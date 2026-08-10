@@ -93,11 +93,9 @@ assert_rust_runner_shape() {
   fi
 
   actual=$(<"$1")
-  expected_without_preflight=$'#!/usr/bin/env bash\n\nset -euo pipefail\n\ncargo fmt --all -- --check\ncargo check --workspace --all-targets --all-features\ncargo clippy --workspace --all-targets --all-features -- -D warnings\ncargo test --workspace --all-features'
   expected_with_preflight=$'#!/usr/bin/env bash\n\nset -euo pipefail\n\nif [ ! -f Cargo.toml ]; then\n  printf \'%s\\n\' \'Rust verification cannot run: Cargo.toml is missing. This harness branch does not track Cargo.toml/Cargo.lock; land the existing manifest separately, then rerun bash .harness/scripts/verify-rust.sh.\'\n  exit 1\nfi\n\ncargo fmt --all -- --check\ncargo check --workspace --all-targets --all-features\ncargo clippy --workspace --all-targets --all-features -- -D warnings\ncargo test --workspace --all-features'
 
-  if [ "$actual" != "$expected_without_preflight" ] \
-    && [ "$actual" != "$expected_with_preflight" ]; then
+  if [ "$actual" != "$expected_with_preflight" ]; then
     fail 'Rust verification runner has an unsupported executable shape'
   fi
 }
@@ -196,7 +194,13 @@ for required in \
   '/root/implement_task_2/work_skill_scenario' \
   '/root/baseline_harness_improve' \
   '/root/implement_task_3/fresh_harness_scenario_round2' \
-  'Fixtures are captured outputs; scripts validate retained artifacts but do not rerun a model or prove universal behavior.'; do
+  '520d7b7' \
+  'dd37caf' \
+  '591ec80' \
+  '4840a63' \
+  '7ef26f6' \
+  'Fixtures are captured outputs; scripts validate retained artifacts but do not rerun a model or prove universal behavior.' \
+  'Fixtures are durable captured transcripts; live agent invocation is intentionally not part of deterministic contract verification.'; do
   assert_contains .harness/tests/skill-scenarios.md "$required" \
     "scenario provenance is missing: $required"
 done

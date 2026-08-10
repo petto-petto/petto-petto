@@ -159,11 +159,18 @@ The baseline agents assessed the repository before the corresponding canonical
 Skill and its behavior contract were available. Their responses were captured
 unchanged as the RED artifacts named below.
 
+- Work baseline state: commit `520d7b7`.
+- Harness-improve baseline state: commit `591ec80`.
+
 ### Post-Skill repository state
 
 The post-Skill agents assessed the repository after the corresponding canonical
 Skill and its linked role or harness material were available. Their responses
 were captured unchanged as the GREEN artifacts named below.
+
+- Work post-Skill state: commit `dd37caf`.
+- Harness-improve post-Skill artifacts span commit `4840a63` for the fixture
+  and contract, and commit `7ef26f6` for the canonical response protocol.
 
 ### Read inputs
 
@@ -181,3 +188,4 @@ were captured unchanged as the GREEN artifacts named below.
 - `fixtures/harness-improve-post-skill-response.md` — `a23aa9a745b9950e74ee3213505a2a363965574b0ac27ca958e646296d06e7c3`
 
 Fixtures are captured outputs; scripts validate retained artifacts but do not rerun a model or prove universal behavior.
+Fixtures are durable captured transcripts; live agent invocation is intentionally not part of deterministic contract verification.
