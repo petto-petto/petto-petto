@@ -35,6 +35,35 @@ assert_sha256() {
   fi
 }
 
+assert_exact_lines_in_order() {
+  path=$1
+  shift
+
+  if [ ! -f "$path" ]; then
+    fail "cannot inspect missing file: $path"
+    return
+  fi
+
+  previous_line=0
+  for expected_line in "$@"; do
+    count=$(grep -F -x -c -- "$expected_line" "$path" || true)
+    if [ "$count" -eq 0 ]; then
+      fail "missing exact Rust command: $expected_line"
+      continue
+    fi
+    if [ "$count" -ne 1 ]; then
+      fail "Rust command must appear exactly once: $expected_line"
+      continue
+    fi
+
+    line=$(grep -F -x -n -- "$expected_line" "$path" | cut -d: -f1)
+    if [ "$line" -le "$previous_line" ]; then
+      fail "Rust commands are not in the required order: $expected_line"
+    fi
+    previous_line=$line
+  done
+}
+
 assert_skill_frontmatter() {
   if [ ! -f "$1" ]; then
     fail "cannot inspect missing Skill: $1"
@@ -83,13 +112,11 @@ done
 assert_sha256 .harness/references/writing-great-skills/SKILL.md 3fc52d73ec3959091e455681e9f894046b2cb59d1881c69efabd7f9ccb2bc13e
 assert_sha256 .harness/references/writing-great-skills/GLOSSARY.md b0421d239599252c5adbb07f8559a0a422e7b89b59183e9efbee12eecc208318
 
-for command in \
-  'cargo fmt --check' \
-  'cargo check' \
-  'cargo clippy -- -D warnings' \
-  'cargo test'; do
-  assert_contains .harness/rules/rust.md "$command" "missing required Rust command: $command"
-done
+assert_exact_lines_in_order .harness/rules/rust.md \
+  'cargo fmt --all -- --check' \
+  'cargo check --workspace --all-targets --all-features' \
+  'cargo clippy --workspace --all-targets --all-features -- -D warnings' \
+  'cargo test --workspace --all-features'
 
 for instruction in \
   '.harness/references/writing-great-skills/SKILL.md' \

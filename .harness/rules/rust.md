@@ -15,10 +15,10 @@ Read this rule before changing Rust code or Cargo configuration, and before repo
 Run these commands in this exact order from the repository root after the final Rust change:
 
 ```bash
-cargo fmt --check
-cargo check
-cargo clippy -- -D warnings
-cargo test
+cargo fmt --all -- --check
+cargo check --workspace --all-targets --all-features
+cargo clippy --workspace --all-targets --all-features -- -D warnings
+cargo test --workspace --all-features
 ```
 
 Completion evidence is the fresh output from every applicable command. A failed or unavailable command is a reported verification gap, not a passing gate.
