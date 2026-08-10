@@ -1,6 +1,6 @@
 ---
 name: work
-description: Feature work, bug fixes, refactors, Rust changes, or explicit `/work` or `$work`: select a track, implement with evidence, and complete the review loop.
+description: "Feature work, bug fixes, refactors, Rust changes, or explicit `/work` or `$work`: select a track, implement with evidence, and complete the review loop."
 ---
 
 # Work
@@ -13,6 +13,9 @@ success criteria before changing files. Use `standard` for new behavior, public
 interfaces, persisted formats, dependencies, or harness changes; use
 `lightweight` only for a bounded, understood local change. The selected track,
 criteria, and non-goals are recorded in the work result.
+
+For Rust work, run `bash .harness/scripts/verify-rust.sh` as the shared
+Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
 
 ## Lightweight track
 

@@ -12,7 +12,9 @@ Read this rule before changing Rust code or Cargo configuration, and before repo
 
 ## Verification gate
 
-Run these commands in this exact order from the repository root after the final Rust change:
+Run `bash .harness/scripts/verify-rust.sh` from the repository root after the
+final Rust change. It is the shared completion entrypoint and owns this exact
+Cargo sequence:
 
 ```bash
 cargo fmt --all -- --check

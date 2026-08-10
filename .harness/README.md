@@ -24,3 +24,9 @@ bash .harness/scripts/verify-rust.sh
 ```
 
 The Rust command sequence has one source of truth in `rules/rust.md`; the runner stops at the first failed command.
+
+## Manifest boundary
+
+This harness branch does not track Cargo.toml/Cargo.lock. A clean checkout must
+land the existing manifest separately before the Rust gate can run; do not add,
+stage, or modify those user-owned files as part of harness work.

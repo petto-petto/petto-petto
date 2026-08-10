@@ -1,6 +1,6 @@
 ---
 name: harness-improve
-description: Evidence: use for explicit $harness-improve or /harness-improve requests and implicit changes to shared rules, Skills, roles, verification, or repeated friction; evolve the harness only with approval.
+description: "Evidence: use for explicit $harness-improve or /harness-improve requests and implicit changes to shared rules, Skills, roles, verification, or repeated friction; evolve the harness only with approval."
 ---
 
 # Harness Improve
@@ -22,10 +22,20 @@ evidence without changing a harness file.
 
 When approval has not been given, do not change files. Return one concise
 read-only record with these headings exactly once and in this order:
-`Read evidence`, `Evidence`, `Root cause`, `Pruning and smallest change`,
-`User approval`, `RED`, `GREEN`, `Contract verification`, `CHANGELOG update`,
-and `Observable completion`. The final five headings describe the approved
-next steps; they are not a claim that unrun checks already passed.
+
+1. `Read evidence`
+2. `Evidence`
+3. `Root cause`
+4. `Pruning and smallest change`
+5. `User approval`
+6. `RED`
+7. `GREEN`
+8. `Contract verification`
+9. `CHANGELOG update`
+10. `Observable completion`
+
+The final five headings describe the approved next steps; they are not a claim
+that unrun checks already passed.
 
 ## Evidence and classification
 

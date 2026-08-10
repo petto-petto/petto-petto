@@ -138,3 +138,46 @@ GREEN, after the minimal Skill and evidence records exist:
 $ bash .harness/tests/verify-harness-improve-skill.sh
 Harness-improve Skill verification passed.
 ```
+
+## Provenance and evidence boundary
+
+### Exact requests
+
+- Work scenario: `Rust 프로젝트에 pet 상태를 한 단계 증가시키는 작은 기능을 추가해줘.`
+- Harness-improve scenario: `팀원이 반복해서 검증 명령을 빠뜨려서 하네스를 개선하고 싶다.`
+
+### Agent run identifiers
+
+- Work baseline: `/root/baseline_work_skill`
+- Work post-Skill: `/root/implement_task_2/work_skill_scenario`
+- Harness-improve baseline: `/root/baseline_harness_improve`
+- Harness-improve post-Skill: `/root/implement_task_3/fresh_harness_scenario_round2`
+
+### Pre-Skill repository state
+
+The baseline agents assessed the repository before the corresponding canonical
+Skill and its behavior contract were available. Their responses were captured
+unchanged as the RED artifacts named below.
+
+### Post-Skill repository state
+
+The post-Skill agents assessed the repository after the corresponding canonical
+Skill and its linked role or harness material were available. Their responses
+were captured unchanged as the GREEN artifacts named below.
+
+### Read inputs
+
+- Work post-Skill run: `AGENTS.md`, `.claude/skills/work/SKILL.md`, and all five
+  `.harness/roles/*.md` contracts.
+- Harness-improve post-Skill run: `AGENTS.md`,
+  `.claude/skills/harness-improve/SKILL.md`, and the embedded writing references
+  in the instructed order.
+
+### Artifacts and SHA-256
+
+- `fixtures/work-baseline-response.md` — `d1e7a35a766c977fea66d32ed0670833ad3ee08ded2ca2394b2c5f023f0110f5`
+- `fixtures/work-post-skill-response.md` — `9368c26cdab8fff8e04e4a81e235376358b09c35e17254dff6abec4d2b9bbcce`
+- `fixtures/harness-improve-baseline-response.md` — `968cc63fcb89a8b10b3aee5fd27970ab16c2590c7c60b21c4222213d0c2ee7bd`
+- `fixtures/harness-improve-post-skill-response.md` — `a23aa9a745b9950e74ee3213505a2a363965574b0ac27ca958e646296d06e7c3`
+
+Fixtures are captured outputs; scripts validate retained artifacts but do not rerun a model or prove universal behavior.

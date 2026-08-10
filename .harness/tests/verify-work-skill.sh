@@ -32,6 +32,26 @@ assert_not_contains() {
   fi
 }
 
+assert_sha256() {
+  if [ ! -f "$1" ]; then
+    fail "cannot hash missing file: $1"
+    return
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "$1" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    actual=$(shasum -a 256 "$1" | awk '{print $1}')
+  else
+    fail 'cannot verify SHA-256: install sha256sum or shasum'
+    return
+  fi
+
+  if [ "$actual" != "$2" ]; then
+    fail "unexpected SHA-256 for $1"
+  fi
+}
+
 section() {
   awk -v heading="$2" '
     $0 == heading { active = 1; next }
@@ -104,6 +124,9 @@ assert_file "$scenarios"
 assert_file "$baseline"
 assert_file "$post_skill"
 assert_file "$contract"
+
+assert_sha256 "$baseline" d1e7a35a766c977fea66d32ed0670833ad3ee08ded2ca2394b2c5f023f0110f5
+assert_sha256 "$post_skill" 9368c26cdab8fff8e04e4a81e235376358b09c35e17254dff6abec4d2b9bbcce
 
 assert_section_contains "$skill" '## Lightweight track' 'Scope confirmation' \
   'lightweight track must begin with scope confirmation'

@@ -3,7 +3,7 @@
 set -u
 
 failures=0
-skill=.claude/skills/harness-improve/SKILL.md
+skill=${HARNESS_IMPROVE_SKILL:-.claude/skills/harness-improve/SKILL.md}
 friction=.harness/friction/README.md
 scenarios=.harness/tests/skill-scenarios.md
 baseline=${HARNESS_IMPROVE_BASELINE_FIXTURE:-.harness/tests/fixtures/harness-improve-baseline-response.md}
@@ -42,7 +42,14 @@ assert_sha256() {
     return
   fi
 
-  actual=$(shasum -a 256 "$1" | awk '{print $1}')
+  if command -v sha256sum >/dev/null 2>&1; then
+    actual=$(sha256sum "$1" | awk '{print $1}')
+  elif command -v shasum >/dev/null 2>&1; then
+    actual=$(shasum -a 256 "$1" | awk '{print $1}')
+  else
+    fail 'cannot verify SHA-256: install sha256sum or shasum'
+    return
+  fi
   if [ "$actual" != "$2" ]; then
     fail "unexpected SHA-256 for $1"
   fi
@@ -89,10 +96,15 @@ assert_file "$contract"
 assert_file "$changelog"
 
 if [ -f "$skill" ]; then
-  description=$(sed -n '3p' "$skill")
+  description_line=$(sed -n '3p' "$skill")
+  case "$description_line" in
+    'description: "'*'"') description=${description_line#description: \"}; description=${description%\"} ;;
+    *) description=; fail 'harness-improve Skill description must be a quoted scalar' ;;
+  esac
   if [ "$(sed -n '1p' "$skill")" != '---' ] \
     || ! grep -q '^name: harness-improve$' "$skill" \
-    || ! printf '%s\n' "$description" | grep -q '^description: Evidence:'; then
+    || [ "$(sed -n '4p' "$skill")" != '---' ] \
+    || ! printf '%s\n' "$description" | grep -q '^Evidence:'; then
     fail 'harness-improve Skill must have evidence-led frontmatter'
   fi
 
@@ -109,6 +121,23 @@ if [ -f "$skill" ]; then
     assert_text_contains "$description" "$trigger" \
       "Skill description is missing trigger: $trigger"
   done
+
+  assert_contains "$skill" 'Before changing a shared-harness file, read' \
+    'Skill must instruct the agent to read evidence before a shared-harness change'
+  assert_markers_in_order "$skill" \
+    '.harness/references/writing-great-skills/SKILL.md' \
+    '.harness/references/writing-great-skills/GLOSSARY.md'
+  assert_markers_in_order "$skill" \
+    '1. `Read evidence`' \
+    '2. `Evidence`' \
+    '3. `Root cause`' \
+    '4. `Pruning and smallest change`' \
+    '5. `User approval`' \
+    '6. `RED`' \
+    '7. `GREEN`' \
+    '8. `Contract verification`' \
+    '9. `CHANGELOG update`' \
+    '10. `Observable completion`'
 fi
 
 for required in \
