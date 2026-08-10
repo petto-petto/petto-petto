@@ -14,6 +14,19 @@ applicable canonical rule, current contract, and
 `.harness/friction/README.md` before proposing a change. **Evidence** is the
 leading word: no rule is added from a hunch.
 
+For a read-only assessment, make these completed reads observable by naming both
+embedded-reference paths in that order in the response. This preserves the
+evidence without changing a harness file.
+
+## Response record
+
+When approval has not been given, do not change files. Return one concise
+read-only record with these headings exactly once and in this order:
+`Read evidence`, `Evidence`, `Root cause`, `Pruning and smallest change`,
+`User approval`, `RED`, `GREEN`, `Contract verification`, `CHANGELOG update`,
+and `Observable completion`. The final five headings describe the approved
+next steps; they are not a claim that unrun checks already passed.
+
 ## Evidence and classification
 
 1. Capture fresh, repository-owned **Evidence**: the exact request or repeated
