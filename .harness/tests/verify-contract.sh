@@ -80,6 +80,10 @@ assert_adapter() {
     fail "missing Skill adapter symlink: $1"
   elif [ "$(readlink "$1")" != "$2" ]; then
     fail "wrong Skill adapter target: $1"
+  elif [ ! -d "$1" ]; then
+    fail "Skill adapter does not resolve to a directory: $1"
+  elif [ ! -r "$1/SKILL.md" ]; then
+    fail "Skill adapter does not expose a readable SKILL.md: $1"
   fi
 }
 
@@ -142,6 +146,12 @@ if ! bash .harness/tests/verify-harness-improve-skill.sh; then
 fi
 
 assert_file .harness/scripts/verify-rust.sh
+assert_contains .harness/scripts/verify-rust.sh 'set -euo pipefail' 'Rust verification runner must fail fast'
+assert_exact_lines_in_order .harness/scripts/verify-rust.sh \
+  'cargo fmt --all -- --check' \
+  'cargo check --workspace --all-targets --all-features' \
+  'cargo clippy --workspace --all-targets --all-features -- -D warnings' \
+  'cargo test --workspace --all-features'
 assert_adapter .agents/skills/work ../../.claude/skills/work
 assert_adapter .agents/skills/harness-improve ../../.claude/skills/harness-improve
 
