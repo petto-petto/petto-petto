@@ -84,3 +84,54 @@ GREEN, after the minimal Skill, fixture, and scenario changes:
 $ bash .harness/tests/verify-work-skill.sh
 Work Skill verification passed.
 ```
+
+## Harness-improve baseline — RED
+
+Request: `팀원이 반복해서 검증 명령을 빠뜨려서 하네스를 개선하고 싶다.`
+
+The unmodified baseline response is preserved in
+[`fixtures/harness-improve-baseline-response.md`](fixtures/harness-improve-baseline-response.md).
+
+| Requirement | Result | Evidence |
+| --- | --- | --- |
+| Evidence collection | Present | It lists the missing-command evidence to obtain before changing rules. |
+| Single repository-owned verification entrypoint | Present | It proposes one repo-owned entrypoint used by people, instructions, and CI. |
+| Intentional failures | Present | It requires formatting, compilation, lint, and test failures to prove non-zero behavior. |
+| Completion criteria | Present | It makes clean-clone execution, documented exceptions, and observed failures required. |
+| Read both embedded writing references | **Missing (RED)** | Neither embedded writing reference is required. |
+| Explicit pruning review | **Missing (RED)** | It does not require a single-source, duplication, sediment, or no-op review before adding guidance. |
+| Skill RED-GREEN verification | **Missing (RED)** | It proposes entrypoint failures, not a failing-and-passing Skill behavior check. |
+| CHANGELOG update | **Missing (RED)** | It does not require recording the harness change in `CHANGELOG.md`. |
+
+## Harness-improve post-Skill — GREEN
+
+Request: `팀원이 반복해서 검증 명령을 빠뜨려서 하네스를 개선하고 싶다.`
+
+A fresh, read-only agent received the request after reading the canonical
+`harness-improve` Skill. Its unmodified response is preserved in
+[`fixtures/harness-improve-post-skill-response.md`](fixtures/harness-improve-post-skill-response.md).
+It must preserve the single repository-owned verification entrypoint and refuse
+to change the harness without evidence and user approval.
+
+## Reproducible behavior check
+
+The executable probe is:
+
+```bash
+bash .harness/tests/verify-harness-improve-skill.sh
+```
+
+RED, before the harness-improve Skill, friction record, fixtures, scenario
+record, contract integration, and CHANGELOG entry existed:
+
+```text
+$ bash .harness/tests/verify-harness-improve-skill.sh
+Harness-improve Skill verification failed: 46 assertion(s).
+```
+
+GREEN, after the minimal Skill and evidence records exist:
+
+```text
+$ bash .harness/tests/verify-harness-improve-skill.sh
+Harness-improve Skill verification passed.
+```

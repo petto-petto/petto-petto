@@ -137,6 +137,10 @@ if ! bash .harness/tests/verify-work-skill.sh; then
   fail 'work Skill behavior verification failed'
 fi
 
+if ! bash .harness/tests/verify-harness-improve-skill.sh; then
+  fail 'harness-improve Skill behavior verification failed'
+fi
+
 assert_file .harness/scripts/verify-rust.sh
 assert_adapter .agents/skills/work ../../../.claude/skills/work
 assert_adapter .agents/skills/harness-improve ../../../.claude/skills/harness-improve
