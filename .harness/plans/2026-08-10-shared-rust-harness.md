@@ -152,7 +152,7 @@ Expected: FAIL for missing adapter symlinks and Rust verification runner.
 
 - [ ] **Step 2: Add thin adapters and the Rust runner**
 
-Create relative links to `../../../.claude/skills/work` and `../../../.claude/skills/harness-improve`. Create a fail-fast Bash runner executing the four Cargo commands in the exact required order.
+Create relative links to `../../.claude/skills/work` and `../../.claude/skills/harness-improve`. Create a fail-fast Bash runner executing the four Cargo commands in the exact required order.
 
 - [ ] **Step 3: Run all structural and Rust checks**
 

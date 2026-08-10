@@ -142,8 +142,8 @@ if ! bash .harness/tests/verify-harness-improve-skill.sh; then
 fi
 
 assert_file .harness/scripts/verify-rust.sh
-assert_adapter .agents/skills/work ../../../.claude/skills/work
-assert_adapter .agents/skills/harness-improve ../../../.claude/skills/harness-improve
+assert_adapter .agents/skills/work ../../.claude/skills/work
+assert_adapter .agents/skills/harness-improve ../../.claude/skills/harness-improve
 
 stale_pattern='ai-pet-design|Type[S]cript|Elec[t]ron|Math[.]random|Event[S]tore|Ralph|Ouroboros'
 stale_paths='AGENTS.md CLAUDE.md .claude .agents .harness/README.md .harness/CHANGELOG.md .harness/rules .harness/roles .harness/friction .harness/scripts'
