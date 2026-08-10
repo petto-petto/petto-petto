@@ -99,8 +99,11 @@ The unmodified baseline response is preserved in
 | Intentional failures | Present | It requires formatting, compilation, lint, and test failures to prove non-zero behavior. |
 | Completion criteria | Present | It makes clean-clone execution, documented exceptions, and observed failures required. |
 | Read both embedded writing references | **Missing (RED)** | Neither embedded writing reference is required. |
+| Root-cause classification | **Missing (RED)** | It lists hypotheses and evidence to gather but does not classify the cause. |
 | Explicit pruning review | **Missing (RED)** | It does not require a single-source, duplication, sediment, or no-op review before adding guidance. |
+| Explicit user approval | **Missing (RED)** | Team agreement on commands is not approval before a shared-harness change. |
 | Skill RED-GREEN verification | **Missing (RED)** | It proposes entrypoint failures, not a failing-and-passing Skill behavior check. |
+| Contract validation | **Missing (RED)** | It never runs the shared contract verification command. |
 | CHANGELOG update | **Missing (RED)** | It does not require recording the harness change in `CHANGELOG.md`. |
 
 ## Harness-improve post-Skill — GREEN
