@@ -5,8 +5,8 @@ set -u
 failures=0
 skill=.claude/skills/work/SKILL.md
 scenarios=.harness/tests/skill-scenarios.md
-baseline=.harness/tests/fixtures/work-baseline-response.md
-post_skill=.harness/tests/fixtures/work-post-skill-response.md
+baseline=${WORK_BASELINE_FIXTURE:-.harness/tests/fixtures/work-baseline-response.md}
+post_skill=${WORK_POST_SKILL_FIXTURE:-.harness/tests/fixtures/work-post-skill-response.md}
 contract=.harness/tests/verify-contract.sh
 
 fail() {
@@ -175,6 +175,7 @@ assert_contains "$scenarios" 'Rust 프로젝트에 pet 상태를 한 단계 증�
 
 for prohibited in \
   'standard' \
+  'lightweight' \
   'Interview/Seed' \
   'Mechanical Review' \
   'Semantic Review' \
@@ -205,6 +206,11 @@ for required in \
   assert_contains "$post_skill" "$required" \
     "post-Skill fixture is missing required result: $required"
 done
+
+assert_lines_in_order "$post_skill" \
+  '   - **Mechanical Review** — formatter, build, lint, test를 fresh output으로 실행' \
+  '   - **Semantic Review** — 성공 기준별 실제 동작을 대조' \
+  '5. **Reviewer** — 구현자와 분리된 **Independent Review** 수행'
 
 assert_contains "$contract" 'bash .harness/tests/verify-work-skill.sh' \
   'contract verification must run the work Skill behavior check'
