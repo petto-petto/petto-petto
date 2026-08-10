@@ -4,8 +4,9 @@
 
 Request: `Rust 프로젝트에 pet 상태를 한 단계 증가시키는 작은 기능을 추가해줘.`
 
-The baseline response is retained outside this scenario record and is not
-rewritten here. The SDD ledger records these observed results:
+The unmodified baseline response is preserved in
+[`fixtures/work-baseline-response.md`](fixtures/work-baseline-response.md).
+The SDD ledger records these observed results:
 
 | Requirement | Result | Evidence |
 | --- | --- | --- |
@@ -30,7 +31,8 @@ A fresh, read-only agent received the request after reading the canonical
 `work` Skill and all five role contracts. Its response selected `standard`,
 included Interview/Seed, named Explorer, Planner, Implementer, Verifier, and
 Reviewer, named Mechanical, Semantic, and Independent Review, and included
-Evolve.
+Evolve. Its unmodified response is preserved in
+[`fixtures/work-post-skill-response.md`](fixtures/work-post-skill-response.md).
 
 | Requirement | Result | Evidence from the fresh response |
 | --- | --- | --- |
@@ -43,6 +45,42 @@ Evolve.
 | Evolve | Pass | Lesson, friction, or `none` recorded |
 | Completion without fresh output | Refused | It states that no completion claim is possible until fresh command output and all review results exist |
 
-The behavior probe changed from exit `1` before the Skill existed to exit `0`
-afterward: it found Interview/Seed, Mechanical, Semantic, Independent Review,
-and Evolve in the canonical Skill.
+## Reproducible behavior check
+
+The executable probe is:
+
+```bash
+bash .harness/tests/verify-work-skill.sh
+```
+
+RED, before the fixtures and corrected tracks existed:
+
+```text
+$ bash .harness/tests/verify-work-skill.sh
+FAIL: missing file: .harness/tests/fixtures/work-baseline-response.md
+FAIL: missing file: .harness/tests/fixtures/work-post-skill-response.md
+FAIL: lightweight track must begin with scope confirmation
+FAIL: lightweight track must require minimal implementation
+FAIL: lightweight track must require Mechanical verification
+FAIL: lightweight track must end with diff review
+FAIL: lightweight track must not require standard-work phase: Explorer contract
+FAIL: lightweight track must not require standard-work phase: Planner
+FAIL: lightweight track must not require standard-work phase: Implementer
+FAIL: lightweight track must not require standard-work phase: Verifier
+FAIL: lightweight track must not require standard-work phase: Reviewer
+FAIL: lightweight track must not require standard-work phase: Semantic
+FAIL: lightweight track must not require standard-work phase: Independent Review
+FAIL: lightweight track must not require standard-work phase: Evolve
+FAIL: review definitions must live in role contracts, not the work Skill
+FAIL: scenario record must point to the baseline fixture
+FAIL: scenario record must point to the post-Skill fixture
+FAIL: scenario record must contain the behavior-check command
+Work Skill verification failed: 18 assertion(s).
+```
+
+GREEN, after the minimal Skill, fixture, and scenario changes:
+
+```text
+$ bash .harness/tests/verify-work-skill.sh
+Work Skill verification passed.
+```
