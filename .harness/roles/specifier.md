@@ -9,9 +9,9 @@ and unresolved product decisions.
 
 Use the [feature-spec template](../templates/feature-spec.md) to create or
 update one feature specification at
-`.harness/specs/features/<feature-slug>.md`. Make the user outcome, scope,
-non-goals, domain rules, acceptance criteria, and unresolved decisions
-explicit. Report the proposed `Draft` path and keep that status until the
+`.harness/specs/features/YYYY-MM-DD-<feature-name>.md`. Make the user outcome,
+scope, non-goals, domain rules, acceptance criteria, and unresolved decisions
+explicit. Report the proposed dated `Draft` path and keep that status until the
 requester approves it.
 
 ## Complete

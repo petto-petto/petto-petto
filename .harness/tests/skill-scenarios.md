@@ -66,13 +66,14 @@ The evaluation is a captured scenario, not proof of universal model behavior.
 
 - Baseline read-only agent run:
   `/root/implement_specifier/baseline_specifier_fixture`.
-- Final post-Skill read-only agent run:
-  `/root/implement_specifier/post_specifier_fixture_final`.
+- Dated-path post-Skill read-only agent run:
+  `/root/implement_specifier/post_specifier_dated_fixture`.
 - Baseline read inputs: `AGENTS.md`, the pre-Specifier
   `.claude/skills/work/SKILL.md`, and all five core role contracts.
 - Post-Skill read inputs: `AGENTS.md`, the updated
   `.claude/skills/work/SKILL.md`, `.harness/roles/specifier.md`, and all five
-  core role contracts.
+  core role contracts. The dated-path evaluation followed the filename and
+  trigger-contract fix.
 - The fixtures retain the agents' raw responses. They are scenario evidence;
   they do not rerun a model or prove universal model behavior.
 

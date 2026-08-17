@@ -31,9 +31,15 @@ Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
 
 ## Standard track
 
-1. **Interview/Seed** — for a new or changed feature, inspect
-   [`.harness/specs/features/`](../../../.harness/specs/features/). Use an
-   existing approved feature specification as the Seed. When the feature
+1. **Interview/Seed** — run the conditional feature-spec branch when any of
+   these triggers applies:
+   - new or changed user-visible behavior
+   - domain rules
+   - public interfaces
+   - persisted formats
+   - ambiguous feature request without an approved feature specification
+   Inspect [`.harness/specs/features/`](../../../.harness/specs/features/).
+   Use an existing approved feature specification as the Seed. When the feature
    specification is missing or ambiguous, run the
    [Specifier](../../../.harness/roles/specifier.md) before Explorer; run
    Specifier only for that missing-or-ambiguous branch, wait for requester

@@ -26,7 +26,17 @@ assert_file() {
 }
 
 assert_contains() {
-  if ! grep -F -q -- "$2" "$1"; then
+  if [ ! -f "$1" ]; then
+    fail "cannot inspect missing file: $1"
+  elif ! grep -F -q -- "$2" "$1"; then
+    fail "$3"
+  fi
+}
+
+assert_matches() {
+  if [ ! -f "$1" ]; then
+    fail "cannot inspect missing file: $1"
+  elif ! grep -E -q -- "$2" "$1"; then
     fail "$3"
   fi
 }
@@ -203,6 +213,17 @@ assert_contains "$skill" 'missing or ambiguous' \
   'work Skill must invoke Specifier only when the feature specification is missing or ambiguous'
 assert_contains "$skill" 'Specifier only for that missing-or-ambiguous branch' \
   'work Skill must require Specifier output only for the missing-or-ambiguous branch'
+for trigger in \
+  'new or changed user-visible behavior' \
+  'domain rules' \
+  'public interfaces' \
+  'persisted formats' \
+  'ambiguous feature request without an approved feature specification'; do
+  assert_section_contains "$skill" '## Standard track' "$trigger" \
+    "work Skill is missing required Specifier trigger: $trigger"
+done
+assert_contains "$specifier" '.harness/specs/features/YYYY-MM-DD-<feature-name>.md' \
+  'Specifier contract must require the dated feature-spec filename convention'
 
 for role in explorer planner implementer verifier reviewer; do
   assert_contains "$skill" ".harness/roles/$role.md" \
@@ -236,6 +257,9 @@ for required in \
   assert_contains "$specifier_post" "$required" \
     "Specifier post-Skill fixture is missing required result: $required"
 done
+assert_matches "$specifier_post" \
+  '[.]harness/specs/features/[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-Za-z0-9][A-Za-z0-9-]*[.]md' \
+  'Specifier post-Skill fixture must use the dated feature-spec filename convention'
 assert_contains "$scenarios" 'fixtures/work-baseline-response.md' \
   'scenario record must point to the baseline fixture'
 assert_contains "$scenarios" 'fixtures/work-post-skill-response.md' \

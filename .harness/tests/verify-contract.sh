@@ -180,10 +180,19 @@ for instruction in \
   '[Specifier](../../../.harness/roles/specifier.md)' \
   '.harness/specs/features/' \
   'existing approved feature specification' \
-  'missing or ambiguous'; do
+  'missing or ambiguous' \
+  'new or changed user-visible behavior' \
+  'domain rules' \
+  'public interfaces' \
+  'persisted formats' \
+  'ambiguous feature request without an approved feature specification'; do
   assert_contains .claude/skills/work/SKILL.md "$instruction" \
     "work Skill is missing Specifier contract guidance: $instruction"
 done
+
+assert_contains .harness/roles/specifier.md \
+  '.harness/specs/features/YYYY-MM-DD-<feature-name>.md' \
+  'Specifier contract is missing the dated feature-spec filename convention'
 
 if ! bash .harness/tests/verify-work-skill.sh; then
   fail 'work Skill behavior verification failed'
