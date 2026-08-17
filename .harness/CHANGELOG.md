@@ -24,6 +24,11 @@
 - This harness branch does not track Cargo.toml/Cargo.lock; a clean checkout must
   land the existing manifest separately before the Rust gate can run.
 
+### Fixed
+
+- Korean guides now point verification and feature workflow readers to their
+  canonical owners; the contract rejects tracked Markdown plans from the index.
+
 ### Removed
 
 - Obsolete shared Rust harness plan at

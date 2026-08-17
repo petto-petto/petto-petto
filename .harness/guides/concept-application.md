@@ -15,10 +15,14 @@
 | 지침을 근거 없이 추가하거나 오래된 설명을 남김 | `.harness/rules/skill-authoring.md`와 `$harness-improve`가 embedded reference 읽기, Evidence, pruning, RED/GREEN, CHANGELOG를 요구 | 규칙과 Skill의 정적 계약 검사 |
 | 한 문서에 모든 설명을 중복해 놓음 | 공통 지침은 `AGENTS.md`, 역할 계약은 `.harness/roles/`, 상세 배경은 이 가이드처럼 분리 | 정본 경로와 링크를 사람이 검토하고 계약으로 구조를 검사 |
 
-여기서 채택한 것은 예측 가능한 과정, 정본 위치, progressive disclosure,
+여기서 채택한 것은 예측 가능한 과정, 정본 위치와 progressive disclosure,
 duplication·sediment·no-op 제거, 그리고 관찰 가능한 완료 기준이다.
-`.harness/references/writing-great-skills/`는 그 원칙을 읽기 위한 embedded
-reference이며 수정 대상이나 실행 엔진이 아니다.
+`.harness/references/writing-great-skills/SKILL.md`는 이 원칙을 설명하므로,
+하네스 문서나 Skill을 바꿀 때 지침을 정본에 두고 상세 내용은 링크로 공개하는
+행동을 이끈다. `.harness/references/writing-great-skills/GLOSSARY.md`는 그
+용어의 판정 기준을 제공하므로, 검토에서 duplication·sediment·no-op을 구분하고
+`$harness-improve`의 pruning으로 최소 변경을 고르는 행동을 이끈다. 두 파일은
+읽기 위한 embedded reference이며 수정 대상이나 실행 엔진이 아니다.
 
 ## Ouroboros: 이전과 이후
 

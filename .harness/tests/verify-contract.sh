@@ -23,6 +23,14 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  if [ ! -f "$1" ]; then
+    fail "cannot inspect missing file: $1"
+  elif grep -F -q -- "$2" "$1"; then
+    fail "$3"
+  fi
+}
+
 assert_sha256() {
   if [ ! -f "$1" ]; then
     fail "cannot hash missing file: $1"
@@ -137,11 +145,32 @@ for guide in \
     "README is missing Korean guide pointer: $guide"
 done
 
-while IFS= read -r path; do
-  if [ -f "$path" ]; then
-    fail "tracked Markdown document remains under .harness/plans/: $path"
-  fi
-done < <(git ls-files -- '.harness/plans/*.md')
+if git ls-files -- '.harness/plans/*.md' | grep -q .; then
+  fail 'tracked Markdown document remains under .harness/plans/'
+fi
+
+for reference in \
+  '.harness/references/writing-great-skills/SKILL.md' \
+  '.harness/references/writing-great-skills/GLOSSARY.md' \
+  '정본 위치와 progressive disclosure' \
+  'duplication·sediment·no-op'; do
+  assert_contains .harness/guides/concept-application.md "$reference" \
+    "concept guide is missing writing-great-skills evidence: $reference"
+done
+
+for pointer in \
+  'AGENTS.md' \
+  '../../.claude/skills/work/SKILL.md' \
+  '../roles/specifier.md' \
+  '적용 가능한 검사' \
+  '공유 하네스 변경'; do
+  assert_contains .harness/guides/quick-start.md "$pointer" \
+    "quick-start guide is missing canonical workflow guidance: $pointer"
+done
+
+assert_not_contains .harness/guides/quick-start.md \
+  '하네스 변경 여부와 관계없이' \
+  'quick-start guide makes contract verification unconditional'
 
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'

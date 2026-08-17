@@ -3,51 +3,49 @@
 ## 결론
 
 일반 기능 작업은 `$work`를, 공유 하네스의 규칙·Skill·역할·검증을 바꾸는
-작업은 `$harness-improve`를 사용한다. 새 기능의 요구가 불명확하거나 승인된
-기능 기획서가 없으면, 구현 전에 조건부 Specifier 절차로 기획서를 승인받는다.
+작업은 `$harness-improve`를 사용한다. 어떤 절차와 검사가 필요한지는
+`AGENTS.md`와 각 정본 계약이 결정한다. 이 문서는 그 계약으로 들어가는 빠른
+경로이며, 별도의 절차 정본이 아니다.
 
 Claude Code와 Codex는 같은 `AGENTS.md`와 같은 검증 명령을 사용한다. Claude
 Code는 `CLAUDE.md`를 통해 `AGENTS.md`를 읽고, Codex는 `.agents/skills/`의
 어댑터를 통해 `.claude/skills/`의 정본 Skill을 발견한다. 두 환경 모두에서
-`$work` 또는 `$harness-improve`를 호출한 뒤 아래 절차와 명령을 따른다.
+`$work` 또는 `$harness-improve`를 호출한 뒤 아래 정본 링크를 따른다.
 
 ## 기능 기획서가 필요한 경우
 
-다음 중 하나이면 standard track을 선택하고, 이미 승인된 기능 기획서가 있는지
-먼저 확인한다.
-
-- 새롭거나 변경되는 사용자 가시 행동
-- 도메인 규칙
-- 공개 인터페이스
-- 영속 형식
-- 승인된 기획서가 없는 모호한 기능 요청
-
-승인된 기획서가 있으면 그것을 Seed로 사용한다. 없거나 모호하면 Specifier가
-`.harness/specs/features/YYYY-MM-DD-<feature-name>.md`에 `Draft`를 만들고,
-요청자 승인 후에만 `Approved`로 바꾼다. 승인 전에는 이후 역할 흐름을 시작하지
-않는다.
+새롭거나 변경되는 기능 또는 승인된 기획서가 없거나 모호한 요청이면,
+[정본 `$work` standard track](../../.claude/skills/work/SKILL.md)을 열어 조건을
+확인한다. 이미 `Approved`인 기획서는 Seed로 사용한다. 없거나 모호한 경우에는
+[Specifier 계약](../roles/specifier.md)의 `Draft`→요청자 승인→`Approved` 절차를
+따른다. 기획서의 정본 위치와 파일명은
+[기능 기획서 README](../specs/features/README.md)에 있다.
 
 ## 역할 흐름
 
-Specifier는 위 조건에서만 앞에 붙는 준비 역할이다. 승인된 Seed가 준비된 뒤의
-다섯 핵심 역할 순서는 항상 다음과 같다.
+Specifier는 정본 `$work`가 요구하는 경우에만 앞에 붙는다. 승인된 Seed 뒤의
+다섯 핵심 역할 흐름은 [정본 `$work` standard track](../../.claude/skills/work/SKILL.md)이
+소유한다.
 
 ```text
 Explorer → Planner → Implementer → Verifier → Reviewer
 ```
 
-각 역할의 결과와 남은 공백을 기록한다. 특히 Verifier와 Reviewer의 검토 결과를
-생략하지 않는다.
+각 역할의 구체적 완료 조건은 링크된 정본 계약에서 확인한다.
 
 ## 검증
 
-저장소 루트에서 하네스 변경 여부와 관계없이 다음 계약 검증을 실행한다.
+`AGENTS.md`와 `$work`가 정한 **적용 가능한 검사**를 선택하고, 최종 변경 뒤의
+새 출력을 보관한다. 일반 작업에 계약 검증을 일괄 강제하지 않는다.
+
+공유 하네스 변경에는 `$harness-improve`가 RED/GREEN 뒤 계약 검증을 요구한다.
+그 경우 저장소 루트에서 다음을 실행한다.
 
 ```bash
 bash .harness/tests/verify-contract.sh
 ```
 
-Rust 작업이면 같은 루트에서 Rust 완료 게이트도 실행한다.
+Rust 작업이면 정본 [Rust 규칙](../rules/rust.md)이 요구하는 완료 게이트도 실행한다.
 
 ```bash
 bash .harness/scripts/verify-rust.sh
@@ -59,11 +57,8 @@ bash .harness/scripts/verify-rust.sh
 
 ## 완료 보고
 
-완료라고 보고하려면 선택한 track, 성공 기준과 non-goal, 변경 파일, focused
-evidence, 각 적용 검증 명령의 새 출력, diff 검토 결과, 그리고 남은 공백을
-기록한다. standard track은 승인된 Seed 경로, 다섯 역할의 결과, Mechanical·Semantic·
-Independent Review 결과와 Evolve 처분도 포함한다.
-
-하네스 변경은 추가로 Evidence, 승인 경계, RED 출력, GREEN 출력, 계약 검증,
-`CHANGELOG.md` 갱신을 기록한다. 하나라도 막혔거나 실패했으면 완료로 표현하지
-않고 그 사실과 다음 조치를 보고한다.
+완료 보고의 필드와 track별 조건은 [정본 `$work` completion](../../.claude/skills/work/SKILL.md)이
+소유한다. 공유 하네스 변경의 Evidence·승인·RED/GREEN·CHANGELOG 기록은
+[`$harness-improve`](../../.claude/skills/harness-improve/SKILL.md)와
+`.harness/friction/README.md`를 따른다. 필요한 검사가 막히거나 실패하면
+`AGENTS.md`의 Completion 규칙에 따라 blocker를 보고한다.
