@@ -124,6 +124,25 @@ for path in \
   assert_file "$path"
 done
 
+for path in \
+  .harness/guides/quick-start.md \
+  .harness/guides/concept-application.md; do
+  assert_file "$path"
+done
+
+for guide in \
+  '.harness/guides/quick-start.md' \
+  '.harness/guides/concept-application.md'; do
+  assert_contains .harness/README.md "$guide" \
+    "README is missing Korean guide pointer: $guide"
+done
+
+while IFS= read -r path; do
+  if [ -f "$path" ]; then
+    fail "tracked Markdown document remains under .harness/plans/: $path"
+  fi
+done < <(git ls-files -- '.harness/plans/*.md')
+
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'
 fi

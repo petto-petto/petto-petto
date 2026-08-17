@@ -25,6 +25,15 @@ bash .harness/scripts/verify-rust.sh
 
 The Rust command sequence has one source of truth in `rules/rust.md`; the runner stops at the first failed command.
 
+## Korean team guides
+
+- [Quick start (`.harness/guides/quick-start.md`)](guides/quick-start.md)
+  explains how Claude Code and Codex select the work flow, create conditional
+  feature specifications, verify work, and report completion.
+- [Concept application (`.harness/guides/concept-application.md`)](guides/concept-application.md)
+  explains adopted design concepts, canonical runtime sharing, and the evidence
+  boundary.
+
 ## Manifest boundary
 
 This harness branch does not track Cargo.toml/Cargo.lock. A clean checkout must

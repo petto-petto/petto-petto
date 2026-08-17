@@ -4,6 +4,9 @@
 
 ### Added
 
+- Korean quick-start and concept-application guides at
+  `.harness/guides/quick-start.md` and
+  `.harness/guides/concept-application.md`.
 - Conditional Specifier branch for new or changed features with a missing or
   ambiguous specification. Approved feature specifications in
   `.harness/specs/features/` are standard-track Seeds; Explorer, Planner,
@@ -20,3 +23,8 @@
   contract; the behavior probe now supports a fixture override for mutation checks.
 - This harness branch does not track Cargo.toml/Cargo.lock; a clean checkout must
   land the existing manifest separately before the Rust gate can run.
+
+### Removed
+
+- Obsolete shared Rust harness plan at
+  `.harness/plans/2026-08-10-shared-rust-harness.md`.
