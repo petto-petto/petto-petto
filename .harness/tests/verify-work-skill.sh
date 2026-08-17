@@ -107,6 +107,19 @@ assert_lines_in_order() {
   done
 }
 
+assert_marker_before() {
+  path=$1
+  first=$2
+  second=$3
+  message=$4
+
+  first_line=$(grep -F -n -m 1 -- "$first" "$path" | cut -d: -f1)
+  second_line=$(grep -F -n -m 1 -- "$second" "$path" | cut -d: -f1)
+  if [ -z "$first_line" ] || [ -z "$second_line" ] || [ "$first_line" -ge "$second_line" ]; then
+    fail "$message"
+  fi
+}
+
 assert_numbered_phase_order() {
   path=$1
   heading=$2
@@ -147,6 +160,25 @@ assert_file "$specifier_post"
 
 assert_sha256 "$baseline" d1e7a35a766c977fea66d32ed0670833ad3ee08ded2ca2394b2c5f023f0110f5
 assert_sha256 "$post_skill" 9368c26cdab8fff8e04e4a81e235376358b09c35e17254dff6abec4d2b9bbcce
+
+assert_section_contains "$skill" '## Entry' 'Before selecting a track' \
+  'work Skill must evaluate feature-spec triggers before track selection'
+assert_section_contains "$skill" '## Entry' 'approved feature specification' \
+  'work Skill entry must inspect for an approved feature specification'
+assert_section_contains "$skill" '## Entry' 'If any trigger applies, choose `standard`' \
+  'every feature-spec trigger must force the standard track'
+assert_marker_before "$skill" 'Before selecting a track' 'State `lightweight` or `standard`' \
+  'feature-spec trigger evaluation must precede track selection'
+
+for trigger in \
+  'new or changed user-visible behavior' \
+  'domain rules' \
+  'public interfaces' \
+  'persisted formats' \
+  'ambiguous feature requests'; do
+  assert_section_contains "$skill" '## Entry' "$trigger" \
+    "without an approved spec, this trigger must not choose lightweight: $trigger"
+done
 
 assert_section_contains "$skill" '## Lightweight track' 'Scope confirmation' \
   'lightweight track must begin with scope confirmation'
@@ -213,17 +245,16 @@ assert_contains "$skill" 'missing or ambiguous' \
   'work Skill must invoke Specifier only when the feature specification is missing or ambiguous'
 assert_contains "$skill" 'Specifier only for that missing-or-ambiguous branch' \
   'work Skill must require Specifier output only for the missing-or-ambiguous branch'
-for trigger in \
-  'new or changed user-visible behavior' \
-  'domain rules' \
-  'public interfaces' \
-  'persisted formats' \
-  'ambiguous feature request without an approved feature specification'; do
-  assert_section_contains "$skill" '## Standard track' "$trigger" \
-    "work Skill is missing required Specifier trigger: $trigger"
-done
 assert_contains "$specifier" '.harness/specs/features/YYYY-MM-DD-<feature-name>.md' \
   'Specifier contract must require the dated feature-spec filename convention'
+assert_contains "$specifier" 'product `what` and `why`' \
+  'Specifier contract must own product what and why'
+assert_contains "$specifier" 'Planner' \
+  'Specifier contract must assign technical how to Planner or the implementation plan'
+assert_contains "$feature_spec_template" 'product what and why' \
+  'feature-spec template must own product what and why'
+assert_contains "$feature_spec_template" 'technical how' \
+  'feature-spec template must assign technical how to the implementation plan'
 
 for role in explorer planner implementer verifier reviewer; do
   assert_contains "$skill" ".harness/roles/$role.md" \

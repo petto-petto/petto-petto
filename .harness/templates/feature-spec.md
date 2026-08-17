@@ -1,5 +1,8 @@
 # Feature specification: <feature name>
 
+This specification owns the product what and why. The related implementation
+plan owns the technical how.
+
 ## Status
 
 Draft | Approved

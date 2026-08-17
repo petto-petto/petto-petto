@@ -149,6 +149,16 @@ if git ls-files -- '.harness/plans/*.md' | grep -q .; then
   fail 'tracked Markdown document remains under .harness/plans/'
 fi
 
+while IFS= read -r -d '' feature_spec; do
+  feature_spec_name=${feature_spec##*/}
+  if [ "$feature_spec_name" = 'README.md' ]; then
+    continue
+  fi
+  if [[ ! "$feature_spec_name" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}-[A-Za-z0-9][A-Za-z0-9-]*[.]md$ ]]; then
+    fail "invalid tracked feature-spec filename: $feature_spec"
+  fi
+done < <(git ls-files -z -- '.harness/specs/features/*.md')
+
 for reference in \
   '.harness/references/writing-great-skills/SKILL.md' \
   '.harness/references/writing-great-skills/GLOSSARY.md' \
@@ -158,6 +168,31 @@ for reference in \
     "concept guide is missing writing-great-skills evidence: $reference"
 done
 
+for concept in \
+  'Interview' \
+  'Seed' \
+  'Execute' \
+  'Evaluate' \
+  'Evolve'; do
+  assert_contains .harness/guides/concept-application.md "$concept" \
+    "concept guide is missing adopted Ouroboros concept: $concept"
+done
+
+for mapping in \
+  '가정·성공 기준·비목표' \
+  '승인된 기능 기획서' \
+  'Explorer → Planner → Implementer' \
+  'Mechanical·Semantic·Independent Review' \
+  'friction' \
+  '$harness-improve'; do
+  assert_contains .harness/guides/concept-application.md "$mapping" \
+    "concept guide is missing canonical Ouroboros mapping: $mapping"
+done
+
+assert_contains .harness/guides/concept-application.md \
+  'Ouroboros 자체는 설치하거나 실행하지 않는다' \
+  'concept guide must state that Ouroboros itself is not installed or executed'
+
 for pointer in \
   'AGENTS.md' \
   '../../.claude/skills/work/SKILL.md' \
@@ -166,6 +201,20 @@ for pointer in \
   '공유 하네스 변경'; do
   assert_contains .harness/guides/quick-start.md "$pointer" \
     "quick-start guide is missing canonical workflow guidance: $pointer"
+done
+
+for invocation in \
+  'Claude Code에서는 `/work`와 `/harness-improve`' \
+  'Codex에서는 `$work`와 `$harness-improve`'; do
+  assert_contains .harness/guides/quick-start.md "$invocation" \
+    "quick-start guide is missing runtime-specific invocation: $invocation"
+done
+
+for condition in \
+  '먼저 정본 trigger' \
+  '없거나 모호한 경우에만 Specifier'; do
+  assert_contains .harness/guides/quick-start.md "$condition" \
+    "quick-start guide is missing the two-stage Specifier condition: $condition"
 done
 
 assert_not_contains .harness/guides/quick-start.md \
@@ -233,7 +282,7 @@ for instruction in \
   'domain rules' \
   'public interfaces' \
   'persisted formats' \
-  'ambiguous feature request without an approved feature specification'; do
+  'ambiguous feature requests'; do
   assert_contains .claude/skills/work/SKILL.md "$instruction" \
     "work Skill is missing Specifier contract guidance: $instruction"
 done

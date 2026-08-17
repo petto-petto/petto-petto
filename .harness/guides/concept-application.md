@@ -2,10 +2,8 @@
 
 ## 결론
 
-이 저장소는 writing-great-skills의 저작 원칙과 Ouroboros의 개선 루프라는
-**개념**을 공유 하네스에 적용한다. 그러나 writing-great-skills나 Ouroboros라는
-별도 런타임, 패키지, 플러그인, 데몬, 훅, 자동 에이전트를 설치하거나 실행하지는
-않는다. 실행되는 것은 저장소의 Markdown 지침과 쉘 검증뿐이다.
+이 저장소는 writing-great-skills의 저작 원칙과 Ouroboros의 개념을 공유
+하네스에 적용한다. 실행되는 것은 저장소의 Markdown 지침과 쉘 검증뿐이다.
 
 ## writing-great-skills: 이전과 이후
 
@@ -24,29 +22,21 @@ duplication·sediment·no-op 제거, 그리고 관찰 가능한 완료 기준이
 `$harness-improve`의 pruning으로 최소 변경을 고르는 행동을 이끈다. 두 파일은
 읽기 위한 embedded reference이며 수정 대상이나 실행 엔진이 아니다.
 
-## Ouroboros: 이전과 이후
+## Ouroboros: 다섯 개념의 대응
 
-Ouroboros에서 가져온 것은 결과를 다시 근거로 삼아 다음 개선을 좁히는 순환의
-발상이다. 이 저장소의 실제 순환은 다음처럼 관찰된다.
+Ouroboros 자체는 설치하거나 실행하지 않는다. 채택한 다섯 개념만 정본 흐름에
+다음처럼 대응한다.
 
-```text
-반복 friction 또는 요청
-  → Evidence와 baseline
-  → 원인 분류·pruning·승인
-  → 실행 계약 RED
-  → 최소 정본 변경
-  → 같은 계약 GREEN
-  → verify-contract 및 CHANGELOG 기록
-```
+| 개념 | 정본 workflow 대응 |
+| --- | --- |
+| Interview | 요청의 가정·성공 기준·비목표와 미해결 결정을 명시한다. |
+| Seed | 승인된 기능 기획서를 standard track의 Seed로 사용한다. |
+| Execute | `Explorer → Planner → Implementer`가 탐색, 계획, 구현을 수행한다. |
+| Evaluate | Verifier와 Reviewer가 `Mechanical·Semantic·Independent Review`를 순서대로 기록한다. |
+| Evolve | 재사용 지식이나 반복 friction의 처리를 기록하고, 개선이 필요하면 `$harness-improve`로 Evidence→RED→GREEN→계약 검증을 수행한다. |
 
-| 이전에 피해야 할 상태 | 현재 적용 | 설치 여부 |
-| --- | --- | --- |
-| 관찰 없는 규칙 추가 | `$harness-improve`의 Evidence와 baseline 요구 | 별도 Ouroboros 런타임 없음 |
-| 개선 결과를 재현할 수 없음 | RED/GREEN 출력과 `verify-contract.sh` 기록 | 자동 반복 실행기 없음 |
-| 해결책을 여러 위치에 복제 | 정본을 고치고 어댑터는 포인터로 유지 | 자동 코드 생성기 없음 |
-
-따라서 "Ouroboros를 도입했다"는 말은 위의 evidence-driven 개선 흐름을 뜻할 뿐,
-프로세스가 스스로 모델을 호출하거나 저장소를 자동 변경한다는 뜻이 아니다.
+즉 이 대응은 개념 적용일 뿐, 프로세스가 스스로 모델을 호출하거나 저장소를 자동
+변경한다는 뜻이 아니다.
 
 ## Claude Code와 Codex의 공유 방식
 

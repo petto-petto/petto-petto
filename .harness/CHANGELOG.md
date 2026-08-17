@@ -28,6 +28,16 @@
 
 - Korean guides now point verification and feature workflow readers to their
   canonical owners; the contract rejects tracked Markdown plans from the index.
+- Feature-spec triggers are evaluated before track selection, so user-visible
+  behavior, domain rules, public interfaces, persisted formats, and ambiguous
+  requests cannot bypass the standard Specifier gate through lightweight work.
+- Korean guides distinguish Claude Code slash invocation from Codex `$` Skill
+  mentions, state the two-stage Specifier condition, and map Interview, Seed,
+  Execute, Evaluate, and Evolve to the canonical workflow.
+- The contract rejects every index-tracked feature specification except
+  `README.md` and dated `YYYY-MM-DD-<feature-name>.md` files, including
+  index-only entries. Specifier and the feature template now assign product
+  `what`/`why` to the specification and technical `how` to planning.
 
 ### Removed
 

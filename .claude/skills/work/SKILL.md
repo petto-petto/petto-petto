@@ -8,11 +8,23 @@ description: "Feature work, bug fixes, refactors, Rust changes, or explicit `/wo
 ## Entry
 
 Read `AGENTS.md`. Read the applicable rule before changing code; Rust work uses
-`.harness/rules/rust.md`. State `lightweight` or `standard` and the request's
-success criteria before changing files. Use `standard` for new behavior, public
-interfaces, persisted formats, dependencies, or harness changes; use
-`lightweight` only for a bounded, understood local change. The selected track,
-criteria, and non-goals are recorded in the work result.
+`.harness/rules/rust.md`. Before selecting a track, inspect
+[`.harness/specs/features/`](../../../.harness/specs/features/) when the request
+has any feature-spec trigger:
+
+- new or changed user-visible behavior
+- domain rules
+- public interfaces
+- persisted formats
+- ambiguous feature requests
+
+If any trigger applies, choose `standard`; its Interview/Seed phase uses an
+existing approved feature specification or runs Specifier when that
+specification is missing or ambiguous. Otherwise, use `standard` for
+dependencies or harness changes and `lightweight` only for a bounded,
+understood local change. State `lightweight` or `standard` and the request's
+success criteria before changing files. Record the selected track, criteria,
+and non-goals in the work result.
 
 For Rust work, run `bash .harness/scripts/verify-rust.sh` as the shared
 Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
@@ -31,15 +43,8 @@ Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
 
 ## Standard track
 
-1. **Interview/Seed** — run the conditional feature-spec branch when any of
-   these triggers applies:
-   - new or changed user-visible behavior
-   - domain rules
-   - public interfaces
-   - persisted formats
-   - ambiguous feature request without an approved feature specification
-   Inspect [`.harness/specs/features/`](../../../.harness/specs/features/).
-   Use an existing approved feature specification as the Seed. When the feature
+1. **Interview/Seed** — for work sent here by the Entry feature-spec gate, use
+   an existing approved feature specification as the Seed. When the feature
    specification is missing or ambiguous, run the
    [Specifier](../../../.harness/roles/specifier.md) before Explorer; run
    Specifier only for that missing-or-ambiguous branch, wait for requester
