@@ -8,6 +8,11 @@ scenarios=.harness/tests/skill-scenarios.md
 baseline=${WORK_BASELINE_FIXTURE:-.harness/tests/fixtures/work-baseline-response.md}
 post_skill=${WORK_POST_SKILL_FIXTURE:-.harness/tests/fixtures/work-post-skill-response.md}
 contract=.harness/tests/verify-contract.sh
+specifier=.harness/roles/specifier.md
+feature_specs=.harness/specs/features/README.md
+feature_spec_template=.harness/templates/feature-spec.md
+specifier_baseline=.harness/tests/fixtures/work-specifier-baseline-response.md
+specifier_post=.harness/tests/fixtures/work-specifier-post-skill-response.md
 
 fail() {
   printf 'FAIL: %s\n' "$1"
@@ -124,6 +129,11 @@ assert_file "$scenarios"
 assert_file "$baseline"
 assert_file "$post_skill"
 assert_file "$contract"
+assert_file "$specifier"
+assert_file "$feature_specs"
+assert_file "$feature_spec_template"
+assert_file "$specifier_baseline"
+assert_file "$specifier_post"
 
 assert_sha256 "$baseline" d1e7a35a766c977fea66d32ed0670833ad3ee08ded2ca2394b2c5f023f0110f5
 assert_sha256 "$post_skill" 9368c26cdab8fff8e04e4a81e235376358b09c35e17254dff6abec4d2b9bbcce
@@ -183,6 +193,49 @@ assert_contains "$skill" '[Verifier](../../../.harness/roles/verifier.md)' \
   'work Skill must point to the Verifier contract'
 assert_contains "$skill" '[Reviewer](../../../.harness/roles/reviewer.md)' \
   'work Skill must point to the Reviewer contract'
+assert_contains "$skill" '[Specifier](../../../.harness/roles/specifier.md)' \
+  'work Skill must point to the Specifier contract'
+assert_contains "$skill" '.harness/specs/features/' \
+  'work Skill must point to the feature-spec directory'
+assert_contains "$skill" 'existing approved feature specification' \
+  'work Skill must use an approved feature specification as the Seed'
+assert_contains "$skill" 'missing or ambiguous' \
+  'work Skill must invoke Specifier only when the feature specification is missing or ambiguous'
+assert_contains "$skill" 'Specifier only for that missing-or-ambiguous branch' \
+  'work Skill must require Specifier output only for the missing-or-ambiguous branch'
+
+for role in explorer planner implementer verifier reviewer; do
+  assert_contains "$skill" ".harness/roles/$role.md" \
+    "work Skill must preserve the $role core role"
+done
+
+for heading in \
+  '## Status' \
+  '## Owner' \
+  '## Problem and user outcome' \
+  '## Scope' \
+  '## Non-goals' \
+  '## Domain rules' \
+  '## Acceptance criteria' \
+  '## Edge and error cases' \
+  '## API and data impact' \
+  '## Open questions' \
+  '## Related implementation plan'; do
+  assert_contains "$feature_spec_template" "$heading" \
+    "feature-spec template is missing required section: $heading"
+done
+
+assert_not_contains "$specifier_baseline" '.harness/specs/features/' \
+  'Specifier baseline fixture must omit a feature-spec path'
+
+for required in \
+  '.harness/specs/features/' \
+  'Draft' \
+  '승인' \
+  'Explorer → Planner → Implementer → Verifier → Reviewer'; do
+  assert_contains "$specifier_post" "$required" \
+    "Specifier post-Skill fixture is missing required result: $required"
+done
 assert_contains "$scenarios" 'fixtures/work-baseline-response.md' \
   'scenario record must point to the baseline fixture'
 assert_contains "$scenarios" 'fixtures/work-post-skill-response.md' \

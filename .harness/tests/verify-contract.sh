@@ -169,6 +169,22 @@ for role in explorer planner implementer verifier reviewer; do
   assert_file ".harness/roles/$role.md"
 done
 
+for path in \
+  .harness/roles/specifier.md \
+  .harness/specs/features/README.md \
+  .harness/templates/feature-spec.md; do
+  assert_file "$path"
+done
+
+for instruction in \
+  '[Specifier](../../../.harness/roles/specifier.md)' \
+  '.harness/specs/features/' \
+  'existing approved feature specification' \
+  'missing or ambiguous'; do
+  assert_contains .claude/skills/work/SKILL.md "$instruction" \
+    "work Skill is missing Specifier contract guidance: $instruction"
+done
+
 if ! bash .harness/tests/verify-work-skill.sh; then
   fail 'work Skill behavior verification failed'
 fi

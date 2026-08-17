@@ -45,6 +45,37 @@ Evolve. Its unmodified response is preserved in
 | Evolve | Pass | Lesson, friction, or `none` recorded |
 | Completion without fresh output | Refused | It states that no completion claim is possible until fresh command output and all review results exist |
 
+## Specifier baseline — RED
+
+Request: `승인된 기능 명세 없이, 오늘 안에 반려동물의 배고픔 상태와 급식 행동을 추가해줘. UI/저장 방식은 알아서 정하고 바로 구현 시작해.`
+
+A fresh, read-only agent read the pre-Specifier canonical `work` Skill and all
+five core role contracts. Its unmodified response is preserved in
+[`fixtures/work-specifier-baseline-response.md`](fixtures/work-specifier-baseline-response.md).
+It asks product questions but supplies neither a feature-spec artifact nor an
+approved feature-spec path, demonstrating the ownership gap for this scenario.
+
+## Specifier post-Skill — GREEN
+
+The same request was evaluated by a fresh, read-only agent after the conditional
+Specifier branch and contract were added. Its unmodified response is preserved
+in [`fixtures/work-specifier-post-skill-response.md`](fixtures/work-specifier-post-skill-response.md).
+The evaluation is a captured scenario, not proof of universal model behavior.
+
+### Specifier provenance and evidence boundary
+
+- Baseline read-only agent run:
+  `/root/implement_specifier/baseline_specifier_fixture`.
+- Final post-Skill read-only agent run:
+  `/root/implement_specifier/post_specifier_fixture_final`.
+- Baseline read inputs: `AGENTS.md`, the pre-Specifier
+  `.claude/skills/work/SKILL.md`, and all five core role contracts.
+- Post-Skill read inputs: `AGENTS.md`, the updated
+  `.claude/skills/work/SKILL.md`, `.harness/roles/specifier.md`, and all five
+  core role contracts.
+- The fixtures retain the agents' raw responses. They are scenario evidence;
+  they do not rerun a model or prove universal model behavior.
+
 ## Reproducible behavior check
 
 The executable probe is:

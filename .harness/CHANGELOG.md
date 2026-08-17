@@ -4,6 +4,13 @@
 
 ### Added
 
+- Conditional Specifier branch for new or changed features with a missing or
+  ambiguous specification. Approved feature specifications in
+  `.harness/specs/features/` are standard-track Seeds; Explorer, Planner,
+  Implementer, Verifier, and Reviewer remain the five core roles. RED and GREEN
+  evidence is retained in the Specifier fixture scenario and contract checks:
+  `verify-work-skill.sh` was RED with 18 missing-Specifier assertions, then
+  `verify-work-skill.sh` and `verify-contract.sh` were GREEN.
 - Common Rust harness entrypoints, rules, embedded writing references, and contract verification.
 - Canonical `work` Skill, runtime-neutral role contracts, and reproducible work-scenario evidence.
 - Task 2: executable `work` Skill behavior verification.

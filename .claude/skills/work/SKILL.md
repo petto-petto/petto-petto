@@ -31,9 +31,18 @@ Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
 
 ## Standard track
 
-1. **Interview/Seed** — resolve open questions, assumptions, success criteria,
+1. **Interview/Seed** — for a new or changed feature, inspect
+   [`.harness/specs/features/`](../../../.harness/specs/features/). Use an
+   existing approved feature specification as the Seed. When the feature
+   specification is missing or ambiguous, run the
+   [Specifier](../../../.harness/roles/specifier.md) before Explorer; run
+   Specifier only for that missing-or-ambiguous branch, wait for requester
+   approval, report its proposed `Draft` path, then record the approved
+   feature-spec path as the Seed. Until approval, state that
+   `Explorer → Planner → Implementer → Verifier → Reviewer` is blocked. For
+   other standard work, resolve open questions, assumptions, success criteria,
    and non-goals before exploration. Done when each is answered or explicitly
-   deferred with its owner.
+   deferred with its owner, and applicable feature work has an approved Seed.
 2. **Explore and plan** — run the [Explorer](../../../.harness/roles/explorer.md)
    and [Planner](../../../.harness/roles/planner.md) contracts to turn the Seed
    into small, testable changes. Done when the plan names its tests and verification.
