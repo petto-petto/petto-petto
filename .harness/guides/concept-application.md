@@ -33,7 +33,7 @@ Ouroboros 자체는 설치하거나 실행하지 않는다. 채택한 다섯 개
 | Seed | 승인된 기능 기획서를 standard track의 Seed로 사용한다. |
 | Execute | `Explorer → Planner → Implementer`가 탐색, 계획, 구현을 수행한다. |
 | Evaluate | Verifier와 Reviewer가 `Mechanical·Semantic·Independent Review`를 순서대로 기록한다. |
-| Evolve | 재사용 지식이나 반복 friction의 처리를 기록하고, 개선이 필요하면 `$harness-improve`로 Evidence→RED→GREEN→계약 검증을 수행한다. |
+| Evolve | 재사용 지식이나 반복 friction의 처리를 기록하고, 개선이 필요하면 공용 `harness-improve` Skill로 Evidence→RED→GREEN→계약 검증을 수행한다. |
 
 즉 이 대응은 개념 적용일 뿐, 프로세스가 스스로 모델을 호출하거나 저장소를 자동
 변경한다는 뜻이 아니다.
