@@ -133,17 +133,21 @@ for path in \
 done
 
 for path in \
-  .harness/guides/quick-start.md \
-  .harness/guides/concept-application.md; do
+  .harness/guides/quick-start.html \
+  .harness/guides/concept-application.html; do
   assert_file "$path"
 done
 
 for guide in \
-  '.harness/guides/quick-start.md' \
-  '.harness/guides/concept-application.md'; do
+  '.harness/guides/quick-start.html' \
+  '.harness/guides/concept-application.html'; do
   assert_contains .harness/README.md "$guide" \
     "README is missing Korean guide pointer: $guide"
 done
+
+if git ls-files -- '.harness/guides/*.md' | grep -q .; then
+  fail 'tracked Markdown guide remains under .harness/guides/'
+fi
 
 if git ls-files -- '.harness/plans/*.md' | grep -q .; then
   fail 'tracked Markdown document remains under .harness/plans/'
@@ -161,10 +165,10 @@ done < <(git ls-files -z -- '.harness/specs/features/*.md')
 
 for reference in \
   '.harness/references/writing-great-skills/SKILL.md' \
-  '.harness/references/writing-great-skills/GLOSSARY.md' \
-  '정본 위치와 progressive disclosure' \
+  'GLOSSARY.md' \
+  'Progressive disclosure' \
   'duplication·sediment·no-op'; do
-  assert_contains .harness/guides/concept-application.md "$reference" \
+  assert_contains .harness/guides/concept-application.html "$reference" \
     "concept guide is missing writing-great-skills evidence: $reference"
 done
 
@@ -174,50 +178,52 @@ for concept in \
   'Execute' \
   'Evaluate' \
   'Evolve'; do
-  assert_contains .harness/guides/concept-application.md "$concept" \
+  assert_contains .harness/guides/concept-application.html "$concept" \
     "concept guide is missing adopted Ouroboros concept: $concept"
 done
 
 for mapping in \
-  '가정·성공 기준·비목표' \
-  '승인된 기능 기획서' \
+  '성공 기준과 비목표' \
+  '승인된 기획서를 Seed' \
   'Explorer → Planner → Implementer' \
-  'Mechanical·Semantic·Independent Review' \
+  'Mechanical' \
+  'Semantic' \
+  'Independent Review' \
   'friction' \
   '$harness-improve'; do
-  assert_contains .harness/guides/concept-application.md "$mapping" \
+  assert_contains .harness/guides/concept-application.html "$mapping" \
     "concept guide is missing canonical Ouroboros mapping: $mapping"
 done
 
-assert_contains .harness/guides/concept-application.md \
-  'Ouroboros 자체는 설치하거나 실행하지 않는다' \
+assert_contains .harness/guides/concept-application.html \
+  '외부 도구를 설치하거나 모델 호출을 자동화하지 않습니다' \
   'concept guide must state that Ouroboros itself is not installed or executed'
 
 for pointer in \
   'AGENTS.md' \
-  '../../.claude/skills/work/SKILL.md' \
-  '../roles/specifier.md' \
-  '적용 가능한 검사' \
-  '공유 하네스 변경'; do
-  assert_contains .harness/guides/quick-start.md "$pointer" \
+  '.claude/skills/' \
+  'feature-spec trigger' \
+  '적용 가능한 formatter' \
+  '공통 규칙·Skill·역할·검증'; do
+  assert_contains .harness/guides/quick-start.html "$pointer" \
     "quick-start guide is missing canonical workflow guidance: $pointer"
 done
 
 for invocation in \
-  'Claude Code에서는 `/work`와 `/harness-improve`' \
-  'Codex에서는 `$work`와 `$harness-improve`'; do
-  assert_contains .harness/guides/quick-start.md "$invocation" \
+  '/work · /harness-improve' \
+  '$work · $harness-improve'; do
+  assert_contains .harness/guides/quick-start.html "$invocation" \
     "quick-start guide is missing runtime-specific invocation: $invocation"
 done
 
 for condition in \
-  '먼저 정본 trigger' \
-  '없거나 모호한 경우에만 Specifier'; do
-  assert_contains .harness/guides/quick-start.md "$condition" \
+  'trigger가 적용되어 standard로 들어온' \
+  '없거나 모호하면 조건부 Specifier'; do
+  assert_contains .harness/guides/quick-start.html "$condition" \
     "quick-start guide is missing the two-stage Specifier condition: $condition"
 done
 
-assert_not_contains .harness/guides/quick-start.md \
+assert_not_contains .harness/guides/quick-start.html \
   '하네스 변경 여부와 관계없이' \
   'quick-start guide makes contract verification unconditional'
 

@@ -27,10 +27,10 @@ The Rust command sequence has one source of truth in `rules/rust.md`; the runner
 
 ## Korean team guides
 
-- [Quick start (`.harness/guides/quick-start.md`)](guides/quick-start.md)
+- [Quick start (`.harness/guides/quick-start.html`)](guides/quick-start.html)
   explains how Claude Code and Codex select the work flow, create conditional
   feature specifications, verify work, and report completion.
-- [Concept application (`.harness/guides/concept-application.md`)](guides/concept-application.md)
+- [Concept application (`.harness/guides/concept-application.html`)](guides/concept-application.html)
   explains adopted design concepts, canonical runtime sharing, and the evidence
   boundary.
 

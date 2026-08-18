@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Claude Code와 Codex가 공유 하네스를 사용하는 방법을 빠르게 확인하는 팀 가이드">
+  <title>공유 하네스 빠른 시작 | tamagochi-pet</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface-soft: #f8faff;
+      --text: #172033;
+      --muted: #5c667d;
+      --line: #dce2ee;
+      --primary: #4f46e5;
+      --primary-strong: #3730a3;
+      --primary-soft: #eef2ff;
+      --accent: #0f766e;
+      --accent-soft: #ecfdf5;
+      --warning: #9a3412;
+      --warning-soft: #fff7ed;
+      --code-bg: #111827;
+      --code-text: #e5e7eb;
+      --shadow: 0 18px 50px rgba(31, 41, 55, 0.08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 12% -5%, rgba(79, 70, 229, 0.12), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      font-size: 16px;
+      line-height: 1.72;
+      word-break: keep-all;
+    }
+
+    a { color: var(--primary-strong); text-underline-offset: 0.18em; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible, button:focus-visible {
+      outline: 3px solid color-mix(in srgb, var(--primary) 55%, white);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+    code {
+      padding: 0.14em 0.38em;
+      border-radius: 6px;
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+      word-break: break-word;
+    }
+    pre {
+      overflow-x: auto;
+      margin: 1rem 0 0;
+      padding: 1rem 1.15rem;
+      border: 1px solid #293247;
+      border-radius: 13px;
+      background: var(--code-bg);
+      box-shadow: inset 0 1px rgba(255, 255, 255, 0.06);
+    }
+    pre code { padding: 0; background: transparent; color: var(--code-text); font-size: 0.9rem; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 0.75rem;
+      left: 0.75rem;
+      transform: translateY(-180%);
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      background: var(--primary-strong);
+      color: white;
+      font-weight: 700;
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .topbar {
+      border-bottom: 1px solid rgba(220, 226, 238, 0.85);
+      background: color-mix(in srgb, var(--surface) 88%, transparent);
+      backdrop-filter: blur(12px);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      min-height: 62px;
+    }
+    .brand { color: var(--text); font-weight: 800; letter-spacing: -0.02em; text-decoration: none; }
+    .topnav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .topnav span {
+      padding: 0.45rem 0.7rem;
+      border-radius: 9px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 650;
+    }
+    .topnav .current { background: var(--primary-soft); color: var(--primary-strong); }
+
+    .hero {
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 4.5rem 0 3.25rem;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0 0 1rem;
+      color: var(--primary-strong);
+      font-size: 0.82rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { width: 28px; height: 2px; background: var(--primary); content: ""; }
+    h1, h2, h3 { margin-top: 0; line-height: 1.28; letter-spacing: -0.035em; }
+    h1 { max-width: 760px; margin-bottom: 1rem; font-size: clamp(2.25rem, 6vw, 4.4rem); }
+    h2 { margin-bottom: 0.85rem; font-size: clamp(1.5rem, 3vw, 2rem); }
+    h3 { margin-bottom: 0.45rem; font-size: 1.05rem; }
+    .lede { max-width: 760px; margin: 0; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.25rem); }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.5rem; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 700;
+    }
+
+    .page-grid {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 2rem;
+      align-items: start;
+      width: min(1180px, calc(100% - 2rem));
+      margin: 0 auto 5rem;
+    }
+    .toc {
+      position: sticky;
+      top: 1.25rem;
+      padding: 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      background: var(--surface);
+      box-shadow: 0 10px 35px rgba(31, 41, 55, 0.05);
+    }
+    .toc strong { display: block; margin-bottom: 0.55rem; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; }
+    .toc ol { margin: 0; padding: 0; list-style: none; }
+    .toc li + li { margin-top: 0.15rem; }
+    .toc a { display: block; padding: 0.42rem 0.5rem; border-radius: 8px; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
+    .toc a:hover { background: var(--surface-soft); color: var(--primary-strong); }
+
+    main { min-width: 0; }
+    .panel {
+      margin-bottom: 1.25rem;
+      padding: clamp(1.35rem, 3vw, 2rem);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      scroll-margin-top: 1rem;
+    }
+    .section-label { margin: 0 0 0.45rem; color: var(--primary); font-size: 0.78rem; font-weight: 850; letter-spacing: 0.09em; text-transform: uppercase; }
+    .panel > :last-child { margin-bottom: 0; }
+    .muted { color: var(--muted); }
+
+    .callout {
+      padding: 1.15rem 1.25rem;
+      border: 1px solid color-mix(in srgb, var(--primary) 25%, var(--line));
+      border-left: 5px solid var(--primary);
+      border-radius: 13px;
+      background: var(--primary-soft);
+    }
+    .callout strong { display: block; margin-bottom: 0.25rem; color: var(--primary-strong); }
+    .callout p { margin: 0; }
+    .callout.warning { border-color: color-mix(in srgb, var(--warning) 25%, var(--line)); border-left-color: var(--warning); background: var(--warning-soft); }
+    .callout.warning strong { color: var(--warning); }
+
+    .runtime-grid, .step-grid, .command-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+    .card {
+      padding: 1.05rem;
+      border: 1px solid var(--line);
+      border-radius: 13px;
+      background: var(--surface-soft);
+    }
+    .card p { margin: 0; color: var(--muted); }
+    .card .command { display: inline-block; margin-top: 0.65rem; padding: 0.35rem 0.55rem; border-radius: 8px; background: var(--code-bg); color: var(--code-text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .step { position: relative; padding-left: 3.4rem; }
+    .step-number {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: grid;
+      width: 1.8rem;
+      height: 1.8rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      font-size: 0.8rem;
+      font-weight: 850;
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      align-items: center;
+      margin: 1.2rem 0;
+    }
+    .role {
+      padding: 0.65rem 0.8rem;
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+    }
+    .arrow { color: var(--muted); font-weight: 900; }
+    .checklist { margin: 1rem 0 0; padding: 0; list-style: none; }
+    .checklist li { position: relative; padding-left: 1.65rem; }
+    .checklist li + li { margin-top: 0.55rem; }
+    .checklist li::before { position: absolute; left: 0; color: var(--accent); font-weight: 900; content: "✓"; }
+
+    .command-banner {
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 1rem;
+      align-items: center;
+      margin: 1rem 0;
+      padding: 1rem 1.1rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+    }
+    .command-token {
+      padding: 0.6rem 0.75rem;
+      border-radius: 10px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .command-banner p { margin: 0; color: var(--muted); }
+    .pipeline {
+      display: grid;
+      gap: 0.75rem;
+      margin: 1.1rem 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: pipeline;
+    }
+    .phase {
+      position: relative;
+      padding: 1rem 1rem 1rem 4rem;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface-soft);
+      counter-increment: pipeline;
+    }
+    .phase::before {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      display: grid;
+      width: 2rem;
+      height: 2rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      content: counter(pipeline);
+      font-size: 0.82rem;
+      font-weight: 850;
+    }
+    .phase h3 { margin-bottom: 0.3rem; }
+    .phase p { margin: 0; color: var(--muted); }
+    .phase-note { display: block; margin-top: 0.6rem; color: var(--text); font-size: 0.9rem; }
+    .track-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+      margin-top: 1rem;
+    }
+    .track-card { border-top: 4px solid var(--primary); }
+    .track-card.standard { border-top-color: var(--accent); }
+    .stage-map {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+      margin: 0.9rem 0 0;
+    }
+    .stage-map span {
+      padding: 0.38rem 0.55rem;
+      border-radius: 8px;
+      background: var(--primary-soft);
+      color: var(--primary-strong);
+      font-size: 0.84rem;
+      font-weight: 750;
+    }
+    .stage-map b { color: var(--muted); }
+    .why {
+      margin-top: 0.85rem;
+      padding-top: 0.75rem;
+      border-top: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    footer {
+      padding: 2rem 1rem 3rem;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      text-align: center;
+      font-size: 0.9rem;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1420;
+        --surface: #171e2d;
+        --surface-soft: #1d2638;
+        --text: #eef2ff;
+        --muted: #b2bdd1;
+        --line: #303a4d;
+        --primary: #a5b4fc;
+        --primary-strong: #c7d2fe;
+        --primary-soft: #24264e;
+        --accent: #5eead4;
+        --accent-soft: #143a39;
+        --warning: #fdba74;
+        --warning-soft: #472818;
+        --shadow: 0 18px 50px rgba(0, 0, 0, 0.24);
+      }
+    }
+
+    @media (max-width: 820px) {
+      body { word-break: normal; }
+      .topbar-inner { align-items: flex-start; flex-direction: column; padding: 0.8rem 0; }
+      .hero { padding: 3.25rem 0 2.25rem; }
+      .page-grid { grid-template-columns: 1fr; }
+      .toc { position: static; }
+      .runtime-grid, .step-grid, .command-grid, .track-grid { grid-template-columns: 1fr; }
+      .command-banner { grid-template-columns: 1fr; }
+      .arrow { transform: rotate(90deg); }
+      .flow { flex-direction: column; align-items: stretch; text-align: center; }
+    }
+
+    @media print {
+      :root { color-scheme: light; --bg: white; --surface: white; --surface-soft: #f8fafc; --text: #111827; --muted: #475569; --line: #cbd5e1; --primary-strong: #3730a3; --primary-soft: #eef2ff; --accent: #0f766e; --accent-soft: #ecfdf5; --warning: #9a3412; --warning-soft: #fff7ed; --shadow: none; }
+      body { background: white; font-size: 10.5pt; }
+      .topbar, .toc, .skip-link { display: none; }
+      .hero, .page-grid { width: 100%; }
+      .hero { padding: 1rem 0 1.5rem; }
+      .page-grid { display: block; }
+      .panel { break-inside: avoid; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+
+  <nav class="topbar" aria-label="현재 가이드">
+    <div class="topbar-inner">
+      <span class="brand">tamagochi-pet · Shared Harness</span>
+      <div class="topnav">
+        <span class="current">실행 가이드</span>
+        <span>work</span>
+        <span>harness-improve</span>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <p class="eyebrow">Team Guide · Command First</p>
+    <h1>두 명령으로 시작하는<br>공유 하네스 실행 가이드</h1>
+    <p class="lede">팀원이 외워야 할 진입점은 <code>work</code>와 <code>harness-improve</code>뿐입니다. 명령을 호출하면 어떤 판단과 역할, 검증 pipeline이 이어지는지 순서대로 설명합니다.</p>
+    <div class="hero-meta" aria-label="문서 특성">
+      <span class="badge">한글 팀 공유용</span>
+      <span class="badge">Claude Code + Codex</span>
+      <span class="badge">Pipeline 중심</span>
+    </div>
+  </header>
+
+  <div class="page-grid">
+    <aside class="toc" aria-label="문서 목차">
+      <strong>이 문서에서</strong>
+      <ol>
+        <li><a href="#command-model">어떤 명령을 쓰나</a></li>
+        <li><a href="#work-command">work 전체 흐름</a></li>
+        <li><a href="#track-gate">track 분기</a></li>
+        <li><a href="#work-lightweight">lightweight flow</a></li>
+        <li><a href="#work-standard">standard flow</a></li>
+        <li><a href="#work-completion">work 완료 조건</a></li>
+        <li><a href="#harness-improve-command">harness-improve 흐름</a></li>
+      </ol>
+    </aside>
+
+    <main id="main-content">
+      <section class="panel" id="command-model">
+        <p class="section-label">01 · Choose Command</p>
+        <h2>일반 작업은 <code>work</code>, 하네스 변경은 <code>harness-improve</code></h2>
+        <div class="callout">
+          <strong>먼저 이것만 기억하세요</strong>
+          <p>기능·버그·리팩터링·Rust 변경은 <code>work</code>로 시작합니다. 공통 규칙·Skill·역할·검증이나 반복 friction을 바꾸는 일은 <code>harness-improve</code>로 시작합니다.</p>
+        </div>
+        <div class="runtime-grid">
+          <article class="card">
+            <h3>Claude Code</h3>
+            <p>슬래시 명령으로 호출합니다.</p>
+            <span class="command">/work · /harness-improve</span>
+          </article>
+          <article class="card">
+            <h3>Codex</h3>
+            <p><code>$</code> 접두사로 Skill을 언급합니다.</p>
+            <span class="command">$work · $harness-improve</span>
+          </article>
+        </div>
+        <p class="muted">호출 문법은 달라도 두 런타임 모두 <code>AGENTS.md</code>, <code>.claude/skills/</code>, <code>.harness/</code>의 같은 정본과 검증 명령을 사용합니다.</p>
+      </section>
+
+      <section class="panel" id="work-command">
+        <p class="section-label">02 · work Pipeline</p>
+        <h2><code>work</code>는 먼저 일을 분류한 뒤, 필요한 깊이만큼 실행합니다</h2>
+        <div class="command-banner">
+          <span class="command-token">/work 또는 $work</span>
+          <p>요청과 성공 기준을 받은 뒤 <strong>Entry → track 선택 → 실행 → 검증 → 완료 기록</strong> 순서로 진행합니다.</p>
+        </div>
+        <div class="stage-map" aria-label="work 상위 흐름">
+          <span>요청·성공 기준</span><b>→</b><span>Entry 판단</span><b>→</b><span>lightweight / standard</span><b>→</b><span>fresh 검증</span><b>→</b><span>완료 기록</span>
+        </div>
+      </section>
+
+      <section class="panel" id="track-gate">
+        <p class="section-label">03 · work Entry</p>
+        <h2>track보다 먼저 feature-spec trigger를 확인합니다</h2>
+        <p>사용자에게 보이는 새 동작이나 변경, 도메인 규칙, 공개 인터페이스, 저장 형식, 모호한 기능 요청 중 하나라도 해당하면 <strong>standard</strong>를 선택합니다. 의존성 작업도 standard입니다. 그 외에 범위가 작고 이미 이해된 로컬 변경만 <strong>lightweight</strong>를 선택할 수 있습니다.</p>
+        <div class="track-grid">
+          <article class="card track-card">
+            <h3>lightweight</h3>
+            <p>경계와 성공 기준이 이미 분명한 작은 로컬 변경을 빠르게 검증합니다.</p>
+          </article>
+          <article class="card track-card standard">
+            <h3>standard</h3>
+            <p>제품 결정, 여러 경로, 의존성 또는 넓은 검증이 필요한 작업을 역할별로 분리합니다.</p>
+          </article>
+        </div>
+        <div class="callout warning">
+          <strong>기획서가 없다는 사실만으로 gate를 넓히지 않습니다</strong>
+          <p>먼저 trigger가 적용되어 standard로 들어온 기능 작업인지 확인합니다. 그 다음에만 승인된 기능 기획서를 찾고, 없거나 모호하면 조건부 Specifier를 실행합니다.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="work-lightweight">
+        <p class="section-label">04 · work / Lightweight</p>
+        <h2>작은 변경은 네 단계의 짧은 loop로 끝냅니다</h2>
+        <ol class="pipeline">
+          <li class="phase">
+            <h3>Scope confirmation</h3>
+            <p>영향받는 동작, 변경 경계, 성공 기준을 먼저 고정합니다.</p>
+            <span class="phase-note"><strong>원리:</strong> 작은 작업도 경계가 없으면 scope drift가 생기므로 완료 조건부터 선명하게 만듭니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Minimal implementation</h3>
+            <p>범위 안에서 가장 작은 변경을 수행하고, 동작 변경이면 집중 테스트를 먼저 실패시킵니다.</p>
+            <span class="phase-note"><strong>원리:</strong> Implementer 역할을 따로 호출하지 않더라도 test-first와 최소 변경 원칙은 유지합니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Mechanical verification</h3>
+            <p>적용 가능한 formatter·build·lint·test를 마지막 변경 뒤 새로 실행합니다.</p>
+            <span class="phase-note"><strong>Rust:</strong> manifest가 준비되어 있으면 <code>bash .harness/scripts/verify-rust.sh</code>가 공용 완료 게이트입니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Diff review</h3>
+            <p>변경 파일을 다시 보고 범위 이탈, 의도하지 않은 편집, 남은 gap을 기록합니다.</p>
+            <span class="phase-note"><strong>원리:</strong> lightweight는 역할 수를 줄이지 증거를 생략하지 않습니다.</span>
+          </li>
+        </ol>
+      </section>
+
+      <section class="panel" id="work-standard">
+        <p class="section-label">05 · work / Standard</p>
+        <h2>제품 결정부터 독립 검토까지 역할을 분리해 흘려보냅니다</h2>
+        <ol class="pipeline">
+          <li class="phase">
+            <h3>Interview / Seed</h3>
+            <p>가정, 성공 기준, 비목표, 미해결 결정을 정리합니다. feature-spec trigger로 들어온 작업은 승인된 기획서를 Seed로 사용합니다.</p>
+            <span class="phase-note"><strong>Specifier가 붙는 때:</strong> 기획서가 없거나 모호할 때만 제품의 what/why를 Draft로 만들고 요청자 승인을 기다립니다. 승인 전에는 뒤의 다섯 역할이 막힙니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Explore and plan</h3>
+            <p><strong>Explorer</strong>가 호출 경로·데이터 경계·기존 패턴과 최소 변경 면을 찾고, <strong>Planner</strong>가 이를 테스트 가능한 순서와 검증 명령으로 바꿉니다.</p>
+            <span class="phase-note"><strong>역할을 나누는 이유:</strong> 사실 탐색과 기술적 how 결정을 분리해 추측이 계획으로 굳는 것을 막습니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Implement</h3>
+            <p><strong>Implementer</strong>가 concern 하나씩 집중 테스트를 RED로 만든 뒤 최소 구현으로 GREEN을 만듭니다.</p>
+            <span class="phase-note"><strong>완료 경계:</strong> Implementer는 구현 증거를 만들지만 전체 완료를 선언하지 않습니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Verify and review</h3>
+            <p><strong>Verifier</strong>가 Mechanical과 Semantic을 수행하고, <strong>Reviewer</strong>가 구현자 밖에서 Independent Review를 수행합니다.</p>
+            <div class="stage-map" aria-label="검토 순서"><span>Mechanical</span><b>→</b><span>Semantic</span><b>→</b><span>Independent Review</span></div>
+            <span class="phase-note"><strong>순서의 의미:</strong> 명령 성공, 성공 기준 충족, 회귀·누락 검토는 서로 다른 질문이므로 한 결과로 뭉치지 않습니다.</span>
+          </li>
+          <li class="phase">
+            <h3>Evolve</h3>
+            <p>재사용할 지식이나 반복 friction을 회수하고, 없으면 <code>none</code>을 명시합니다.</p>
+            <span class="phase-note"><strong>원리:</strong> 한 번의 작업에서 얻은 교훈이 다음 실행의 Seed 또는 하네스 개선 Evidence가 됩니다.</span>
+          </li>
+        </ol>
+        <div class="flow" aria-label="standard 핵심 역할 순서">
+          <span class="role">Explorer</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="role">Planner</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="role">Implementer</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="role">Verifier</span><span class="arrow" aria-hidden="true">→</span>
+          <span class="role">Reviewer</span>
+        </div>
+      </section>
+
+      <section class="panel" id="work-completion">
+        <p class="section-label">06 · work Completion</p>
+        <h2>pipeline의 각 출력을 기록해야 완료입니다</h2>
+        <p><strong>lightweight</strong>는 track·scope·집중 증거·fresh Mechanical 결과·diff review·변경 파일·남은 gap을 기록합니다. <strong>standard</strong>는 여기에 Interview/Seed, 다섯 역할 출력, 세 검토 결과, Evolve disposition을 더 기록합니다.</p>
+        <div class="callout">
+          <strong>fresh output이 없으면 완료가 아닙니다</strong>
+          <p>필수 검사가 막히거나 실패하면 blocker와 남은 gap을 보고합니다. 이전 실행 결과나 정적 설명만으로 통과했다고 표현하지 않습니다.</p>
+        </div>
+      </section>
+
+      <section class="panel" id="harness-improve-command">
+        <p class="section-label">07 · harness-improve Pipeline</p>
+        <h2><code>harness-improve</code>는 Evidence가 승인된 변경으로 진화하는 loop입니다</h2>
+        <div class="command-banner">
+          <span class="command-token">/harness-improve 또는 $harness-improve</span>
+          <p>공유 하네스는 팀 전체의 다음 실행을 바꾸므로, 추측으로 규칙을 추가하지 않고 <strong>Evidence → 승인 → RED/GREEN → 계약 완료</strong>를 강제합니다.</p>
+        </div>
+        <ol class="pipeline">
+          <li class="phase" id="evidence-gate">
+            <h3>Read evidence → Evidence → Root cause</h3>
+            <p><code>writing-great-skills/SKILL.md</code>와 <code>GLOSSARY.md</code>를 순서대로 읽고, 정확한 요청·반복 friction·영향받는 정본·재현 가능한 baseline을 모읍니다. 그 뒤 누락 지침, ownership gap, 중복 entrypoint, 빠진 검사, stale guidance 중 실제 원인을 분류합니다.</p>
+            <span class="phase-note"><strong>요소의 역할:</strong> embedded reference는 규칙을 더 쓰기 위한 재료가 아니라 Evidence를 판정하고 정본을 찾는 기준입니다.</span>
+          </li>
+          <li class="phase" id="approval-gate">
+            <h3>Pruning and smallest change → User approval</h3>
+            <p>single source of truth를 찾고 duplication·sediment·no-op을 먼저 제거합니다. 관찰 가능한 행동을 바꾸는 가장 작은 안, 영향받는 검사, 완료 기준을 제시하고 명시적 승인을 받습니다.</p>
+            <span class="phase-note"><strong>승인 전 경계:</strong> 파일은 바꾸지 않습니다. 읽기 전용 결과에는 RED 이후 단계가 “다음 계획”으로만 기록됩니다.</span>
+          </li>
+          <li class="phase" id="red-green">
+            <h3>RED → smallest canonical change → GREEN</h3>
+            <p>승인된 동작을 검사하는 실행 가능한 계약 또는 behavior check를 먼저 추가해 예상 실패를 기록합니다. 그 다음 정본 한 곳만 최소 수정하고 같은 검사를 통과시킵니다.</p>
+            <span class="phase-note"><strong>어댑터 원리:</strong> Claude/Codex별 지침을 복제하지 않고 <code>.agents/skills/</code>는 <code>.claude/skills/</code> 정본을 가리키는 pointer로 유지합니다.</span>
+          </li>
+          <li class="phase" id="contract-completion">
+            <h3>Contract verification → CHANGELOG → Observable completion</h3>
+            <p><code>bash .harness/tests/verify-contract.sh</code>를 마지막 변경 뒤 실행하고, <code>.harness/CHANGELOG.md</code>와 friction loop에 scenario·정본 변경·남은 gap·결과를 기록합니다.</p>
+            <span class="phase-note"><strong>완료 경계:</strong> 필요한 check가 막히거나 실패하면 완료를 선언하지 않습니다. fixture는 보존된 증거이지 모든 live agent 동작의 보편적 보장이 아닙니다.</span>
+          </li>
+        </ol>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    <p>실행 진입점은 <code>work</code>와 <code>harness-improve</code>입니다. 이 HTML은 팀 설명용이며 실제 완료 조건은 저장소 정본 계약이 소유합니다.</p>
+  </footer>
+</body>
+</html>

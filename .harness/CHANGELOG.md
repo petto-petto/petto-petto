@@ -5,8 +5,8 @@
 ### Added
 
 - Korean quick-start and concept-application guides at
-  `.harness/guides/quick-start.md` and
-  `.harness/guides/concept-application.md`.
+  `.harness/guides/quick-start.html` and
+  `.harness/guides/concept-application.html`.
 - Conditional Specifier branch for new or changed features with a missing or
   ambiguous specification. Approved feature specifications in
   `.harness/specs/features/` are standard-track Seeds; Explorer, Planner,
