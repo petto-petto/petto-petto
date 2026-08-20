@@ -9,6 +9,7 @@ This directory holds the runtime-neutral material for the shared Claude Code and
 - `.claude/skills/` contains the canonical `work` and `harness-improve` Skill bodies.
 - `.agents/skills/` contains relative Codex adapters to those canonical Skill directories.
 - `rules/`, `roles/`, `references/`, and `friction/` hold shared support material.
+- `specs/` contains approved product and harness designs; `plans/` contains implementation plans that reference them.
 - `tests/verify-contract.sh` verifies the harness structure, canonical references, and adapter targets.
 - `scripts/verify-rust.sh` runs the required Cargo completion gate.
 
@@ -24,6 +25,8 @@ bash .harness/scripts/verify-rust.sh
 ```
 
 The Rust command sequence has one source of truth in `rules/rust.md`; the runner stops at the first failed command.
+
+Product work uses the approved specification under `specs/` as its behavioral source of truth. Implementation plans and tests reference the requirement IDs in that specification instead of duplicating product rules.
 
 ## Korean team guides
 

@@ -125,6 +125,7 @@ for path in \
   CLAUDE.md \
   .harness/README.md \
   .harness/CHANGELOG.md \
+  .harness/specs/2026-08-20-meta-info-settings-achievements-design.md \
   .harness/rules/rust.md \
   .harness/rules/skill-authoring.md \
   .harness/references/writing-great-skills/SKILL.md \
@@ -226,6 +227,21 @@ done
 assert_not_contains .harness/guides/quick-start.html \
   '하네스 변경 여부와 관계없이' \
   'quick-start guide makes contract verification unconditional'
+
+for instruction in \
+  '# meta — 정보 · 설정 · 업적 상세 기획' \
+  '## 5. 정보 화면' \
+  '## 6. 설정 화면' \
+  '## 7. 업적' \
+  '## 8. 수집 계약' \
+  '## 12. 인수 조건' \
+  'INFO-001' \
+  'SET-001' \
+  'COLLECT-001' \
+  'ACH-001'; do
+  assert_contains .harness/specs/2026-08-20-meta-info-settings-achievements-design.md "$instruction" \
+    "meta product specification is missing required guidance: $instruction"
+done
 
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'

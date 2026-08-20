@@ -14,6 +14,10 @@
   evidence is retained in the Specifier fixture scenario and contract checks:
   `verify-work-skill.sh` was RED with 18 missing-Specifier assertions, then
   `verify-work-skill.sh` and `verify-contract.sh` were GREEN.
+- Approved meta product specification for information, settings, achievements,
+  three-source local usage collection, and macOS/Windows acceptance criteria.
+- Contract assertions for the meta specification and its implementation-facing
+  requirement ID families.
 - Common Rust harness entrypoints, rules, embedded writing references, and contract verification.
 - Canonical `work` Skill, runtime-neutral role contracts, and reproducible work-scenario evidence.
 - Task 2: executable `work` Skill behavior verification.
