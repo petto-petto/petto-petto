@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="tamagochi-pet의 정보, 설정, 업적 상세 기획을 팀에 소개하는 한 페이지 요약">
+  <title>정보 · 설정 · 업적 한눈에 보기 | tamagochi-pet</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --canvas: #f7f5ef;
+      --surface: #fffdf8;
+      --surface-strong: #ffffff;
+      --ink: #20243a;
+      --muted: #687086;
+      --line: #e4e0d7;
+      --primary: #5c5bd6;
+      --primary-strong: #3d3ca8;
+      --primary-soft: #eeedff;
+      --mint: #147d6f;
+      --mint-soft: #e8f7f2;
+      --coral: #d95f4a;
+      --coral-soft: #fff0eb;
+      --gold: #a56b09;
+      --gold-soft: #fff6d9;
+      --shadow: 0 22px 60px rgba(56, 54, 95, 0.09);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --page: 1160px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(92, 91, 214, 0.14), transparent 28rem),
+        radial-gradient(circle at 94% 18%, rgba(20, 125, 111, 0.10), transparent 24rem),
+        var(--canvas);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      font-size: 16px;
+      line-height: 1.68;
+      word-break: keep-all;
+    }
+
+    a { color: var(--primary-strong); text-underline-offset: 0.2em; }
+    a:hover { text-decoration-thickness: 2px; }
+    a:focus-visible {
+      border-radius: 6px;
+      outline: 3px solid color-mix(in srgb, var(--primary) 55%, white);
+      outline-offset: 3px;
+    }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { line-height: 1.25; letter-spacing: -0.035em; }
+    h1 { margin-bottom: 1.1rem; font-size: clamp(2.4rem, 7vw, 4.9rem); }
+    h2 { margin-bottom: 0.65rem; font-size: clamp(1.55rem, 3vw, 2.15rem); }
+    h3 { margin-bottom: 0.45rem; font-size: 1.08rem; }
+    p { margin-bottom: 0; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 100;
+      top: 0.75rem;
+      left: 0.75rem;
+      transform: translateY(-180%);
+      padding: 0.7rem 1rem;
+      border-radius: 10px;
+      background: var(--primary-strong);
+      color: #fff;
+      font-weight: 800;
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .topbar {
+      border-bottom: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+      background: color-mix(in srgb, var(--surface) 86%, transparent);
+      backdrop-filter: blur(14px);
+    }
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      width: min(var(--page), calc(100% - 2rem));
+      min-height: 64px;
+      margin: 0 auto;
+    }
+    .brand { color: var(--ink); font-weight: 900; letter-spacing: -0.02em; text-decoration: none; }
+    .topnav { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+    .topnav a {
+      padding: 0.42rem 0.68rem;
+      border-radius: 9px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .topnav a:hover, .topnav .current { background: var(--primary-soft); color: var(--primary-strong); }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+      gap: clamp(2rem, 6vw, 5rem);
+      align-items: center;
+      width: min(var(--page), calc(100% - 2rem));
+      margin: 0 auto;
+      padding: clamp(4rem, 9vw, 7.5rem) 0 clamp(3rem, 6vw, 5rem);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+      color: var(--primary-strong);
+      font-size: 0.8rem;
+      font-weight: 900;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before { width: 30px; height: 2px; background: var(--primary); content: ""; }
+    .lede { max-width: 700px; color: var(--muted); font-size: clamp(1.05rem, 2vw, 1.27rem); }
+    .hero-badges { display: flex; flex-wrap: wrap; gap: 0.55rem; margin-top: 1.6rem; }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 0.28rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 800;
+    }
+
+    .pet-stage {
+      position: relative;
+      min-height: 360px;
+      border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--line));
+      border-radius: 34px;
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.15)),
+        repeating-linear-gradient(0deg, transparent 0 31px, rgba(92, 91, 214, 0.05) 31px 32px),
+        var(--primary-soft);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .speech {
+      position: absolute;
+      top: 48px;
+      left: 42px;
+      max-width: 260px;
+      padding: 1.05rem 1.2rem;
+      border: 2px solid var(--ink);
+      border-radius: 20px 20px 20px 5px;
+      background: var(--surface-strong);
+      box-shadow: 7px 7px 0 rgba(32, 36, 58, 0.12);
+      font-size: 0.96rem;
+      font-weight: 850;
+      line-height: 1.45;
+    }
+    .speech small { display: block; margin-top: 0.4rem; color: var(--coral); font-weight: 800; }
+    .pet {
+      position: absolute;
+      right: 56px;
+      bottom: 47px;
+      width: 154px;
+      height: 150px;
+      border: 4px solid var(--ink);
+      border-radius: 48% 48% 44% 44%;
+      background: #ffd86d;
+      box-shadow: inset 0 -13px rgba(165, 107, 9, 0.11), 10px 12px 0 rgba(32, 36, 58, 0.12);
+    }
+    .pet::before, .pet::after {
+      position: absolute;
+      top: 55px;
+      width: 13px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--ink);
+      content: "";
+    }
+    .pet::before { left: 42px; }
+    .pet::after { right: 42px; }
+    .pet-mouth {
+      position: absolute;
+      top: 86px;
+      left: 65px;
+      width: 20px;
+      height: 11px;
+      border: 3px solid var(--ink);
+      border-top: 0;
+      border-radius: 0 0 18px 18px;
+    }
+    .pet-shadow {
+      position: absolute;
+      right: 35px;
+      bottom: 26px;
+      width: 195px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(32, 36, 58, 0.13);
+    }
+
+    main { width: min(var(--page), calc(100% - 2rem)); margin: 0 auto 5rem; }
+    .section { padding: clamp(2rem, 5vw, 4rem) 0; scroll-margin-top: 1rem; }
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 1.5rem;
+      margin-bottom: 1.55rem;
+    }
+    .section-kicker { margin-bottom: 0.35rem; color: var(--primary); font-size: 0.78rem; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; }
+    .section-copy { max-width: 610px; color: var(--muted); }
+
+    .area-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .area-card, .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .area-card { position: relative; min-height: 300px; padding: 1.6rem; overflow: hidden; }
+    .area-card::after {
+      position: absolute;
+      right: -35px;
+      bottom: -45px;
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: var(--card-soft);
+      content: "";
+    }
+    .area-card.info { --card-color: var(--primary); --card-soft: var(--primary-soft); }
+    .area-card.settings { --card-color: var(--mint); --card-soft: var(--mint-soft); }
+    .area-card.achievement { --card-color: var(--coral); --card-soft: var(--coral-soft); }
+    .area-number {
+      display: grid;
+      width: 42px;
+      height: 42px;
+      margin-bottom: 1.2rem;
+      place-items: center;
+      border-radius: 13px;
+      background: var(--card-soft);
+      color: var(--card-color);
+      font-weight: 950;
+    }
+    .area-card p { color: var(--muted); }
+    .clean-list { position: relative; z-index: 1; margin: 1rem 0 0; padding: 0; list-style: none; }
+    .clean-list li { position: relative; padding-left: 1.1rem; color: var(--muted); font-size: 0.93rem; }
+    .clean-list li + li { margin-top: 0.42rem; }
+    .clean-list li::before { position: absolute; top: 0.65em; left: 0; width: 6px; height: 6px; border-radius: 50%; background: var(--card-color, var(--primary)); content: ""; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0;
+      padding: 1.5rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    .flow-step { position: relative; padding: 0.8rem 1.25rem; }
+    .flow-step:not(:last-child)::after {
+      position: absolute;
+      top: 28px;
+      right: -10px;
+      z-index: 2;
+      color: var(--primary);
+      content: "→";
+      font-size: 1.3rem;
+      font-weight: 900;
+    }
+    .flow-index {
+      display: inline-grid;
+      width: 38px;
+      height: 38px;
+      margin-bottom: 0.9rem;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 900;
+    }
+    .flow-step p { color: var(--muted); font-size: 0.91rem; }
+
+    .rule-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.85rem; margin-top: 1rem; }
+    .rule {
+      padding: 1.05rem;
+      border: 1px solid color-mix(in srgb, var(--primary) 16%, var(--line));
+      border-radius: var(--radius-md);
+      background: var(--primary-soft);
+    }
+    .rule strong { display: block; margin-bottom: 0.25rem; color: var(--primary-strong); }
+    .rule span { color: var(--muted); font-size: 0.9rem; }
+
+    .achievement-layout { display: grid; grid-template-columns: 0.86fr 1.14fr; gap: 1rem; }
+    .panel { padding: clamp(1.35rem, 3vw, 2rem); }
+    .big-number { margin-bottom: 0.15rem; color: var(--coral); font-size: clamp(3.5rem, 9vw, 6.5rem); font-weight: 950; letter-spacing: -0.08em; line-height: 1; }
+    .category-list { display: grid; gap: 0.55rem; margin-top: 1.35rem; }
+    .category-row { display: grid; grid-template-columns: 75px 1fr 30px; gap: 0.65rem; align-items: center; }
+    .category-row span, .category-row strong { font-size: 0.86rem; }
+    .track { height: 9px; border-radius: 999px; background: var(--line); overflow: hidden; }
+    .track i { display: block; width: var(--value); height: 100%; border-radius: inherit; background: var(--coral); }
+    .reward-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1rem; }
+    .reward { padding: 1rem; border-radius: 15px; background: var(--coral-soft); }
+    .reward strong { display: block; margin-bottom: 0.3rem; color: var(--coral); }
+    .reward p { color: var(--muted); font-size: 0.89rem; }
+    .bubble-note { margin-top: 1rem; padding: 1rem 1.15rem; border-left: 5px solid var(--coral); border-radius: 12px; background: var(--coral-soft); }
+    .bubble-note strong { color: var(--coral); }
+
+    .scope-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .scope-card { padding: 1.5rem; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+    .scope-card.in h3 { color: var(--mint); }
+    .scope-card.out h3 { color: var(--muted); }
+    .scope-card ul { margin: 1rem 0 0; padding-left: 1.2rem; color: var(--muted); }
+    .scope-card li + li { margin-top: 0.4rem; }
+
+    .handoff {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 2rem;
+      align-items: center;
+      padding: clamp(1.6rem, 4vw, 2.5rem);
+      border-radius: var(--radius-lg);
+      background: var(--ink);
+      color: #fff;
+      box-shadow: var(--shadow);
+    }
+    .handoff p { max-width: 700px; color: #cdd2e1; }
+    .spec-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0.7rem 1.05rem;
+      border-radius: 12px;
+      background: #fff;
+      color: var(--primary-strong);
+      font-weight: 900;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    footer { width: min(var(--page), calc(100% - 2rem)); margin: 0 auto; padding: 0 0 3rem; color: var(--muted); font-size: 0.84rem; text-align: center; }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #161725;
+        --surface: #1e2031;
+        --surface-strong: #26283b;
+        --ink: #f4f5fb;
+        --muted: #b3b8ca;
+        --line: #36394e;
+        --primary: #a4a3ff;
+        --primary-strong: #cfceff;
+        --primary-soft: #292947;
+        --mint: #78d4c6;
+        --mint-soft: #1d3a37;
+        --coral: #ff9d8e;
+        --coral-soft: #432a2c;
+        --gold-soft: #3d3420;
+        --shadow: 0 22px 60px rgba(0, 0, 0, 0.24);
+      }
+      .pet-stage { background: linear-gradient(rgba(30, 32, 49, 0.45), rgba(30, 32, 49, 0.05)), var(--primary-soft); }
+      .pet { border-color: #20243a; }
+      .speech { border-color: #f4f5fb; box-shadow: 7px 7px 0 rgba(0, 0, 0, 0.24); }
+      .handoff { background: #0f101a; }
+    }
+
+    @media (max-width: 920px) {
+      .hero { grid-template-columns: 1fr; }
+      .pet-stage { min-height: 320px; }
+      .area-grid, .rule-grid { grid-template-columns: 1fr 1fr; }
+      .area-card:last-child { grid-column: 1 / -1; }
+      .flow { grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .flow-step:not(:last-child)::after { content: none; }
+      .achievement-layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar-inner { align-items: flex-start; flex-direction: column; padding: 0.75rem 0; }
+      .topnav { gap: 0.15rem; }
+      .topnav a { padding-left: 0; padding-right: 0.7rem; }
+      .hero { padding-top: 3.2rem; }
+      .pet-stage { min-height: 290px; }
+      .speech { top: 28px; left: 24px; max-width: calc(100% - 48px); }
+      .pet { right: 38px; bottom: 36px; transform: scale(0.88); transform-origin: bottom right; }
+      .pet-shadow { right: 24px; bottom: 20px; transform: scale(0.85); transform-origin: bottom right; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .area-grid, .rule-grid, .flow, .reward-grid, .scope-grid { grid-template-columns: 1fr; }
+      .area-card:last-child { grid-column: auto; }
+      .handoff { grid-template-columns: 1fr; }
+      .spec-link { width: 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+    }
+
+    @media print {
+      body { background: #fff; color: #111; }
+      .topbar, .skip-link { display: none; }
+      .hero { padding: 2rem 0; }
+      .section { padding: 1.4rem 0; break-inside: avoid; }
+      .area-card, .panel, .flow, .handoff { box-shadow: none; break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">본문으로 바로가기</a>
+
+  <nav class="topbar" aria-label="팀 가이드">
+    <div class="topbar-inner">
+      <a class="brand" href="../README.md">tamagochi-pet</a>
+      <div class="topnav">
+        <a href="quick-start.html">빠른 시작</a>
+        <a href="concept-application.html">하네스 개념</a>
+        <a class="current" href="#main-content" aria-current="page">제품 기획 요약</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Product brief · approved MVP</p>
+      <h1>AI 도구를 쓸수록,<br>나의 펫 세계가 자랍니다.</h1>
+      <p class="lede">정보는 기록을 보여주고, 설정은 수집과 오버레이를 제어하며, 업적은 이미 이룬 행동을 펫의 반응으로 축하합니다.</p>
+      <div class="hero-badges" aria-label="핵심 범위">
+        <span class="badge">로컬 우선</span>
+        <span class="badge">Claude · Codex · Gemini</span>
+        <span class="badge">업적 22개</span>
+        <span class="badge">macOS · Windows</span>
+      </div>
+    </div>
+    <div class="pet-stage" aria-label="펫이 업적 달성을 말풍선으로 알려주는 예시">
+      <div class="speech">3개 업적을 달성했어!<small>누르면 업적 화면으로 이동</small></div>
+      <div class="pet-shadow" aria-hidden="true"></div>
+      <div class="pet" aria-hidden="true"><span class="pet-mouth"></span></div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="section" id="areas">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Three areas</p>
+          <h2>세 화면이 맡는 역할</h2>
+        </div>
+        <p class="section-copy">각 화면은 한 가지 질문에 답합니다. 실제 구현과 테스트는 상세 기획서의 요구사항 ID를 기준으로 합니다.</p>
+      </div>
+      <div class="area-grid">
+        <article class="area-card info">
+          <span class="area-number" aria-hidden="true">01</span>
+          <h3>정보 · 지금까지 무엇을 했나?</h3>
+          <p>설치 이후의 활동과 현재 펫 상태를 한눈에 확인합니다.</p>
+          <ul class="clean-list">
+            <li>프로필과 오늘·누적 핵심 수치</li>
+            <li>최근 12주 사용량 잔디</li>
+            <li>도구별 사용량과 전체 모델 보기</li>
+            <li>뽑기·합성·전투·성장 실적</li>
+          </ul>
+        </article>
+        <article class="area-card settings">
+          <span class="area-number" aria-hidden="true">02</span>
+          <h3>설정 · 무엇을 수집하고 보여줄까?</h3>
+          <p>세 CLI 수집 상태와 데스크톱 오버레이 동작을 제어합니다.</p>
+          <ul class="clean-list">
+            <li>기본 경로 자동 감지와 소스별 토글</li>
+            <li>앱 시작·1분 주기·수동 재스캔</li>
+            <li>오버레이 표시와 펫 크기</li>
+            <li>말풍선 알림과 자동 실행</li>
+          </ul>
+        </article>
+        <article class="area-card achievement">
+          <span class="area-number" aria-hidden="true">03</span>
+          <h3>업적 · 무엇을 함께 축하할까?</h3>
+          <p>과제를 강요하지 않고 이미 달성한 행동을 사후에 발견합니다.</p>
+          <ul class="clean-list">
+            <li>일반·단계형·히든 업적 22개</li>
+            <li>현재 진행률과 전체 완료율</li>
+            <li>코인·칭호·트로피 보상</li>
+            <li>업데이트 후 설치 이후 사실 소급 판정</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="flow">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Local data flow</p>
+          <h2>로컬 기록이 펫의 반응이 되기까지</h2>
+        </div>
+        <p class="section-copy">서버 계정이나 사용자 API 키 없이, 번들된 고정 버전 수집 경계와 멱등 처리를 사용합니다.</p>
+      </div>
+      <div class="flow" aria-label="사용량 수집과 업적 알림 흐름">
+        <article class="flow-step">
+          <span class="flow-index">1</span>
+          <h3>자동 감지</h3>
+          <p>Claude Code, Codex, Gemini CLI의 기본 위치를 찾습니다.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-index">2</span>
+          <h3>기준점과 집계</h3>
+          <p>첫 정상 스캔은 기준점만 저장하고 이후 증가분부터 반영합니다.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-index">3</span>
+          <h3>기록과 보상</h3>
+          <p>관측 통계와 보상 대상 토큰을 분리해 각 도메인에 전달합니다.</p>
+        </article>
+        <article class="flow-step">
+          <span class="flow-index">4</span>
+          <h3>판정과 말풍선</h3>
+          <p>업적을 한 번만 해제하고 현재 펫이 결과를 알려줍니다.</p>
+        </article>
+      </div>
+      <div class="rule-grid" aria-label="변경할 수 없는 핵심 수집 규칙">
+        <div class="rule"><strong>설치 전 기록은 0</strong><span>첫 정상 스캔의 기존 로그는 통계·코인·업적에 들어가지 않습니다.</span></div>
+        <div class="rule"><strong>비활성 기간은 제외</strong><span>소스를 다시 켤 때 현재 값을 새 기준점으로 잡습니다.</span></div>
+        <div class="rule"><strong>두 토큰을 분리</strong><span>정보는 관측 토큰, 코인은 재화 도메인의 보상 대상 토큰을 사용합니다.</span></div>
+        <div class="rule"><strong>활동 분은 중복 없이</strong><span>같은 로컬 분에 여러 도구를 써도 활동 시간은 1분입니다.</span></div>
+        <div class="rule"><strong>원천 감소에도 유지</strong><span>로그 삭제나 재기준화가 이미 쌓인 통계와 진행률을 깎지 않습니다.</span></div>
+        <div class="rule"><strong>로컬에서만 동작</strong><span>계정·서버 저장·클라우드 동기화 없이 macOS와 Windows를 지원합니다.</span></div>
+      </div>
+    </section>
+
+    <section class="section" id="achievements">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Achievement system</p>
+          <h2>22개의 업적, 한 번뿐인 보상</h2>
+        </div>
+        <p class="section-copy">수집·성장·전투·사용량을 고르게 다루고, 두 개의 히든 업적은 달성 전까지 내용을 공개하지 않습니다.</p>
+      </div>
+      <div class="achievement-layout">
+        <article class="panel">
+          <p class="big-number">22</p>
+          <h3>전체 업적 수</h3>
+          <div class="category-list" aria-label="카테고리별 업적 수">
+            <div class="category-row"><span>수집</span><span class="track"><i style="--value: 100%"></i></span><strong>7</strong></div>
+            <div class="category-row"><span>성장</span><span class="track"><i style="--value: 71%"></i></span><strong>5</strong></div>
+            <div class="category-row"><span>전투</span><span class="track"><i style="--value: 57%"></i></span><strong>4</strong></div>
+            <div class="category-row"><span>사용량</span><span class="track"><i style="--value: 57%"></i></span><strong>4</strong></div>
+            <div class="category-row"><span>히든</span><span class="track"><i style="--value: 29%"></i></span><strong>2</strong></div>
+          </div>
+        </article>
+        <article class="panel">
+          <h3>보상과 표시 원칙</h3>
+          <div class="reward-grid">
+            <div class="reward"><strong>코인</strong><p>업적별 고정 보상을 동일한 멱등 키로 한 번만 지급합니다.</p></div>
+            <div class="reward"><strong>칭호</strong><p>첫 칭호만 빈 장착 슬롯에 자동 장착하고 이후에는 사용자가 고릅니다.</p></div>
+            <div class="reward"><strong>트로피</strong><p>첫 만남만 빈자리에 자동 배치하며 나머지는 보관함으로 갑니다.</p></div>
+          </div>
+          <div class="bubble-note">
+            <strong>알림은 운영체제 토스트가 아니라 펫의 말풍선입니다.</strong>
+            여러 업적을 한 번에 달성하면 “N개 업적을 달성했어!” 한 번으로 묶고, 클릭하면 업적 화면을 엽니다.
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="scope">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">MVP boundary</p>
+          <h2>이번에 만드는 것과 만들지 않는 것</h2>
+        </div>
+        <p class="section-copy">작은 데스크톱 펫이라는 제품 형태를 지키며, 운영 복잡도를 키우는 기능은 MVP에서 분리합니다.</p>
+      </div>
+      <div class="scope-grid">
+        <article class="scope-card in">
+          <h3>포함</h3>
+          <ul>
+            <li>정보·설정·업적 패널과 트레이 진입점</li>
+            <li>세 CLI의 기본 위치 자동 감지</li>
+            <li>최근 12주 사용량과 전체 모델 조회</li>
+            <li>업적 판정·진행률·보상·말풍선 알림</li>
+            <li>설치 이후 사실을 이용한 신규 업적 소급 판정</li>
+            <li>macOS·Windows 동작 검증</li>
+          </ul>
+        </article>
+        <article class="scope-card out">
+          <h3>제외</h3>
+          <ul>
+            <li>계정·서버 저장·클라우드 동기화</li>
+            <li>사용자 지정 수집 경로와 USD 비용 표시</li>
+            <li>백업·복원·초기화와 원본 레코드 미리보기</li>
+            <li>클릭 통과·집중 모드·조용한 시간대</li>
+            <li>운영체제 알림 센터</li>
+            <li>후원과 게임 보상의 연결</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="handoff-title">
+      <div class="handoff">
+        <div>
+          <p class="section-kicker">Team handoff</p>
+          <h2 id="handoff-title">구현에서는 요구사항 ID로 대화합니다.</h2>
+          <p>화면과 수집은 meta가 소유하고, 펫·뽑기·전투 도메인은 승인된 이벤트를 발행합니다. 구현 계획과 테스트는 INFO, SET, COLLECT, ACH, META 요구사항 ID를 참조합니다.</p>
+        </div>
+        <a class="spec-link" href="../specs/meta-info-settings-achievements-design.md">상세 기획서 열기 →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>이 페이지는 팀 설명을 위한 요약입니다. 제품 행동의 단일 기준은 상세 기획서입니다.</footer>
+</body>
+</html>

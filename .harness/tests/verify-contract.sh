@@ -31,6 +31,46 @@ assert_not_contains() {
   fi
 }
 
+assert_html_local_links_resolve() {
+  path=$1
+
+  if [ ! -f "$path" ]; then
+    fail "cannot inspect local links in missing HTML: $path"
+    return
+  fi
+
+  base_dir=${path%/*}
+  while IFS= read -r href; do
+    case "$href" in
+      http://*|https://*|mailto:*|tel:*)
+        continue
+        ;;
+    esac
+
+    target=${href%%#*}
+    if [[ "$href" == *'#'* ]]; then
+      fragment=${href#*#}
+    else
+      fragment=''
+    fi
+
+    if [ -n "$target" ]; then
+      resolved="$base_dir/$target"
+    else
+      resolved=$path
+    fi
+
+    if [ ! -f "$resolved" ]; then
+      fail "broken local HTML link in $path: $href"
+      continue
+    fi
+
+    if [ -n "$fragment" ] && ! grep -F -q -- "id=\"$fragment\"" "$resolved"; then
+      fail "missing local HTML anchor in $path: $href"
+    fi
+  done < <(grep -o 'href="[^"]*"' "$path" | sed 's/^href="//; s/"$//')
+}
+
 assert_sha256() {
   if [ ! -f "$1" ]; then
     fail "cannot hash missing file: $1"
@@ -135,16 +175,40 @@ done
 
 for path in \
   .harness/guides/quick-start.html \
-  .harness/guides/concept-application.html; do
+  .harness/guides/concept-application.html \
+  .harness/guides/meta-product-overview.html; do
   assert_file "$path"
 done
 
 for guide in \
   '.harness/guides/quick-start.html' \
-  '.harness/guides/concept-application.html'; do
+  '.harness/guides/concept-application.html' \
+  '.harness/guides/meta-product-overview.html'; do
   assert_contains .harness/README.md "$guide" \
     "README is missing Korean guide pointer: $guide"
 done
+
+for marker in \
+  '<html lang="ko">' \
+  '<main id="main-content">' \
+  'id="areas"' \
+  'id="flow"' \
+  'id="achievements"' \
+  'id="scope"' \
+  'href="../specs/meta-info-settings-achievements-design.md"'; do
+  assert_contains .harness/guides/meta-product-overview.html "$marker" \
+    "meta product overview is missing required page structure: $marker"
+done
+
+assert_not_contains .harness/guides/meta-product-overview.html \
+  '<script src=' \
+  'meta product overview must not depend on an external script'
+
+assert_not_contains .harness/guides/meta-product-overview.html \
+  '<link rel="stylesheet"' \
+  'meta product overview must not depend on an external stylesheet'
+
+assert_html_local_links_resolve .harness/guides/meta-product-overview.html
 
 if git ls-files -- '.harness/guides/*.md' | grep -q .; then
   fail 'tracked Markdown guide remains under .harness/guides/'

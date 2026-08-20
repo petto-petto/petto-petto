@@ -38,6 +38,9 @@ Product specification filenames use stable, content-focused names without date p
 - [Concept application (`.harness/guides/concept-application.html`)](guides/concept-application.html)
   explains adopted design concepts, canonical runtime sharing, and the evidence
   boundary.
+- [Meta product overview (`.harness/guides/meta-product-overview.html`)](guides/meta-product-overview.html)
+  gives teammates a short visual briefing on the approved information,
+  settings, achievements, collection, and reward design.
 
 ## Manifest boundary
 

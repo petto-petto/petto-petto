@@ -10,6 +10,8 @@
 
 ### Added
 
+- Korean one-page meta product overview for briefing teammates on the approved
+  information, settings, achievements, local collection, and reward design.
 - Korean quick-start and concept-application guides at
   `.harness/guides/quick-start.html` and
   `.harness/guides/concept-application.html`.
