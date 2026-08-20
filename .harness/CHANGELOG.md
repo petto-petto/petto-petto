@@ -112,6 +112,12 @@
   `specs/meta-info-settings-achievements-design.md` path and made that naming
   convention part of the harness contract.
 
+### Changed
+
+- Renamed the meta product specification to the stable, content-focused
+  `specs/meta-info-settings-achievements-design.md` path and made that naming
+  convention part of the harness contract.
+
 ### Added
 
 - Approved meta product specification for information, settings, achievements,
