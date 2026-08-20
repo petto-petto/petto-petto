@@ -125,7 +125,7 @@ for path in \
   CLAUDE.md \
   .harness/README.md \
   .harness/CHANGELOG.md \
-  .harness/specs/2026-08-20-meta-info-settings-achievements-design.md \
+  .harness/specs/meta-info-settings-achievements-design.md \
   .harness/rules/rust.md \
   .harness/rules/skill-authoring.md \
   .harness/references/writing-great-skills/SKILL.md \
@@ -239,9 +239,13 @@ for instruction in \
   'SET-001' \
   'COLLECT-001' \
   'ACH-001'; do
-  assert_contains .harness/specs/2026-08-20-meta-info-settings-achievements-design.md "$instruction" \
+  assert_contains .harness/specs/meta-info-settings-achievements-design.md "$instruction" \
     "meta product specification is missing required guidance: $instruction"
 done
+
+assert_contains .harness/README.md \
+  'Product specification filenames use stable, content-focused names without date prefixes.' \
+  'README is missing the content-focused product specification filename rule'
 
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'

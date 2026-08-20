@@ -28,6 +28,8 @@ The Rust command sequence has one source of truth in `rules/rust.md`; the runner
 
 Product work uses the approved specification under `specs/` as its behavioral source of truth. Implementation plans and tests reference the requirement IDs in that specification instead of duplicating product rules.
 
+Product specification filenames use stable, content-focused names without date prefixes. Dates belong in version history and change records rather than the canonical product-specification path.
+
 ## Korean team guides
 
 - [Quick start (`.harness/guides/quick-start.html`)](guides/quick-start.html)

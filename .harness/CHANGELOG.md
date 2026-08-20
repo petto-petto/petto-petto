@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed
+
+- Renamed the meta product specification to the stable, content-focused
+  `specs/meta-info-settings-achievements-design.md` path and made that naming
+  convention part of the harness contract.
+
 ### Added
 
 - Korean quick-start and concept-application guides at
