@@ -192,9 +192,23 @@ for marker in \
   '<html lang="ko">' \
   '<main id="main-content">' \
   'id="screen-preview"' \
-  'aria-label="정보 화면 예시"' \
-  'aria-label="설정 화면 예시"' \
-  'aria-label="업적 화면 예시"' \
+  'aria-label="정보 요약 화면 예시"' \
+  'aria-label="조련사 이름 변경 화면 예시"' \
+  'aria-label="정보 사용량 화면 예시"' \
+  'aria-label="전체 모델 목록 화면 예시"' \
+  'aria-label="정보 실적 화면 예시"' \
+  'aria-label="정보 상태 화면 예시"' \
+  'aria-label="설정 수집 화면 예시"' \
+  'aria-label="수집 상태 화면 예시"' \
+  'aria-label="화면 설정 화면 예시"' \
+  'aria-label="알림 설정 화면 예시"' \
+  'aria-label="알림 말풍선 화면 예시"' \
+  'aria-label="기타 로컬 데이터 화면 예시"' \
+  'aria-label="기타 앱 정보 화면 예시"' \
+  'aria-label="업적 전체 화면 예시"' \
+  'aria-label="업적 진행 상태 화면 예시"' \
+  'aria-label="칭호 관리 화면 예시"' \
+  'aria-label="업적 보상 화면 예시"' \
   'id="areas"' \
   'id="flow"' \
   'id="achievements"' \
@@ -203,6 +217,11 @@ for marker in \
   assert_contains .harness/guides/meta-product-overview.html "$marker" \
     "meta product overview is missing required page structure: $marker"
 done
+
+screen_example_count=$(grep -E -o 'role="group" aria-label="[^"]+ 화면 예시"' .harness/guides/meta-product-overview.html | wc -l | tr -d ' ')
+if [ "$screen_example_count" -ne 17 ]; then
+  fail "meta product overview must contain exactly 17 screen examples, found: $screen_example_count"
+fi
 
 if grep -F -q -- 'id="screen-preview"' .harness/guides/meta-product-overview.html \
   && grep -F -q -- 'id="areas"' .harness/guides/meta-product-overview.html; then

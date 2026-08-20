@@ -233,6 +233,7 @@
     .mockup { margin: 0; }
     .mockup figcaption {
       display: flex;
+      flex-wrap: wrap;
       align-items: center;
       gap: 0.55rem;
       margin-bottom: 0.65rem;
@@ -326,6 +327,8 @@
     .mock-grass .l2 { background: #aaa9f5; }
     .mock-grass .l3 { background: #7775de; }
     .mock-grass .l4 { background: #4c4ab7; }
+    .mock-grass-wrap { position: relative; }
+    .mock-grass-tip { position: absolute; right: 5%; bottom: 82%; padding: 0.22rem 0.4rem; border-radius: 6px; background: #25283a; color: #fff; font-size: clamp(0.36rem, 0.54vw, 0.45rem); font-weight: 800; box-shadow: 0 4px 10px rgba(37, 40, 58, 0.2); }
 
     .mock-source-list { display: grid; gap: 2.6%; }
     .mock-source {
@@ -370,6 +373,95 @@
     .mock-hidden .mock-achievement-icon { background: #eceef3; color: #9296a6; }
     .mock-bubble { position: absolute; right: 4%; bottom: 3.5%; padding: 0.38rem 0.55rem; border: 1.5px solid #25283a; border-radius: 10px 10px 3px 10px; background: #fff; color: #25283a; font-size: clamp(0.42rem, 0.66vw, 0.54rem); font-weight: 850; box-shadow: 3px 3px 0 rgba(37, 40, 58, 0.1); }
     .preview-disclaimer { margin-top: 1rem; color: var(--muted); font-size: 0.83rem; text-align: center; }
+
+    .preview-group { margin-top: 2.8rem; }
+    .preview-group + .preview-group { padding-top: 2.8rem; border-top: 1px solid var(--line); }
+    .preview-group-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .preview-group-head h3 { font-size: clamp(1.35rem, 2.2vw, 1.9rem); }
+    .preview-count { padding: 0.35rem 0.65rem; border-radius: 999px; background: var(--primary-soft); color: var(--primary-strong); font-size: 0.75rem; font-weight: 900; }
+    .mockup figcaption em { margin-left: auto; color: #9a9ead; font-size: 0.7rem; font-style: normal; font-weight: 750; }
+    .mock-body.compact { padding: 3.5%; }
+    .mock-button { display: inline-flex; align-items: center; justify-content: center; min-height: 24px; padding: 0.22rem 0.5rem; border: 1px solid #dfe2ec; border-radius: 7px; background: #fff; color: #555bc1; font-size: clamp(0.42rem, 0.65vw, 0.54rem); font-weight: 850; }
+    .mock-button.primary { border-color: #5c5bd6; background: #5c5bd6; color: #fff; }
+    .mock-button.disabled { border-color: #e4e6ed; background: #eceef3; color: #a0a4b1; }
+    .mock-chip { display: inline-flex; align-items: center; padding: 0.18rem 0.38rem; border-radius: 999px; background: #eeedff; color: #5553c7; font-size: clamp(0.4rem, 0.6vw, 0.5rem); font-weight: 850; }
+    .mock-chip.warn { background: #fff0eb; color: #c94e3a; }
+    .mock-chip.ok { background: #e9f8ef; color: #278754; }
+    .mock-chip.muted { background: #eceef3; color: #777c8e; }
+    .mock-input { display: flex; align-items: center; justify-content: space-between; min-height: 31px; padding: 0 0.6rem; border: 1px solid #cfd2df; border-radius: 8px; background: #fff; font-size: clamp(0.48rem, 0.72vw, 0.6rem); font-weight: 750; }
+    .mock-help { color: #9296a6; font-size: clamp(0.4rem, 0.6vw, 0.5rem); line-height: 1.45; }
+    .mock-divider { height: 1px; margin: 3% 0; background: #e7e9f0; }
+
+    .mock-dialog-shade { position: absolute; inset: 18% 0 0; display: grid; place-items: center; padding: 8%; background: rgba(37, 40, 58, 0.34); }
+    .mock-dialog { width: 100%; padding: 7%; border-radius: 15px; background: #fff; box-shadow: 0 15px 35px rgba(31, 34, 57, 0.24); }
+    .mock-dialog h4 { margin-bottom: 0.25rem; font-size: clamp(0.65rem, 1vw, 0.82rem); }
+    .mock-dialog-actions { display: flex; justify-content: space-between; gap: 0.5rem; margin-top: 7%; }
+
+    .mock-periods { display: flex; gap: 2%; margin-bottom: 3%; }
+    .mock-period { flex: 1; padding: 0.26rem 0; border-radius: 7px; background: #fff; color: #858a9c; text-align: center; font-size: clamp(0.42rem, 0.65vw, 0.54rem); font-weight: 800; }
+    .mock-period.active { background: #5c5bd6; color: #fff; }
+    .mock-tool-list, .mock-model-list, .mock-ledger, .mock-status-list, .mock-title-list, .mock-reward-list { display: grid; gap: 2%; }
+    .mock-tool-row, .mock-model-row, .mock-ledger-row, .mock-status-row, .mock-title-row, .mock-reward-row { display: grid; align-items: center; gap: 3%; padding: 2.8% 3.5%; border-radius: 9px; background: #fff; }
+    .mock-tool-row { grid-template-columns: auto 1fr auto; }
+    .mock-tool-row b, .mock-model-row b, .mock-ledger-row b, .mock-status-row b, .mock-title-row b, .mock-reward-row b { font-size: clamp(0.46rem, 0.7vw, 0.58rem); }
+    .mock-tool-row small, .mock-model-row small, .mock-ledger-row small, .mock-status-row small, .mock-title-row small, .mock-reward-row small { display: block; color: #8b90a1; font-size: clamp(0.38rem, 0.56vw, 0.47rem); }
+    .mock-barline { height: 4px; margin-top: 3px; border-radius: 999px; background: #eceef3; overflow: hidden; }
+    .mock-barline i { display: block; height: 100%; border-radius: inherit; background: #7775df; }
+    .mock-model-row { grid-template-columns: auto minmax(0, 1fr) auto; padding: 1.5% 3%; }
+    .mock-model-row code { overflow: hidden; color: #34384b; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: clamp(0.42rem, 0.64vw, 0.52rem); text-overflow: ellipsis; white-space: nowrap; }
+    .mock-model-row span:last-child { color: #73788c; font-size: clamp(0.4rem, 0.6vw, 0.5rem); font-weight: 800; text-align: right; }
+    .mock-ledger-row { grid-template-columns: 1fr auto; }
+    .mock-ledger-row .plus { color: #278754; }
+    .mock-ledger-row .minus { color: #c94e3a; }
+
+    .mock-state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3%; }
+    .mock-state-card { min-height: 82px; padding: 7%; border-radius: 11px; background: #fff; }
+    .mock-state-card.wide { grid-column: 1 / -1; min-height: 66px; }
+    .mock-state-card strong { display: block; margin: 0.3rem 0 0.15rem; font-size: clamp(0.48rem, 0.73vw, 0.59rem); }
+    .mock-state-card p { color: #858a9c; font-size: clamp(0.38rem, 0.57vw, 0.47rem); line-height: 1.4; }
+    .mock-skeleton { display: grid; gap: 5px; margin-top: 8%; }
+    .mock-skeleton i { display: block; height: 7px; border-radius: 999px; background: #eceef3; }
+    .mock-skeleton i:last-child { width: 64%; }
+
+    .mock-source.detailed { grid-template-columns: auto 1fr auto; min-height: 22%; }
+    .mock-source-actions { display: grid; justify-items: end; gap: 0.25rem; }
+    .mock-source-copy code { display: block; max-width: 180px; overflow: hidden; color: #9a9eac; font-size: clamp(0.36rem, 0.52vw, 0.45rem); text-overflow: ellipsis; white-space: nowrap; }
+    .mock-status-row { grid-template-columns: auto 1fr auto; padding: 2.3% 3%; }
+    .mock-status-dot { width: 8px; height: 8px; border-radius: 50%; background: #37a36b; }
+    .mock-status-dot.warn { background: #ef9b3e; }
+    .mock-status-dot.off { background: #9ca1b0; }
+    .mock-status-dot.error { background: #d9604b; }
+    .mock-segments { display: flex; gap: 3%; }
+    .mock-segments span { padding: 0.2rem 0.42rem; border-radius: 6px; background: #eceef3; color: #858a9c; font-size: clamp(0.4rem, 0.6vw, 0.5rem); }
+    .mock-segments .active { background: #5c5bd6; color: #fff; }
+
+    .mock-notice-row { display: grid; grid-template-columns: 1fr auto; gap: 3%; padding: 4%; border-radius: 11px; background: #fff; }
+    .mock-notice-row + .mock-notice-row { margin-top: 3%; }
+    .mock-notice-row strong { display: block; font-size: clamp(0.5rem, 0.76vw, 0.62rem); }
+    .mock-notice-row small { display: block; color: #898e9f; font-size: clamp(0.4rem, 0.59vw, 0.49rem); }
+    .bubble-stage { position: relative; min-height: 72px; padding: 4% 4% 4% 24%; border-radius: 11px; background: #eeedff; }
+    .bubble-stage + .bubble-stage { margin-top: 3%; }
+    .bubble-pet { position: absolute; left: 5%; bottom: 12%; width: 14%; aspect-ratio: 1; border: 1.5px solid #25283a; border-radius: 46%; background: #ffd86d; }
+    .bubble-card { padding: 5%; border: 1.5px solid #25283a; border-radius: 10px 10px 10px 3px; background: #fff; font-size: clamp(0.44rem, 0.66vw, 0.54rem); font-weight: 850; }
+    .bubble-card small { display: block; margin-top: 0.15rem; color: #d95f4a; font-size: clamp(0.37rem, 0.55vw, 0.46rem); }
+
+    .mock-card-stack { display: grid; gap: 3%; }
+    .mock-detail-card { padding: 4%; border-radius: 11px; background: #fff; }
+    .mock-detail-card h4 { margin-bottom: 0.25rem; font-size: clamp(0.52rem, 0.78vw, 0.64rem); }
+    .mock-detail-card p, .mock-detail-card li { color: #858a9c; font-size: clamp(0.4rem, 0.6vw, 0.5rem); line-height: 1.5; }
+    .mock-detail-card ul { margin: 0; padding-left: 1rem; }
+    .mock-path { display: flex; align-items: center; justify-content: space-between; gap: 3%; margin-top: 4%; padding: 3%; border: 1px solid #dfe2ec; border-radius: 8px; background: #fafafe; }
+    .mock-path code { overflow: hidden; color: #73788c; font-size: clamp(0.38rem, 0.56vw, 0.47rem); text-overflow: ellipsis; white-space: nowrap; }
+    .mock-link-row { display: flex; align-items: center; justify-content: space-between; min-height: 31px; border-bottom: 1px solid #eceef3; font-size: clamp(0.44rem, 0.66vw, 0.54rem); font-weight: 750; }
+    .mock-link-row:last-child { border-bottom: 0; }
+
+    .mock-title-row { grid-template-columns: 1fr auto; min-height: 48px; }
+    .mock-title-row.equipped { border: 1px solid #aaa9f5; }
+    .mock-reward-row { grid-template-columns: auto 1fr auto; min-height: 44px; padding-top: 2%; padding-bottom: 2%; }
+    .mock-reward-icon { display: grid; width: 27px; height: 27px; place-items: center; border-radius: 8px; background: #fff6d9; color: #a56b09; font-size: 0.62rem; font-weight: 950; }
+    .mock-room { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4%; margin-top: 4%; }
+    .mock-room span { display: grid; aspect-ratio: 1.7; place-items: center; border: 1px dashed #c8cbd6; border-radius: 8px; color: #9ca1af; font-size: clamp(0.38rem, 0.56vw, 0.46rem); }
+    .mock-room .filled { border-style: solid; border-color: #e6c263; background: #fff6d9; color: #98670c; font-weight: 900; }
 
     .area-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
     .area-card, .panel {
@@ -610,125 +702,353 @@
           <h2>기획이 화면이 되면, 이런 모습입니다.</h2>
         </div>
         <div>
-          <p class="section-copy">실제 400 × 462 패널 비율 안에 각 화면의 기본 정보 위계와 대표 상태를 담았습니다.</p>
+          <p class="section-copy">실제 400 × 462 패널 비율을 유지하면서 탭별 기능과 화면이 달라지는 주요 상태를 17개 예시로 나누어 담았습니다.</p>
           <span class="preview-note">기획 기준 화면 예시</span>
         </div>
       </div>
 
-      <div class="mock-grid">
-        <figure class="mockup">
-          <figcaption><span>01</span><strong>정보</strong>오늘과 누적 활동을 한눈에</figcaption>
-          <div class="mock-panel mock-info" role="group" aria-label="정보 화면 예시">
-            <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
-            <div class="mock-tabs" aria-hidden="true">
-              <span class="mock-tab active">요약</span>
-              <span class="mock-tab">사용량</span>
-              <span class="mock-tab">실적</span>
-            </div>
-            <div class="mock-body">
-              <div class="mock-profile">
-                <div class="mock-avatar" aria-hidden="true"></div>
-                <div class="mock-profile-copy"><strong>까만 코뿔소</strong><span>이 기기 · 함께한 지 14일</span></div>
-                <span class="mock-title-chip">초보 조련사</span>
-              </div>
-              <div class="mock-metrics">
-                <div class="mock-metric"><small>누적 토큰</small><strong>2.4M</strong></div>
-                <div class="mock-metric"><small>보유 펫</small><strong>12</strong></div>
-                <div class="mock-metric"><small>도감</small><strong>12 / 24</strong></div>
-                <div class="mock-metric"><small>오늘 토큰</small><strong>84K</strong></div>
-                <div class="mock-metric"><small>오늘 코인</small><strong>320</strong></div>
-                <div class="mock-metric"><small>함께한 시간</small><strong>42분</strong></div>
-              </div>
-              <div class="mock-block-title"><span>사용량</span><span>최근 12주</span></div>
-              <div class="mock-grass" aria-hidden="true">
-                <i></i><i class="l1"></i><i></i><i class="l2"></i><i class="l1"></i><i></i><i class="l3"></i><i></i><i class="l1"></i><i class="l2"></i><i></i><i class="l4"></i>
-                <i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i class="l2"></i>
-                <i></i><i class="l2"></i><i class="l1"></i><i></i><i class="l4"></i><i class="l2"></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i>
-                <i class="l2"></i><i class="l1"></i><i></i><i class="l3"></i><i class="l2"></i><i></i><i class="l1"></i><i class="l4"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i>
+      <section class="preview-group" aria-labelledby="preview-info-title">
+        <div class="preview-group-head">
+          <h3 id="preview-info-title">정보 화면</h3>
+          <span class="preview-count">6개 예시</span>
+        </div>
+        <div class="mock-grid">
+          <figure class="mockup">
+            <figcaption><span>01</span><strong>요약</strong>오늘과 누적 상태<em>기본</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="정보 요약 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">요약</span><span class="mock-tab">사용량</span><span class="mock-tab">실적</span></div>
+              <div class="mock-body">
+                <div class="mock-profile">
+                  <div class="mock-avatar" aria-hidden="true"></div>
+                  <div class="mock-profile-copy"><strong>까만 코뿔소</strong><span>이 기기 · 함께한 지 14일</span></div>
+                  <span class="mock-title-chip">초보 조련사</span>
+                </div>
+                <div class="mock-metrics">
+                  <div class="mock-metric"><small>누적 토큰</small><strong>2.4M</strong></div>
+                  <div class="mock-metric"><small>보유 펫</small><strong>12</strong></div>
+                  <div class="mock-metric"><small>도감</small><strong>12 / 24</strong></div>
+                  <div class="mock-metric"><small>오늘 토큰</small><strong>84K</strong></div>
+                  <div class="mock-metric"><small>오늘 코인</small><strong>320</strong></div>
+                  <div class="mock-metric"><small>함께한 시간</small><strong>42분</strong></div>
+                </div>
+                <div class="mock-block-title"><span>최근 활동</span><span>마지막 집계 · 방금 전</span></div>
+                <div class="mock-detail-card"><p>설치 이후 기록만 합산하며 현재 오버레이 펫을 프로필에 표시합니다.</p></div>
               </div>
             </div>
-          </div>
-        </figure>
+          </figure>
 
-        <figure class="mockup">
-          <figcaption><span>02</span><strong>설정</strong>수집과 오버레이를 명확하게</figcaption>
-          <div class="mock-panel mock-settings" role="group" aria-label="설정 화면 예시">
-            <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
-            <div class="mock-tabs" aria-hidden="true">
-              <span class="mock-tab active">수집</span>
-              <span class="mock-tab">화면</span>
-              <span class="mock-tab">알림</span>
-              <span class="mock-tab">기타</span>
-            </div>
-            <div class="mock-body">
-              <div class="mock-source-list">
-                <div class="mock-source">
-                  <span class="mock-source-icon">CL</span>
-                  <span class="mock-source-copy"><strong>Claude Code</strong><span>정상 · 방금 전 집계</span></span>
-                  <span class="mock-switch on" aria-hidden="true"></span>
-                </div>
-                <div class="mock-source">
-                  <span class="mock-source-icon">CX</span>
-                  <span class="mock-source-copy"><strong>Codex</strong><span>정상 · 1분 전 집계</span></span>
-                  <span class="mock-switch on" aria-hidden="true"></span>
-                </div>
-                <div class="mock-source">
-                  <span class="mock-source-icon">GM</span>
-                  <span class="mock-source-copy"><strong>Gemini CLI</strong><span>정상 · 1분 전 집계</span></span>
-                  <span class="mock-switch on" aria-hidden="true"></span>
+          <figure class="mockup">
+            <figcaption><span>02</span><strong>조련사 이름</strong>수정과 다시 만들기<em>편집</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="조련사 이름 변경 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">요약</span><span class="mock-tab">사용량</span><span class="mock-tab">실적</span></div>
+              <div class="mock-body">
+                <div class="mock-profile">
+                  <div class="mock-avatar" aria-hidden="true"></div>
+                  <div class="mock-profile-copy"><strong>까만 코뿔소</strong><span>이 기기</span></div>
+                  <span class="mock-button">이름 수정</span>
                 </div>
               </div>
-              <div class="mock-block-title"><span>화면 기본값</span><span>항상 맨 위</span></div>
-              <div class="mock-setting-group">
-                <div class="mock-setting-row"><span>오버레이 표시</span><span class="mock-switch on" aria-hidden="true"></span></div>
-                <div class="mock-setting-row"><span>펫 크기</span><span>보통</span></div>
-                <div class="mock-setting-row"><span>부팅 시 자동 실행</span><span class="mock-switch" aria-hidden="true"></span></div>
+              <div class="mock-dialog-shade">
+                <div class="mock-dialog">
+                  <h4>조련사 이름</h4>
+                  <p class="mock-help">안전한 한글 이름을 수정하거나 새로 만들 수 있어요.</p>
+                  <div class="mock-block-title"><span>표시 이름</span><span>1~20자</span></div>
+                  <div class="mock-input"><span>까만 코뿔소</span><span>7 / 20</span></div>
+                  <div class="mock-dialog-actions"><span class="mock-button">다시 만들기</span><span class="mock-button primary">저장</span></div>
+                </div>
               </div>
             </div>
-          </div>
-        </figure>
+          </figure>
 
-        <figure class="mockup">
-          <figcaption><span>03</span><strong>업적</strong>진행과 보상을 즐겁게</figcaption>
-          <div class="mock-panel mock-achievements" role="group" aria-label="업적 화면 예시">
-            <div class="mock-bar"><strong>업적</strong><span class="mock-close" aria-hidden="true">×</span></div>
-            <div class="mock-tabs" aria-hidden="true">
-              <span class="mock-tab active">전체</span>
-              <span class="mock-tab">수집</span>
-              <span class="mock-tab">성장</span>
-              <span class="mock-tab">전투</span>
-              <span class="mock-tab">사용량</span>
-            </div>
-            <div class="mock-body">
-              <div class="mock-achievement-head">
-                <div class="mock-achievement-meta"><strong>전체 완료율</strong><b>8 / 22</b></div>
-                <div class="mock-progress" aria-hidden="true"><i></i></div>
-              </div>
-              <div class="mock-block-title"><span>업적 목록</span><span>36% 달성</span></div>
-              <div class="mock-achievement-list">
-                <div class="mock-achievement-card">
-                  <span class="mock-achievement-icon">✓</span>
-                  <span class="mock-achievement-copy"><strong>첫 만남</strong><span>첫 펫 획득 · 달성</span></span>
-                  <span class="mock-reward">+10</span>
+          <figure class="mockup">
+            <figcaption><span>03</span><strong>사용량</strong>기간·잔디·도구별 분해<em>주</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="정보 사용량 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">요약</span><span class="mock-tab active">사용량</span><span class="mock-tab">실적</span></div>
+              <div class="mock-body compact">
+                <div class="mock-periods"><span class="mock-period">오늘</span><span class="mock-period active">주</span><span class="mock-period">달</span><span class="mock-period">전체</span></div>
+                <div class="mock-block-title"><span>관측 토큰</span><strong>620K</strong></div>
+                <div class="mock-block-title"><span>사용량 잔디</span><span>최근 12주</span></div>
+                <div class="mock-grass-wrap">
+                  <div class="mock-grass" aria-hidden="true">
+                    <i></i><i class="l1"></i><i></i><i class="l2"></i><i class="l1"></i><i></i><i class="l3"></i><i></i><i class="l1"></i><i class="l2"></i><i></i><i class="l4"></i>
+                    <i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i><i class="l2"></i>
+                    <i></i><i class="l2"></i><i class="l1"></i><i></i><i class="l4"></i><i class="l2"></i><i class="l1"></i><i></i><i class="l2"></i><i class="l3"></i><i class="l1"></i><i></i>
+                  </div>
+                  <span class="mock-grass-tip">8월 20일 · 84K 토큰</span>
                 </div>
-                <div class="mock-achievement-card">
-                  <span class="mock-achievement-icon">T</span>
-                  <span class="mock-achievement-copy"><strong>토큰 마일스톤 Ⅰ</strong><span>740K / 1M</span><span class="mock-card-progress" aria-hidden="true"><i></i></span></span>
-                  <span class="mock-reward">+20</span>
-                </div>
-                <div class="mock-achievement-card mock-hidden">
-                  <span class="mock-achievement-icon">?</span>
-                  <span class="mock-achievement-copy"><strong>? ? ?</strong><span>? ? ?</span></span>
-                  <span class="mock-reward">? ? ?</span>
+                <div class="mock-block-title"><span>도구별 사용량</span><span>토큰 · 비율</span></div>
+                <div class="mock-tool-list">
+                  <div class="mock-tool-row"><span class="mock-source-icon">CL</span><span><b>Claude Code</b><small>372K · 60%</small><span class="mock-barline"><i style="width:60%"></i></span></span><span class="mock-chip ok">수집 중</span></div>
+                  <div class="mock-tool-row"><span class="mock-source-icon">CX</span><span><b>Codex</b><small>186K · 30%</small><span class="mock-barline"><i style="width:30%"></i></span></span><span class="mock-chip ok">수집 중</span></div>
+                  <div class="mock-tool-row"><span class="mock-source-icon">GM</span><span><b>Gemini CLI</b><small>62K · 10%</small><span class="mock-barline"><i style="width:10%"></i></span></span><span class="mock-chip muted">수집 중지</span></div>
                 </div>
               </div>
-              <div class="mock-bubble">업적을 달성했어!</div>
             </div>
-          </div>
-        </figure>
-      </div>
+          </figure>
 
-      <p class="preview-disclaimer">화면의 정보 구조와 흐름을 설명하기 위한 예시입니다. 픽셀 아트, 정확한 간격, 애니메이션과 세부 문구는 구현 과정에서 조정합니다.</p>
+          <figure class="mockup">
+            <figcaption><span>04</span><strong>전체 모델</strong>도구와 원본 모델명<em>펼침</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="전체 모델 목록 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">요약</span><span class="mock-tab active">사용량</span><span class="mock-tab">실적</span></div>
+              <div class="mock-body compact">
+                <div class="mock-periods"><span class="mock-period">오늘</span><span class="mock-period">주</span><span class="mock-period active">달</span><span class="mock-period">전체</span></div>
+                <div class="mock-block-title"><span>전체 8개 모델</span><span class="mock-chip">접기 · 기본 상위 5개</span></div>
+                <div class="mock-model-list">
+                  <div class="mock-model-row"><span class="mock-chip">CL</span><code>claude-opus-4-1</code><span>880K · 38%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">CX</span><code>gpt-5.6-sol</code><span>610K · 27%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">CL</span><code>claude-sonnet-4</code><span>420K · 18%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">GM</span><code>gemini-2.5-pro</code><span>210K · 9%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">CX</span><code>gpt-5.4</code><span>110K · 5%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">CX</span><code>gpt-next-preview</code><span>42K · 2%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">GM</span><code>gemini-2.5-flash</code><span>18K · 1%</span></div>
+                  <div class="mock-model-row"><span class="mock-chip">CL</span><code>unknown-model-name</code><span>4K · &lt;1%</span></div>
+                </div>
+                <p class="mock-help" style="margin-top:3%">새 모델도 별도 매핑 없이 도구 배지와 원본 이름으로 표시합니다.</p>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>05</span><strong>실적</strong>누적 활동과 코인 원장<em>최신 20개</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="정보 실적 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">요약</span><span class="mock-tab">사용량</span><span class="mock-tab active">실적</span></div>
+              <div class="mock-body compact">
+                <div class="mock-metrics" style="margin-top:0">
+                  <div class="mock-metric"><small>뽑기</small><strong>48회</strong></div><div class="mock-metric"><small>합성</small><strong>11회</strong></div><div class="mock-metric"><small>전투</small><strong>73승</strong></div>
+                  <div class="mock-metric"><small>최고</small><strong>Lv.18</strong></div><div class="mock-metric"><small>획득</small><strong>8,420</strong></div><div class="mock-metric"><small>소비</small><strong>5,600</strong></div>
+                </div>
+                <div class="mock-block-title"><span>코인 원장</span><span>최신 20개 · 내부 스크롤</span></div>
+                <div class="mock-ledger">
+                  <div class="mock-ledger-row"><span><b>업적 · 첫 만남</b><small>오늘 14:32</small></span><b class="plus">+10</b></div>
+                  <div class="mock-ledger-row"><span><b>펫 뽑기</b><small>오늘 13:10</small></span><b class="minus">-100</b></div>
+                  <div class="mock-ledger-row"><span><b>활동 보상</b><small>오늘 12:00</small></span><b class="plus">+320</b></div>
+                  <div class="mock-ledger-row"><span><b>펫 합성</b><small>어제 22:41</small></span><b class="minus">-250</b></div>
+                </div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>06</span><strong>정보 상태</strong>로딩·빈 기록·오류<em>상태</em></figcaption>
+            <div class="mock-panel mock-info" role="group" aria-label="정보 상태 화면 예시">
+              <div class="mock-bar"><strong>정보</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">요약</span><span class="mock-tab">사용량</span><span class="mock-tab">실적</span></div>
+              <div class="mock-body compact">
+                <div class="mock-state-grid">
+                  <div class="mock-state-card"><span class="mock-chip muted">최초 로딩</span><div class="mock-skeleton"><i></i><i></i><i></i></div></div>
+                  <div class="mock-state-card"><span class="mock-chip">기록 없음</span><strong>아직 기록이 없습니다</strong><p>수치는 0으로 표시</p></div>
+                  <div class="mock-state-card"><span class="mock-chip warn">일부 소스 오류</span><strong>마지막 정상값 유지</strong><p>오류 소스 배지 표시</p></div>
+                  <div class="mock-state-card"><span class="mock-chip warn">전체 수집 오류</span><strong>갱신하지 못했습니다</strong><p>상단 안내 + 이전 값 유지</p></div>
+                  <div class="mock-state-card wide"><span class="mock-chip muted">다른 도메인 오류</span><strong>문제가 생긴 블록만 오류 처리</strong><p>펫·도감·원장 중 실패한 영역 외의 정보는 그대로 보여줍니다.</p></div>
+                </div>
+              </div>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <section class="preview-group" aria-labelledby="preview-settings-title">
+        <div class="preview-group-head">
+          <h3 id="preview-settings-title">설정 화면</h3>
+          <span class="preview-count">7개 예시</span>
+        </div>
+        <div class="mock-grid">
+          <figure class="mockup">
+            <figcaption><span>07</span><strong>수집</strong>세 도구 자동 감지<em>기본</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="설정 수집 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">수집</span><span class="mock-tab">화면</span><span class="mock-tab">알림</span><span class="mock-tab">기타</span></div>
+              <div class="mock-body compact">
+                <div class="mock-source-list">
+                  <div class="mock-source detailed"><span class="mock-source-icon">CL</span><span class="mock-source-copy"><strong>Claude Code</strong><span>수집 중 · 방금 전</span><code>기본 로그 위치 · 자동 감지</code></span><span class="mock-source-actions"><span class="mock-switch on" aria-hidden="true"></span><span class="mock-button">재스캔</span></span></div>
+                  <div class="mock-source detailed"><span class="mock-source-icon">CX</span><span class="mock-source-copy"><strong>Codex</strong><span>수집 중 · 1분 전</span><code>기본 로그 위치 · 자동 감지</code></span><span class="mock-source-actions"><span class="mock-switch on" aria-hidden="true"></span><span class="mock-button">재스캔</span></span></div>
+                  <div class="mock-source detailed"><span class="mock-source-icon">GM</span><span class="mock-source-copy"><strong>Gemini CLI</strong><span>수집 중 · 1분 전</span><code>기본 로그 위치 · 자동 감지</code></span><span class="mock-source-actions"><span class="mock-switch on" aria-hidden="true"></span><span class="mock-button">재스캔</span></span></div>
+                </div>
+                <p class="mock-help" style="margin-top:3%">사용자 지정 경로 없이 기본 위치를 자동 감지합니다.</p>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>08</span><strong>수집 상태</strong>발견·중지·확인·오류<em>5상태</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="수집 상태 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">수집</span><span class="mock-tab">화면</span><span class="mock-tab">알림</span><span class="mock-tab">기타</span></div>
+              <div class="mock-body compact">
+                <div class="mock-status-list">
+                  <div class="mock-status-row"><span class="mock-status-dot"></span><span><b>수집 중</b><small>1분 주기 집계 대상</small></span><span class="mock-button">재스캔</span></div>
+                  <div class="mock-status-row"><span class="mock-status-dot warn"></span><span><b>기록을 찾을 수 없음</b><small>기본 위치 표시 · 다시 확인 가능</small></span><span class="mock-button">재스캔</span></div>
+                  <div class="mock-status-row"><span class="mock-status-dot off"></span><span><b>수집 중지</b><small>과거 통계 유지 · 새 기록 제외</small></span><span class="mock-switch" aria-hidden="true"></span></div>
+                  <div class="mock-status-row"><span class="mock-status-dot warn"></span><span><b>확인 중</b><small>중복 재스캔 방지</small></span><span class="mock-button disabled">확인 중</span></div>
+                  <div class="mock-status-row"><span class="mock-status-dot error"></span><span><b>집계 오류</b><small>마지막 정상 데이터 유지</small></span><span class="mock-button">다시 시도</span></div>
+                </div>
+                <div class="mock-detail-card" style="margin-top:4%"><p>다시 켜는 시점에 새 기준점을 만들고, 꺼진 기간의 기록은 소급하지 않습니다.</p></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>09</span><strong>화면</strong>오버레이·크기·자동 실행<em>기본값</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="화면 설정 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">수집</span><span class="mock-tab active">화면</span><span class="mock-tab">알림</span><span class="mock-tab">기타</span></div>
+              <div class="mock-body">
+                <div class="mock-setting-group" style="margin-top:0">
+                  <div class="mock-setting-row"><span>오버레이 표시<small style="display:block">숨겨도 앱과 수집은 계속 실행</small></span><span class="mock-switch on" aria-hidden="true"></span></div>
+                  <div class="mock-setting-row"><span>펫 크기<small style="display:block">패널 크기에는 영향 없음</small></span><span class="mock-segments"><span>작게</span><span class="active">보통</span><span>크게</span></span></div>
+                  <div class="mock-setting-row"><span>부팅 시 자동 실행<small style="display:block">사용자가 켤 때만 OS에 등록</small></span><span class="mock-switch" aria-hidden="true"></span></div>
+                </div>
+                <div class="mock-block-title"><span>고정 동작</span><span class="mock-chip ok">항상 맨 위</span></div>
+                <div class="mock-detail-card"><p>오버레이를 끄면 트레이만 유지하고, 재실행 후에도 숨김 상태를 기억합니다.</p></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>10</span><strong>알림</strong>사건별 말풍선 설정<em>기본값</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="알림 설정 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">수집</span><span class="mock-tab">화면</span><span class="mock-tab active">알림</span><span class="mock-tab">기타</span></div>
+              <div class="mock-body">
+                <div class="mock-notice-row"><span><strong>레벨업</strong><small>클릭하면 해당 펫 화면 열기</small></span><span class="mock-switch on" aria-hidden="true"></span></div>
+                <div class="mock-notice-row"><span><strong>업적 달성</strong><small>클릭하면 업적 화면 열기</small></span><span class="mock-switch on" aria-hidden="true"></span></div>
+                <div class="mock-notice-row"><span><strong>뽑기 가능</strong><small>기본 꺼짐 · 비용 기준 상향 돌파 시 1회 · 클릭하면 뽑기</small></span><span class="mock-switch" aria-hidden="true"></span></div>
+                <div class="mock-block-title"><span>노출 방식</span><span class="mock-chip">펫 말풍선</span></div>
+                <div class="mock-detail-card"><p>운영체제 알림 센터는 사용하지 않습니다. 오버레이가 숨겨졌거나 알림이 꺼진 동안 억제된 말풍선은 나중에 재생하지 않습니다.</p></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>11</span><strong>말풍선</strong>네 가지 대표 사건<em>펫 반응</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="알림 말풍선 화면 예시">
+              <div class="mock-bar"><strong>오버레이 알림</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">사건별 예시</span><span class="mock-tab">표정·짧은 애니메이션</span></div>
+              <div class="mock-body compact">
+                <div class="bubble-stage"><span class="bubble-pet" aria-hidden="true"></span><div class="bubble-card">‘첫 만남’을 달성했어!<small>코인 +10 · 초보 조련사 · 트로피</small></div></div>
+                <div class="bubble-stage"><span class="bubble-pet" aria-hidden="true"></span><div class="bubble-card">3개 업적을 달성했어!<small>누르면 업적 화면으로 이동</small></div></div>
+                <div class="bubble-stage"><span class="bubble-pet" aria-hidden="true"></span><div class="bubble-card">노란 병아리가 Lv.8이 됐어!<small>Lv.7 → Lv.8</small></div></div>
+                <div class="bubble-stage"><span class="bubble-pet" aria-hidden="true"></span><div class="bubble-card">새 펫을 만날 코인이 모였어!<small>누르면 뽑기 화면으로 이동</small></div></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>12</span><strong>기타 · 로컬</strong>저장 위치와 후원 채널<em>상단</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="기타 로컬 데이터 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">수집</span><span class="mock-tab">화면</span><span class="mock-tab">알림</span><span class="mock-tab active">기타</span></div>
+              <div class="mock-body">
+                <div class="mock-card-stack">
+                  <div class="mock-detail-card"><h4>로컬 데이터</h4><p>저장 위치는 읽기 전용으로 표시합니다.</p><div class="mock-path"><code>앱 로컬 데이터 저장 위치</code><span class="mock-button">폴더 열기</span></div><p style="margin-top:3%">백업·복원·초기화 기능은 제공하지 않습니다.</p></div>
+                  <div class="mock-detail-card"><h4>개발자에게 커피 한 잔</h4><p>후원은 게임 보상과 연결되지 않습니다.</p><div style="display:flex;gap:3%;margin-top:4%"><span class="mock-button primary">GitHub Sponsors</span><span class="mock-button disabled">Buy Me a Coffee · 준비 중</span></div></div>
+                </div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>13</span><strong>기타 · 앱 정보</strong>버전·라이선스·크레딧<em>하단</em></figcaption>
+            <div class="mock-panel mock-settings" role="group" aria-label="기타 앱 정보 화면 예시">
+              <div class="mock-bar"><strong>설정</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">수집</span><span class="mock-tab">화면</span><span class="mock-tab">알림</span><span class="mock-tab active">기타</span></div>
+              <div class="mock-body">
+                <div class="mock-detail-card"><h4>앱 정보</h4><div class="mock-link-row"><span>버전</span><span>v0.1.0</span></div><div class="mock-link-row"><span>오픈소스 라이선스</span><span>보기 →</span></div><div class="mock-link-row"><span>에셋 크레딧</span><span>보기 →</span></div><div class="mock-link-row"><span>프로젝트 저장소</span><span>열기 ↗</span></div></div>
+                <div class="mock-detail-card" style="margin-top:4%"><h4>에셋 크레딧</h4><p>배포물에 포함된 에셋만 표시하고, 각 라이선스 원문 또는 원문 링크를 제공합니다.</p></div>
+                <div class="mock-detail-card" style="margin-top:4%"><span class="mock-chip muted">외부 링크</span><p style="margin-top:3%">후원·저장소 링크는 유효한 주소가 있을 때만 기본 브라우저로 엽니다.</p></div>
+              </div>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <section class="preview-group" aria-labelledby="preview-achievements-title">
+        <div class="preview-group-head">
+          <h3 id="preview-achievements-title">업적 화면</h3>
+          <span class="preview-count">4개 예시</span>
+        </div>
+        <div class="mock-grid">
+          <figure class="mockup">
+            <figcaption><span>14</span><strong>전체 목록</strong>완료율과 카테고리<em>22개</em></figcaption>
+            <div class="mock-panel mock-achievements" role="group" aria-label="업적 전체 화면 예시">
+              <div class="mock-bar"><strong>업적</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">전체</span><span class="mock-tab">수집</span><span class="mock-tab">성장</span><span class="mock-tab">전투</span><span class="mock-tab">사용량</span></div>
+              <div class="mock-body compact">
+                <div class="mock-achievement-head"><div class="mock-achievement-meta"><strong>전체 완료율</strong><b>8 / 22</b></div><div class="mock-progress" aria-hidden="true"><i></i></div></div>
+                <div class="mock-block-title"><span>업적 목록</span><span>히든 2개 포함</span></div>
+                <div class="mock-achievement-list">
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">✓</span><span class="mock-achievement-copy"><strong>첫 만남</strong><span>첫 펫 획득 · 달성</span></span><span class="mock-reward">+10 · 칭호 · 트로피</span></div>
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">T</span><span class="mock-achievement-copy"><strong>토큰 마일스톤 Ⅰ</strong><span>740K / 1M</span><span class="mock-card-progress" aria-hidden="true"><i></i></span></span><span class="mock-reward">+20</span></div>
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">B</span><span class="mock-achievement-copy"><strong>백전노장 Ⅰ</strong><span>18 / 50승</span><span class="mock-card-progress" aria-hidden="true"><i style="width:36%"></i></span></span><span class="mock-reward">+80</span></div>
+                  <div class="mock-achievement-card mock-hidden"><span class="mock-achievement-icon">?</span><span class="mock-achievement-copy"><strong>? ? ?</strong><span>? ? ?</span></span><span class="mock-reward">? ? ?</span></div>
+                </div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>15</span><strong>진행 상태</strong>잠금·달성·히든 공개<em>상태</em></figcaption>
+            <div class="mock-panel mock-achievements" role="group" aria-label="업적 진행 상태 화면 예시">
+              <div class="mock-bar"><strong>업적</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">전체</span><span class="mock-tab">수집</span><span class="mock-tab">성장</span><span class="mock-tab">전투</span><span class="mock-tab">사용량</span></div>
+              <div class="mock-body compact">
+                <div class="mock-achievement-list">
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">✓</span><span class="mock-achievement-copy"><strong>첫 승리</strong><span>전투 1승 · 달성 완료</span></span><span class="mock-chip ok">달성</span></div>
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">G</span><span class="mock-achievement-copy"><strong>오랜 친구 Ⅱ</strong><span>Lv.14 / Lv.20</span><span class="mock-card-progress" aria-hidden="true"><i style="width:70%"></i></span></span><span class="mock-reward">+100</span></div>
+                  <div class="mock-achievement-card mock-hidden"><span class="mock-achievement-icon">?</span><span class="mock-achievement-copy"><strong>? ? ?</strong><span>? ? ?</span></span><span class="mock-reward">? ? ?</span></div>
+                  <div class="mock-achievement-card"><span class="mock-achievement-icon">✓</span><span class="mock-achievement-copy"><strong>세 도구의 조련사</strong><span>히든 업적 · 달성 후 공개</span></span><span class="mock-reward">+70 · 칭호</span></div>
+                </div>
+                <p class="mock-help" style="margin-top:4%">기록이 감소해도 이미 저장된 업적 진행률은 되돌리지 않습니다.</p>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>16</span><strong>칭호 관리</strong>장착·교체·해제<em>보유 칭호</em></figcaption>
+            <div class="mock-panel mock-achievements" role="group" aria-label="칭호 관리 화면 예시">
+              <div class="mock-bar"><strong>칭호</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab">업적</span><span class="mock-tab active">보유 칭호</span><span class="mock-tab">트로피</span></div>
+              <div class="mock-body">
+                <div class="mock-profile"><div class="mock-avatar" aria-hidden="true"></div><div class="mock-profile-copy"><strong>까만 코뿔소</strong><span>현재 장착 칭호</span></div><span class="mock-title-chip">초보 조련사</span></div>
+                <div class="mock-block-title"><span>보유 칭호</span><span>3개</span></div>
+                <div class="mock-title-list">
+                  <div class="mock-title-row equipped"><span><b>초보 조련사</b><small>첫 만남 보상</small></span><span class="mock-button">장착 해제</span></div>
+                  <div class="mock-title-row"><span><b>세 도구의 조련사</b><small>히든 업적 보상</small></span><span class="mock-button primary">장착</span></div>
+                  <div class="mock-title-row"><span><b>행운아</b><small>에픽 펫 첫 획득 보상</small></span><span class="mock-button">장착</span></div>
+                </div>
+                <div class="mock-detail-card" style="margin-top:4%"><p>첫 칭호만 장착값이 없을 때 자동 장착하고, 이후 획득한 칭호는 현재 선택을 바꾸지 않습니다.</p></div>
+              </div>
+            </div>
+          </figure>
+
+          <figure class="mockup">
+            <figcaption><span>17</span><strong>보상·트로피</strong>멱등 지급과 배치<em>첫 만남</em></figcaption>
+            <div class="mock-panel mock-achievements" role="group" aria-label="업적 보상 화면 예시">
+              <div class="mock-bar"><strong>업적 보상</strong><span class="mock-close" aria-hidden="true">×</span></div>
+              <div class="mock-tabs" aria-hidden="true"><span class="mock-tab active">지급 결과</span><span class="mock-tab">트로피 보관함</span></div>
+              <div class="mock-body compact">
+                <div class="mock-achievement-head"><div class="mock-achievement-meta"><strong>첫 만남</strong><b>지급 완료</b></div><div class="mock-progress" aria-hidden="true"><i style="width:100%"></i></div></div>
+                <div class="mock-block-title"><span>필수 보상</span><span>모두 기록됨</span></div>
+                <div class="mock-reward-list">
+                  <div class="mock-reward-row"><span class="mock-reward-icon">C</span><span><b>코인 +10</b><small>재화 원장에 멱등 기록</small></span><span class="mock-chip ok">완료</span></div>
+                  <div class="mock-reward-row"><span class="mock-reward-icon">T</span><span><b>초보 조련사</b><small>첫 칭호라 자동 장착</small></span><span class="mock-chip ok">완료</span></div>
+                  <div class="mock-reward-row"><span class="mock-reward-icon">★</span><span><b>첫 만남 트로피</b><small>룸의 첫 빈자리 우선</small></span><span class="mock-chip ok">배치</span></div>
+                </div>
+                <div class="mock-block-title"><span>룸 배치</span><span>빈자리 없으면 보관함</span></div>
+                <div class="mock-room"><span class="filled">★ 첫 만남</span><span>빈자리</span><span>빈자리</span></div>
+                <p class="mock-help" style="margin-top:4%">모든 필수 보상이 기록된 뒤에만 지급 완료로 표시하며, 실패한 보상만 다시 시도합니다.</p>
+              </div>
+            </div>
+          </figure>
+        </div>
+      </section>
+
+      <p class="preview-disclaimer">정상 기능 전체와 UI가 달라지는 상태를 설명하기 위한 예시입니다. 픽셀 아트, 정확한 간격, 애니메이션과 세부 문구는 구현 과정에서 조정합니다.</p>
     </section>
 
     <section class="section" id="areas">

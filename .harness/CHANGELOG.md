@@ -4,9 +4,9 @@
 
 ### Changed
 
-- Added information, settings, and achievements screen examples to the top of
-  the meta product overview so teammates can see the approved plan before its
-  detailed explanation.
+- Expanded the meta product overview from three partial screen examples to a
+  17-panel gallery covering every planned information, settings, and
+  achievements function plus materially different UI states.
 - Renamed the meta product specification to the stable, content-focused
   `specs/meta-info-settings-achievements-design.md` path and made that naming
   convention part of the harness contract.
