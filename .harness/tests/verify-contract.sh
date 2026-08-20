@@ -191,6 +191,10 @@ done
 for marker in \
   '<html lang="ko">' \
   '<main id="main-content">' \
+  'id="screen-preview"' \
+  'aria-label="정보 화면 예시"' \
+  'aria-label="설정 화면 예시"' \
+  'aria-label="업적 화면 예시"' \
   'id="areas"' \
   'id="flow"' \
   'id="achievements"' \
@@ -199,6 +203,15 @@ for marker in \
   assert_contains .harness/guides/meta-product-overview.html "$marker" \
     "meta product overview is missing required page structure: $marker"
 done
+
+if grep -F -q -- 'id="screen-preview"' .harness/guides/meta-product-overview.html \
+  && grep -F -q -- 'id="areas"' .harness/guides/meta-product-overview.html; then
+  screen_preview_line=$(grep -F -n -m 1 -- 'id="screen-preview"' .harness/guides/meta-product-overview.html | cut -d: -f1)
+  areas_line=$(grep -F -n -m 1 -- 'id="areas"' .harness/guides/meta-product-overview.html | cut -d: -f1)
+  if [ "$screen_preview_line" -ge "$areas_line" ]; then
+    fail 'meta product screen preview must appear before the explanatory area cards'
+  fi
+fi
 
 assert_not_contains .harness/guides/meta-product-overview.html \
   '<script src=' \

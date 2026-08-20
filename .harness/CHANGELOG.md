@@ -4,6 +4,9 @@
 
 ### Changed
 
+- Added information, settings, and achievements screen examples to the top of
+  the meta product overview so teammates can see the approved plan before its
+  detailed explanation.
 - Renamed the meta product specification to the stable, content-focused
   `specs/meta-info-settings-achievements-design.md` path and made that naming
   convention part of the harness contract.
