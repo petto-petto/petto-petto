@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 펫 알림 노출 방식 비교</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #12151c;
+      --panel: #1d2330;
+      --panel-2: #252d3d;
+      --line: #3b455b;
+      --text: #f7f1df;
+      --muted: #aeb8cc;
+      --mint: #66e3bd;
+      --amber: #ffc866;
+      --violet: #b89cff;
+      --coral: #ff8b83;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 20% 0%, #253052 0, transparent 34%),
+        radial-gradient(circle at 90% 80%, #303052 0, transparent 35%),
+        var(--bg);
+    }
+    .page { max-width: 1460px; margin: 0 auto; padding: 34px 30px 48px; }
+    .eyebrow { color: var(--mint); font-weight: 800; font-size: 13px; letter-spacing: .12em; text-transform: uppercase; }
+    h1 { margin: 8px 0 8px; font-size: clamp(28px, 3.2vw, 46px); letter-spacing: -.04em; }
+    .lead { margin: 0 0 28px; color: var(--muted); font-size: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .choice {
+      cursor: pointer;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(29,35,48,.92);
+      overflow: hidden;
+      transition: .18s ease;
+      box-shadow: 0 14px 44px rgba(0,0,0,.28);
+    }
+    .choice:hover { transform: translateY(-3px); border-color: #697692; }
+    .choice.selected { outline: 3px solid var(--mint); border-color: transparent; }
+    .scene {
+      position: relative;
+      height: 430px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(12,17,26,.25), rgba(12,17,26,.62)),
+        linear-gradient(135deg, #3e5367 0%, #2a3549 50%, #22293b 100%);
+    }
+    .menubar {
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 10px;
+      font-size: 10px;
+      color: #e6edf7;
+      background: rgba(18,23,34,.82);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .window {
+      position: absolute;
+      left: 22px;
+      right: 28px;
+      top: 54px;
+      height: 255px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-radius: 10px;
+      background: rgba(15,20,30,.82);
+      box-shadow: 0 20px 45px rgba(0,0,0,.35);
+    }
+    .window-head { height: 28px; padding: 7px 10px; font-size: 10px; color: #aeb8cc; border-bottom: 1px solid rgba(255,255,255,.08); }
+    .code { padding: 14px; font: 10px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; color: #7f8ba2; }
+    .code b { color: #cfd8e8; }
+    .pet {
+      position: absolute;
+      right: 25px;
+      bottom: 24px;
+      width: 70px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      border-radius: 34% 34% 24% 24%;
+      background: linear-gradient(145deg, #ffc569, #e9874f);
+      border: 4px solid #3d2f35;
+      font-size: 38px;
+      filter: drop-shadow(0 9px 4px rgba(0,0,0,.3));
+    }
+    .pet::after { content: "나비 · Lv.14"; position: absolute; bottom: -20px; width: 110px; text-align: center; font-size: 10px; font-weight: 800; color: white; text-shadow: 0 1px 4px #000; }
+    .toast {
+      position: absolute;
+      right: 20px;
+      bottom: 112px;
+      width: 268px;
+      min-height: 82px;
+      display: grid;
+      grid-template-columns: 44px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 13px;
+      border: 1px solid rgba(255,255,255,.16);
+      border-left: 4px solid var(--amber);
+      border-radius: 12px;
+      background: rgba(24,29,40,.96);
+      box-shadow: 0 15px 45px rgba(0,0,0,.44);
+    }
+    .toast .icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 10px; background: #3b3144; font-size: 24px; }
+    .toast .kicker { color: var(--amber); font-size: 10px; font-weight: 900; letter-spacing: .08em; }
+    .toast strong { display: block; margin: 2px 0 3px; font-size: 14px; }
+    .toast small { color: #c2cad8; font-size: 10px; }
+    .os-toast {
+      position: absolute;
+      right: 13px;
+      top: 42px;
+      width: 280px;
+      padding: 12px 13px;
+      border: 1px solid rgba(255,255,255,.34);
+      border-radius: 14px;
+      color: #141820;
+      background: rgba(245,247,251,.92);
+      box-shadow: 0 14px 35px rgba(0,0,0,.28);
+      backdrop-filter: blur(14px);
+    }
+    .os-top { display: flex; justify-content: space-between; color: #5e6572; font-size: 10px; font-weight: 700; }
+    .os-toast strong { display: block; margin: 7px 0 3px; font-size: 13px; }
+    .os-toast p { margin: 0; color: #4c5360; font-size: 11px; }
+    .multi .toast { bottom: 86px; transform: scale(.88); transform-origin: bottom right; }
+    .multi .os-toast { transform: scale(.88); transform-origin: top right; }
+    .body { padding: 17px 18px 20px; }
+    .title-row { display: flex; align-items: center; gap: 9px; }
+    .letter { width: 28px; height: 28px; display: grid; place-items: center; flex: none; border-radius: 50%; background: #30394d; color: white; font-weight: 900; }
+    .body h2 { margin: 0; font-size: 18px; }
+    .body p { min-height: 42px; margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .recommended { display: inline-flex; margin-top: 13px; padding: 5px 9px; border-radius: 999px; background: rgba(102,227,189,.14); color: var(--mint); font-size: 11px; font-weight: 900; }
+    .event-strip { display: flex; gap: 8px; margin-top: 25px; flex-wrap: wrap; }
+    .event { flex: 1; min-width: 210px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; color: #cbd4e4; background: rgba(29,35,48,.7); font-size: 12px; }
+    .event b { color: white; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } .scene { height: 390px; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="eyebrow">Information · Settings · Achievements</div>
+    <h1>알림은 어디에 나타날까요?</h1>
+    <p class="lead">세 가지 노출 방식을 같은 데스크톱 장면에서 비교했습니다. 마음에 드는 카드를 클릭해 선택할 수 있습니다.</p>
+
+    <section class="grid">
+      <article class="choice" data-choice="in-app" onclick="toggleSelect(this)">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 새로운 기능을 구현해줘</b><br><br>Analyzing workspace…<br>Running tests…<br><span style="color:#66e3bd">Finished successfully</span></div></div>
+          <div class="toast"><div class="icon">🏆</div><div><div class="kicker">업적 달성!</div><strong>세 도구의 조련사</strong><small>+70코인 · 새 칭호 획득</small></div></div>
+          <div class="pet">🐱</div>
+        </div>
+        <div class="body"><div class="title-row"><span class="letter">A</span><h2>펫 옆 인앱 토스트</h2></div><p>게임 세계 안에서 펫의 반응과 함께 나타납니다. 클릭하면 관련 화면으로 바로 이동합니다.</p><span class="recommended">권장</span></div>
+      </article>
+
+      <article class="choice" data-choice="os" onclick="toggleSelect(this)">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 새로운 기능을 구현해줘</b><br><br>Analyzing workspace…<br>Running tests…<br><span style="color:#66e3bd">Finished successfully</span></div></div>
+          <div class="os-toast"><div class="os-top"><span>🐾 AI PET</span><span>지금</span></div><strong>🏆 세 도구의 조련사</strong><p>업적 달성 · +70코인</p></div>
+          <div class="pet">🐱</div>
+        </div>
+        <div class="body"><div class="title-row"><span class="letter">B</span><h2>운영체제 기본 알림</h2></div><p>다른 앱 위에서도 익숙하게 보이지만, 알림 권한과 OS별 구현 차이가 생깁니다.</p></div>
+      </article>
+
+      <article class="choice multi" data-choice="both" onclick="toggleSelect(this)">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 새로운 기능을 구현해줘</b><br><br>Analyzing workspace…<br>Running tests…<br><span style="color:#66e3bd">Finished successfully</span></div></div>
+          <div class="os-toast"><div class="os-top"><span>🐾 AI PET</span><span>지금</span></div><strong>🏆 세 도구의 조련사</strong><p>업적 달성 · +70코인</p></div>
+          <div class="toast"><div class="icon">🏆</div><div><div class="kicker">업적 달성!</div><strong>세 도구의 조련사</strong><small>+70코인 · 새 칭호 획득</small></div></div>
+          <div class="pet">🐱</div>
+        </div>
+        <div class="body"><div class="title-row"><span class="letter">C</span><h2>인앱 + OS 알림</h2></div><p>놓칠 가능성은 낮지만 같은 사건이 두 번 보여 산만하고 설정도 복잡해집니다.</p></div>
+      </article>
+    </section>
+
+    <section class="event-strip">
+      <div class="event">🏆 <b>업적 달성</b><br>업적명 · 코인 · 칭호</div>
+      <div class="event">✨ <b>레벨업</b><br>펫 이름 · 이전/현재 레벨</div>
+      <div class="event">🥚 <b>뽑기 가능</b><br>현재 코인 · 뽑기 화면 이동</div>
+    </section>
+  </main>
+</body>
+</html>
