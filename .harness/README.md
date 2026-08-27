@@ -1,6 +1,6 @@
-# Shared Rust Harness
+# Shared Electron Harness
 
-This directory holds the runtime-neutral material for the shared Claude Code and Codex Rust harness.
+This directory holds the runtime-neutral material for the shared Claude Code and Codex Electron harness.
 
 ## Structure
 
@@ -11,7 +11,7 @@ This directory holds the runtime-neutral material for the shared Claude Code and
 - `rules/`, `roles/`, `references/`, and `friction/` hold shared support material.
 - `specs/` contains approved product and harness designs; `plans/` contains implementation plans that reference them.
 - `tests/verify-contract.sh` verifies the harness structure, canonical references, and adapter targets.
-- `scripts/verify-rust.sh` runs the required Cargo completion gate.
+- `scripts/verify-electron.sh` runs the required npm completion gate.
 
 ## Using the harness
 
@@ -21,10 +21,10 @@ Both runtimes run the same checks directly. From the repository root, run:
 
 ```bash
 bash .harness/tests/verify-contract.sh
-bash .harness/scripts/verify-rust.sh
+bash .harness/scripts/verify-electron.sh
 ```
 
-The Rust command sequence has one source of truth in `rules/rust.md`; the runner stops at the first failed command.
+The npm command sequence has one source of truth in `rules/electron.md`; the runner stops at the first failed command.
 
 Product work uses the approved specification under `specs/` as its behavioral source of truth. Implementation plans and tests reference the requirement IDs in that specification instead of duplicating product rules.
 
@@ -44,6 +44,6 @@ Product specification filenames use stable, content-focused names without date p
 
 ## Manifest boundary
 
-This harness branch does not track Cargo.toml/Cargo.lock. A clean checkout must
-land the existing manifest separately before the Rust gate can run; do not add,
-stage, or modify those user-owned files as part of harness work.
+Harness work does not modify package.json or package-lock.json. Those are
+product-owned files; a clean checkout runs `npm install` before the Electron gate
+can run, and the lockfile is committed so every teammate installs the same versions.

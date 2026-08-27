@@ -1,0 +1,10 @@
+{
+  "//": "테스트 타입 검사 전용. 산출물을 내지 않으므로 solution 빌드와 분리한다.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "declaration": false
+  },
+  "include": ["packages/*/test/**/*.ts"]
+}

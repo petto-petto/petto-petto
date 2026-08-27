@@ -1,0 +1,18 @@
+dist
+node_modules
+package-lock.json
+
+# 펫 도트 에셋. 팀원이 만든 원본이라 형식을 건드리지 않는다.
+apps/desktop/renderer/assets
+
+# 하네스와 Skill 본문.
+#
+# `verify-contract.sh`가 이 파일들의 정확한 줄과 문자열을 검사한다. 포맷터가 줄을
+# 다시 흘리면 계약 검증이 깨진다. 픽스처와 시나리오는 과거 실행의 증거이기도 해서
+# 내용을 바꾸면 기록을 위조하는 것이 된다.
+.harness/
+.claude/
+.agents/
+
+# 다른 도구가 만든 산출물.
+.superpowers/

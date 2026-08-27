@@ -1,0 +1,19 @@
+{
+  "name": "@pet/stubs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "다른 도메인 포트의 인메모리 어댑터. 팀원의 실제 패키지가 이 자리를 대체한다",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "dependencies": {
+    "@pet/core": "*",
+    "@pet/meta": "*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

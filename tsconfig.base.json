@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2023", "DOM"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "declaration": true,
+    "composite": true,
+    "sourceMap": true,
+
+    // Node가 `.ts`를 직접 실행하려면 상대 import에 `.ts` 확장자가 있어야 한다.
+    // 두 옵션이 그것을 허용하고, 컴파일 시 `.js`로 다시 써 준다. TypeScript 5.7 이상 필요.
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  }
+}

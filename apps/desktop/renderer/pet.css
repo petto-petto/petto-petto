@@ -1,0 +1,136 @@
+/* 펫 창. 투명 배경 위에 스프라이트만 떠 있다. */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', system-ui, sans-serif;
+}
+
+#stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+/*
+ * `hidden` 속성을 실제로 존중하게 만든다.
+ *
+ * 브라우저 기본 스타일시트의 `[hidden] { display: none }`은 우선순위가 가장 낮아서,
+ * 아래 `#menu { display: flex }` 같은 작성자 규칙 하나에 그냥 진다. 그러면 HTML에
+ * `hidden`을 적어 둬도 메뉴가 처음부터 보인다. 그래서 명시적으로 다시 적는다.
+ */
+[hidden] {
+  display: none !important;
+}
+
+#sprite {
+  /* 픽셀 아트는 보간하면 뭉개진다. 에셋 가이드 §7의 필수 규칙이다. */
+  image-rendering: pixelated;
+  cursor: grab;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+  /* Electron은 이 영역을 타이틀 바처럼 다룬다. 펫을 잡아 끌면 창이 따라온다. */
+  -webkit-app-region: drag;
+}
+
+/* 스프라이트를 아직 못 읽었을 때만 보이는 자리표시. */
+#stage.sprite-missing #sprite {
+  width: 64px;
+  height: 64px;
+  background: rgba(126, 214, 191, 0.25);
+  border: 2px dashed #7ed6bf;
+  border-radius: 12px;
+}
+
+/* 말풍선. 기획서 6.3의 알림 표면이다. */
+#bubble {
+  position: absolute;
+  left: 50%;
+  bottom: 84%;
+  transform: translateX(-50%);
+  max-width: 190px;
+  padding: 6px 9px;
+  border: 1px solid #2c3140;
+  border-radius: 9px;
+  background: #1c1f29;
+  color: #e6e9f2;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  animation: pop 0.16s ease-out;
+  z-index: 2;
+}
+
+#bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: #1c1f29;
+  border-right: 1px solid #2c3140;
+  border-bottom: 1px solid #2c3140;
+  transform: rotate(45deg);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/*
+ * 우클릭 메뉴.
+ *
+ * 위치는 JS가 클릭 좌표로 정한다. 여기서 `left`/`top`을 고정하면 어디를 눌러도
+ * 같은 자리에 뜬다.
+ */
+#menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid #2c3140;
+  border-radius: 8px;
+  background: rgba(20, 22, 29, 0.97);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55);
+  z-index: 3;
+}
+
+#menu button {
+  /* 드래그 영역 위에 얹히므로 명시적으로 빼야 클릭이 먹힌다. */
+  -webkit-app-region: no-drag;
+  padding: 4px 14px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #e6e9f2;
+  font: inherit;
+  font-size: 11px;
+  cursor: default;
+}
+
+#menu button:hover {
+  background: #3c6b60;
+}

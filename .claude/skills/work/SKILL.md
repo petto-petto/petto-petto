@@ -1,14 +1,14 @@
 ---
 name: work
-description: "Feature work, bug fixes, refactors, Rust changes, or explicit `/work` or `$work`: select a track, implement with evidence, and complete the review loop."
+description: "Feature work, bug fixes, refactors, Electron changes, or explicit `/work` or `$work`: select a track, implement with evidence, and complete the review loop."
 ---
 
 # Work
 
 ## Entry
 
-Read `AGENTS.md`. Read the applicable rule before changing code; Rust work uses
-`.harness/rules/rust.md`. Before selecting a track, inspect
+Read `AGENTS.md`. Read the applicable rule before changing code; Electron work uses
+`.harness/rules/electron.md`. Before selecting a track, inspect
 [`.harness/specs/features/`](../../../.harness/specs/features/) when the request
 has any feature-spec trigger:
 
@@ -26,8 +26,8 @@ understood local change. State `lightweight` or `standard` and the request's
 success criteria before changing files. Record the selected track, criteria,
 and non-goals in the work result.
 
-For Rust work, run `bash .harness/scripts/verify-rust.sh` as the shared
-Mechanical completion entrypoint. The Rust rule owns the gate's command detail.
+For Electron work, run `bash .harness/scripts/verify-electron.sh` as the shared
+Mechanical completion entrypoint. The Electron rule owns the gate's command detail.
 
 ## Lightweight track
 

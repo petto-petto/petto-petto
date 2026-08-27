@@ -1,0 +1,241 @@
+{
+  "_comment": [
+    "기획서 7.2 표를 그대로 옮긴 업적 정의. 이 파일이 22개 업적의 단일 원본이다.",
+    "코드 분기 대신 설정 파일을 쓰는 이유(기획서 7.1): 밸런스 값을 바꾸는 데 로직 수정이",
+    "필요 없고, 22개가 한 화면에 보여 기획서와 대조하기 쉽고, id는 릴리스 사이에 절대",
+    "바뀌지 않아야 하는 값인데 한곳에 모여 있으면 지키기 쉽다.",
+    "fact/target: 모든 업적을 '어떤 사실이 목표값에 도달했는가' 한 가지 모양으로 표현한다.",
+    "사실은 단조 증가하는 정수이므로 진행률이 감소할 수 없고(기획서 7.1), 새 업적을",
+    "추가해도 현재 사실만으로 소급 판정된다(ACH-004)."
+  ],
+  "achievements": [
+    {
+      "id": "collection.first_pet",
+      "category": "collection",
+      "name": "첫 만남",
+      "condition": "첫 펫 획득",
+      "fact": "first_pet",
+      "target": 1,
+      "coin": 10,
+      "title": "초보 조련사",
+      "trophy": true
+    },
+    {
+      "id": "collection.dex_5",
+      "category": "collection",
+      "name": "수집가 Ⅰ",
+      "condition": "도감 5종",
+      "fact": "dex_owned",
+      "target": 5,
+      "coin": 30,
+      "tier": "bronze"
+    },
+    {
+      "id": "collection.dex_15",
+      "category": "collection",
+      "name": "수집가 Ⅱ",
+      "condition": "도감 15종",
+      "fact": "dex_owned",
+      "target": 15,
+      "coin": 80,
+      "tier": "silver"
+    },
+    {
+      "id": "collection.dex_complete",
+      "category": "collection",
+      "name": "도감 마스터",
+      "condition": "현재 도감의 전체 종 보유",
+      "fact": "dex_complete",
+      "target": 1,
+      "coin": 300,
+      "tier": "gold",
+      "title": "도감 마스터",
+      "trophy": true
+    },
+    {
+      "id": "collection.first_epic",
+      "category": "collection",
+      "name": "행운아",
+      "condition": "에픽 펫 첫 획득",
+      "fact": "first_epic",
+      "target": 1,
+      "coin": 50,
+      "title": "행운아"
+    },
+    {
+      "id": "collection.fusion_5",
+      "category": "collection",
+      "name": "연금술사 Ⅰ",
+      "condition": "합성 5회",
+      "fact": "fusion_count",
+      "target": 5,
+      "coin": 30,
+      "tier": "bronze"
+    },
+    {
+      "id": "collection.fusion_50",
+      "category": "collection",
+      "name": "연금술사 Ⅱ",
+      "condition": "합성 50회",
+      "fact": "fusion_count",
+      "target": 50,
+      "coin": 120,
+      "tier": "silver",
+      "title": "심야의 연금술사"
+    },
+    {
+      "id": "growth.level_5",
+      "category": "growth",
+      "name": "첫 걸음",
+      "condition": "한 펫이 Lv.5 달성",
+      "fact": "max_pet_level",
+      "target": 5,
+      "coin": 20
+    },
+    {
+      "id": "growth.level_10",
+      "category": "growth",
+      "name": "오랜 친구 Ⅰ",
+      "condition": "한 펫이 Lv.10 달성",
+      "fact": "max_pet_level",
+      "target": 10,
+      "coin": 40,
+      "tier": "bronze"
+    },
+    {
+      "id": "growth.level_20",
+      "category": "growth",
+      "name": "오랜 친구 Ⅱ",
+      "condition": "한 펫이 Lv.20 달성",
+      "fact": "max_pet_level",
+      "target": 20,
+      "coin": 100,
+      "tier": "silver"
+    },
+    {
+      "id": "growth.max_level",
+      "category": "growth",
+      "name": "오랜 친구 Ⅲ",
+      "condition": "한 펫이 설정된 최고 레벨 달성",
+      "fact": "max_level_reached",
+      "target": 1,
+      "coin": 250,
+      "tier": "gold",
+      "title": "베테랑 조련사",
+      "trophy": true
+    },
+    {
+      "id": "growth.first_evolution",
+      "category": "growth",
+      "name": "진화의 순간",
+      "condition": "첫 진화 성공",
+      "fact": "evolution_count",
+      "target": 1,
+      "coin": 60
+    },
+    {
+      "id": "battle.first_win",
+      "category": "battle",
+      "name": "첫 승리",
+      "condition": "전투 1승",
+      "fact": "battle_wins",
+      "target": 1,
+      "coin": 20
+    },
+    {
+      "id": "battle.win_50",
+      "category": "battle",
+      "name": "백전노장 Ⅰ",
+      "condition": "전투 50승",
+      "fact": "battle_wins",
+      "target": 50,
+      "coin": 80,
+      "tier": "bronze"
+    },
+    {
+      "id": "battle.win_500",
+      "category": "battle",
+      "name": "백전노장 Ⅱ",
+      "condition": "전투 500승",
+      "fact": "battle_wins",
+      "target": 500,
+      "coin": 300,
+      "tier": "gold",
+      "title": "백전노장",
+      "trophy": true
+    },
+    {
+      "id": "battle.streak_10",
+      "category": "battle",
+      "name": "무패",
+      "condition": "10연승",
+      "fact": "max_streak",
+      "target": 10,
+      "coin": 120,
+      "tier": "silver"
+    },
+    {
+      "id": "usage.tokens_1m",
+      "category": "usage",
+      "name": "토큰 마일스톤 Ⅰ",
+      "condition": "관측 토큰 100만",
+      "fact": "observed_tokens",
+      "target": 1000000,
+      "coin": 20,
+      "tier": "bronze"
+    },
+    {
+      "id": "usage.tokens_10m",
+      "category": "usage",
+      "name": "토큰 마일스톤 Ⅱ",
+      "condition": "관측 토큰 1천만",
+      "fact": "observed_tokens",
+      "target": 10000000,
+      "coin": 60,
+      "tier": "silver"
+    },
+    {
+      "id": "usage.tokens_100m",
+      "category": "usage",
+      "name": "토큰 마일스톤 Ⅲ",
+      "condition": "관측 토큰 1억",
+      "fact": "observed_tokens",
+      "target": 100000000,
+      "coin": 200,
+      "tier": "gold",
+      "title": "토큰 헤비유저"
+    },
+    {
+      "id": "usage.active_24h",
+      "category": "usage",
+      "name": "함께한 시간 Ⅰ",
+      "condition": "활동 시간 1,440분",
+      "fact": "activity_minutes",
+      "target": 1440,
+      "coin": 30,
+      "tier": "bronze"
+    },
+    {
+      "id": "hidden.three_tools_day",
+      "category": "hidden",
+      "name": "세 도구의 조련사",
+      "condition": "같은 로컬 날짜에 세 CLI 모두 관측 토큰 발생",
+      "fact": "three_tools_days",
+      "target": 1,
+      "coin": 70,
+      "title": "세 도구의 조련사",
+      "hidden": true
+    },
+    {
+      "id": "hidden.common_fusion_epic",
+      "category": "hidden",
+      "name": "연금술의 기적",
+      "condition": "커먼 펫 2마리 합성으로 에픽 펫 획득",
+      "fact": "common_fusion_epic",
+      "target": 1,
+      "coin": 100,
+      "title": "기적의 연금술사",
+      "hidden": true
+    }
+  ]
+}

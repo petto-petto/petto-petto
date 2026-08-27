@@ -103,17 +103,17 @@ assert_exact_lines_in_order() {
   for expected_line in "$@"; do
     count=$(grep -F -x -c -- "$expected_line" "$path" || true)
     if [ "$count" -eq 0 ]; then
-      fail "missing exact Rust command: $expected_line"
+      fail "missing exact gate command: $expected_line"
       continue
     fi
     if [ "$count" -ne 1 ]; then
-      fail "Rust command must appear exactly once: $expected_line"
+      fail "gate command must appear exactly once: $expected_line"
       continue
     fi
 
     line=$(grep -F -x -n -- "$expected_line" "$path" | cut -d: -f1)
     if [ "$line" -le "$previous_line" ]; then
-      fail "Rust commands are not in the required order: $expected_line"
+      fail "gate commands are not in the required order: $expected_line"
     fi
     previous_line=$line
   done
@@ -134,17 +134,17 @@ assert_skill_frontmatter() {
   fi
 }
 
-assert_rust_runner_shape() {
+assert_gate_runner_shape() {
   if [ ! -f "$1" ]; then
-    fail "missing Rust verification runner: $1"
+    fail "missing verification runner: $1"
     return
   fi
 
   actual=$(<"$1")
-  expected_with_preflight=$'#!/usr/bin/env bash\n\nset -euo pipefail\n\nif [ ! -f Cargo.toml ]; then\n  printf \'%s\\n\' \'Rust verification cannot run: Cargo.toml is missing. This harness branch does not track Cargo.toml/Cargo.lock; land the existing manifest separately, then rerun bash .harness/scripts/verify-rust.sh.\'\n  exit 1\nfi\n\ncargo fmt --all -- --check\ncargo check --workspace --all-targets --all-features\ncargo clippy --workspace --all-targets --all-features -- -D warnings\ncargo test --workspace --all-features'
+  expected_with_preflight=$'#!/usr/bin/env bash\n\nset -euo pipefail\n\nif [ ! -f package.json ]; then\n  printf \'%s\\n\' \'Electron verification cannot run: package.json is missing. Land the workspace manifest first, then rerun bash .harness/scripts/verify-electron.sh.\'\n  exit 1\nfi\n\nif [ ! -x node_modules/.bin/tsc ]; then\n  printf \'%s\\n\' \'Electron verification cannot run: dependencies are not installed. Run npm install, then rerun bash .harness/scripts/verify-electron.sh.\'\n  exit 1\nfi\n\nnpm run format:check\nnpm run typecheck\nnpm test'
 
   if [ "$actual" != "$expected_with_preflight" ]; then
-    fail 'Rust verification runner has an unsupported executable shape'
+    fail 'verification runner has an unsupported executable shape'
   fi
 }
 
@@ -166,7 +166,7 @@ for path in \
   .harness/README.md \
   .harness/CHANGELOG.md \
   .harness/specs/meta-info-settings-achievements-design.md \
-  .harness/rules/rust.md \
+  .harness/rules/electron.md \
   .harness/rules/skill-authoring.md \
   .harness/references/writing-great-skills/SKILL.md \
   .harness/references/writing-great-skills/GLOSSARY.md; do
@@ -348,7 +348,7 @@ if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' 
 fi
 
 for instruction in \
-  '.harness/rules/rust.md' \
+  '.harness/rules/electron.md' \
   '.harness/references/writing-great-skills/SKILL.md' \
   '.harness/references/writing-great-skills/GLOSSARY.md' \
   '$work' \
@@ -360,11 +360,10 @@ done
 assert_sha256 .harness/references/writing-great-skills/SKILL.md 3fc52d73ec3959091e455681e9f894046b2cb59d1881c69efabd7f9ccb2bc13e
 assert_sha256 .harness/references/writing-great-skills/GLOSSARY.md b0421d239599252c5adbb07f8559a0a422e7b89b59183e9efbee12eecc208318
 
-assert_exact_lines_in_order .harness/rules/rust.md \
-  'cargo fmt --all -- --check' \
-  'cargo check --workspace --all-targets --all-features' \
-  'cargo clippy --workspace --all-targets --all-features -- -D warnings' \
-  'cargo test --workspace --all-features'
+assert_exact_lines_in_order .harness/rules/electron.md \
+  'npm run format:check' \
+  'npm run typecheck' \
+  'npm test'
 
 for instruction in \
   '.harness/references/writing-great-skills/SKILL.md' \
@@ -379,9 +378,9 @@ assert_skill_frontmatter .claude/skills/harness-improve/SKILL.md harness-improve
 
 for path in \
   .claude/skills/work/SKILL.md \
-  .harness/rules/rust.md; do
-  assert_contains "$path" 'bash .harness/scripts/verify-rust.sh' \
-    "shared Rust verification entrypoint is missing from: $path"
+  .harness/rules/electron.md; do
+  assert_contains "$path" 'bash .harness/scripts/verify-electron.sh' \
+    "shared verification entrypoint is missing from: $path"
 done
 
 for role in explorer planner implementer verifier reviewer; do
@@ -421,8 +420,8 @@ if ! bash .harness/tests/verify-harness-improve-skill.sh; then
   fail 'harness-improve Skill behavior verification failed'
 fi
 
-assert_file .harness/scripts/verify-rust.sh
-assert_rust_runner_shape .harness/scripts/verify-rust.sh
+assert_file .harness/scripts/verify-electron.sh
+assert_gate_runner_shape .harness/scripts/verify-electron.sh
 assert_adapter .agents/skills/work ../../.claude/skills/work
 assert_adapter .agents/skills/harness-improve ../../.claude/skills/harness-improve
 
@@ -450,11 +449,13 @@ for required in \
 done
 
 for path in .harness/README.md .harness/CHANGELOG.md; do
-  assert_contains "$path" 'does not track Cargo.toml/Cargo.lock' \
+  assert_contains "$path" 'does not modify package.json or package-lock.json' \
     "manifest-boundary documentation is missing from: $path"
 done
 
-stale_pattern='ai-pet-design|Type[S]cript|Elec[t]ron|Math[.]random|Event[S]tore|Ralph|Ouroboros'
+# `TypeScript`와 `Electron`은 더 이상 금지어가 아니다. 프로젝트가 그 스택으로 돌아왔다.
+# 나머지는 여전히 잔재다 — 옛 저장소 이름, 비결정적 난수, 폐기된 개념 이름.
+stale_pattern='ai-pet-design|Math[.]random|Event[S]tore|Ralph|Ouroboros'
 stale_paths='AGENTS.md CLAUDE.md .claude .agents .harness/README.md .harness/CHANGELOG.md .harness/rules .harness/roles .harness/friction .harness/scripts'
 if git grep -n -E -- "$stale_pattern" -- $stale_paths; then
   fail 'forbidden stale reference found in tracked harness paths'
