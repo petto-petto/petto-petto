@@ -1,0 +1,25 @@
+{
+  "name": "tamagotchi-pet",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "데스크톱 타마고치 펫 — Electron 프로토타입",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "format:check": "prettier --check .",
+    "format": "prettier --write .",
+    "typecheck": "tsc --build && tsc -p tsconfig.test.json",
+    "test": "tsc --build && node --test \"packages/*/test/**/*.test.ts\"",
+    "build": "tsc --build",
+    "start": "npm run build && electron apps/desktop/dist/main/main.js"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "electron": "^33.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.7.0"
+  }
+}

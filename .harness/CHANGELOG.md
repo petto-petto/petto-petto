@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-27 — 런타임을 Rust에서 Electron으로 전환
+
+- 팀이 프로젝트 언어를 Rust에서 TypeScript·Electron으로 바꾸기로 결정했다.
+- `rules/rust.md`를 `rules/electron.md`로, `scripts/verify-rust.sh`를
+  `scripts/verify-electron.sh`로 대체했다. 게이트는 `npm run format:check` →
+  `npm run typecheck` → `npm test` 세 단계다.
+- 계약 검사의 금지어 목록에서 `TypeScript`와 `Electron`을 뺐다. 프로젝트가 그
+  스택으로 돌아왔으므로 더 이상 잔재가 아니다. 비결정적 난수 금지는 유지한다.
+- 과거 픽스처와 시나리오 기록은 그대로 둔다. 지난 실행의 증거이므로 고치면
+  기록을 위조하는 것이 된다.
+
 ## Unreleased
 
 ### Changed
@@ -36,8 +47,8 @@
 - Task 4: Codex Skill adapters and the shared fail-fast Rust verification runner.
 - Hardened canonical Skill frontmatter and the harness-improve response protocol
   contract; the behavior probe now supports a fixture override for mutation checks.
-- This harness branch does not track Cargo.toml/Cargo.lock; a clean checkout must
-  land the existing manifest separately before the Rust gate can run.
+- Harness work does not modify package.json or package-lock.json; a clean checkout
+  runs `npm install` before the completion gate can run.
 
 ### Fixed
 

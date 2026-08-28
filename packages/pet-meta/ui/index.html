@@ -1,0 +1,18 @@
+<meta charset="utf-8" />
+<title>메타 패널</title>
+<link rel="stylesheet" href="panel.css" />
+
+<header id="titlebar">
+  <span id="grip" title="드래그해서 창 옮기기" aria-hidden="true"></span>
+  <button class="screen-tab" data-screen="info" aria-selected="true">정보</button>
+  <button class="screen-tab" data-screen="settings" aria-selected="false">설정</button>
+  <button class="screen-tab" data-screen="achievements" aria-selected="false">업적</button>
+  <button class="icon-button" id="demo-button" title="프로토타입 시연용">⚗</button>
+  <button class="icon-button" id="close-button" title="닫기">✕</button>
+</header>
+
+<nav id="subtabs"></nav>
+
+<main id="content"></main>
+
+<script src="panel.js"></script>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 펫 말풍선 알림 시안</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #12151c;
+      --panel: #1d2330;
+      --line: #3b455b;
+      --text: #f7f1df;
+      --muted: #aeb8cc;
+      --cream: #fff7df;
+      --ink: #2e3038;
+      --mint: #66e3bd;
+      --amber: #f5b942;
+      --violet: #b89cff;
+      --coral: #ff8b83;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 18% 0%, #263252 0, transparent 35%),
+        radial-gradient(circle at 88% 80%, #352c4d 0, transparent 36%),
+        var(--bg);
+    }
+    .page { max-width: 1420px; margin: 0 auto; padding: 36px 30px 52px; }
+    .eyebrow { color: var(--mint); font-size: 13px; font-weight: 900; letter-spacing: .12em; }
+    h1 { margin: 7px 0 8px; font-size: clamp(30px, 3.5vw, 47px); letter-spacing: -.045em; }
+    .lead { margin: 0 0 28px; color: var(--muted); font-size: 16px; }
+    .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .card { overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: rgba(29,35,48,.94); box-shadow: 0 17px 48px rgba(0,0,0,.3); }
+    .scene {
+      position: relative;
+      height: 435px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(18,22,32,.18), rgba(18,22,32,.66)),
+        linear-gradient(135deg, #476376 0%, #303c51 52%, #242a3d 100%);
+    }
+    .menubar { height: 28px; display: flex; justify-content: space-between; align-items: center; padding: 0 10px; color: #dce4ef; background: rgba(18,23,34,.84); font-size: 10px; }
+    .window { position: absolute; left: 20px; right: 25px; top: 54px; height: 230px; border: 1px solid rgba(255,255,255,.15); border-radius: 10px; background: rgba(14,19,28,.83); box-shadow: 0 18px 43px rgba(0,0,0,.3); }
+    .window-head { height: 28px; padding: 7px 10px; color: #aab4c7; border-bottom: 1px solid rgba(255,255,255,.08); font-size: 10px; }
+    .code { padding: 14px; color: #7e8aa0; font: 10px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .code b { color: #dbe4f3; }
+    .pet-wrap { position: absolute; right: 28px; bottom: 25px; width: 86px; height: 92px; }
+    .pet {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      width: 70px;
+      height: 72px;
+      display: grid;
+      place-items: center;
+      border: 4px solid #3e3035;
+      border-radius: 35% 35% 25% 25%;
+      background: linear-gradient(145deg, #ffc569, #e9874f);
+      font-size: 38px;
+      filter: drop-shadow(0 9px 4px rgba(0,0,0,.32));
+      animation: hop 1.3s ease-in-out infinite;
+    }
+    .pet-name { position: absolute; bottom: -10px; left: -10px; width: 106px; color: white; text-align: center; font-size: 10px; font-weight: 900; text-shadow: 0 1px 5px #000; }
+    .spark { position: absolute; z-index: 4; color: #ffe474; font-size: 18px; animation: twinkle 1s ease-in-out infinite alternate; }
+    .s1 { right: 70px; bottom: 80px; }
+    .s2 { right: 4px; bottom: 89px; animation-delay: .35s; }
+    @keyframes hop { 0%,75%,100% { transform: translateY(0) rotate(0); } 84% { transform: translateY(-7px) rotate(-3deg); } 92% { transform: translateY(-2px) rotate(3deg); } }
+    @keyframes twinkle { from { opacity: .25; transform: scale(.7) rotate(0); } to { opacity: 1; transform: scale(1.15) rotate(15deg); } }
+    .bubble {
+      position: absolute;
+      right: 47px;
+      bottom: 125px;
+      width: 278px;
+      padding: 15px 16px 14px;
+      color: var(--ink);
+      border: 3px solid #3e3035;
+      border-radius: 20px 20px 7px 20px;
+      background: var(--cream);
+      box-shadow: 0 13px 35px rgba(0,0,0,.36), inset 0 0 0 2px rgba(255,255,255,.7);
+      transform-origin: bottom right;
+      animation: pop .42s cubic-bezier(.2,1.45,.4,1) both;
+    }
+    .bubble::before { content: ""; position: absolute; right: -14px; bottom: 5px; width: 26px; height: 27px; border-right: 3px solid #3e3035; border-bottom: 3px solid #3e3035; background: var(--cream); transform: skew(29deg) rotate(8deg); }
+    .bubble::after { content: ""; position: absolute; right: 2px; bottom: 0; width: 20px; height: 27px; background: var(--cream); }
+    @keyframes pop { from { opacity: 0; transform: scale(.68) translate(10px,12px); } to { opacity: 1; transform: scale(1) translate(0,0); } }
+    .bubble .label { position: relative; z-index: 2; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; color: #9a6913; font-size: 10px; font-weight: 1000; letter-spacing: .06em; }
+    .bubble strong { position: relative; z-index: 2; display: block; font-size: 16px; line-height: 1.3; }
+    .bubble p { position: relative; z-index: 2; margin: 5px 0 0; color: #68616a; font-size: 11px; font-weight: 700; }
+    .bubble .hint { position: relative; z-index: 2; display: inline-block; margin-top: 9px; padding: 4px 7px; border-radius: 7px; color: #fff; background: #4a4255; font-size: 9px; font-weight: 800; }
+    .level .bubble { background: #e9fff4; }
+    .level .bubble::before, .level .bubble::after { background: #e9fff4; }
+    .level .bubble .label { color: #218565; }
+    .gacha .bubble { background: #f5efff; }
+    .gacha .bubble::before, .gacha .bubble::after { background: #f5efff; }
+    .gacha .bubble .label { color: #7252ad; }
+    .body { padding: 18px; }
+    .body h2 { margin: 0 0 7px; font-size: 18px; }
+    .body p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+    .rules { margin-top: 22px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+    .rule { padding: 13px 14px; border: 1px solid var(--line); border-radius: 12px; color: #ccd5e4; background: rgba(29,35,48,.72); font-size: 12px; line-height: 1.5; }
+    .rule b { display: block; margin-bottom: 3px; color: white; }
+    @media (max-width: 980px) { .grid { grid-template-columns: 1fr; } .rules { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <div class="eyebrow">REVISED · PET INTERACTION</div>
+    <h1>펫이 직접 말해주는 알림</h1>
+    <p class="lead">독립된 토스트를 없애고, 모든 알림이 펫의 반응과 말풍선으로 나타나도록 바꿨습니다.</p>
+
+    <section class="grid">
+      <article class="card achievement">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 새로운 기능을 구현해줘</b><br><br>Analyzing workspace…<br>Running tests…<br><span style="color:#66e3bd">Finished successfully</span></div></div>
+          <div class="bubble"><div class="label">🏆 업적을 달성했어!</div><strong>세 도구의 조련사</strong><p>70코인과 새 칭호를 받았어.</p><span class="hint">눌러서 업적 보기</span></div>
+          <span class="spark s1">✦</span><span class="spark s2">✧</span>
+          <div class="pet-wrap"><div class="pet">😺</div><div class="pet-name">나비 · Lv.14</div></div>
+        </div>
+        <div class="body"><h2>🏆 업적 달성</h2><p>업적 이름과 핵심 보상을 말풍선에 담고, 누르면 업적 화면으로 이동합니다.</p></div>
+      </article>
+
+      <article class="card level">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 테스트를 다시 실행해줘</b><br><br>Compiling workspace…<br>18 tests passed<br><span style="color:#66e3bd">No warnings</span></div></div>
+          <div class="bubble"><div class="label">✨ 나, 성장했어!</div><strong>Lv.14 → Lv.15</strong><p>오늘도 같이 있어 줘서 고마워.</p><span class="hint">눌러서 펫 보기</span></div>
+          <span class="spark s1">✦</span><span class="spark s2">✧</span>
+          <div class="pet-wrap"><div class="pet">😸</div><div class="pet-name">나비 · Lv.15</div></div>
+        </div>
+        <div class="body"><h2>✨ 레벨업</h2><p>숫자만 알리지 않고 펫의 짧은 대사로 함께 성장한다는 느낌을 강화합니다.</p></div>
+      </article>
+
+      <article class="card gacha">
+        <div class="scene">
+          <div class="menubar"><span>Terminal</span><span>14:21 · 🐾</span></div>
+          <div class="window"><div class="window-head">tamagochi-pet — cargo run</div><div class="code"><b>&gt; 변경 내용을 정리해줘</b><br><br>Collecting results…<br>Preparing summary…<br><span style="color:#66e3bd">Done</span></div></div>
+          <div class="bubble"><div class="label">🥚 새로운 친구를 만날 수 있어!</div><strong>현재 120코인</strong><p>뽑기 한 번에 100코인이 필요해.</p><span class="hint">눌러서 뽑기 열기</span></div>
+          <span class="spark s1">✦</span><span class="spark s2">✧</span>
+          <div class="pet-wrap"><div class="pet">😺</div><div class="pet-name">나비 · Lv.14</div></div>
+        </div>
+        <div class="body"><h2>🥚 뽑기 가능</h2><p>재화 임계치를 넘은 순간 한 번만 말하고, 사용자가 알림을 켰을 때만 표시합니다.</p></div>
+      </article>
+    </section>
+
+    <section class="rules">
+      <div class="rule"><b>펫에 붙어 표시</b>말풍선 꼬리가 현재 오버레이 펫을 가리킵니다.</div>
+      <div class="rule"><b>펫 반응 동시 재생</b>점프·표정·반짝임으로 사건별 감정을 전달합니다.</div>
+      <div class="rule"><b>클릭하면 관련 화면</b>업적·펫·뽑기 화면으로 바로 이동합니다.</div>
+      <div class="rule"><b>여러 알림은 순서대로</b>한 번에 하나만 말하고 다음 알림으로 교체합니다.</div>
+    </section>
+  </main>
+</body>
+</html>

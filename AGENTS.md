@@ -1,15 +1,15 @@
-# Shared Rust Harness
+# Shared Electron Harness
 
 This is the common instruction entrypoint for Claude Code and Codex. Keep project instructions here; `CLAUDE.md` imports this file and runtime adapters only point to canonical Skills.
 
 ## Choose the relevant guidance
 
-- Before changing Rust code, Cargo configuration, or evaluating Rust completion, read `.harness/rules/rust.md`.
+- Before changing TypeScript, Electron, or package configuration, or evaluating completion, read `.harness/rules/electron.md`.
 - Before creating or changing a Skill or harness document, read `.harness/references/writing-great-skills/SKILL.md` and `.harness/references/writing-great-skills/GLOSSARY.md` in full, then follow `.harness/rules/skill-authoring.md`.
 
 ## Invoke shared workflows
 
-- Invoke `$work` for feature work, bug fixes, refactors, and Rust changes. It supplies the implementation and review workflow.
+- Invoke `$work` for feature work, bug fixes, refactors, and Electron changes. It supplies the implementation and review workflow.
 - Invoke `$harness-improve` when changing harness rules, Skills, roles, verification, or repeated friction. It governs evidence-based harness evolution.
 
 ## Completion
