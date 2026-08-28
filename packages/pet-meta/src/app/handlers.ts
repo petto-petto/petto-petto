@@ -1,22 +1,20 @@
 /**
- * 렌더러가 부르는 IPC 핸들러. Spring MVC의 `@RestController`에 해당한다.
+ * 화면이 부르는 핸들러. Spring MVC의 `@RestController`에 해당한다.
  *
- * 이 파일에는 규칙이 없다. 전부 `@pet/meta`의 함수를 부르고 결과를 그대로 돌려준다.
- * 규칙이 여기 들어오기 시작하면 창을 띄우지 않고는 테스트할 수 없게 되므로,
- * "얇게 유지한다"가 이 계층의 유일한 규칙이다.
+ * ## 왜 `ipcMain`을 부르지 않는가
+ *
+ * 여기서 `ipcMain.handle`을 직접 부르면 이 패키지가 Electron을 의존하게 되고, 창을
+ * 띄우지 않고는 테스트할 수 없어진다. 그래서 **채널 이름과 함수의 맵만 돌려주고**,
+ * 그것을 `ipcMain`에 붙이는 일은 앱이 한다.
+ *
+ * 덕분에 meta는 자기 채널 이름과 화면 계약을 온전히 소유하면서도 프레임워크를 모른다.
+ * Electron이 아닌 무언가로 바뀌어도 이 파일은 그대로다.
+ *
+ * 이 파일에는 규칙이 없다. 전부 도메인 함수를 부르고 결과를 그대로 돌려준다.
  */
 
-import { ipcMain, shell } from 'electron';
-
-import {
-  PROVIDERS,
-  domainEvent,
-  eventId,
-  isProvider,
-  petId,
-  type EventPayload,
-  type Provider,
-} from '@pet/core';
+import { PROVIDERS, isProvider, petId, type Provider } from '@pet/core';
+import { domainEvent, eventId, type EventPayload } from '../events/index.ts';
 import {
   CollectError,
   achievementScreen,
@@ -36,16 +34,30 @@ import {
   usageScreen,
   type AggregationRun,
   type EvaluationOutcome,
-} from '@pet/meta';
+} from '../index.ts';
 
-import type { AppState } from './composition.ts';
-import {
-  applyOverlayVisibility,
-  applyPetSize,
-  broadcast,
-  hidePanel,
-  showPanel,
-} from './windows.ts';
+import type { MetaAppState } from './state.ts';
+
+/**
+ * meta가 앱 껍데기에 요구하는 것.
+ *
+ * 창을 보이고 숨기는 일, 외부 브라우저를 여는 일은 meta가 할 수 없다. 그렇다고 Electron을
+ * 직접 부르면 이 패키지가 프레임워크에 묶인다. 그래서 **필요한 동작만 인터페이스로 적고**
+ * 구현은 앱이 준다. 다른 도메인에 포트를 두는 것과 같은 규칙이다.
+ */
+export interface MetaHost {
+  showPanel(): void;
+  hidePanel(): void;
+  applyOverlayVisibility(visible: boolean): void;
+  applyPetSize(petSize: string): void;
+  /** 펫 창과 패널 창에 같은 이벤트를 보낸다. */
+  broadcast(channel: string, payload: unknown): void;
+  openExternal(url: string): Promise<void>;
+  revealPath(path: string): void;
+}
+
+/** 채널 이름 → 처리 함수. 앱이 이것을 자기 IPC에 붙인다. */
+export type MetaHandlers = Record<string, (...args: unknown[]) => unknown>;
 
 /** 집계·판정 후 렌더러에 알릴 내용. */
 export interface TickReport {
@@ -93,7 +105,12 @@ function describe(run: AggregationRun): string[] {
   });
 }
 
-function report(state: AppState, run: AggregationRun, outcome: EvaluationOutcome): TickReport {
+function report(
+  state: MetaAppState,
+  host: MetaHost,
+  run: AggregationRun,
+  outcome: EvaluationOutcome,
+): TickReport {
   // 기획서 6.3 / ACH-008: 오버레이가 숨겨졌거나 알림이 꺼져 있으면 말풍선을 표시하지
   // 않는다. 판정과 보상은 이미 끝났으므로 여기서 억제하는 것은 표시뿐이다.
   const allowed = state.meta.settings.notifyAchievement && state.meta.settings.overlayVisible;
@@ -107,14 +124,20 @@ function report(state: AppState, run: AggregationRun, outcome: EvaluationOutcome
   };
 
   // 말풍선은 펫 창이 그린다. 패널이 아니라 펫이 알림 표면이기 때문이다(기획서 6.3).
-  broadcast('usage:aggregated', { activityMinuteAdded: tick.activityMinuteAdded, bubble });
+  host.broadcast('usage:aggregated', { activityMinuteAdded: tick.activityMinuteAdded, bubble });
   return tick;
 }
 
-/** 모든 IPC 핸들러를 등록한다. */
-export function registerHandlers(state: AppState): void {
+/**
+ * meta의 모든 핸들러를 만든다.
+ *
+ * 채널 이름이 이 파일에 모여 있다는 점이 중요하다. meta가 자기 화면 계약을 온전히
+ * 소유하고, 앱은 그 목록을 그대로 등록만 한다.
+ */
+export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers {
+  const handlers: MetaHandlers = {};
   const handle = (channel: string, listener: (...args: unknown[]) => unknown): void => {
-    ipcMain.handle(channel, (_event, ...args: unknown[]) => listener(...args));
+    handlers[channel] = listener;
   };
 
   /* ---------- 조회 ---------- */
@@ -157,19 +180,19 @@ export function registerHandlers(state: AppState): void {
     setSourceEnabled(state.meta, state.clock, providerFromKey(provider), enabled === true);
     const { run, outcome } = state.aggregate();
     state.persist();
-    return report(state, run, outcome);
+    return report(state, host, run, outcome);
   });
 
   handle('collect:rescan', (provider) => {
     const { run, outcome } = state.rescan(providerFromKey(provider));
     state.persist();
-    return report(state, run, outcome);
+    return report(state, host, run, outcome);
   });
 
   handle('collect:now', () => {
     const { run, outcome } = state.aggregate();
     state.persist();
-    return report(state, run, outcome);
+    return report(state, host, run, outcome);
   });
 
   /* ---------- 설정 ---------- */
@@ -178,13 +201,13 @@ export function registerHandlers(state: AppState): void {
     switch (key) {
       case 'overlay_visible': {
         state.meta.settings.overlayVisible = value === true;
-        applyOverlayVisibility(state.meta.settings.overlayVisible);
+        host.applyOverlayVisibility(state.meta.settings.overlayVisible);
         break;
       }
       case 'pet_size': {
         if (typeof value !== 'string' || !isPetSize(value)) throw new Error('알 수 없는 펫 크기');
         state.meta.settings.petSize = value;
-        applyPetSize(value);
+        host.applyPetSize(value);
         break;
       }
       case 'autostart': {
@@ -240,12 +263,12 @@ export function registerHandlers(state: AppState): void {
 
   handle('panel:open', (screenName) => {
     state.panelScreen = typeof screenName === 'string' ? screenName : 'info';
-    showPanel();
+    host.showPanel();
     // 기획서 4.2: 정보와 설정은 패널을 다시 열 때 기본 서브탭으로 진입한다.
-    broadcast('panel:show', state.panelScreen);
+    host.broadcast('panel:show', state.panelScreen);
   });
 
-  handle('panel:close', () => hidePanel());
+  handle('panel:close', () => host.hidePanel());
   handle('panel:current', () => state.panelScreen);
 
   handle('shell:open-external', async (url) => {
@@ -253,11 +276,11 @@ export function registerHandlers(state: AppState): void {
     if (typeof url !== 'string' || !url.startsWith('https://')) {
       throw new Error('https 주소만 열 수 있습니다');
     }
-    await shell.openExternal(url);
+    await host.openExternal(url);
   });
 
   handle('shell:reveal-data', () => {
-    shell.showItemInFolder(state.dataLocation);
+    host.revealPath(state.dataLocation);
   });
 
   /* ---------- 진단 ---------- */
@@ -336,7 +359,7 @@ export function registerHandlers(state: AppState): void {
     );
     state.persist();
     const bubble = bubbleMessage(outcome, state.catalog);
-    broadcast('usage:aggregated', { activityMinuteAdded: false, bubble });
+    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble });
     return {
       activityMinuteAdded: false,
       sourceNotes: [],
@@ -361,7 +384,7 @@ export function registerHandlers(state: AppState): void {
     );
     const { run, outcome } = state.aggregate();
     state.persist();
-    return report(state, run, outcome);
+    return report(state, host, run, outcome);
   });
 
   handle('demo:fail-next-reward', () => state.currency.failNextGrant());
@@ -370,6 +393,8 @@ export function registerHandlers(state: AppState): void {
     state.collector.setError(providerFromKey(provider), new CollectError('execution_failed'));
     const { run, outcome } = state.aggregate();
     state.persist();
-    return report(state, run, outcome);
+    return report(state, host, run, outcome);
   });
+
+  return handlers;
 }

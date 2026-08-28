@@ -21,7 +21,7 @@
 import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { PortError } from '@pet/core';
+import { PortError } from '@pet/meta';
 import type { MetaSnapshot, MetaStore } from '@pet/meta';
 
 const FILE_NAME = 'meta-state.json';

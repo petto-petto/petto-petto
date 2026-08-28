@@ -19,15 +19,8 @@
  * 된다. 로그 파일을 지우거나 앱을 다시 깔지 않아도 되고, 원천 로그를 건드리지도 않는다.
  */
 
-import {
-  PROVIDERS,
-  domainEvent,
-  eventId,
-  localMinuteOf,
-  type Clock,
-  type DomainEvent,
-  type Provider,
-} from '@pet/core';
+import { PROVIDERS, localMinuteOf, type Clock, type Provider } from '@pet/core';
+import { domainEvent, eventId, type DomainEvent } from '../../events/index.ts';
 
 import type { CurrencyPort } from '../../ports/index.ts';
 import { sourceOf, usageKey, type MetaState } from '../state.ts';

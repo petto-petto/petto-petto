@@ -6,34 +6,32 @@ import assert from 'node:assert/strict';
 import { FixedClock, parseLocalDate, petId, type LocalDate } from '@pet/core';
 import {
   AchievementCatalog,
+  createMetaState,
   FixtureCollector,
+  generateTrainerName,
   GRASS_WEEKS,
+  InMemoryCollection,
+  InMemoryCurrency,
+  type MetaState,
   MODEL_PREVIEW_COUNT,
+  needsFirstRunCollectTab,
   PANEL_HEIGHT,
   PANEL_WIDTH,
-  PET_SIZES,
-  createMetaState,
-  generateTrainerName,
-  needsFirstRunCollectTab,
   performanceScreen,
+  PET_SIZES,
   placePanel,
+  type Rect,
   renameTrainer,
   runAggregation,
   setSourceEnabled,
   settingsScreen,
-  summaryScreen,
-  tokenCounts,
-  usageScreen,
-  type MetaState,
-  type Rect,
-} from '@pet/meta';
-import {
-  InMemoryCollection,
-  InMemoryCurrency,
   StubBattle,
   StubGacha,
   StubGrowth,
-} from './support/doubles.ts';
+  summaryScreen,
+  tokenCounts,
+  usageScreen,
+} from '@pet/meta';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 const today = (): LocalDate => {

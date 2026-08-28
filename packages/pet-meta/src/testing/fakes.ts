@@ -1,17 +1,22 @@
+import { PortError, type DomainEvent, type EventBus } from '../index.ts';
 /**
- * 다른 도메인의 임시 구현.
+ * 다른 도메인과 저장소의 임시 구현.
  *
  * `collection`, `gacha`, `battle`, `overlay-growth`는 팀의 다른 사람이 만든다. 그 구현이
- * 아직 없어서 `meta`가 요구하는 포트를 인메모리로 채워 둔다.
+ * 아직 없으므로 `meta`가 요구하는 포트를 인메모리로 채워 규칙만 검증한다.
  *
- * **앱이 이것을 소유하는 것이 맞다.** 실제 도메인 패키지는 `meta`의 인터페이스를 알지
- * 못한 채 자기 API를 갖고, 둘을 잇는 어댑터는 조립하는 쪽인 앱이 쓴다. 지금은 그 어댑터
- * 자리에 대역이 들어가 있고, 도메인이 완성되면 이 파일이 진짜 어댑터로 바뀐다.
+ * **`meta`가 상대에게 기대하는 모양을 여기서 드러낸다.** 실제 도메인이 완성되면 이것을
+ * 버리고 진짜 어댑터를 쓴다. 그때까지는 테스트와 앱이 같은 한 벌을 공유해서, 규칙을
+ * 검증하는 대역과 화면에 보이는 대역이 어긋나지 않게 한다.
  *
- * `meta`는 어느 경우에도 이 파일을 알지 못한다.
+ * ## 실패 주입
+ *
+ * 여러 대역이 `failNext`류의 스위치를 갖는다. 기획서 11.1이 정한 오류 동작 —
+ * "재화 보상 실패는 같은 키로 재시도", "다른 도메인 조회 실패는 해당 블록만 오류" —
+ * 은 **실패를 만들 수 있어야** 검증된다.
  */
 
-import { PortError, petId, type Coin, type DomainEvent, type EventBus } from '@pet/core';
+import { petId, type Coin } from '@pet/core';
 import type {
   BattlePort,
   CollectionPort,

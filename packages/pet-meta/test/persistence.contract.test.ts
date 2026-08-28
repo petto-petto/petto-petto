@@ -11,27 +11,29 @@ import assert from 'node:assert/strict';
 import { FixedClock, PROVIDERS, petId } from '@pet/core';
 import {
   AchievementCatalog,
-  FixtureCollector,
-  SCHEMA_VERSION,
   createMetaState,
   evaluate,
   factSnapshot,
+  FixtureCollector,
   grantTitle,
+  InMemoryCollection,
+  InMemoryCurrency,
+  InMemoryMetaStore,
   isUnlocked,
   loadState,
+  type MetaState,
   needsFirstRunCollectTab,
   observedTotal,
   renameTrainer,
   runAggregation,
   saveState,
   setSourceEnabled,
+  SNAPSHOT_SCHEMA_VERSION,
   snapshotOf,
+  type SourceRunResult,
   stateOf,
   tokenCounts,
-  type MetaState,
-  type SourceRunResult,
 } from '@pet/meta';
-import { InMemoryCollection, InMemoryCurrency, InMemoryMetaStore } from './support/doubles.ts';
 
 const NOW = '2026-08-26T14:37:12+09:00';
 
@@ -207,7 +209,7 @@ test('스냅샷이 JSON을 왕복해도 내용이 같다', () => {
   const parsed = JSON.parse(JSON.stringify(snapshot)) as typeof snapshot;
 
   assert.deepEqual(parsed, snapshot, 'JSON을 거쳐도 내용이 같아야 한다');
-  assert.equal(parsed.schemaVersion, SCHEMA_VERSION);
+  assert.equal(parsed.schemaVersion, SNAPSHOT_SCHEMA_VERSION);
 
   const restored = stateOf(parsed);
   assert.equal(observedTotal(restored), observedTotal(session.state));
@@ -226,7 +228,7 @@ test('알 수 없는 스키마 버전은 추측하지 않고 거절한다', () =
   const session = new Session();
   session.run();
   const snapshot = snapshotOf(session.state);
-  snapshot.schemaVersion = SCHEMA_VERSION + 99;
+  snapshot.schemaVersion = SNAPSHOT_SCHEMA_VERSION + 99;
 
   const store = InMemoryMetaStore.withSnapshot(snapshot);
   assert.throws(() => loadState(store), /지원하지 않는 저장 형식/);

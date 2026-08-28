@@ -8,12 +8,11 @@
 import {
   PROVIDERS,
   dateOfMinute,
-  type EventId,
-  type DomainEvent,
   type LocalDate,
   type LocalMinute,
   type Provider,
 } from '@pet/core';
+import { type EventId, type DomainEvent } from '../events/index.ts';
 
 import {
   applyEvent,

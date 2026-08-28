@@ -12,7 +12,7 @@
  *   열어 봐도 내용을 읽을 수 있다.
  *
  * 분리해 두면 나중에 런타임 자료구조를 바꿔도 저장 파일이 깨지지 않는다. 반대로 저장
- * 형식을 바꿔야 할 때는 `SCHEMA_VERSION`을 올리고 변환을 한곳에서 처리한다.
+ * 형식을 바꿔야 할 때는 `SNAPSHOT_SCHEMA_VERSION`을 올리고 변환을 한곳에서 처리한다.
  *
  * ## 무엇이 저장되고 무엇이 저장되지 않는가
  *
@@ -31,13 +31,8 @@
  * 기억하고 앱을 다시 시작하면 `전체`로 돌아간다"고 정하므로 애초에 `MetaState` 밖에 있다.
  */
 
-import {
-  PROVIDERS,
-  type EventId,
-  type LocalDate,
-  type LocalMinute,
-  type Provider,
-} from '@pet/core';
+import { PROVIDERS, type LocalDate, type LocalMinute, type Provider } from '@pet/core';
+import { type EventId } from '../events/index.ts';
 
 import type { EventFacts } from '../domain/achievement/facts.ts';
 import type { AchievementProgress, RewardRecord } from '../domain/achievement/progress.ts';
@@ -60,7 +55,7 @@ import {
  *
  * 처음부터 넣는다. 나중에 넣으면 "버전 없는 파일"을 위한 특수 처리가 영구히 남는다.
  */
-export const SCHEMA_VERSION = 1;
+export const SNAPSHOT_SCHEMA_VERSION = 1;
 
 /** 사용량 한 줄. 맵의 합성 키를 필드로 펴 놓은 것이다. */
 export interface UsageRow {
@@ -199,7 +194,7 @@ export function snapshotOf(state: MetaState): MetaSnapshot {
   }
 
   return {
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: SNAPSHOT_SCHEMA_VERSION,
     sources,
     usageDaily,
     activityMinutes: [...state.activityMinutes],
@@ -243,7 +238,7 @@ export class SnapshotError extends Error {
  * 이 자리를 미리 만들어 두는 이유는, 나중에 만들면 호출부가 여기저기 흩어지기 때문이다.
  */
 export function migrateSnapshot(snapshot: MetaSnapshot): MetaSnapshot {
-  if (snapshot.schemaVersion === SCHEMA_VERSION) return snapshot;
+  if (snapshot.schemaVersion === SNAPSHOT_SCHEMA_VERSION) return snapshot;
   throw new SnapshotError(
     `지원하지 않는 저장 형식 버전 ${snapshot.schemaVersion}`,
     '저장 파일이 이 버전보다 새롭습니다',

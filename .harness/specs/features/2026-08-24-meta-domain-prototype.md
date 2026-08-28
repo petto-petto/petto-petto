@@ -54,22 +54,31 @@ Approved (요청자 승인, 2026-08-24)
 ```
 package.json                # npm workspaces
 packages/
-  pet-core/                 # 공통 베이스: 이벤트 봉투, 공용 값 타입, 시간 추상화
-  pet-meta/                 # ← 내가 맡은 feature의 상위 패키지
-    src/domain/             #   규칙 (순수 로직, 바깥을 모른다)
+  pet-core/                 # 공용 어휘만 — 값 타입 · Clock
+  pet-meta/                 # ← 내가 맡은 feature. 도메인부터 화면까지 통째로 소유
+    src/domain/             #   규칙 (순수 로직)
+    src/events/             #   meta가 소비·발행하는 이벤트의 모양
     src/ports/              #   다른 도메인·인프라에 요구하는 인터페이스
     src/persistence/        #   저장 형식과 저장소 포트
     src/view/               #   화면 모델
+    src/app/                #   앱에 끼울 때 필요한 상태와 핸들러 맵 (Electron 비의존)
+    src/testing/            #   다른 도메인·저장소의 임시 구현
+    ui/                     #   패널 화면 (HTML · CSS · JS)
     test/                   #   기획서 인수 조건 계약 테스트
-      support/              #     다른 도메인·저장소 대역
 apps/
-  desktop/src/main/         # Electron 메인: 조립 · IPC · 창 · 저장 · 도메인 대역
+  desktop/src/main/         # Electron 껍데기 — 부팅 · 창 · 저장 · feature 마운트
   desktop/src/preload/      # 렌더러에 노출하는 안전한 API 표면
-  desktop/renderer/         # 화면 (HTML/CSS/JS)
+  desktop/renderer/         # 오버레이 펫 창과 에셋
 ```
 
-`@pet/meta`는 `@pet/core`에만 의존한다. 다른 feature 패키지가 추가돼도 서로를 직접 의존하지
-않고 `@pet/core`의 이벤트와 각자가 소유한 포트로만 대화한다. 이것이 팀에 제안할 규칙이다.
+`@pet/meta`는 `@pet/core`에만 의존하고 **Electron도 의존하지 않는다.** 핸들러는 채널 이름과
+함수의 맵만 돌려주고, 그것을 `ipcMain`에 붙이는 일은 앱이 한다.
+
+공용 커널에는 **어휘만** 둔다 — `PetId`, `Rarity`, `Coin`, 날짜, `Clock`. 이벤트 봉투,
+이벤트 버스, 오류 표현, 도메인 간 포트는 전부 "어떻게 할지"가 아직 정해지지 않은 설계
+결정이라 각 feature가 자기 답을 자기 패키지에 갖는다. 다음 주에 그 답들을 비교한다.
+
+기준은 하나다 — **이견이 나면 설계 논쟁이 되는 것은 커널에 두지 않는다.**
 
 ### 포함하는 동작
 

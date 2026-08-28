@@ -3,8 +3,9 @@
 import { BrowserWindow, Menu, Tray, app, nativeImage } from 'electron';
 import { join } from 'node:path';
 
-import { AppState } from './composition.ts';
-import { registerHandlers } from './ipc.ts';
+import { MetaAppState } from '@pet/meta';
+
+import { mountMeta } from './mount.ts';
 import { JsonFileStore } from './store.ts';
 import {
   applyOverlayVisibility,
@@ -17,11 +18,11 @@ import {
 /** 기획서 8.3: 수집은 앱 시작, 실행 중 매 1분, 카드별 수동 재스캔에서 실행한다. */
 const AGGREGATION_INTERVAL_MS = 60_000;
 
-let state: AppState | undefined;
+let state: MetaAppState | undefined;
 let tray: Tray | undefined;
 
 /** 트레이 진입점. 기획서 2.1은 트레이를 MVP에 포함한다. */
-function buildTray(current: AppState): void {
+function buildTray(current: MetaAppState): void {
   // 아이콘 파일이 없어도 트레이가 뜨도록 빈 이미지로 시작한다.
   tray = new Tray(nativeImage.createEmpty());
   tray.setToolTip('tamagotchi-pet 프로토타입');
@@ -75,8 +76,8 @@ app.whenReady().then(() => {
   const store = new JsonFileStore(directory);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
-  state = new AppState(store, store.path, app.getVersion());
-  registerHandlers(state);
+  state = new MetaAppState(store, store.path, app.getVersion());
+  mountMeta(state);
 
   createPetWindow(state.meta.settings.petSize);
   createPanelWindow();

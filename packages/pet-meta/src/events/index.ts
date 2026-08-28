@@ -1,15 +1,35 @@
 /**
- * 도메인 이벤트 봉투와 페이로드. 기획서 9.1·9.2를 그대로 옮긴다.
+ * `meta`가 주고받는 이벤트의 모양.
  *
  * 왜 이벤트인가: 업적 엔진은 다른 도메인의 내부 저장소를 읽지 않는다(기획서 9.3).
  * `meta`가 `battle`의 데이터를 들여다보면 두 도메인이 영원히 붙어버린다. 대신 각 도메인이
  * "무슨 일이 일어났다"만 발행하고, `meta`는 그것만 소비한다.
+ *
+ * ## 왜 공용 커널이 아니라 여기인가
+ *
+ * 이벤트를 **어떻게 선언할지**(닫힌 유니온 / 타입 태그 + JSON / 그 외)는 팀이 아직 정하지
+ * 않은 설계 결정이다. 공용 커널에 두면 그 결정을 먼저 못박는 셈이고, 팀원이 자기 이벤트를
+ * 추가할 때마다 커널을 고쳐야 해서 다섯 명이 같은 파일에서 충돌한다.
+ *
+ * 그래서 여기 있는 것은 **"meta가 소비하고 발행하는 이벤트의 모양"**이다. `battle`은 자기
+ * 패키지에 "내가 발행하는 모양"을 선언하고, 둘을 잇는 어댑터는 통합 시점에 앱이 쓴다.
+ * 포트를 필요로 하는 쪽이 소유하는 것과 같은 규칙이다.
  */
 
-import type { AcquireSource, BattleResult, Coin, PetId, Provider, Rarity, EventId } from './ids.ts';
+import type { AcquireSource, BattleResult, Coin, PetId, Provider, Rarity } from '@pet/core';
 
 /** 현재 이벤트 스키마 버전. 페이로드 모양이 바뀌면 올린다. */
-export const SCHEMA_VERSION = 1;
+export const EVENT_SCHEMA_VERSION = 1;
+
+declare const brand: unique symbol;
+type Brand<T, B extends string> = T & { readonly [brand]: B };
+
+/**
+ * 이벤트 식별자. 발행 도메인이 안정적으로 생성하며 재전송해도 바뀌지 않는다(기획서 9.1).
+ * 이 값이 멱등성의 기준이다.
+ */
+export type EventId = Brand<string, 'EventId'>;
+export const eventId = (value: string): EventId => value as EventId;
 
 export interface PetAcquired {
   eventType: 'pet.acquired';
@@ -106,7 +126,7 @@ export function domainEvent(id: EventId, occurredAt: Date, payload: EventPayload
   return {
     eventId: id,
     occurredAt: occurredAt.toISOString(),
-    schemaVersion: SCHEMA_VERSION,
+    schemaVersion: EVENT_SCHEMA_VERSION,
     payload,
   };
 }
@@ -120,4 +140,31 @@ export function domainEvent(id: EventId, occurredAt: Date, payload: EventPayload
  */
 export function assertNever(value: never, context: string): never {
   throw new Error(`${context}: 처리하지 않은 갈래 ${JSON.stringify(value)}`);
+}
+
+/**
+ * 이벤트 발행 경로.
+ *
+ * 실어 나르는 것이 위의 계약이므로 한 쌍이다. 프로토타입은 인프로세스 구현을 쓰지만,
+ * 인프로세스로 갈지 영속 큐로 갈지도 아직 팀이 정하지 않은 결정이다.
+ */
+export interface EventBus {
+  publish(event: DomainEvent): void;
+}
+
+/**
+ * 포트 호출 실패.
+ *
+ * 기획서 11.1은 "다른 도메인 조회 실패는 해당 블록만 오류"라고 정한다. 화면이 블록별로
+ * 잡아내려면 실패가 구분 가능한 타입이어야 한다.
+ *
+ * 오류를 던질지 값으로 돌려줄지, 계층을 얼마나 세분할지도 팀 논의 대상이라 커널이 아니라
+ * 여기에 둔다.
+ */
+export class PortError extends Error {
+  override readonly name = 'PortError';
+
+  constructor(message: string) {
+    super(message);
+  }
 }

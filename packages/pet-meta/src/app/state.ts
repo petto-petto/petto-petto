@@ -1,22 +1,15 @@
 /**
- * 앱이 조립하는 것들.
+ * meta feature 를 앱에 끼울 때 필요한 상태.
  *
- * 이 파일이 구조의 요점이다. 도메인 규칙은 `@pet/meta`가, 도메인 간 계약은 `@pet/core`가,
- * 다른 팀원의 도메인 대역은 같은 폴더의 `fakes.ts`에 있다. 앱은 그것들을 **연결하는 배선**만
- * 한다. Spring으로 치면 `@Configuration` 클래스 자리다.
+ * 도메인 규칙, 수집기, 저장소, 다른 도메인 대역을 한 덩어리로 묶는다. 앱은 이것을 만들고
+ * 핸들러를 등록하기만 하면 된다.
  *
- * 실제 도메인이 완성되면 `fakes.ts`를 진짜 어댑터로 바꾸는 것이 전부다.
- * `@pet/meta`는 한 줄도 고치지 않는다.
+ * **이 파일에 Electron이 없다.** 창도 IPC도 모른다. 그래서 창을 띄우지 않고 테스트할 수
+ * 있고, 앱이 Electron이 아니게 되어도 그대로 쓸 수 있다.
  */
 
-import {
-  localDateOf,
-  systemClock,
-  type Clock,
-  type DomainEvent,
-  type LocalDate,
-  type Provider,
-} from '@pet/core';
+import { localDateOf, systemClock, type Clock, type LocalDate, type Provider } from '@pet/core';
+import { type DomainEvent } from '../events/index.ts';
 import {
   AchievementCatalog,
   FixtureCollector,
@@ -33,8 +26,8 @@ import {
   type MetaState,
   type MetaStore,
   type SponsorLinks,
-} from '@pet/meta';
-import { createMetaState } from '@pet/meta';
+} from '../index.ts';
+import { createMetaState } from '../index.ts';
 import {
   InMemoryCollection,
   InMemoryCurrency,
@@ -42,12 +35,12 @@ import {
   StubBattle,
   StubGacha,
   StubGrowth,
-} from './fakes.ts';
+} from '../testing/fakes.ts';
 
 /** 조련사 이름 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
 const NAME_SEED = 20_260_824;
 
-export class AppState {
+export class MetaAppState {
   /** meta 도메인 상태. 메모리에서 돌고, 변경 뒤에 로컬 파일로 저장된다. */
   meta: MetaState;
   /** 저장된 상태 없이 시작했는가. 데모 데이터를 한 번만 심기 위해 쓴다. */

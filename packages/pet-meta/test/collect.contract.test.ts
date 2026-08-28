@@ -9,22 +9,22 @@ import assert from 'node:assert/strict';
 
 import { FixedClock, PROVIDERS, type Provider } from '@pet/core';
 import {
+  type AggregationRun,
   CollectError,
-  FixtureCollector,
   createMetaState,
   defaultLogLocation,
   factSnapshot,
+  FixtureCollector,
+  InMemoryCurrency,
+  type MetaState,
   observedTotal,
   rescanSource,
   runAggregation,
   setSourceEnabled,
   sourceOf,
-  tokenCounts,
-  type AggregationRun,
-  type MetaState,
   type SourceRunResult,
+  tokenCounts,
 } from '@pet/meta';
-import { InMemoryCurrency } from './support/doubles.ts';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 

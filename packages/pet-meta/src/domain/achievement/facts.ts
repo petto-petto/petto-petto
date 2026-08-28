@@ -19,7 +19,7 @@
  * 코드 경로 자체가 존재하지 않는다.
  */
 
-import { assertNever, type EventPayload } from '@pet/core';
+import { assertNever, type EventPayload } from '../../events/index.ts';
 
 /**
  * 판정에 쓸 수 있는 모든 사실 키.

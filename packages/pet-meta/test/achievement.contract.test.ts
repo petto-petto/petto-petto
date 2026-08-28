@@ -3,27 +3,31 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FixedClock, domainEvent, eventId, petId, type EventPayload, type Rarity } from '@pet/core';
+import { FixedClock, petId, type Rarity } from '@pet/core';
 import {
   AchievementCatalog,
-  FixtureCollector,
-  MASK,
+  type AchievementDefinition,
   achievementScreen,
   bubbleMessage,
   createMetaState,
+  domainEvent,
   evaluate,
+  type EvaluationOutcome,
+  eventId,
+  type EventPayload,
   factSnapshot,
+  FixtureCollector,
+  InMemoryCollection,
+  InMemoryCurrency,
   isUnlocked,
+  MASK,
+  type MetaState,
   observedTotal,
   recordEvent,
   runAggregation,
   settleRewards,
   tokenCounts,
-  type AchievementDefinition,
-  type EvaluationOutcome,
-  type MetaState,
 } from '@pet/meta';
-import { InMemoryCollection, InMemoryCurrency } from './support/doubles.ts';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 
@@ -268,9 +272,18 @@ test('ACH-006: 첫 만남 트로피만 자동 배치된다', () => {
   harness.evaluate();
 
   const trophies = harness.collection.trophies;
-  assert.equal(trophies.find((t) => t.achievementId === 'collection.first_pet')?.placement, 'room');
   assert.equal(
-    trophies.find((t) => t.achievementId === 'collection.dex_complete')?.placement,
+    trophies.find(
+      (t: { achievementId: string; placement: string }) =>
+        t.achievementId === 'collection.first_pet',
+    )?.placement,
+    'room',
+  );
+  assert.equal(
+    trophies.find(
+      (t: { achievementId: string; placement: string }) =>
+        t.achievementId === 'collection.dex_complete',
+    )?.placement,
     'storage',
     '나머지 트로피는 보관함으로 간다',
   );

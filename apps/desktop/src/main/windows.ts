@@ -17,6 +17,12 @@ const appRoot = join(here, '..', '..');
 const rendererDir = join(appRoot, 'renderer');
 const preloadPath = join(appRoot, 'src', 'preload', 'preload.cjs');
 
+/**
+ * 패널 화면은 `@pet/meta`가 소유한다. 패키지 위치에서 찾아야 하므로 경로를 직접 쓰지 않고
+ * 모듈 해석으로 구한다 — 패키지가 옮겨져도 깨지지 않는다.
+ */
+const metaUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/meta/package.json'))), 'ui');
+
 let petWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 
@@ -63,7 +69,7 @@ export function createPanelWindow(): BrowserWindow {
     height: PANEL_HEIGHT,
     show: false,
   });
-  void panelWindow.loadFile(join(rendererDir, 'index.html'));
+  void panelWindow.loadFile(join(metaUiDir, 'index.html'));
   return panelWindow;
 }
 

@@ -13,10 +13,6 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
 export type PetId = Brand<string, 'PetId'>;
 export const petId = (value: string): PetId => value as PetId;
 
-/** 이벤트 식별자. 이 값이 멱등성의 기준이다(기획서 9.1). */
-export type EventId = Brand<string, 'EventId'>;
-export const eventId = (value: string): EventId => value as EventId;
-
 /** 희귀도. 기획서 9.2가 이 세 값만 허용한다. */
 export type Rarity = 'COMMON' | 'RARE' | 'EPIC';
 
