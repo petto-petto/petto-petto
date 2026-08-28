@@ -31,6 +31,46 @@ assert_not_contains() {
   fi
 }
 
+assert_html_local_links_resolve() {
+  path=$1
+
+  if [ ! -f "$path" ]; then
+    fail "cannot inspect local links in missing HTML: $path"
+    return
+  fi
+
+  base_dir=${path%/*}
+  while IFS= read -r href; do
+    case "$href" in
+      http://*|https://*|mailto:*|tel:*)
+        continue
+        ;;
+    esac
+
+    target=${href%%#*}
+    if [[ "$href" == *'#'* ]]; then
+      fragment=${href#*#}
+    else
+      fragment=''
+    fi
+
+    if [ -n "$target" ]; then
+      resolved="$base_dir/$target"
+    else
+      resolved=$path
+    fi
+
+    if [ ! -f "$resolved" ]; then
+      fail "broken local HTML link in $path: $href"
+      continue
+    fi
+
+    if [ -n "$fragment" ] && ! grep -F -q -- "id=\"$fragment\"" "$resolved"; then
+      fail "missing local HTML anchor in $path: $href"
+    fi
+  done < <(grep -o 'href="[^"]*"' "$path" | sed 's/^href="//; s/"$//')
+}
+
 assert_sha256() {
   if [ ! -f "$1" ]; then
     fail "cannot hash missing file: $1"
@@ -125,6 +165,7 @@ for path in \
   CLAUDE.md \
   .harness/README.md \
   .harness/CHANGELOG.md \
+  .harness/specs/meta-info-settings-achievements-design.md \
   .harness/rules/rust.md \
   .harness/rules/skill-authoring.md \
   .harness/references/writing-great-skills/SKILL.md \
@@ -134,16 +175,72 @@ done
 
 for path in \
   .harness/guides/quick-start.html \
-  .harness/guides/concept-application.html; do
+  .harness/guides/concept-application.html \
+  .harness/guides/meta-product-overview.html; do
   assert_file "$path"
 done
 
 for guide in \
   '.harness/guides/quick-start.html' \
-  '.harness/guides/concept-application.html'; do
+  '.harness/guides/concept-application.html' \
+  '.harness/guides/meta-product-overview.html'; do
   assert_contains .harness/README.md "$guide" \
     "README is missing Korean guide pointer: $guide"
 done
+
+for marker in \
+  '<html lang="ko">' \
+  '<main id="main-content">' \
+  'id="screen-preview"' \
+  'aria-label="정보 요약 화면 예시"' \
+  'aria-label="조련사 이름 변경 화면 예시"' \
+  'aria-label="정보 사용량 화면 예시"' \
+  'aria-label="전체 모델 목록 화면 예시"' \
+  'aria-label="정보 실적 화면 예시"' \
+  'aria-label="정보 상태 화면 예시"' \
+  'aria-label="설정 수집 화면 예시"' \
+  'aria-label="수집 상태 화면 예시"' \
+  'aria-label="화면 설정 화면 예시"' \
+  'aria-label="알림 설정 화면 예시"' \
+  'aria-label="알림 말풍선 화면 예시"' \
+  'aria-label="기타 로컬 데이터 화면 예시"' \
+  'aria-label="기타 앱 정보 화면 예시"' \
+  'aria-label="업적 전체 화면 예시"' \
+  'aria-label="업적 진행 상태 화면 예시"' \
+  'aria-label="칭호 관리 화면 예시"' \
+  'aria-label="업적 보상 화면 예시"' \
+  'id="areas"' \
+  'id="flow"' \
+  'id="achievements"' \
+  'id="scope"' \
+  'href="../specs/meta-info-settings-achievements-design.md"'; do
+  assert_contains .harness/guides/meta-product-overview.html "$marker" \
+    "meta product overview is missing required page structure: $marker"
+done
+
+screen_example_count=$(grep -E -o 'role="group" aria-label="[^"]+ 화면 예시"' .harness/guides/meta-product-overview.html | wc -l | tr -d ' ')
+if [ "$screen_example_count" -ne 17 ]; then
+  fail "meta product overview must contain exactly 17 screen examples, found: $screen_example_count"
+fi
+
+if grep -F -q -- 'id="screen-preview"' .harness/guides/meta-product-overview.html \
+  && grep -F -q -- 'id="areas"' .harness/guides/meta-product-overview.html; then
+  screen_preview_line=$(grep -F -n -m 1 -- 'id="screen-preview"' .harness/guides/meta-product-overview.html | cut -d: -f1)
+  areas_line=$(grep -F -n -m 1 -- 'id="areas"' .harness/guides/meta-product-overview.html | cut -d: -f1)
+  if [ "$screen_preview_line" -ge "$areas_line" ]; then
+    fail 'meta product screen preview must appear before the explanatory area cards'
+  fi
+fi
+
+assert_not_contains .harness/guides/meta-product-overview.html \
+  '<script src=' \
+  'meta product overview must not depend on an external script'
+
+assert_not_contains .harness/guides/meta-product-overview.html \
+  '<link rel="stylesheet"' \
+  'meta product overview must not depend on an external stylesheet'
+
+assert_html_local_links_resolve .harness/guides/meta-product-overview.html
 
 if git ls-files -- '.harness/guides/*.md' | grep -q .; then
   fail 'tracked Markdown guide remains under .harness/guides/'
@@ -226,6 +323,25 @@ done
 assert_not_contains .harness/guides/quick-start.html \
   '하네스 변경 여부와 관계없이' \
   'quick-start guide makes contract verification unconditional'
+
+for instruction in \
+  '# meta — 정보 · 설정 · 업적 상세 기획' \
+  '## 5. 정보 화면' \
+  '## 6. 설정 화면' \
+  '## 7. 업적' \
+  '## 8. 수집 계약' \
+  '## 12. 인수 조건' \
+  'INFO-001' \
+  'SET-001' \
+  'COLLECT-001' \
+  'ACH-001'; do
+  assert_contains .harness/specs/meta-info-settings-achievements-design.md "$instruction" \
+    "meta product specification is missing required guidance: $instruction"
+done
+
+assert_contains .harness/README.md \
+  'Product specification filenames use stable, content-focused names without date prefixes.' \
+  'README is missing the content-focused product specification filename rule'
 
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'

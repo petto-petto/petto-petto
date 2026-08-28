@@ -2,8 +2,19 @@
 
 ## Unreleased
 
+### Changed
+
+- Expanded the meta product overview from three partial screen examples to a
+  17-panel gallery covering every planned information, settings, and
+  achievements function plus materially different UI states.
+- Renamed the meta product specification to the stable, content-focused
+  `specs/meta-info-settings-achievements-design.md` path and made that naming
+  convention part of the harness contract.
+
 ### Added
 
+- Korean one-page meta product overview for briefing teammates on the approved
+  information, settings, achievements, local collection, and reward design.
 - Korean quick-start and concept-application guides at
   `.harness/guides/quick-start.html` and
   `.harness/guides/concept-application.html`.
@@ -14,6 +25,10 @@
   evidence is retained in the Specifier fixture scenario and contract checks:
   `verify-work-skill.sh` was RED with 18 missing-Specifier assertions, then
   `verify-work-skill.sh` and `verify-contract.sh` were GREEN.
+- Approved meta product specification for information, settings, achievements,
+  three-source local usage collection, and macOS/Windows acceptance criteria.
+- Contract assertions for the meta specification and its implementation-facing
+  requirement ID families.
 - Common Rust harness entrypoints, rules, embedded writing references, and contract verification.
 - Canonical `work` Skill, runtime-neutral role contracts, and reproducible work-scenario evidence.
 - Task 2: executable `work` Skill behavior verification.
