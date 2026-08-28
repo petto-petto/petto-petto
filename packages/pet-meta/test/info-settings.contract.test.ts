@@ -33,7 +33,7 @@ import {
   StubBattle,
   StubGacha,
   StubGrowth,
-} from '@pet/stubs';
+} from './support/doubles.ts';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 const today = (): LocalDate => {

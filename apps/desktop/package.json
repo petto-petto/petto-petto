@@ -7,7 +7,6 @@
   "main": "dist/main/main.js",
   "dependencies": {
     "@pet/core": "*",
-    "@pet/meta": "*",
-    "@pet/stubs": "*"
+    "@pet/meta": "*"
   }
 }

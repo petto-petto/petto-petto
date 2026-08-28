@@ -61,9 +61,9 @@ packages/
     src/persistence/        #   저장 형식과 저장소 포트
     src/view/               #   화면 모델
     test/                   #   기획서 인수 조건 계약 테스트
-  pet-stubs/                # 다른 도메인 대역 (어댑터 자리)
+      support/              #     다른 도메인·저장소 대역
 apps/
-  desktop/src/main/         # Electron 메인: 조립 · IPC · 창 · 저장
+  desktop/src/main/         # Electron 메인: 조립 · IPC · 창 · 저장 · 도메인 대역
   desktop/src/preload/      # 렌더러에 노출하는 안전한 API 표면
   desktop/renderer/         # 화면 (HTML/CSS/JS)
 ```
@@ -215,5 +215,8 @@ apps/
 
 ## Related implementation plan
 
-구조 결정과 근거는 [`ARCHITECTURE.md`](../../../ARCHITECTURE.md)에 있다.
 순서화된 변경 계획과 검증 결과는 이 명세를 Seed로 삼은 `$work` 표준 트랙 작업 결과에 기록했다.
+
+구조 제안 문서는 팀 합의 전까지 저장소에 두지 않는다. 각자 자기 feature 패키지 안에
+구현을 넣어 두고 다음 주에 내용물을 비교하기로 했으므로, 공통 베이스를 미리 규정하는
+문서는 그 논의를 앞질러 간다.

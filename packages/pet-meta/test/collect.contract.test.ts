@@ -24,7 +24,7 @@ import {
   type MetaState,
   type SourceRunResult,
 } from '@pet/meta';
-import { InMemoryCurrency } from '@pet/stubs';
+import { InMemoryCurrency } from './support/doubles.ts';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 

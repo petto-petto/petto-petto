@@ -23,7 +23,7 @@ import {
   type EvaluationOutcome,
   type MetaState,
 } from '@pet/meta';
-import { InMemoryCollection, InMemoryCurrency } from '@pet/stubs';
+import { InMemoryCollection, InMemoryCurrency } from './support/doubles.ts';
 
 const NOW = '2026-08-24T14:37:12+09:00';
 
