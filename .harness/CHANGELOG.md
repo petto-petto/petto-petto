@@ -15,6 +15,9 @@
 
 ### Changed
 
+- Design work now has one canonical guide: `AGENTS.md` requires `design.md`
+  before UI, visual, or interaction design changes. The Korean version is for
+  human reading and is not an agent instruction source.
 - Expanded the meta product overview from three partial screen examples to a
   17-panel gallery covering every planned information, settings, and
   achievements function plus materially different UI states.

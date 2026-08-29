@@ -5,6 +5,7 @@ This is the common instruction entrypoint for Claude Code and Codex. Keep projec
 ## Choose the relevant guidance
 
 - Before changing TypeScript, Electron, or package configuration, or evaluating completion, read `.harness/rules/electron.md`.
+- Before creating or changing UI, visual, or interaction design, read `design.md`.
 - Before creating or changing a Skill or harness document, read `.harness/references/writing-great-skills/SKILL.md` and `.harness/references/writing-great-skills/GLOSSARY.md` in full, then follow `.harness/rules/skill-authoring.md`.
 
 ## Invoke shared workflows
