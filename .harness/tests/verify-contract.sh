@@ -382,6 +382,7 @@ done
 
 assert_skill_frontmatter .claude/skills/work/SKILL.md work
 assert_skill_frontmatter .claude/skills/harness-improve/SKILL.md harness-improve
+assert_skill_frontmatter .claude/skills/background-generator/SKILL.md background-generator
 
 for path in \
   .claude/skills/work/SKILL.md \
@@ -425,6 +426,10 @@ fi
 
 if ! bash .harness/tests/verify-harness-improve-skill.sh; then
   fail 'harness-improve Skill behavior verification failed'
+fi
+
+if ! bash .harness/tests/verify-background-generator-skill.sh; then
+  fail 'background generator Skill verification failed'
 fi
 
 assert_file .harness/scripts/verify-electron.sh

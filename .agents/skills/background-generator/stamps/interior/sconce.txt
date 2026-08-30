@@ -1,0 +1,23 @@
+# 벽 등잔 — 빈 벽면을 채우고 따뜻한 광원을 하나 더 만든다
+[legend]
+M = wood.4
+m = wood.2
+w = wood.1
+W = wood.3
+L = light.3
+C = light.4
+f = light.2
+[grid]
+.MMMMMMM.
+.mmmmmmm.
+..LLLLL..
+..LCCCL..
+..LCCCL..
+..LLLLL..
+..fffff..
+...Ww....
+...Ww....
+...Ww....
+...Ww....
+..WWWWW..
+..wwwww..

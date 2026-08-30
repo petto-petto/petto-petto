@@ -1,0 +1,33 @@
+# 쇼파(정면) — 등받이/좌석/팔걸이 3톤. near 램프 전용
+[legend]
+H = near.4
+B = near.3
+b = near.2
+s = near.0
+[grid]
+..HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH..
+..BBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBsBBBBBBBBBBBBBBs..
+..Bbbbbbbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbbbbbbs..
+..Bbbbbbbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbbbbbbs..
+..Bbbbbbbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbbbbbbs..
+..Bbbbbbbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbbbbbbs..
+.HHHHHHHbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbHHHHHHH.
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsbbbbbbbbbbbsbbbbbbbbbbbbbbsbbbbbbbbbBbbbbbbs
+BbbbbbbsHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+BbbbbbbsBBBBBBBBBBBBBBBBBBsBBBBBBBBBBBBBBBBBBbbbbbbs
+ssssssssssssssssssssssssssssssssssssssssssssssssssss
+..sbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbs..
+..ssssssssssssssssssssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssssssssssssssssssssss..
+....sssss..................................sssss....

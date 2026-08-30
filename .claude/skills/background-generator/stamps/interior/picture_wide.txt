@@ -1,0 +1,21 @@
+# 가로 액자 — 겨울 풍경. 창밖과 같은 한색 계열로 벽에 차가운 점을 하나 더 둔다
+[legend]
+h = wood.4
+w = wood.2
+s = wood.0
+G = accent.2
+T = leaf.0
+S = accent.4
+[grid]
+hhhhhhhhhhhhhhhh
+hwwwwwwwwwwwwwws
+hwGGGGGGGGGGGGws
+hwGSGGGGGGGGSGws
+hwGGGGGGGSGGGGws
+hwGGGGGGGGGGGGws
+hwGTTGGTTGTTGGws
+hwTTTTTTTTTTTTws
+hwSSSSSSSSSSSSws
+hwSSSSSSSSSSSSws
+hwwwwwwwwwwwwwws
+hsssssssssssssss

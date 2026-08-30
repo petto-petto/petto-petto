@@ -1,0 +1,11 @@
+[legend]
+h = wood.4
+b = wood.2
+s = wood.0
+[grid]
+..hhhh...
+.hbbbbbh.
+hbbbbbbbh
+bbbbbbbss
+bbbbsssss
+.sssssss.

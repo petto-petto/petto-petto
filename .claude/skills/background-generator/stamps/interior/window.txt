@@ -1,0 +1,18 @@
+[legend]
+w = wood.1
+g = near.0
+G = light.2
+[grid]
+wwwwwwwwwwwwwww
+wGGggggwggggggw
+wgGggggwggggggw
+wggggggwggggggw
+wggggggwggggggw
+wggggggwggggggw
+wwwwwwwwwwwwwww
+wggggggwggggggw
+wggggggwggggggw
+wggggggwggggggw
+wggggggwggggggw
+wggggggwggggggw
+wwwwwwwwwwwwwww

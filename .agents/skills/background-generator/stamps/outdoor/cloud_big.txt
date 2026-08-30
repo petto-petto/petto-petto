@@ -1,0 +1,12 @@
+[legend]
+c = light.4
+m = light.3
+s = light.2
+[grid]
+.......ccccc.........
+....cccccccccc.......
+..cccccccccccccc.....
+.cccccccccmmmmmmmmm..
+cccccccmmmmmmmmmmmmmm
+.mmmmmmmmmmmmmmmmmmm.
+..sssssssssssssssss..

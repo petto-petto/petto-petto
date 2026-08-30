@@ -1,0 +1,11 @@
+[legend]
+c = accent.1
+C = accent.3
+w = wood.4
+s = wood.2
+[grid]
+.ccc.
+ccccc
+cCcCc
+.wws.
+.wws.

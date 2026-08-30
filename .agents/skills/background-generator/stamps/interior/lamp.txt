@@ -1,0 +1,16 @@
+[legend]
+L = light.4
+l = light.2
+w = wood.2
+s = wood.0
+[grid]
+.LLLLL.
+LLLLLLL
+.lllll.
+..lll..
+...w...
+...w...
+...w...
+..www..
+.wwwww.
+.sssss.

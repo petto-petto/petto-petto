@@ -1,0 +1,22 @@
+# 햇빛 드는 창 — 실내 명도 상단 구간을 채우는 가장 큰 요소. 프레임 3톤.
+[legend]
+h = wood.4
+w = wood.2
+s = wood.0
+g = light.3
+G = light.4
+d = light.1
+[grid]
+hhhhhhhhhhhhhhw
+hGGggggwggggggs
+hGgggggwgggggds
+hggggggwgggggds
+hggggggwgggggds
+hggggggwgggggds
+hwwwwwwwwwwwwws
+hGgggggwggggggs
+hggggggwgggggds
+hggggggwgggggds
+hggggggwgggggds
+hggggggwgggggds
+wssssssssssssss

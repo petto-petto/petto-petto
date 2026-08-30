@@ -1,0 +1,17 @@
+[legend]
+g = leaf.1
+G = leaf.3
+p = accent.1
+s = accent.0
+[grid]
+..g.g.g..
+.gGgGgGg.
+gGgGgGgGg
+.gGgGgGg.
+..gGgGg..
+...ggg...
+.ppppppp.
+.ppppppp.
+.pppppss.
+..pppss..
+..sssss..

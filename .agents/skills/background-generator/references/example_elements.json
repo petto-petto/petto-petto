@@ -1,0 +1,14 @@
+{
+  "reference": "background_image_reference/5f8aeea756837294b09025831a97e974.jpg",
+  "structure": "vertical",
+  "note": "레퍼런스 분석에서 뽑은 핵심 요소. op은 씬에서 실제로 세어 검증한다.",
+  "elements": [
+    {"name": "화면을 세로로 관통하는 거대 고목", "op": "tree_column", "min": 6},
+    {"name": "이끼 낀 나뭇가지 발판(다층)", "op": "branch_platform", "min": 4},
+    {"name": "로프 다리", "op": "rope_bridge", "min": 2},
+    {"name": "사다리(수직 이동 경로)", "op": "ladder", "min": 1},
+    {"name": "역광 안개 개방부", "op": "glow", "min": 2},
+    {"name": "늘어진 덩굴", "op": "stamp:vine", "min": 3},
+    {"name": "잎 덩어리 군락", "op": "foliage", "min": 6}
+  ]
+}

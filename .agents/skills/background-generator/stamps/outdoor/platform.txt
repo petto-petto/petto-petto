@@ -1,0 +1,16 @@
+[legend]
+g = leaf.4
+G = leaf.2
+r = wood.4
+R = wood.2
+s = wood.0
+[grid]
+gggggggggggggggggggggggg
+GGGGGGGGGGGGGGGGGGGGGGGG
+rrrrrrrrrrrrrrrrrrrrrrrr
+rrRrrrrRrrrrrRrrrrRrrrrr
+RRRRRRRRRRRRRRRRRRRRRRRR
+.RRRRRRRRRRRRRRRRRRRRRR.
+..sssssssssssssssssss...
+....sssssssssssssss.....
+.......ssssssss.........
