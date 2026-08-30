@@ -383,6 +383,7 @@ done
 assert_skill_frontmatter .claude/skills/work/SKILL.md work
 assert_skill_frontmatter .claude/skills/harness-improve/SKILL.md harness-improve
 assert_skill_frontmatter .claude/skills/background-generator/SKILL.md background-generator
+assert_skill_frontmatter .claude/skills/pet-generator/SKILL.md pet-generator
 
 for path in \
   .claude/skills/work/SKILL.md \
@@ -432,10 +433,15 @@ if ! bash .harness/tests/verify-background-generator-skill.sh; then
   fail 'background generator Skill verification failed'
 fi
 
+if ! bash .harness/tests/verify-pet-generator-skill.sh; then
+  fail 'pet generator Skill verification failed'
+fi
+
 assert_file .harness/scripts/verify-electron.sh
 assert_gate_runner_shape .harness/scripts/verify-electron.sh
 assert_adapter .agents/skills/work ../../.claude/skills/work
 assert_adapter .agents/skills/harness-improve ../../.claude/skills/harness-improve
+assert_adapter .agents/skills/pet-generator ../../.claude/skills/pet-generator
 
 for required in \
   '## Provenance and evidence boundary' \

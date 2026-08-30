@@ -1,6 +1,6 @@
 ---
-name: pixel-pet-creator-pillow
-description: 오버레이 펫 키우기 게임의 도트 캐릭터를 등급·진화 단계 규칙에 맞춰 처음부터 생성·검증·export한다. Piskel MCP를 쓰지 않고 Pillow(파이썬 이미지 라이브러리)로 직접 PNG를 렌더링한다는 점만 빼면 `pixel-pet-creator`와 동일한 결과물·동일한 검증 게이트를 만든다. Piskel MCP가 연결 안 돼 있거나, 기기 브릿지 왕복 없이 컨테이너 안에서만 빠르게 작업하고 싶을 때 이 스킬을 쓴다. 새 종을 처음부터 그리는 작업 전용이며, 이미 있는 에셋의 부분 수정은 `pixel-pet-editor`를 쓴다.
+name: pet-generator
+description: "Generate and validate pixel-art pets with Pillow when creating a new pet species or evolution stage."
 ---
 
 # Pixel Pet Creator (Pillow 버전)
