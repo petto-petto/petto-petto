@@ -1,0 +1,62 @@
+{
+  "reference": "사용자 요청 (레퍼런스 이미지 없음)",
+  "structure": "horizontal",
+  "note": "요청 문장에서 직접 옮긴 핵심 요소",
+  "elements": [
+    {
+      "name": "소파",
+      "op": "stamp:sofa",
+      "min": 1
+    },
+    {
+      "name": "소파 위 담요",
+      "op": "stamp:blanket",
+      "min": 1
+    },
+    {
+      "name": "러그",
+      "op": "stamp:rug_cozy",
+      "min": 1
+    },
+    {
+      "name": "벽난로",
+      "op": "stamp:fireplace",
+      "min": 1
+    },
+    {
+      "name": "벽에 걸린 액자",
+      "op": "stamp:picture_wide",
+      "min": 4
+    },
+    {
+      "name": "사슴뿔 장식",
+      "op": "stamp:antlers",
+      "min": 1
+    },
+    {
+      "name": "눈 내리는 창",
+      "op": "stamp:window_snow",
+      "min": 1
+    },
+    {
+      "name": "책장(서재)",
+      "op": "stamp:shelf",
+      "min": 5
+    },
+    {
+      "name": "난롯불·램프 불빛",
+      "op": "glow",
+      "min": 2
+    },
+    {
+      "name": "물러나는 마루",
+      "op": "ground_plane",
+      "min": 1
+    },
+    {
+      "name": "접지 그림자",
+      "op": "contact_shadow",
+      "min": 1
+    }
+  ]
+}
