@@ -1,0 +1,12 @@
+# tile op 전용 — 8x6 벽널 텍스처. stagger 4로 벽돌쌓기.
+[legend]
+w = sky.2
+h = sky.3
+s = sky.1
+[grid]
+hhhhhhhh
+wwwwwwww
+wwwwwwww
+wwwwwwww
+sssssssw
+wwwwwwww

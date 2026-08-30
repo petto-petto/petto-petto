@@ -1,0 +1,12 @@
+# tile op 전용 — 12x5 마루널. stagger 6으로 엇갈리게.
+[legend]
+w = mid.2
+h = mid.3
+s = mid.1
+d = mid.0
+[grid]
+hhhhhhhhhhhh
+wwwwwwwwwwww
+wwwwswwwwwww
+sssssssssssd
+dddddddddddd

@@ -1,0 +1,17 @@
+# 장작더미 — 벽난로 옆 전경 소품. wood 3톤 + 단면
+[legend]
+h = wood.3
+w = wood.1
+s = wood.0
+c = far.1
+[grid]
+....................
+...hcchhhhcchhhcc...
+...wccwwwwccwwwcc...
+...ssssssssssssss...
+.whhhhhhhhhhhhhhhhw.
+.whhhhwwhhhhwwhhhhs.
+.whcchwwhcchwwhcchs.
+.whcchwwhcchwwhcchs.
+.whhhhwwhhhhwwhhhhs.
+.ssssssssssssssssss.

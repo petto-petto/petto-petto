@@ -1,0 +1,8 @@
+[legend]
+h = leaf.4
+b = leaf.2
+[grid]
+.h.h.
+hbhbh
+.bbb.
+..b..

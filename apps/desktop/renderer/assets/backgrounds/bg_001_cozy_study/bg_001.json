@@ -1,0 +1,94 @@
+{
+  "id": "bg_001",
+  "name": "아늑한 서재",
+  "preset": "cozy_study",
+  "kind": "interior",
+  "layout": "ground",
+  "width": 560,
+  "height": 240,
+  "seamless": false,
+  "horizon": 92,
+  "groundTop": 176,
+  "petAnchor": {
+    "x": 264,
+    "y": 112,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_001_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_001_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_001_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_001_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_001_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0A0507",
+      "#130A0E",
+      "#1B3350",
+      "#1C3418",
+      "#2A151B",
+      "#2A1712",
+      "#2C4E22",
+      "#35618C",
+      "#3B1A18",
+      "#3E2318",
+      "#3E6B2E",
+      "#412125",
+      "#4A2A18",
+      "#4E211C",
+      "#4E3620",
+      "#55893C",
+      "#563220",
+      "#5B332F",
+      "#5B8DB8",
+      "#632A21",
+      "#653A20",
+      "#6B4522",
+      "#6E432A",
+      "#6E4C2C",
+      "#74A855",
+      "#7A3626",
+      "#7E4A28",
+      "#8A5836",
+      "#8F6A3C",
+      "#985C32",
+      "#A06A2E",
+      "#A8CDE6",
+      "#B08B52",
+      "#B4753F",
+      "#D2B173",
+      "#E0A83F",
+      "#EAF6FF",
+      "#FBD98A",
+      "#FFF3CE"
+    ],
+    "rampOverride": []
+  }
+}

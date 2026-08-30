@@ -1,0 +1,16 @@
+# 바위 첨탑 / 종유석 — 식생이 없는 지형(사막·동굴·화산)의 세로 요소
+[legend]
+h = wood.4
+b = wood.2
+s = wood.0
+[grid]
+...hb....
+...hb....
+..hbbs...
+..hbbs...
+.hbbbss..
+.hbbbss..
+.hbbbbss.
+hbbbbbbss
+hbbbbbbss
+bbbbbbbss

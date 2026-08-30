@@ -1,0 +1,54 @@
+# 전경 안락의자(뒤에서 본 실루엣) — 화면 좌우 끝에서 잘려 프레이밍을 만든다.
+# near 램프 4단이라 뒤 레이어와 명도차가 크게 벌어진다(레이어 분리 게이트).
+[legend]
+H = near.3
+B = near.2
+b = near.1
+s = near.0
+[grid]
+......HHHHHHHHHHHHHHHHHHHHHH......
+......BBBBBBBBBBBBBBBBBBBBBB......
+....HHHHHHHHHHHHHHHHHHHHHHHHHH....
+....HHBBBBBBBBBBBBBBBBBBBBBBBs....
+....HHBBBBBBBBBBBBBBBBBBBBBBss....
+....HHBBBBBBBBBBBBBBBBBBBBBBss....
+....HHBBBBHHHHHHHHHHHHHHBBBBss....
+....HHBBBBHbbbbbbbbbbbbsBBBBss....
+....HHBBBBHbbbbbbbbbbbbsBBBBss....
+....HHBBBBHbbbbbbbbbbbbsBBBBss....
+HHHHHHBBBBHbbbbbbbbbbbbsBBBBHHHHHH
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHsssssssssssssBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHsssssssssssssBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBHbbbbbbbbbbbbsBBBBHbbbbs
+HbbbbsBBBBssssssssssssssBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsHHHHHHHHHHHHHHHHHHHHHHHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+HbbbbsBBBBBBBBBBBBBBBBBBBBBBHbbbbs
+ssssssssssssssssssssssssssssssssss
+..bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb..
+..ssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssss..
+..ssssssssssssssssssssssssssssss..
+....sssss................sssss....

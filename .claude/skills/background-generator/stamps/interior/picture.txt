@@ -1,0 +1,16 @@
+# 액자 — 프레임이 3톤(좌상 밝음 / 본체 / 우하 어두움)이어야 매스 3톤 게이트를 넘는다
+[legend]
+h = wood.4
+w = wood.2
+s = wood.0
+f = near.2
+a = accent.2
+[grid]
+hhhhhhhhw
+hffffffws
+hffaaaffs
+hffaaaffs
+hfffafffs
+hffaaaffs
+hffffffws
+wssssssss

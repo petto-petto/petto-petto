@@ -15,6 +15,19 @@
 
 ### Changed
 
+- `background-generator` now exports every runtime background under Electron's
+  `apps/desktop/renderer/assets/backgrounds/` path and verifies that contract.
+- Renamed `pixel-pet-creator-pillow` to `pet-generator` and made Claude and
+  Codex share one canonical Skill source.
+- `background-generator` now contains the complete scene, palette, rendering,
+  checking, scoring, preview, reference, evaluation, and stamp toolkit.
+- `background-generator` now keeps full, byte-identical Claude and Codex Skill
+  trees so both tools load the same stamps and references.
+- `background-generator` now fails closed when Pillow is unavailable; it never
+  renders, verifies, or installs the dependency in that state.
+- Design work now has one canonical guide: `AGENTS.md` requires `design.md`
+  before UI, visual, or interaction design changes. The Korean version is for
+  human reading and is not an agent instruction source.
 - Expanded the meta product overview from three partial screen examples to a
   17-panel gallery covering every planned information, settings, and
   achievements function plus materially different UI states.
@@ -24,6 +37,7 @@
 
 ### Added
 
+- Local `background-generator` Skill and deterministic `320x180` forest-background renderer for the desktop pet room, with one shared source exposed to both Codex and Claude.
 - Korean one-page meta product overview for briefing teammates on the approved
   information, settings, achievements, local collection, and reward design.
 - Korean quick-start and concept-application guides at

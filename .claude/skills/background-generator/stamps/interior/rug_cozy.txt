@@ -1,0 +1,20 @@
+# 타원 러그 — 금빛 테두리 + 버건디 본판 + 중앙 문양. 4톤
+[legend]
+o = near.1
+g = light.2
+R = near.3
+H = light.3
+[grid]
+.............oggRRRRRRRRRRRggo............
+........oggRRRHHRRRRRRRRRRRHHRRRggo.......
+.....oggRHHRRRRRRRRRRRRRRRRRRRRRHHRggo....
+...oggHHRRRRRRRRRRRRRRRRRRRRRRRRRRRHHggo..
+..oggHRRRRRRRRHHHHHHHHHHHHHHHRRRRRRRRHggo.
+.oggHRRRRRRRRRRRRgggggggggRRRRRRRRRRRRHggo
+.oggRRRRRRRRRRRRRggHHHHHggRRRRRRRRRRRRRggo
+.oggRRRRRRRRRRRRRgggggggggRRRRRRRRRRRRRggo
+..oggRRRRRRRRRHHHHHHHHHHHHHHHRRRRRRRRRggo.
+...oggRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRggo..
+.....oggRRRRRRRRRRRRRRRRRRRRRRRRRRRggo....
+........oggRRRRRRRRRRRRRRRRRRRRRggo.......
+.............oggRRRRRRRRRRRggo............

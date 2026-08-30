@@ -1,0 +1,12 @@
+[legend]
+h = leaf.4
+b = leaf.2
+s = leaf.0
+[grid]
+...hhh.....
+..hbbbhh...
+.hbbbbbbh..
+hbbbbbbbbh.
+hbbbbssbbbh
+.bbssssssb.
+..sssssss..

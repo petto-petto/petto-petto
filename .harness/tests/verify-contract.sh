@@ -343,12 +343,15 @@ assert_contains .harness/README.md \
   'Product specification filenames use stable, content-focused names without date prefixes.' \
   'README is missing the content-focused product specification filename rule'
 
+assert_file design.md
+
 if [ -f CLAUDE.md ] && [ "$(sed '/^[[:space:]]*$/d' CLAUDE.md)" != '@AGENTS.md' ]; then
   fail 'CLAUDE.md must only import @AGENTS.md'
 fi
 
 for instruction in \
   '.harness/rules/electron.md' \
+  'Before creating or changing UI, visual, or interaction design, read `design.md`.' \
   '.harness/references/writing-great-skills/SKILL.md' \
   '.harness/references/writing-great-skills/GLOSSARY.md' \
   '$work' \
@@ -356,6 +359,10 @@ for instruction in \
   'fresh evidence'; do
   assert_contains AGENTS.md "$instruction" "AGENTS.md is missing required guidance: $instruction"
 done
+
+assert_not_contains AGENTS.md \
+  'design-kr.md' \
+  'AGENTS.md must not use the human-only Korean design guide as an agent instruction source'
 
 assert_sha256 .harness/references/writing-great-skills/SKILL.md 3fc52d73ec3959091e455681e9f894046b2cb59d1881c69efabd7f9ccb2bc13e
 assert_sha256 .harness/references/writing-great-skills/GLOSSARY.md b0421d239599252c5adbb07f8559a0a422e7b89b59183e9efbee12eecc208318
@@ -375,6 +382,8 @@ done
 
 assert_skill_frontmatter .claude/skills/work/SKILL.md work
 assert_skill_frontmatter .claude/skills/harness-improve/SKILL.md harness-improve
+assert_skill_frontmatter .claude/skills/background-generator/SKILL.md background-generator
+assert_skill_frontmatter .claude/skills/pet-generator/SKILL.md pet-generator
 
 for path in \
   .claude/skills/work/SKILL.md \
@@ -420,10 +429,19 @@ if ! bash .harness/tests/verify-harness-improve-skill.sh; then
   fail 'harness-improve Skill behavior verification failed'
 fi
 
+if ! bash .harness/tests/verify-background-generator-skill.sh; then
+  fail 'background generator Skill verification failed'
+fi
+
+if ! bash .harness/tests/verify-pet-generator-skill.sh; then
+  fail 'pet generator Skill verification failed'
+fi
+
 assert_file .harness/scripts/verify-electron.sh
 assert_gate_runner_shape .harness/scripts/verify-electron.sh
 assert_adapter .agents/skills/work ../../.claude/skills/work
 assert_adapter .agents/skills/harness-improve ../../.claude/skills/harness-improve
+assert_adapter .agents/skills/pet-generator ../../.claude/skills/pet-generator
 
 for required in \
   '## Provenance and evidence boundary' \

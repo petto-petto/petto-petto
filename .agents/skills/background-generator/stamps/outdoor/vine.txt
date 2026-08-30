@@ -1,0 +1,16 @@
+[legend]
+v = leaf.1
+l = leaf.3
+[grid]
+.v.
+.v.
+lv.
+.v.
+.vl
+.v.
+lv.
+.v.
+.vl
+.v.
+.v.
+.l.

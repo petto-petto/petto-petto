@@ -1,0 +1,22 @@
+# 쇼파 팔걸이에 걸친 담요 — 둥근 어깨 / 주름 / 물결 밑단. light 램프 4단
+[legend]
+W = light.4
+w = light.3
+v = light.2
+s = light.1
+[grid]
+..WWWWWWWWWWWW..
+.wwwwwwwwwwwwww.
+vvvvvvvvvvvvvvvv
+WWwwvwwwvwwwvwws
+WWWWvwwwvwwwvwss
+WWwwWWwwWWwwWWss
+WWwwvwWWvwWWvwss
+WWwwvwwwvwwwvwss
+WWwwvwwwvwwwvwss
+WWwwvwwwvwwwvwss
+WWwwvwwwvwwwvwss
+WWwwvwwwvwwwvwss
+WWwwvwwwvwwwvwss
+sswwsswwsswwssww
+..ss..ss..ss..ss

@@ -1,0 +1,54 @@
+{
+  "skill_name": "background-generator",
+  "evals": [
+    {
+      "id": 0,
+      "name": "reference-vertical-jungle",
+      "prompt": "첨부한 이미지 같은 분위기로 게임 배경 하나 만들어줘. 크기는 560x240. 우리 게임은 도트 캐릭터가 배경 앞에 서 있는 형태야.",
+      "expected_output": "레퍼런스의 다층 수직 구조(관통하는 고목, 이끼 발판, 로프 다리, 역광 안개)를 반영한 560x240 배경 4레이어 + 합성본. 평평한 가로 풍경이면 실패.",
+      "files": [
+        "ref_jungle.jpg"
+      ],
+      "assertions": [
+        "레퍼런스를 실제로 열어 5축 분석을 하고 elements.json을 남겼다",
+        "layout=canopy(다층 수직)로 만들었다 — 평평한 가로 풍경이 아니다",
+        "scene.json + 4개 레이어 PNG + 합성본이 모두 저장됐다",
+        "bg_check.py가 PASS다",
+        "bg_score.py가 80점 이상이고 재생성 트리거가 0건이다",
+        "스캐폴드 초안을 그대로 내지 않고 레퍼런스 구조로 재구성했다"
+      ]
+    },
+    {
+      "id": 1,
+      "name": "new-mood-no-preset-snow",
+      "prompt": "눈 덮인 침엽수림 배경이 필요해. 겨울 스테이지에 쓸 거고 480x200으로. 차갑고 조용한 느낌이면 좋겠어.",
+      "expected_output": "기존 프리셋에 없는 분위기. 새 팔레트를 만들어 480x200 배경을 생성하고 검증까지 통과. 초록 정글 프리셋을 억지로 재활용하면 실패.",
+      "files": [],
+      "assertions": [
+        "기존 프리셋을 재활용하지 않고 겨울용 팔레트를 새로 만들었다",
+        "새 팔레트를 만드는 데 스킬이 제공한 스크립트를 썼다 (손으로 hex를 지어내지 않았다)",
+        "지형에 맞는 소품이다 — 눈 장면에 정글 식생이 남아 있지 않다",
+        "480x200 크기가 정확하다",
+        "bg_check.py가 PASS다",
+        "bg_score.py가 80점 이상이고 재생성 트리거가 0건이다"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "edit-existing-brighter",
+      "prompt": "assets/backgrounds/bg_001_canopy_grove 에 있는 배경 말인데, 전체적으로 좀 어두워서 답답해. 더 화사하고 밝게 고쳐줘. 구도는 그대로 두고.",
+      "expected_output": "scene.json을 열어 톤만 조정해 같은 구도로 다시 렌더. 처음부터 새로 그리거나 PNG를 직접 손대면 실패.",
+      "files": [
+        "bg_001_canopy_grove/"
+      ],
+      "assertions": [
+        "scene.json만 고쳤다 — PNG를 직접 편집하지 않았다",
+        "구도가 보존됐다 — 좌표·크기·seed·op 개수가 동일하다",
+        "입력 폴더를 훼손하지 않았다",
+        "실제로 밝아졌다 — 평균 명도가 상승했다",
+        "bg_check.py가 PASS다",
+        "bg_score.py가 80점 이상이고 재생성 트리거가 0건이다"
+      ]
+    }
+  ]
+}

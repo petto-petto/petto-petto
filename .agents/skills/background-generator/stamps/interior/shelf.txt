@@ -1,0 +1,23 @@
+# 책장 — 프레임 3톤(좌상 밝음/본체/우하 어두움) + 선반 윗면 밝은 행. 책은 버건디·초록·금·청색 4계열
+[legend]
+H = wood.3
+w = wood.1
+S = wood.0
+b = near.3
+B = leaf.3
+c = light.2
+a = accent.1
+[grid]
+HHHHHHHHHHHHHHHHH
+HbbBBccaabbccbb.S
+HbbBBccaabbccbb.S
+HbbBBccaabbccbb.S
+HHHHHHHHHHHHHHHHS
+HwwwwwwwwwwwwwwSS
+HccbbaaBBccbbBB.S
+HccbbaaBBccbbBB.S
+HccbbaaBBccbbBB.S
+HHHHHHHHHHHHHHHHS
+HwwwwwwwwwwwwwwSS
+H...............S
+SSSSSSSSSSSSSSSSS

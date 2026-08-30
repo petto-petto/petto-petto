@@ -1,0 +1,8 @@
+[legend]
+a = accent.2
+A = accent.4
+g = leaf.1
+[grid]
+.a.
+aAa
+.g.

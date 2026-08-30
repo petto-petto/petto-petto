@@ -1,0 +1,410 @@
+{
+  "id": "bg_001",
+  "name": "아늑한 서재",
+  "preset": "cozy_study",
+  "canvas": [
+    560,
+    240
+  ],
+  "layout": "ground",
+  "seamless": false,
+  "horizon": 92,
+  "groundTop": 176,
+  "petAnchor": {
+    "x": 264,
+    "y": 112,
+    "w": 64,
+    "h": 64
+  },
+  "layers": [
+    {
+      "name": "sky",
+      "z": 0,
+      "parallax": 0.0,
+      "ops": [
+        {
+          "op": "panel",
+          "box": [
+            0,
+            0,
+            560,
+            128
+          ],
+          "ramp": "sky",
+          "base": 2,
+          "seam": 0,
+          "light": 3,
+          "boardH": 8,
+          "jointEvery": 26,
+          "seed": 51,
+          "vary": 1,
+          "grain": 0.012,
+          "grainShift": 3
+        },
+        {
+          "op": "panel",
+          "box": [
+            0,
+            128,
+            560,
+            48
+          ],
+          "ramp": "wood",
+          "base": 3,
+          "seam": 1,
+          "light": 4,
+          "boardH": 8,
+          "jointEvery": 26,
+          "seed": 53,
+          "vary": 1,
+          "grain": 0.01,
+          "grainShift": 4
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 124,
+          "w": 560,
+          "h": 4,
+          "color": "wood.4"
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 168,
+          "w": 560,
+          "h": 6,
+          "color": "wood.2"
+        },
+        {
+          "op": "ground_plane",
+          "y": 176,
+          "h": 64,
+          "ramp": "mid",
+          "far": 4,
+          "near": 0,
+          "cell": [
+            4,
+            30
+          ],
+          "seed": 55,
+          "edge": "wood.0",
+          "edgeH": 4,
+          "furrow0": 1,
+          "furrowShift": 2,
+          "furrowStrength": 0.6,
+          "markShift": -1
+        }
+      ]
+    },
+    {
+      "name": "far",
+      "z": 1,
+      "parallax": 0.25,
+      "ops": [
+        {
+          "op": "stamp",
+          "name": "window_snow",
+          "x": 110,
+          "y": 12,
+          "align": "center",
+          "anchor": "top",
+          "scale": 4
+        },
+        {
+          "op": "stamp",
+          "name": "antlers",
+          "x": 244,
+          "y": 12,
+          "align": "center",
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "stamp",
+          "name": "picture_wide",
+          "x": 232,
+          "y": 62,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "picture",
+          "x": 282,
+          "y": 62,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "picture_wide",
+          "x": 244,
+          "y": 98,
+          "align": "center",
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 326,
+          "y": 8,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 326,
+          "y": 49,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 326,
+          "y": 88,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "picture_wide",
+          "x": 400,
+          "y": 8,
+          "align": "center",
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "stamp",
+          "name": "picture_wide",
+          "x": 472,
+          "y": 8,
+          "align": "center",
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 534,
+          "y": 8,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 534,
+          "y": 49,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "shelf",
+          "x": 534,
+          "y": 88,
+          "align": "center",
+          "anchor": "top",
+          "scale": 3
+        }
+      ]
+    },
+    {
+      "name": "mid",
+      "z": 2,
+      "parallax": 0.55,
+      "ops": [
+        {
+          "op": "stamp",
+          "name": "rug_cozy",
+          "x": 372,
+          "y": 232,
+          "align": "center",
+          "scale": 4,
+          "shade": 1
+        },
+        {
+          "op": "stamp",
+          "name": "fireplace",
+          "x": 436,
+          "y": 176,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 4
+        },
+        {
+          "op": "glow",
+          "x": 436,
+          "y": 140,
+          "rx": 52,
+          "ry": 36,
+          "color": "light.3",
+          "strength": 0.15,
+          "gamma": 2.0
+        },
+        {
+          "op": "glow",
+          "x": 436,
+          "y": 104,
+          "rx": 104,
+          "ry": 68,
+          "color": "light.2",
+          "strength": 0.08,
+          "gamma": 2.8
+        },
+        {
+          "op": "contact_shadow",
+          "x": 364,
+          "y": 176,
+          "w": 144,
+          "h": 5,
+          "color": "mid.0",
+          "strength": 0.6
+        },
+        {
+          "op": "stamp",
+          "name": "firewood",
+          "x": 532,
+          "y": 178,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 2
+        },
+        {
+          "op": "contact_shadow",
+          "x": 512,
+          "y": 178,
+          "w": 40,
+          "h": 4,
+          "color": "mid.0",
+          "strength": 0.55
+        },
+        {
+          "op": "stamp",
+          "name": "lamp",
+          "x": 268,
+          "y": 204,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 4
+        },
+        {
+          "op": "glow",
+          "x": 268,
+          "y": 170,
+          "rx": 22,
+          "ry": 16,
+          "color": "light.3",
+          "strength": 0.12,
+          "gamma": 2.6
+        },
+        {
+          "op": "contact_shadow",
+          "x": 254,
+          "y": 204,
+          "w": 28,
+          "h": 4,
+          "color": "mid.0",
+          "strength": 0.6
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "near",
+      "z": 3,
+      "parallax": 1.0,
+      "ops": [
+        {
+          "op": "vgradient",
+          "ramp": "near",
+          "from": 0,
+          "to": 2,
+          "box": [
+            0,
+            0,
+            560,
+            14
+          ],
+          "dither": true
+        },
+        {
+          "op": "stamp",
+          "name": "armchair_back",
+          "x": 18,
+          "y": 240,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 2,
+          "shade": 1
+        },
+        {
+          "op": "stamp",
+          "name": "sofa",
+          "x": 168,
+          "y": 216,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 3
+        },
+        {
+          "op": "contact_shadow",
+          "x": 90,
+          "y": 216,
+          "w": 156,
+          "h": 6,
+          "color": "near.0",
+          "strength": 0.65
+        },
+        {
+          "op": "stamp",
+          "name": "blanket",
+          "x": 104,
+          "y": 150,
+          "align": "center",
+          "anchor": "top",
+          "scale": 2,
+          "shade": -1
+        },
+        {
+          "op": "stamp",
+          "name": "plant_pot",
+          "x": 546,
+          "y": 232,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 3
+        },
+        {
+          "op": "vignette",
+          "color": "near.0",
+          "edge": 18,
+          "strength": 0.28
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    }
+  ]
+}
