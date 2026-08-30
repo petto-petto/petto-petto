@@ -3,4 +3,4 @@ dist
 *.tsbuildinfo
 .omx/*
 .omc/*
-logs/mcp-mssqlserver-cli.log
+logs/*
