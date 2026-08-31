@@ -20,7 +20,10 @@ fn preview_controls_are_independent_and_resettable() {
     preview.toggle_menu(PreviewMenu::Enemy);
     preview.select_asset_version(AssetVersion::V2);
     assert_eq!(preview.cycle_enemy_size(), EnemyPreviewSize::Small);
-    assert_eq!(preview.cycle_enemy_color(EnemyColorStage::Red), EnemyColorStage::Orange);
+    assert_eq!(
+        preview.cycle_enemy_color(EnemyColorStage::Red),
+        EnemyColorStage::Orange
+    );
     assert!((preview.cycle_enemy_hp(1.0) - 0.60).abs() < f32::EPSILON);
     assert!((preview.set_display_opacity(0.42).alpha() - 0.42).abs() < f32::EPSILON);
 
@@ -37,9 +40,18 @@ fn manual_motion_and_rarity_effects_keep_their_original_beats() {
     let mut preview = MotionPreview::default();
     preview.trigger_pet(PetPreviewAction::Attack, 10.0);
     assert!(preview.visual(10.45).pet_attack_phase.is_some());
-    assert_eq!(preview.cycle_attack_effect_rarity(PetRarity::Common), PetRarity::Common);
-    assert_eq!(preview.cycle_attack_effect_rarity(PetRarity::Common), PetRarity::Rare);
-    assert_eq!(preview.cycle_attack_effect_rarity(PetRarity::Common), PetRarity::Epic);
+    assert_eq!(
+        preview.cycle_attack_effect_rarity(PetRarity::Common),
+        PetRarity::Common
+    );
+    assert_eq!(
+        preview.cycle_attack_effect_rarity(PetRarity::Common),
+        PetRarity::Rare
+    );
+    assert_eq!(
+        preview.cycle_attack_effect_rarity(PetRarity::Common),
+        PetRarity::Epic
+    );
 
     let anticipation = sample_combat_motion(0.48, 12, false);
     let dash = sample_combat_motion(0.58, 13, false);

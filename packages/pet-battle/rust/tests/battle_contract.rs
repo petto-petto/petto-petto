@@ -62,7 +62,10 @@ fn stage_color_and_background_cycle_together() {
     assert_eq!(EnemyColorStage::for_stage(4), EnemyColorStage::Green);
     assert_eq!(EnemyColorStage::for_stage(7), EnemyColorStage::Rainbow);
     assert_eq!(EnemyColorStage::for_stage(8), EnemyColorStage::Red);
-    assert_ne!(EnemyColorStage::Red.background(), EnemyColorStage::Green.background());
+    assert_ne!(
+        EnemyColorStage::Red.background(),
+        EnemyColorStage::Green.background()
+    );
 }
 
 #[test]
@@ -70,7 +73,10 @@ fn battle_can_pause_without_changing_progress() {
     let mut controller = BattleController::demo(CONFIG);
     let before = controller.active_pet().expect("active pet").clone();
 
-    assert_eq!(controller.toggle_battle(), Some(BattleEvent::ModeChanged(BattleMode::Paused)));
+    assert_eq!(
+        controller.toggle_battle(),
+        Some(BattleEvent::ModeChanged(BattleMode::Paused))
+    );
     let after = controller.active_pet().expect("active pet");
     assert_eq!(after.stage, before.stage);
     assert_eq!(after.interval_xp, before.interval_xp);
