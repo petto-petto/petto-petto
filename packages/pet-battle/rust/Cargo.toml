@@ -13,6 +13,10 @@ path = "src/lib.rs"
 name = "pet-battle-engine"
 path = "src/bin/pet-battle-engine.rs"
 
+[[bin]]
+name = "generate-battle-assets"
+path = "src/bin/generate-battle-assets.rs"
+
 [dependencies]
 image = { version = "0.25", default-features = false, features = ["png"] }
 serde = { version = "1.0", features = ["derive"] }
