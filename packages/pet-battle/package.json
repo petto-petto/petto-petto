@@ -1,0 +1,26 @@
+{
+  "name": "@pet/battle",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "battle feature — Rust 전투 코어와 Electron 오버레이 수직 슬라이스",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui/*": "./ui/*",
+    "./assets/*": "./assets/*",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "@pet/core": "*"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "test:rust": "cargo test --manifest-path rust/Cargo.toml"
+  }
+}
