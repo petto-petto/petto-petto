@@ -1,11 +1,8 @@
 import assert from 'node:assert/strict';
+import { access } from 'node:fs/promises';
 import { test } from 'node:test';
 
-import {
-  deriveBattleScene,
-  enemyColorForStage,
-  type BattleState,
-} from '../src/index.ts';
+import { deriveBattleScene, enemyColorForStage, type BattleState } from '../src/index.ts';
 
 const state = (overrides: Partial<BattleState> = {}): BattleState => ({
   activePet: {
@@ -38,10 +35,16 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
 });
 
 test('적 단계는 일곱 색을 순환하고 색상에 맞는 배경을 함께 선택한다', () => {
-  assert.deepEqual(
-    [1, 2, 3, 4, 5, 6, 7, 8].map(enemyColorForStage),
-    ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'RAINBOW', 'RED'],
-  );
+  assert.deepEqual([1, 2, 3, 4, 5, 6, 7, 8].map(enemyColorForStage), [
+    'RED',
+    'ORANGE',
+    'YELLOW',
+    'GREEN',
+    'BLUE',
+    'PURPLE',
+    'RAINBOW',
+    'RED',
+  ]);
 
   const rainbow = deriveBattleScene(
     state({ enemyColor: 'RAINBOW', background: 'STARLIGHT_SHRINE' }),
@@ -77,4 +80,27 @@ test('v2와 등급별 타격 이펙트는 진행 상태와 독립적인 표현 �
   assert.equal(scene.attackEffect.slashCount, 3);
   assert.equal(scene.attackEffect.shockwaveCount, 3);
   assert.equal(scene.attackEffect.particleCount, 12);
+});
+
+test('scene이 선택할 수 있는 v1/v2 에셋이 패키지 안에 모두 존재한다', async () => {
+  const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'rainbow'];
+  const faces = ['steady', 'worried', 'exhausted'];
+  const versions = ['v1', 'v2'];
+  const backgrounds = ['mushroom-forest', 'crystal-ruins', 'starlight-shrine'];
+  const assetRoot = new URL('../assets/', import.meta.url);
+  const paths = versions.flatMap((version) => [
+    ...colors.flatMap((color) => faces.map((face) => `enemies/${version}/${color}-${face}.png`)),
+    ...backgrounds.map((background) => `backgrounds/${version}/${background}.png`),
+  ]);
+
+  paths.push(
+    'pets/v1/cream-fox-idle.png',
+    'pets/v1/cream-fox-attack.png',
+    ...['common', 'rare', 'epic'].flatMap((rarity) => [
+      `pets/v2/${rarity}-idle.png`,
+      `pets/v2/${rarity}-attack.png`,
+    ]),
+  );
+
+  await Promise.all(paths.map((path) => access(new URL(path, assetRoot))));
 });

@@ -1,0 +1,575 @@
+:root {
+  --battle-width: 360px;
+  --battle-height: 180px;
+  --forest-deep: #10231a;
+  --forest-mid: #1c4a34;
+  --wood-border: #3a2a1c;
+  --wood: #6b4a2e;
+  --wood-light: #a5763f;
+  --parchment: #f3e3c0;
+  --ink: #3b2a1a;
+  --cream: #f5ecd8;
+  --gold: #ffd166;
+  --cyan: #55d7cf;
+  --outline: #2c2438;
+  --danger: #762f35;
+  --enemy-height: 80px;
+  --slash-opacity: 0;
+  --impact-opacity: 0;
+  --speed-opacity: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: var(--battle-width);
+  height: var(--battle-height);
+  margin: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+body {
+  color: var(--cream);
+  font-family: 'Galmuri9', ui-monospace, monospace;
+  font-size: 10px;
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+  user-select: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#battle-overlay {
+  position: relative;
+  width: var(--battle-width);
+  height: var(--battle-height);
+  overflow: hidden;
+  border: 2px solid var(--outline);
+  background: var(--forest-deep);
+  box-shadow:
+    inset 0 0 0 2px rgba(143, 214, 138, 0.22),
+    2px 2px 0 rgba(0, 0, 0, 0.38);
+  isolation: isolate;
+  -webkit-app-region: drag;
+}
+
+.battle-background,
+.vignette {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.battle-background {
+  z-index: -3;
+  object-fit: cover;
+  image-rendering: pixelated;
+  transition: opacity 80ms steps(2, end);
+}
+
+.vignette {
+  z-index: -2;
+  background:
+    linear-gradient(90deg, rgba(8, 14, 20, 0.42), transparent 28% 72%, rgba(8, 14, 20, 0.5)),
+    linear-gradient(0deg, rgba(8, 12, 18, 0.48), transparent 42%);
+  pointer-events: none;
+}
+
+.battle-hud {
+  position: absolute;
+  z-index: 6;
+  top: 6px;
+  left: 8px;
+  right: 8px;
+  display: grid;
+  grid-template-columns: 62px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  height: 18px;
+  color: var(--cream);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  -webkit-app-region: no-drag;
+}
+
+#stage-label {
+  text-shadow: 1px 1px 0 var(--outline);
+}
+
+.enemy-hp {
+  position: relative;
+  height: 12px;
+  border: 2px solid var(--outline);
+  background: #202439;
+  box-shadow: inset 0 0 0 1px #3b4661;
+}
+
+#enemy-hp-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #1c4a34, #3c7a4a, #8fd68a);
+  transition: width 140ms steps(5, end);
+}
+
+#enemy-hp-label {
+  position: absolute;
+  inset: -2px 3px auto auto;
+  color: var(--cream);
+  font-size: 10px;
+  line-height: 12px;
+  text-shadow: 1px 1px 0 var(--outline);
+}
+
+.motion-toggle {
+  height: 18px;
+  border: 2px solid var(--wood-border);
+  border-radius: 0;
+  background: var(--wood);
+  color: var(--cream);
+  box-shadow: inset 0 2px 0 var(--wood-light);
+  cursor: pointer;
+}
+
+.character {
+  position: absolute;
+  z-index: 2;
+  bottom: 12px;
+  transform-origin: 50% 100%;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.character:focus-visible,
+.character:hover {
+  filter: drop-shadow(0 0 1px var(--gold)) drop-shadow(1px 0 0 var(--gold));
+}
+
+.pet {
+  left: 50px;
+  width: 112px;
+  height: 112px;
+}
+
+.enemy {
+  left: 192px;
+  width: 120px;
+  height: 112px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  transition: opacity 80ms steps(2, end);
+}
+
+.ground-shadow {
+  position: absolute;
+  z-index: -1;
+  left: 22%;
+  right: 22%;
+  bottom: 0;
+  height: 8px;
+  background: rgba(21, 17, 35, 0.62);
+  clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
+}
+
+.pet-viewport {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.pet-sheet {
+  --frame-count: 1;
+  --sheet-shift: 0px;
+  --sheet-duration: 667ms;
+  display: block;
+  width: calc(112px * var(--frame-count));
+  height: 112px;
+  object-fit: fill;
+  image-rendering: pixelated;
+}
+
+.pet-sheet.animated-sheet {
+  animation: pet-frames var(--sheet-duration) steps(var(--frame-count)) infinite;
+}
+
+.enemy img {
+  width: auto;
+  height: var(--enemy-height);
+  max-width: 120px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+@keyframes pet-frames {
+  to {
+    transform: translateX(var(--sheet-shift));
+  }
+}
+
+.combat-effects {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  pointer-events: none;
+}
+
+.speed-line,
+.slash,
+.impact-wave,
+.growth-particle {
+  position: absolute;
+  display: block;
+  opacity: 0;
+}
+
+.speed-line {
+  left: 126px;
+  width: 56px;
+  height: 2px;
+  background: var(--cyan);
+  opacity: var(--speed-opacity);
+}
+
+.line-1 {
+  top: 78px;
+}
+
+.line-2 {
+  top: 102px;
+  width: 38px;
+}
+
+.slash {
+  left: 205px;
+  top: 66px;
+  width: 4px;
+  height: 55px;
+  background: var(--cyan);
+  box-shadow: 3px 0 0 var(--gold);
+  opacity: var(--slash-opacity);
+  transform: rotate(38deg);
+}
+
+.slash-2 {
+  left: 216px;
+  display: none;
+  transform: rotate(50deg) scale(0.86);
+}
+
+.slash-3 {
+  left: 225px;
+  display: none;
+  transform: rotate(29deg) scale(0.72);
+}
+
+[data-effect-rarity='RARE'] .slash-2,
+[data-effect-rarity='EPIC'] .slash-2,
+[data-effect-rarity='EPIC'] .slash-3 {
+  display: block;
+}
+
+.impact-wave {
+  left: 219px;
+  top: 77px;
+  width: 42px;
+  height: 42px;
+  border: 3px solid var(--gold);
+  clip-path: polygon(25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%, 0 25%);
+  opacity: var(--impact-opacity);
+}
+
+.wave-2,
+.wave-3 {
+  display: none;
+}
+
+[data-effect-rarity='RARE'] .wave-2,
+[data-effect-rarity='EPIC'] .wave-2,
+[data-effect-rarity='EPIC'] .wave-3 {
+  display: block;
+}
+
+.wave-2 {
+  transform: scale(1.28);
+  border-color: var(--cyan);
+}
+
+.wave-3 {
+  transform: scale(1.58);
+  border-color: #b46bff;
+}
+
+[data-pet-action='GROWTH'] .growth-particle {
+  width: 5px;
+  height: 5px;
+  background: var(--cyan);
+  opacity: 1;
+  animation: growth-gather 780ms steps(6, end) forwards;
+}
+
+.particle-1 {
+  left: 55px;
+  top: 58px;
+}
+
+.particle-2 {
+  left: 147px;
+  top: 52px;
+  background: var(--gold);
+}
+
+.particle-3 {
+  left: 74px;
+  top: 132px;
+  background: var(--gold);
+}
+
+.particle-4 {
+  left: 143px;
+  top: 122px;
+}
+
+@keyframes growth-gather {
+  to {
+    left: 105px;
+    top: 92px;
+    opacity: 0;
+  }
+}
+
+[data-enemy-phase='HIT'] .enemy {
+  animation: enemy-hit 420ms steps(6, end);
+}
+
+[data-enemy-phase='DEFEATING'] .enemy {
+  animation: enemy-defeat 1100ms steps(10, end) forwards;
+}
+
+[data-enemy-phase='SPAWNING'] .enemy {
+  animation: enemy-spawn 720ms steps(8, end);
+}
+
+@keyframes enemy-hit {
+  30% {
+    transform: translateX(7px) scale(1.13, 0.82);
+    filter: brightness(1.8);
+  }
+  55% {
+    transform: translateX(-5px) scale(0.94, 1.08);
+  }
+}
+
+@keyframes enemy-defeat {
+  35% {
+    transform: scale(1.18, 0.74);
+    filter: brightness(2);
+  }
+  100% {
+    transform: translateY(16px) scale(1.38, 0.08);
+    opacity: 0;
+  }
+}
+
+@keyframes enemy-spawn {
+  from {
+    transform: translateY(22px) scale(0.4, 0.15);
+    opacity: 0;
+  }
+}
+
+.radial-menu {
+  position: absolute;
+  z-index: 8;
+  inset: 0;
+  pointer-events: none;
+  -webkit-app-region: no-drag;
+}
+
+.radial-menu[hidden] {
+  display: none;
+}
+
+.radial-button {
+  position: absolute;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 2px solid var(--cyan);
+  border-radius: 0;
+  background: #202439;
+  color: var(--cream);
+  box-shadow:
+    inset 0 2px 0 #43516b,
+    inset 0 -2px 0 #111522,
+    2px 2px 0 rgba(0, 0, 0, 0.5);
+  clip-path: polygon(25% 0, 75% 0, 100% 25%, 100% 75%, 75% 100%, 25% 100%, 0 75%, 0 25%);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: radial-open 120ms steps(4, end) backwards;
+}
+
+.radial-button:hover,
+.radial-button:focus-visible {
+  color: var(--gold);
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.radial-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: inset 0 2px 0 #111522;
+}
+
+.radial-button.danger {
+  border-color: var(--gold);
+  background: var(--danger);
+}
+
+@keyframes radial-open {
+  from {
+    transform: scale(0.25);
+    opacity: 0;
+  }
+}
+
+.pet-menu [data-action='START'] {
+  left: 16px;
+  top: 79px;
+}
+
+.pet-menu [data-action='STOP'] {
+  left: 29px;
+  top: 43px;
+}
+
+.pet-menu [data-action='ATTACK'] {
+  left: 66px;
+  top: 21px;
+}
+
+.pet-menu [data-action='GROWTH'] {
+  left: 108px;
+  top: 27px;
+}
+
+.pet-menu [data-action='ASSET_V1'] {
+  left: 143px;
+  top: 52px;
+}
+
+.pet-menu [data-action='ATTACK_EFFECT'] {
+  left: 150px;
+  top: 91px;
+}
+
+.pet-menu [data-action='ASSET_V2'] {
+  left: 130px;
+  top: 127px;
+}
+
+.enemy-menu [data-action='HIT'] {
+  left: 187px;
+  top: 54px;
+}
+
+.enemy-menu [data-action='DEFEAT'] {
+  left: 218px;
+  top: 26px;
+}
+
+.enemy-menu [data-action='SPAWN'] {
+  left: 263px;
+  top: 21px;
+}
+
+.enemy-menu [data-action='RESET'] {
+  left: 305px;
+  top: 45px;
+}
+
+.enemy-menu [data-action='SIZE'] {
+  left: 320px;
+  top: 82px;
+}
+
+.enemy-menu [data-action='COLOR'] {
+  left: 306px;
+  top: 119px;
+}
+
+.enemy-menu [data-action='HP'] {
+  left: 266px;
+  top: 137px;
+}
+
+.opacity-control {
+  position: absolute;
+  left: 185px;
+  top: 158px;
+  width: 158px;
+  height: 18px;
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 4px;
+  border: 2px solid var(--wood-border);
+  background: var(--parchment);
+  color: var(--ink);
+  pointer-events: auto;
+}
+
+.opacity-control input {
+  width: 100%;
+  height: 10px;
+  margin: 0;
+  accent-color: var(--forest-mid);
+  cursor: ew-resize;
+}
+
+.battle-toast {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: 8px;
+  min-width: 110px;
+  padding: 4px 7px;
+  border: 2px solid var(--wood-border);
+  background: var(--parchment);
+  color: var(--ink);
+  text-align: center;
+  opacity: 0;
+  transform: translateX(-50%) translateY(6px);
+  transition: 100ms steps(3, end);
+  pointer-events: none;
+}
+
+.battle-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.battle-toast.error {
+  background: #f08a8a;
+}
+
+.reduced-motion * {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 1ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

@@ -20,6 +20,8 @@
   },
   "scripts": {
     "build": "tsc --build tsconfig.json",
+    "build:rust": "cargo build --manifest-path rust/Cargo.toml --bin pet-battle-engine",
+    "demo": "npm run build && npm run build:rust && electron ui/demo-main.cjs",
     "test": "node --test \"test/**/*.test.ts\"",
     "test:rust": "cargo test --manifest-path rust/Cargo.toml"
   }

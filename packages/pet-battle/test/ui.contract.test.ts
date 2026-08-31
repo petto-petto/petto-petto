@@ -42,3 +42,11 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
   assert.match(html, /type="range"/);
   assert.match(html, /data-action="OPACITY"/);
 });
+
+test('표시 투명도는 배경·적·HP 바에 동일하게 적용된다', async () => {
+  const script = await readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8');
+
+  assert.match(script, /background\.style\.opacity\s*=\s*String\(scene\.displayOpacity\)/);
+  assert.match(script, /enemy\.style\.opacity\s*=.*String\(scene\.displayOpacity\)/);
+  assert.match(script, /hpBar\.style\.opacity\s*=\s*String\(scene\.displayOpacity\)/);
+});

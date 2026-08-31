@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Petto Petto Battle</title>
+    <link rel="stylesheet" href="battle.css" />
+  </head>
+  <body>
+    <main id="battle-overlay" aria-label="펫 자동 전투 오버레이">
+      <img
+        id="battle-background"
+        class="battle-background"
+        src="../assets/backgrounds/v1/mushroom-forest.png"
+        alt=""
+        draggable="false"
+      />
+      <div class="vignette" aria-hidden="true"></div>
+
+      <header class="battle-hud">
+        <span id="stage-label">STAGE 1</span>
+        <div class="enemy-hp" aria-label="적 체력">
+          <span id="enemy-hp-fill"></span>
+          <strong id="enemy-hp-label">100%</strong>
+        </div>
+        <button
+          class="motion-toggle"
+          type="button"
+          data-action="REDUCED_MOTION"
+          aria-label="모션 감소 전환"
+        >
+          모션↓
+        </button>
+      </header>
+
+      <section id="pet" class="character pet" data-character="pet" aria-label="펫 모션 메뉴 열기">
+        <span class="ground-shadow" aria-hidden="true"></span>
+        <span class="pet-viewport">
+          <img
+            id="pet-sheet"
+            class="pet-sheet"
+            src="../assets/pets/v1/cream-fox-idle.png"
+            alt="전투 중인 펫"
+            draggable="false"
+          />
+        </span>
+      </section>
+
+      <section
+        id="enemy"
+        class="character enemy"
+        data-character="enemy"
+        aria-label="적 모션 메뉴 열기"
+      >
+        <span class="ground-shadow" aria-hidden="true"></span>
+        <img
+          id="enemy-image"
+          src="../assets/enemies/v1/red-steady.png"
+          alt="현재 적"
+          draggable="false"
+        />
+      </section>
+
+      <div class="combat-effects" aria-hidden="true">
+        <i class="speed-line line-1"></i><i class="speed-line line-2"></i>
+        <i class="slash slash-1"></i><i class="slash slash-2"></i><i class="slash slash-3"></i>
+        <i class="impact-wave wave-1"></i><i class="impact-wave wave-2"></i
+        ><i class="impact-wave wave-3"></i> <i class="growth-particle particle-1"></i
+        ><i class="growth-particle particle-2"></i><i class="growth-particle particle-3"></i
+        ><i class="growth-particle particle-4"></i>
+      </div>
+
+      <nav id="pet-menu" class="radial-menu pet-menu" aria-label="펫 모션" hidden>
+        <button type="button" data-action="START" class="radial-button">START</button>
+        <button type="button" data-action="STOP" class="radial-button">STOP</button>
+        <button type="button" data-action="ATTACK" class="radial-button">공격</button>
+        <button type="button" data-action="GROWTH" class="radial-button">성장</button>
+        <button type="button" data-action="ASSET_V1" class="radial-button">v1</button>
+        <button type="button" data-action="ATTACK_EFFECT" class="radial-button">효과</button>
+        <button type="button" data-action="ASSET_V2" class="radial-button">v2</button>
+      </nav>
+
+      <nav id="enemy-menu" class="radial-menu enemy-menu" aria-label="적 모션" hidden>
+        <button type="button" data-action="HIT" class="radial-button">맞기</button>
+        <button type="button" data-action="DEFEAT" class="radial-button danger">처치</button>
+        <button type="button" data-action="SPAWN" class="radial-button">등장</button>
+        <button type="button" data-action="RESET" class="radial-button">복귀</button>
+        <button type="button" data-action="SIZE" class="radial-button">크기</button>
+        <button type="button" data-action="COLOR" class="radial-button">색상</button>
+        <button type="button" data-action="HP" class="radial-button">HP</button>
+        <label class="opacity-control" data-action="OPACITY">
+          <span>투명도</span>
+          <input id="display-opacity" type="range" min="0" max="100" value="100" />
+        </label>
+      </nav>
+
+      <output id="battle-toast" class="battle-toast" aria-live="polite"></output>
+    </main>
+    <script type="module" src="../dist/ui/battle-overlay.js"></script>
+  </body>
+</html>
