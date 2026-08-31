@@ -50,3 +50,10 @@ test('표시 투명도는 배경·적·HP 바에 동일하게 적용된다', asy
   assert.match(script, /enemy\.style\.opacity\s*=.*String\(scene\.displayOpacity\)/);
   assert.match(script, /hpBar\.style\.opacity\s*=\s*String\(scene\.displayOpacity\)/);
 });
+
+test('renderer와 Electron IPC는 같은 epoch 시간 기준을 사용한다', async () => {
+  const script = await readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8');
+
+  assert.match(script, /return Date\.now\(\)/);
+  assert.doesNotMatch(script, /performance\.now\(\)/);
+});

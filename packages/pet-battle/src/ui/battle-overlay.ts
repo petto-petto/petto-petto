@@ -55,7 +55,7 @@ function assetUrl(path: string): string {
 }
 
 function nowMs(): number {
-  return Math.round(performance.now());
+  return Date.now();
 }
 
 async function execute(command: BattleCommand, message?: string): Promise<void> {
