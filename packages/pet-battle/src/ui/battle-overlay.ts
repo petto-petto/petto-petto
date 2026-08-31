@@ -42,7 +42,7 @@ const opacity = required<HTMLInputElement>('#display-opacity');
 
 const gateway: BattleGateway = window.petBattle ?? new DemoBattleGateway();
 let state: BattleState | undefined;
-let busy = false;
+let inFlight = 0;
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -59,8 +59,8 @@ function nowMs(): number {
 }
 
 async function execute(command: BattleCommand, message?: string): Promise<void> {
-  if (busy) return;
-  busy = true;
+  if (command.type === 'GET_STATE' && inFlight > 0) return;
+  inFlight += 1;
   try {
     const result = await gateway.execute(command);
     state = result.state;
@@ -69,7 +69,7 @@ async function execute(command: BattleCommand, message?: string): Promise<void> 
   } catch (error) {
     showToast(`연결 오류 · ${String(error)}`, true);
   } finally {
-    busy = false;
+    inFlight -= 1;
   }
 }
 
@@ -251,5 +251,5 @@ root.addEventListener('click', () => {
 
 void execute({ type: 'GET_STATE', nowMs: nowMs() });
 window.setInterval(() => {
-  if (!busy) void execute({ type: 'GET_STATE', nowMs: nowMs() });
+  void execute({ type: 'GET_STATE', nowMs: nowMs() });
 }, 80);

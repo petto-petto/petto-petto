@@ -57,3 +57,10 @@ test('renderer와 Electron IPC는 같은 epoch 시간 기준을 사용한다', a
   assert.match(script, /return Date\.now\(\)/);
   assert.doesNotMatch(script, /performance\.now\(\)/);
 });
+
+test('상태 조회 중에도 사용자의 버튼 명령은 버리지 않는다', async () => {
+  const script = await readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8');
+
+  assert.match(script, /command\.type === 'GET_STATE' && inFlight > 0/);
+  assert.doesNotMatch(script, /if \(busy\) return/);
+});
