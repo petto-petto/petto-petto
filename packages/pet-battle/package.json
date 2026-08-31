@@ -19,7 +19,7 @@
     "@pet/core": "*"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc --build tsconfig.json",
     "test": "node --test \"test/**/*.test.ts\"",
     "test:rust": "cargo test --manifest-path rust/Cargo.toml"
   }
