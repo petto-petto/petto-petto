@@ -72,7 +72,10 @@ fn pet_lunge_stops_at_contact_and_returns_quickly_without_crossing_enemy() {
         .map(|sample| sample.pet_offset.x)
         .fold(f32::NEG_INFINITY, f32::max);
 
-    assert!(furthest_x <= 34.0, "pet crossed contact point: {furthest_x}");
+    assert!(
+        furthest_x <= 34.0,
+        "pet crossed contact point: {furthest_x}"
+    );
     assert!(sample_combat_motion(0.75, 12, false).pet_offset.x <= 8.0);
     assert_eq!(sample_combat_motion(0.81, 12, false).beat, CombatBeat::Idle);
 }
