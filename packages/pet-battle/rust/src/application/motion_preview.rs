@@ -8,14 +8,6 @@ const ENEMY_HIT_SECONDS: f64 = 0.42;
 const ENEMY_DEFEAT_SECONDS: f64 = 1.10;
 const ENEMY_SPAWN_SECONDS: f64 = 0.72;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum AssetVersion {
-    #[default]
-    V1,
-    V2,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DisplayOpacity(f32);
 
@@ -110,7 +102,6 @@ pub enum EnemyPreviewPhase {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MotionPreviewVisual {
-    pub asset_version: AssetVersion,
     pub display_opacity: DisplayOpacity,
     pub menu: PreviewMenu,
     pub pet_attack_phase: Option<f64>,
@@ -143,7 +134,6 @@ enum EnemyPreviewState {
 
 #[derive(Debug, Clone, Copy)]
 pub struct MotionPreview {
-    asset_version: AssetVersion,
     display_opacity: DisplayOpacity,
     menu: PreviewMenu,
     pet: PetPreviewState,
@@ -157,7 +147,6 @@ pub struct MotionPreview {
 impl Default for MotionPreview {
     fn default() -> Self {
         Self {
-            asset_version: AssetVersion::V1,
             display_opacity: DisplayOpacity::FULL,
             menu: PreviewMenu::Closed,
             pet: PetPreviewState::Idle,
@@ -171,10 +160,6 @@ impl Default for MotionPreview {
 }
 
 impl MotionPreview {
-    pub fn select_asset_version(&mut self, version: AssetVersion) {
-        self.asset_version = version;
-    }
-
     pub fn reset_actions(&mut self) {
         self.menu = PreviewMenu::Closed;
         self.display_opacity = DisplayOpacity::FULL;
@@ -348,7 +333,6 @@ impl MotionPreview {
         };
 
         MotionPreviewVisual {
-            asset_version: self.asset_version,
             display_opacity: self.display_opacity,
             menu: self.menu,
             pet_attack_phase,

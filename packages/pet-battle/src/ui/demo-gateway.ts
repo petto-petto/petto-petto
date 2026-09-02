@@ -46,7 +46,6 @@ const initialState = (): BattleState => ({
   background: 'MUSHROOM_FOREST',
   overlay: null,
   preview: {
-    assetVersion: 'V1',
     displayOpacity: 1,
     menu: 'CLOSED',
     petAction: null,
@@ -111,9 +110,6 @@ export class DemoBattleGateway implements BattleGateway {
       }
       case 'SET_DISPLAY_OPACITY':
         this.#state.preview.displayOpacity = Math.max(0, Math.min(100, command.percent)) / 100;
-        break;
-      case 'SELECT_ASSET_VERSION':
-        this.#state.preview.assetVersion = command.version;
         break;
       case 'CYCLE_ATTACK_EFFECT': {
         const current = this.#state.preview.attackEffectRarity;

@@ -15,7 +15,7 @@ packages/pet-battle/
 │   ├── ui/            # 오버레이 DOM controller와 브라우저 fallback
 │   └── view/          # 상태 → 배경·에셋·표정·크기 표현 모델
 ├── ui/                # 패키지 단독 Electron 프로토타입
-├── assets/            # v1/v2 펫·적·배경 에셋
+├── assets/            # v2 도트 펫·적·배경 에셋
 ├── docs/              # 전투 시스템·UI 명세
 └── test/              # TypeScript 계약 테스트
 ```

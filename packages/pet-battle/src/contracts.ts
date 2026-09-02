@@ -5,7 +5,6 @@ export type { Rarity } from '@pet/core';
 export type BattleMode = 'FIGHTING' | 'PAUSED';
 export type EnemyColor = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RAINBOW';
 export type BackgroundTheme = 'MUSHROOM_FOREST' | 'CRYSTAL_RUINS' | 'STARLIGHT_SHRINE';
-export type AssetVersion = 'V1' | 'V2';
 export type PreviewMenu = 'CLOSED' | 'PET' | 'ENEMY';
 export type PetPreviewAction = 'ATTACK' | 'GROWTH';
 export type EnemyPreviewAction = 'HIT' | 'DEFEAT' | 'SPAWN' | 'RESET';
@@ -48,7 +47,6 @@ export interface BattleOverlayState {
 }
 
 export interface BattlePreviewState {
-  assetVersion: AssetVersion;
   displayOpacity: number;
   menu: PreviewMenu;
   petAction: PetPreviewAction | null;
@@ -108,7 +106,6 @@ export type BattleCommand =
   | { type: 'CYCLE_ENEMY_COLOR' }
   | { type: 'CYCLE_ENEMY_HP' }
   | { type: 'SET_DISPLAY_OPACITY'; percent: number }
-  | { type: 'SELECT_ASSET_VERSION'; version: AssetVersion }
   | { type: 'CYCLE_ATTACK_EFFECT' }
   | { type: 'TOGGLE_REDUCED_MOTION' };
 

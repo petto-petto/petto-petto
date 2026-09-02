@@ -1,7 +1,7 @@
 use pet_battle::{
-    AssetVersion, CombatBeat, EnemyColorStage, EnemyPreviewAction, EnemyPreviewPhase,
-    EnemyPreviewSize, MotionPreview, OverlayClick, OverlayFlow, OverlayPhase, PetPreviewAction,
-    PetRarity, PreviewMenu, sample_combat_motion,
+    CombatBeat, EnemyColorStage, EnemyPreviewAction, EnemyPreviewPhase, EnemyPreviewSize,
+    MotionPreview, OverlayClick, OverlayFlow, OverlayPhase, PetPreviewAction, PetRarity,
+    PreviewMenu, sample_combat_motion,
 };
 
 #[test]
@@ -17,9 +17,7 @@ fn conquest_waits_for_two_step_overlay_click_flow() {
 #[test]
 fn preview_controls_are_independent_and_resettable() {
     let mut preview = MotionPreview::default();
-    assert_eq!(preview.visual(0.0).asset_version, AssetVersion::V2);
     preview.toggle_menu(PreviewMenu::Enemy);
-    preview.select_asset_version(AssetVersion::V2);
     assert_eq!(preview.cycle_enemy_size(), EnemyPreviewSize::Small);
     assert_eq!(
         preview.cycle_enemy_color(EnemyColorStage::Red),
@@ -33,7 +31,6 @@ fn preview_controls_are_independent_and_resettable() {
     assert_eq!(visual.enemy_size, None);
     assert_eq!(visual.enemy_color_stage, None);
     assert_eq!(visual.enemy_hp_ratio, None);
-    assert_eq!(visual.asset_version, AssetVersion::V2);
 }
 
 #[test]

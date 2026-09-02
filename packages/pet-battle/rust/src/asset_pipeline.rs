@@ -167,29 +167,27 @@ pub fn rainbow_mottle_color(x: u32, y: u32, width: u32, height: u32) -> (u8, u8,
 }
 
 pub fn generate_enemy_asset_set(source_root: &Path, output_root: &Path) -> Result<(), String> {
-    for (version, preserve_outline, max_height) in [("v1", false, 256), ("v2", true, 32)] {
-        let version_output = output_root.join(version);
-        std::fs::create_dir_all(&version_output).map_err(|error| {
-            format!(
-                "failed to create enemy asset directory {}: {error}",
-                version_output.display()
-            )
-        })?;
+    let version_output = output_root.join("v2");
+    std::fs::create_dir_all(&version_output).map_err(|error| {
+        format!(
+            "failed to create enemy asset directory {}: {error}",
+            version_output.display()
+        )
+    })?;
 
-        for face in FACES {
-            let suffix = if face == "steady" {
-                String::new()
-            } else {
-                format!("-{face}")
-            };
-            let source_path = source_root.join(format!("shadow-slime-idle-{version}{suffix}.png"));
-            let source = decode_trimmed(&source_path, max_height)?;
-            for color in COLORS {
-                let output = version_output.join(format!("{}-{face}.png", color_slug(color)));
-                colorize_enemy_image(&source, color, preserve_outline)
-                    .save(&output)
-                    .map_err(|error| format!("failed to save {}: {error}", output.display()))?;
-            }
+    for face in FACES {
+        let suffix = if face == "steady" {
+            String::new()
+        } else {
+            format!("-{face}")
+        };
+        let source_path = source_root.join(format!("shadow-slime-idle-v2{suffix}.png"));
+        let source = decode_trimmed(&source_path, 32)?;
+        for color in COLORS {
+            let output = version_output.join(format!("{}-{face}.png", color_slug(color)));
+            colorize_enemy_image(&source, color, true)
+                .save(&output)
+                .map_err(|error| format!("failed to save {}: {error}", output.display()))?;
         }
     }
     Ok(())

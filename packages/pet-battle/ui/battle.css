@@ -160,12 +160,14 @@ input {
 }
 
 .pet {
+  z-index: 7;
   left: 50px;
   width: 112px;
   height: 112px;
 }
 
 .enemy {
+  z-index: 2;
   left: 192px;
   width: 120px;
   height: 112px;
@@ -194,6 +196,7 @@ input {
 
 .pet-sheet {
   --frame-count: 1;
+  --frame-steps: 1;
   --sheet-shift: 0px;
   --sheet-duration: 667ms;
   display: block;
@@ -204,7 +207,7 @@ input {
 }
 
 .pet-sheet.animated-sheet {
-  animation: pet-frames var(--sheet-duration) steps(var(--frame-count)) 1 forwards;
+  animation: pet-frames var(--sheet-duration) steps(var(--frame-steps)) 1 forwards;
 }
 
 .enemy img {
@@ -468,19 +471,9 @@ input {
   top: 27px;
 }
 
-.pet-menu [data-action='ASSET_V1'] {
+.pet-menu [data-action='ATTACK_EFFECT'] {
   left: 143px;
   top: 52px;
-}
-
-.pet-menu [data-action='ATTACK_EFFECT'] {
-  left: 150px;
-  top: 91px;
-}
-
-.pet-menu [data-action='ASSET_V2'] {
-  left: 130px;
-  top: 127px;
 }
 
 .enemy-menu [data-action='HIT'] {

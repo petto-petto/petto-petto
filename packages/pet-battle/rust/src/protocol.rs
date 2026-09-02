@@ -1,10 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    AssetVersion, BackgroundTheme, BattleConfig, BattleController, BattleEvent, BattleInput,
-    BattleMode, CombatMotionSample, EnemyColorStage, EnemyPreviewAction, EnemyPreviewPhase,
-    EnemyPreviewSize, MotionPreview, OverlayClick, OverlayFlow, OverlayPhase, OverlayVisual,
-    PetBattleProgress, PetPreviewAction, PetRarity, PreviewMenu, sample_combat_motion,
+    BackgroundTheme, BattleConfig, BattleController, BattleEvent, BattleInput, BattleMode,
+    CombatMotionSample, EnemyColorStage, EnemyPreviewAction, EnemyPreviewPhase, EnemyPreviewSize,
+    MotionPreview, OverlayClick, OverlayFlow, OverlayPhase, OverlayVisual, PetBattleProgress,
+    PetPreviewAction, PetRarity, PreviewMenu, sample_combat_motion,
 };
 
 const DEFAULT_CONFIG: BattleConfig = BattleConfig {
@@ -62,9 +62,6 @@ pub enum BattleCommand {
     SetDisplayOpacity {
         percent: u8,
     },
-    SelectAssetVersion {
-        version: AssetVersion,
-    },
     CycleAttackEffect,
     ToggleReducedMotion,
 }
@@ -86,7 +83,6 @@ impl BattleCommand {
             | Self::CycleEnemyColor
             | Self::CycleEnemyHp
             | Self::SetDisplayOpacity { .. }
-            | Self::SelectAssetVersion { .. }
             | Self::CycleAttackEffect
             | Self::ToggleReducedMotion => fallback,
         }
@@ -133,7 +129,6 @@ pub enum EngineEvent {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EnginePreviewState {
-    pub asset_version: AssetVersion,
     pub display_opacity: f32,
     pub menu: PreviewMenu,
     pub pet_action: Option<PetPreviewAction>,
@@ -279,9 +274,6 @@ impl BattleEngine {
                 self.preview
                     .set_display_opacity(f32::from(percent.min(100)) / 100.0);
             }
-            BattleCommand::SelectAssetVersion { version } => {
-                self.preview.select_asset_version(version);
-            }
             BattleCommand::CycleAttackEffect => {
                 let rarity = self
                     .controller
@@ -373,7 +365,6 @@ impl BattleEngine {
             background: enemy_color.background(),
             overlay,
             preview: EnginePreviewState {
-                asset_version: preview.asset_version,
                 display_opacity: preview.display_opacity.alpha(),
                 menu: preview.menu,
                 pet_action: preview.active_pet_action,

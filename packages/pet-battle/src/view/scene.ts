@@ -16,6 +16,7 @@ export interface AttackEffectProfile {
 
 export interface PetSpriteProfile {
   frameCount: number;
+  frameSteps: number;
   animated: boolean;
   durationMs: number;
 }
@@ -115,7 +116,6 @@ export function shouldStartEnemyHitReaction(
 }
 
 export function deriveBattleScene(state: BattleState): BattleScene {
-  const version = state.preview.assetVersion.toLowerCase();
   const hpRatio = Math.max(0, Math.min(1, state.preview.enemyHpRatio ?? state.enemyHpRatio));
   const face = enemyFaceForHp(hpRatio);
   const enemyColor = state.preview.enemyColor ?? state.enemyColor;
@@ -124,15 +124,13 @@ export function deriveBattleScene(state: BattleState): BattleScene {
   const isAttackMotion = state.motion?.beat !== undefined && state.motion.beat !== 'IDLE';
   const isAttacking = state.preview.petAction === 'ATTACK' || isAttackMotion;
   const petAction = isAttacking ? 'attack' : 'idle';
-  const petAsset =
-    state.preview.assetVersion === 'V1'
-      ? `assets/pets/v1/cream-fox-${petAction}.png`
-      : `assets/pets/v2/${PET_SLUG[state.activePet?.rarity ?? 'COMMON']}-${petAction}.png`;
+  const petAsset = `assets/pets/v2/${PET_SLUG[state.activePet?.rarity ?? 'COMMON']}-${petAction}.png`;
+  const frameCount = isAttacking ? 6 : 4;
 
   return {
     petAsset,
-    enemyAsset: `assets/enemies/${version}/${enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
-    backgroundAsset: `assets/backgrounds/${version}/${BACKGROUND_SLUG[background]}.png`,
+    enemyAsset: `assets/enemies/v2/${enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
+    backgroundAsset: `assets/backgrounds/v2/${BACKGROUND_SLUG[background]}.png`,
     enemyHpRatio: hpRatio,
     enemyFace: face,
     enemyHeight: state.preview.enemySize ? ENEMY_HEIGHT[state.preview.enemySize] : 80,
@@ -140,8 +138,9 @@ export function deriveBattleScene(state: BattleState): BattleScene {
     displayOpacity: Math.max(0, Math.min(1, state.preview.displayOpacity)),
     attackEffect: attackEffectForRarity(rarity),
     petSprite: {
-      frameCount: state.preview.assetVersion === 'V2' ? (isAttacking ? 6 : 4) : 1,
-      animated: state.preview.assetVersion === 'V2' && isAttacking,
+      frameCount,
+      frameSteps: frameCount - 1,
+      animated: isAttacking,
       durationMs: isAttacking ? 545 : 667,
     },
   };

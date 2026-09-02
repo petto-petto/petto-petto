@@ -13,8 +13,6 @@ type ButtonAction =
   | 'STOP'
   | 'ATTACK'
   | 'GROWTH'
-  | 'ASSET_V1'
-  | 'ASSET_V2'
   | 'ATTACK_EFFECT'
   | 'HIT'
   | 'DEFEAT'
@@ -135,6 +133,7 @@ function triggerEnemyHitReaction(): void {
 
 function updateSprite(sprite: ReturnType<typeof deriveBattleScene>['petSprite']): void {
   petSheet.style.setProperty('--frame-count', String(sprite.frameCount));
+  petSheet.style.setProperty('--frame-steps', String(sprite.frameSteps));
   petSheet.style.setProperty('--sheet-shift', `${-(sprite.frameCount - 1) * 112}px`);
   petSheet.style.setProperty('--sheet-duration', `${sprite.durationMs}ms`);
   petSheet.classList.toggle('animated-sheet', sprite.animated);
@@ -199,10 +198,6 @@ function commandFor(action: ButtonAction): { command: BattleCommand; message: st
         command: { type: 'PREVIEW_PET', action: 'GROWTH', nowMs: nowMs() },
         message: '성장 이펙트',
       };
-    case 'ASSET_V1':
-      return { command: { type: 'SELECT_ASSET_VERSION', version: 'V1' }, message: '에셋 v1' };
-    case 'ASSET_V2':
-      return { command: { type: 'SELECT_ASSET_VERSION', version: 'V2' }, message: '에셋 v2' };
     case 'ATTACK_EFFECT':
       return { command: { type: 'CYCLE_ATTACK_EFFECT' }, message: '등급별 타격 이펙트' };
     case 'HIT':

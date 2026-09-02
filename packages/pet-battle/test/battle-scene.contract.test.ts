@@ -24,7 +24,6 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
   background: 'MUSHROOM_FOREST',
   overlay: null,
   preview: {
-    assetVersion: 'V2',
     displayOpacity: 1,
     menu: 'CLOSED',
     petAction: null,
@@ -76,7 +75,6 @@ test('v2와 등급별 타격 이펙트는 진행 상태와 독립적인 표현 �
     ...state(),
     preview: {
       ...state().preview,
-      assetVersion: 'V2',
       attackEffectRarity: 'EPIC',
     },
   });
@@ -101,7 +99,7 @@ test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를
       impactFlashOpacity: 0,
       afterimageOpacity: 0.3,
     },
-    preview: { ...state().preview, assetVersion: 'V2' },
+    preview: { ...state().preview },
   });
 
   assert.match(scene.petAsset, /common-attack\.png$/);
@@ -113,7 +111,7 @@ test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를
 test('일시 정지 상태의 v2 펫은 idle 첫 프레임에서 멈춘다', () => {
   const paused = state({
     activePet: { ...state().activePet!, battleMode: 'PAUSED' },
-    preview: { ...state().preview, assetVersion: 'V2' },
+    preview: { ...state().preview },
   });
   const scene = deriveBattleScene(paused);
 
