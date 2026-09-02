@@ -1,0 +1,140 @@
+:root {
+  --cyan: #38e6ff;
+  --magenta: #ff54c8;
+  --purple: #8a5cf6;
+  --gold: #ffd35a;
+  color-scheme: light dark;
+}
+* { box-sizing: border-box; }
+html, body, #root {
+  margin: 0; width: 100%; height: 100%;
+  background: transparent !important; overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR", sans-serif;
+}
+.px { font-family: "Press Start 2P", monospace; -webkit-font-smoothing: none; }
+
+/* 브라우저 미리보기 전용 어두운 배경 (Electron 투명 창엔 미적용) */
+.browser-preview body { background: radial-gradient(120% 120% at 70% 30%, #1b2340 0%, #0a0d18 60%) !important; }
+
+.overlay-root { position: fixed; inset: 0; pointer-events: none; }
+/* 펫은 소형 창의 중앙에 고정. 드래그하면 창(윈도우) 자체가 이동한다. */
+.pet-anchor { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 120px; pointer-events: auto; }
+
+/* ---------- 펫 (z-index 로 메뉴/링보다 항상 위 → 흐려지지 않음) ---------- */
+.pet { position: relative; width: 120px; display: flex; flex-direction: column; align-items: center; z-index: 12; cursor: pointer; user-select: none; }
+.pet-top { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-bottom: 3px; }
+.pet-level { font-size: 9px; color: #fff; background: rgba(10,12,22,.72); padding: 3px 8px; border-radius: 8px; border: 1px solid rgba(120,200,255,.35); box-shadow: 0 0 8px rgba(56,230,255,.35); }
+.pet-exp { width: 80px; height: 8px; background: rgba(255,255,255,.15); border-radius: 5px; overflow: hidden; border: 1px solid rgba(138,92,246,.55); box-shadow: 0 0 7px rgba(138,92,246,.4); }
+.pet-exp span { display: block; height: 100%; background: linear-gradient(90deg,#7c3aed,#c084fc,#38e6ff); box-shadow: 0 0 8px var(--purple); transition: width .35s ease; }
+.pet-body { filter: drop-shadow(0 6px 8px rgba(0,0,0,.4)); animation: idle-bob 2.6s ease-in-out infinite; }
+/* 도트 스프라이트: 정수 배율 nearest-neighbor (pets/README §7) */
+.pet-sprite { display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+.pet-svg .eyes { transform-box: fill-box; transform-origin: center; animation: blink 4.6s infinite; }
+.pet-svg .tail { transform-box: fill-box; transform-origin: 18% 82%; animation: wag 1.9s ease-in-out infinite; }
+@keyframes blink { 0%,93%,100% { transform: scaleY(1); } 96% { transform: scaleY(.14); } }
+@keyframes wag { 0%,100% { transform: rotate(-9deg); } 50% { transform: rotate(9deg); } }
+.pet-name {
+  margin-top: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans KR", "Segoe UI", sans-serif;
+  font-size: 13px; font-weight: 800; letter-spacing: .3px;
+  color: #eef6ff;
+  padding: 3px 11px; border-radius: 999px;
+  background: rgba(12,14,24,.62);
+  border: 1px solid rgba(120,200,255,.4);
+  box-shadow: 0 0 10px rgba(56,230,255,.3);
+  text-shadow: 0 1px 2px rgba(0,0,0,.55);
+}
+.evo-badge { position: absolute; top: 34px; right: 6px; font-size: 22px; filter: drop-shadow(0 0 6px var(--gold)); animation: sparkle 1.2s ease-in-out infinite; }
+
+.state-reaction .pet-body { animation: reaction .6s ease; }
+.state-gainxp .pet-body { animation: xp-hop .55s ease; }
+.pet.evolving .pet-body { animation: evolve-spin 2.6s ease-in-out; }
+/* 심심함: 축 처지고 느리게 흔들 + 💤 */
+.pet.mood-bored.state-idle .pet-body { animation: bored-sway 3.4s ease-in-out infinite; }
+@keyframes bored-sway { 0%,100% { transform: translateY(2px) rotate(-2.5deg); } 50% { transform: translateY(5px) rotate(2.5deg); } }
+.mood-zzz { position: absolute; top: 28px; left: 6px; font-size: 15px; pointer-events: none; animation: zzz-float 2.8s ease-in-out infinite; }
+@keyframes zzz-float { 0% { opacity: 0; transform: translateY(6px) scale(.7); } 25% { opacity: .85; } 100% { opacity: 0; transform: translateY(-16px) scale(1); } }
+
+@keyframes idle-bob { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+@keyframes reaction { 0%{transform:scale(1);}30%{transform:scale(1.22) rotate(-6deg);}60%{transform:scale(.94) rotate(5deg);}100%{transform:scale(1);} }
+@keyframes xp-hop { 0%{transform:translateY(0);}30%{transform:translateY(-11px) scale(1.06);}60%{transform:translateY(0) scale(.98);}100%{transform:translateY(0);} }
+@keyframes evolve-spin {
+  0%{ transform: scale(1); filter: none; }
+  20%{ transform: scale(1.1) rotate(8deg); }
+  40%{ filter: brightness(6) saturate(0); transform: scale(1.16) rotate(-8deg); }
+  60%{ filter: brightness(6) saturate(0); transform: scale(1.16) rotate(8deg); }
+  80%{ filter: none; transform: scale(1.05); }
+  100%{ transform: scale(1); }
+}
+@keyframes sparkle { 0%,100%{transform:scale(1);opacity:.85;}50%{transform:scale(1.3);opacity:1;} }
+
+/* ---------- 토스트 (펫 위로) ---------- */
+.toasts { position: absolute; left: 60px; top: -6px; transform: translate(-50%, -100%); display: flex; flex-direction: column-reverse; gap: 5px; align-items: center; pointer-events: none; z-index: 16; }
+.toast { font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; color: #fff; white-space: nowrap; box-shadow: 0 2px 10px rgba(0,0,0,.5); animation: toast-in .2s ease, toast-out .3s ease 1.7s forwards; }
+.toast-xp { background: linear-gradient(180deg,#33c956,#1f8f3c); border: 1px solid #6dffa0; }
+.toast-evo { background: linear-gradient(180deg,#a56bff,#6d3fd6); border: 1px solid #d9baff; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px) scale(.9); } to { opacity: 1; } }
+@keyframes toast-out { to { opacity: 0; transform: translateY(-10px); } }
+
+/* ---------- 원형 메뉴 (링이 펫을 감싸며 등장, 펫은 위에 선명) ---------- */
+.radial { position: absolute; left: 60px; top: 50px; width: 0; height: 0; z-index: 5; }
+.radial-bg { position: fixed; inset: 0; background: rgba(0,0,0,.001); }
+/* 메뉴 배경 큰 원(radial-orb) 제거 — 네온 아이템 버블만 표시 */
+
+.radial-item {
+  position: absolute; left: 0; top: 0;
+  width: 62px; height: 62px; border-radius: 50%;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  border: 2px solid; background: rgba(16,18,30,.92); cursor: pointer;
+}
+.ri-icon { display: flex; line-height: 1; transition: transform .12s ease; }
+.ri-icon svg { display: block; filter: drop-shadow(0 0 3px currentColor); }
+.ri-label { font-size: 10px; font-weight: 800; color: #fff; margin-top: 1px; }
+.pt-icon { display: inline-flex; vertical-align: middle; margin-right: 3px; }
+.pt-icon svg { display: block; }
+.ri-dot { position: absolute; top: -4px; right: -2px; font-size: 13px; filter: drop-shadow(0 0 4px var(--gold)); }
+.glow-cyan { border-color: var(--cyan); box-shadow: 0 0 14px rgba(56,230,255,.7), inset 0 0 8px rgba(56,230,255,.35); }
+.glow-magenta { border-color: var(--magenta); box-shadow: 0 0 14px rgba(255,84,200,.7), inset 0 0 8px rgba(255,84,200,.35); }
+.glow-gold { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,211,90,.7), inset 0 0 8px rgba(255,211,90,.35); }
+.radial-item:hover { filter: brightness(1.25); }
+.radial-item:hover .ri-icon { transform: scale(1.18); }
+
+.panel { position: absolute; left: 0; top: 0; transform: translate(-50%, -185px); width: 232px; background: rgba(16,18,30,.97); color: #fff; border-radius: 12px; padding: 13px; box-shadow: 0 10px 30px rgba(0,0,0,.6); border: 1px solid rgba(120,180,255,.3); z-index: 8; }
+.panel-title { font-weight: 800; margin-bottom: 6px; }
+.panel-body { font-size: 12px; color: #cbd5e1; line-height: 1.55; }
+.evo-btn { margin-top: 10px; width: 100%; padding: 9px; border: none; border-radius: 9px; background: linear-gradient(180deg,#a56bff,#6d3fd6); color: #fff; font-weight: 800; cursor: pointer; box-shadow: 0 0 14px rgba(138,92,246,.6); }
+.panel-close { margin-top: 8px; width: 100%; padding: 7px; border: none; border-radius: 9px; background: #2a2f3d; color: #fff; cursor: pointer; }
+
+/* ---------- 파티클 VFX 캔버스 ---------- */
+.vfx-canvas { position: absolute; left: 60px; top: 50px; transform: translate(-50%, -50%); pointer-events: none; z-index: 20; }
+
+/* ---------- 문구 배너 (텍스트만; 파티클은 캔버스) ---------- */
+.fx { position: absolute; left: 60px; top: 50px; width: 0; height: 0; z-index: 18; pointer-events: none; }
+.fx-banner { position: absolute; left: 0; transform: translate(-50%, -50%); white-space: nowrap; text-align: center; }
+.levelup-banner {
+  top: -150px; font-family: "Press Start 2P", monospace; font-size: 22px; color: #fff;
+  text-shadow: 0 0 2px #38e6ff, 3px 3px 0 #1666c8, -1px -1px 0 #38e6ff, 0 0 18px #38e6ff;
+  animation: banner-pop .45s cubic-bezier(.2,1.6,.4,1) both;
+}
+.fx-sub { font-size: 10px; color: var(--gold); text-shadow: 0 0 8px var(--gold); margin-top: 8px; }
+.evolve-banner {
+  top: -150px; font-family: "Press Start 2P", monospace; font-size: 18px; color: #fff;
+  text-shadow: 0 0 2px #ff54c8, 3px 3px 0 #7d1a5a, 0 0 18px #ff54c8;
+  animation: banner-pop .45s cubic-bezier(.2,1.6,.4,1) both;
+}
+@keyframes banner-pop { 0%{opacity:0; transform: translate(-50%, -50%) scale(.3);} 100%{opacity:1; transform: translate(-50%, -50%) scale(1);} }
+
+/* ---------- Dev 패널 ---------- */
+.devpanel { position: fixed; top: 12px; left: 12px; pointer-events: auto; z-index: 30; }
+.dev-toggle { width: 34px; height: 34px; border-radius: 9px; border: 1px solid rgba(120,180,255,.35); background: rgba(16,18,30,.92); color: #fff; cursor: pointer; font-size: 16px; box-shadow: 0 0 10px rgba(56,230,255,.25); }
+.dev-body { margin-top: 6px; width: 252px; background: rgba(14,16,26,.97); color: #e5e7eb; border-radius: 11px; padding: 11px; font-size: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.55); border: 1px solid rgba(120,180,255,.25); }
+.dev-title { font-weight: 800; margin-bottom: 6px; }
+.dev-row { margin: 2px 0; color: #cbd5e1; }
+.dev-btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0; }
+.dev-btns button { flex: 1 1 40%; padding: 7px; border: none; border-radius: 7px; background: #2b3346; color: #fff; cursor: pointer; font-size: 11px; }
+.dev-btns button:hover { background: #3a4560; }
+.dev-btns button:disabled { opacity: .4; cursor: not-allowed; }
+.dev-pets button { flex: 1 1 30%; font-size: 10px; }
+.dev-pets button.active { background: #6d3fd6; box-shadow: 0 0 8px rgba(138,92,246,.7); }
+.dev-note { color: #94a3b8; font-size: 10px; margin-top: 4px; }
+.dev-hook { color: #64748b; font-size: 10px; margin-top: 2px; word-break: break-all; }

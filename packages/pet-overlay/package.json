@@ -1,0 +1,41 @@
+{
+  "name": "@pet/main-overlay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "메인 펫 오버레이와 성장 도메인",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV=1 electron electron/main.cjs\"",
+    "electron": "vite build && electron electron/main.cjs",
+    "test": "node src/growth/engine.test.mjs && node src/growth/controller.test.mjs && node electron/ingest.test.cjs && node --test test/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "domain:build": "tsc -p tsconfig.json"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "dependencies": {
+    "@fontsource/press-start-2p": "^5.3.0",
+    "koffi": "^3.1.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "electron": "^33.2.1",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.7",
+    "wait-on": "^8.0.1"
+  }
+}
