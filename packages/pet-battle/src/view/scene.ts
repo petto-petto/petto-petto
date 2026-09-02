@@ -14,6 +14,12 @@ export interface AttackEffectProfile {
   particleCount: number;
 }
 
+export interface PetSpriteProfile {
+  frameCount: number;
+  animated: boolean;
+  durationMs: number;
+}
+
 export interface BattleScene {
   petAsset: string;
   enemyAsset: string;
@@ -24,6 +30,7 @@ export interface BattleScene {
   enemyVisible: boolean;
   displayOpacity: number;
   attackEffect: AttackEffectProfile;
+  petSprite: PetSpriteProfile;
 }
 
 const COLOR_SEQUENCE: readonly EnemyColor[] = [
@@ -103,7 +110,9 @@ export function deriveBattleScene(state: BattleState): BattleScene {
   const enemyColor = state.preview.enemyColor ?? state.enemyColor;
   const background = backgroundForEnemy(enemyColor);
   const rarity = state.preview.attackEffectRarity ?? state.activePet?.rarity ?? 'COMMON';
-  const petAction = state.preview.petAction === 'ATTACK' ? 'attack' : 'idle';
+  const isAttackMotion = state.motion?.beat !== undefined && state.motion.beat !== 'IDLE';
+  const isAttacking = state.preview.petAction === 'ATTACK' || isAttackMotion;
+  const petAction = isAttacking ? 'attack' : 'idle';
   const petAsset =
     state.preview.assetVersion === 'V1'
       ? `assets/pets/v1/cream-fox-${petAction}.png`
@@ -119,5 +128,10 @@ export function deriveBattleScene(state: BattleState): BattleScene {
     enemyVisible: state.preview.enemyPhase !== 'HIDDEN',
     displayOpacity: Math.max(0, Math.min(1, state.preview.displayOpacity)),
     attackEffect: attackEffectForRarity(rarity),
+    petSprite: {
+      frameCount: state.preview.assetVersion === 'V2' ? (isAttacking ? 6 : 4) : 1,
+      animated: state.preview.assetVersion === 'V2' && isAttacking,
+      durationMs: isAttacking ? 545 : 667,
+    },
   };
 }

@@ -97,7 +97,7 @@ function render(next: BattleState): void {
   petMenu.hidden = next.preview.menu !== 'PET';
   enemyMenu.hidden = next.preview.menu !== 'ENEMY';
   updateMotion(next);
-  updateSprite(next);
+  updateSprite(scene.petSprite);
   updateControlLabels(next);
 }
 
@@ -115,13 +115,11 @@ function updateMotion(next: BattleState): void {
   root.style.setProperty('--speed-opacity', String(motion.speedLineOpacity));
 }
 
-function updateSprite(next: BattleState): void {
-  const attacking = next.preview.petAction === 'ATTACK';
-  const frameCount = next.preview.assetVersion === 'V2' ? (attacking ? 6 : 4) : 1;
-  petSheet.style.setProperty('--frame-count', String(frameCount));
-  petSheet.style.setProperty('--sheet-shift', `${-(frameCount - 1) * 112}px`);
-  petSheet.style.setProperty('--sheet-duration', attacking ? '545ms' : '667ms');
-  petSheet.classList.toggle('animated-sheet', frameCount > 1);
+function updateSprite(sprite: ReturnType<typeof deriveBattleScene>['petSprite']): void {
+  petSheet.style.setProperty('--frame-count', String(sprite.frameCount));
+  petSheet.style.setProperty('--sheet-shift', `${-(sprite.frameCount - 1) * 112}px`);
+  petSheet.style.setProperty('--sheet-duration', `${sprite.durationMs}ms`);
+  petSheet.classList.toggle('animated-sheet', sprite.animated);
 }
 
 function updateControlLabels(next: BattleState): void {

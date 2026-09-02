@@ -176,6 +176,7 @@ pub struct BattleEngine {
     preview: MotionPreview,
     reduced_motion: bool,
     now_ms: u64,
+    attack_cycle_started_at_ms: Option<u64>,
 }
 
 impl BattleEngine {
@@ -187,6 +188,7 @@ impl BattleEngine {
             preview: MotionPreview::default(),
             reduced_motion: false,
             now_ms: 0,
+            attack_cycle_started_at_ms: None,
         }
     }
 
@@ -198,7 +200,7 @@ impl BattleEngine {
 
         let mut events = Vec::new();
         match request.command {
-            BattleCommand::GetState { .. } => {}
+            BattleCommand::GetState { .. } => self.anchor_attack_cycle_if_needed(),
             BattleCommand::UpsertPet {
                 pet_id,
                 display_name,
@@ -244,6 +246,7 @@ impl BattleEngine {
                 {
                     events.push(engine_event(pet_id, event));
                 }
+                self.sync_attack_cycle_anchor();
             }
             BattleCommand::SetBattleRunning { running } => {
                 if self.controller.is_fighting() != running
@@ -252,6 +255,7 @@ impl BattleEngine {
                 {
                     events.push(engine_event(pet_id, event));
                 }
+                self.attack_cycle_started_at_ms = running.then_some(self.now_ms);
             }
             BattleCommand::OverlayClick { .. } => {
                 let result = self.overlay.click(now);
@@ -302,6 +306,16 @@ impl BattleEngine {
         self.now_ms as f64 / 1_000.0
     }
 
+    fn anchor_attack_cycle_if_needed(&mut self) {
+        if self.controller.is_fighting() && self.attack_cycle_started_at_ms.is_none() {
+            self.attack_cycle_started_at_ms = Some(self.now_ms);
+        }
+    }
+
+    fn sync_attack_cycle_anchor(&mut self) {
+        self.attack_cycle_started_at_ms = self.controller.is_fighting().then_some(self.now_ms);
+    }
+
     fn live_enemy_hp(&self) -> f32 {
         self.controller
             .active_pet()
@@ -338,8 +352,13 @@ impl BattleEngine {
         };
         let phase = preview.pet_attack_phase.unwrap_or_else(|| {
             if self.controller.is_fighting() {
-                (self.now_ms % self.controller.config().attack_cycle_ms) as f64
-                    / self.controller.config().attack_cycle_ms as f64
+                let elapsed = self
+                    .now_ms
+                    .saturating_sub(self.attack_cycle_started_at_ms.unwrap_or(self.now_ms));
+                (0.43
+                    + (elapsed % self.controller.config().attack_cycle_ms) as f64
+                        / self.controller.config().attack_cycle_ms as f64)
+                    .rem_euclid(1.0)
             } else {
                 0.0
             }
