@@ -49,7 +49,8 @@ function compact(value) {
 function fieldValue(field, format = num) {
   if (!field) return el('div', { class: 'value error', text: '—' });
   if (field.error) {
-    return el('div', { class: 'value error', text: '조회 실패', title: field.error });
+    // 가이드: 색상에만 의존하지 않는다. 아이콘을 함께 준다.
+    return el('div', { class: 'value error', text: '⚠ 조회 실패', title: field.error });
   }
   return el('div', { class: 'value', text: format(field.value) });
 }
@@ -157,7 +158,7 @@ async function renderSummary() {
   const petThumb = el('div', { class: 'pet-thumb' }, [
     el('span', {
       text: data.profile.petName.error ? '❓' : '🐾',
-      attrs: { style: 'font-size:20px' },
+      attrs: { style: 'font-size:16px' },
     }),
   ]);
 
@@ -216,7 +217,7 @@ async function renderSummary() {
       stat(
         '도감',
         data.dexOwned.error
-          ? el('div', { class: 'value error', text: '조회 실패' })
+          ? el('div', { class: 'value error', text: '⚠ 조회 실패' })
           : el('div', {
               class: 'value small',
               text: `${data.dexOwned.value} / ${data.dexTotal.value}`,
@@ -237,7 +238,9 @@ async function renderSummary() {
   const achievements = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [
       el('span', { text: '업적' }),
-      el('span', { text: `${data.achievementsUnlocked} / ${data.achievementsTotal}` }),
+      el('span', {
+        text: `${data.achievementsUnlocked} / ${data.achievementsTotal} · ${data.completionPercent}%`,
+      }),
     ]),
     bar(data.achievementsTotal ? data.achievementsUnlocked / data.achievementsTotal : 0),
   ]);
@@ -315,7 +318,7 @@ async function renderUsage() {
     ...(data.tools.length
       ? data.tools.map((row) =>
           el('div', { class: 'row' }, [
-            el('span', { class: `badge ${row.provider}`, text: row.providerLabel }),
+            el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name' }, [bar(row.sharePercent / 100)]),
             row.paused ? el('span', { class: 'status paused', text: row.statusLabel }) : null,
             el('span', { class: 'num', text: compact(row.observed) }),
@@ -334,7 +337,7 @@ async function renderUsage() {
     ...(shown.length
       ? shown.map((row) =>
           el('div', { class: 'row model-row' }, [
-            el('span', { class: `badge ${row.provider}`, text: row.providerLabel }),
+            el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name', text: row.rawModel, title: row.rawModel }),
             el('span', { class: 'num', text: compact(row.observed) }),
             el('span', { class: 'pct', text: `${row.sharePercent}%` }),
@@ -429,7 +432,7 @@ async function renderSettings() {
     const cards = data.collect.map((card) =>
       el('div', { class: 'card collect-card' }, [
         el('div', { class: 'head' }, [
-          el('span', { class: `badge ${card.provider}`, text: '●' }),
+          el('span', { class: 'badge', text: '◆' }),
           el('span', { class: 'name', text: card.providerLabel }),
           el('span', { class: `status ${card.status}`, text: card.statusLabel }),
         ]),

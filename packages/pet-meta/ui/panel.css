@@ -1,20 +1,60 @@
-/* 400 × 462 논리 픽셀 패널. 기획서 4.2의 규약 치수다. */
+/*
+ * meta 패널 — 400 × 462 논리 픽셀 (기획서 4.2의 규약 치수).
+ *
+ * 팀 디자인 가이드(`design.md`)를 따른다. 요점만 옮기면:
+ *
+ *   - 어두운 숲 배경 위에 양피지 패널, 조작은 나무 버튼
+ *   - `border-radius` 없음. 그림자는 블러 없는 2px 오프셋
+ *   - 희귀도 색은 희귀도에만, 금색은 선택·달성·보상에만
+ *   - 글꼴 크기는 10 / 11 / 12 / 13 / 15 / 16px 만
+ *   - 간격은 4 / 6 / 8 / 10 / 12 / 14 / 18px 만
+ */
 
 :root {
-  --bg: #14161d;
-  --surface: #1c1f29;
-  --surface-2: #232733;
-  --border: #2c3140;
-  --text: #e6e9f2;
-  --muted: #8b93a7;
-  --accent: #7ed6bf;
-  --accent-dim: #3c6b60;
+  /* 숲 */
+  --forest-darkest: #10231a;
+  --forest-mid: #1c4a34;
+  --forest-leaf: #3c7a4a;
+  --forest-light: #8fd68a;
+
+  /* 나무 */
+  --wood-border: #3a2a1c;
+  --wood-surface: #6b4a2e;
+  --wood-highlight: #a5763f;
+
+  /* 양피지 */
+  --parchment: #f3e3c0;
+  --parchment-ring: #e0c894;
+
+  /* 글자 */
+  /*
+   * 가이드는 밝은 패널 위 글자를 하나만 준다. 보조 정보는 색을 새로 만들지 않고
+   * 크기(10px)로 구분한다.
+   */
+  --ink: #3b2a1a;
+  --light-text: #f5ecd8;
+
+  /* 강조와 상태 */
+  --gold: #ffd166;
+  --outline: #2c2438;
   --warn: #f0b775;
+  --warn-dark: #725127;
   --error: #f08a8a;
-  --gold: #e8c46a;
-  --silver: #c2c8d6;
-  --bronze: #c98f63;
-  --radius: 8px;
+  --error-dark: #762f35;
+  --disabled: #999999;
+  --disabled-dark: #555555;
+
+  /* 간격 */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 18px;
+
+  /* 픽셀 그림자 — 블러 없음 */
+  --drop: 2px 2px 0 rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -31,97 +71,120 @@ body {
 body {
   width: 400px;
   height: 462px;
-  background: var(--bg);
-  color: var(--text);
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  background: var(--parchment);
+  color: var(--ink);
+  /*
+   * 픽셀 글꼴. 저장소에 폰트 파일이 없으므로 가이드가 정한 폴백으로 떨어진다.
+   * 폰트를 추가하면 이 한 줄로 바로 적용된다.
+   */
+  font-family: 'Galmuri9', ui-monospace, monospace;
   font-size: 12px;
-  line-height: 1.45;
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  line-height: 1.5;
+  /* 픽셀 글꼴의 외곽을 부드럽게 처리하지 않는다. */
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+
+  /* 양피지 패널: 3px 나무 테두리, 2px 나무 하이라이트, 5px 양피지 안쪽 링. */
+  border: 3px solid var(--wood-border);
+  box-shadow:
+    inset 0 0 0 2px var(--wood-highlight),
+    inset 0 0 0 5px var(--parchment-ring),
+    var(--drop);
+
   display: flex;
   flex-direction: column;
   user-select: none;
   -webkit-user-select: none;
 }
 
+/* 키보드 포커스: 2px 금색 외곽선 + 바깥쪽 1px 보조 링. */
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--outline);
+}
+
 /* ---------- 헤더 ---------- */
 
-/*
- * 창 테두리가 없으므로(`decorations: false`) 잡고 옮길 곳을 직접 만들어야 한다.
- * 헤더의 빈 공간과 왼쪽 손잡이가 그 역할을 한다.
- */
 #titlebar {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  border-radius: 9px 9px 0 0;
-  /*
-   * Electron은 이 속성이 붙은 영역을 타이틀 바처럼 다룬다. 창 테두리를 껐어도
-   * 여기를 잡으면 OS가 창을 옮겨 준다. JS가 관여하지 않는다.
-   */
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) var(--space-2) 0;
+  background: var(--wood-surface);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
+  /* Electron이 이 영역을 타이틀 바처럼 다룬다. 잡으면 창이 따라온다. */
   -webkit-app-region: drag;
 }
 
-/* 점 여섯 개짜리 손잡이. 여기가 드래그 지점이라는 것을 눈에 보이게 한다. */
+/* 점 여섯 개짜리 손잡이 — 여기가 드래그 지점이라는 표시. */
 #grip {
   flex: 0 0 auto;
   width: 10px;
   height: 16px;
   margin-right: 2px;
-  background-image: radial-gradient(circle, var(--muted) 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--wood-highlight) 1px, transparent 1px);
   background-size: 5px 5px;
   background-position: 0 2px;
-  opacity: 0.55;
-}
-
-#titlebar:hover #grip {
-  opacity: 0.9;
-}
-
-/* 버튼은 드래그 영역에서 빼야 클릭이 드래그로 먹히지 않는다. */
-#titlebar button {
-  cursor: default;
-  -webkit-app-region: no-drag;
 }
 
 .screen-tab {
   flex: 1;
-  padding: 5px 0;
+  padding: var(--space-1) 0;
   text-align: center;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
   font: inherit;
-  font-weight: 600;
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
   cursor: default;
+  /* 버튼은 드래그 영역에서 빼야 클릭이 먹힌다. */
+  -webkit-app-region: no-drag;
 }
 
+/* 현재 선택은 금색. 가이드가 금색을 쓰라고 한 세 경우 중 하나다. */
 .screen-tab[aria-selected='true'] {
-  background: var(--accent-dim);
-  color: var(--text);
+  background: var(--gold);
+  color: var(--ink);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
+}
+
+.screen-tab:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 .icon-button {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--muted);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
   font: inherit;
+  font-size: 12px;
   cursor: default;
+  -webkit-app-region: no-drag;
 }
 
-.icon-button:hover {
-  background: var(--surface-2);
-  color: var(--text);
+.icon-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
 }
 
 /* ---------- 서브탭 ---------- */
@@ -129,8 +192,8 @@ body {
 #subtabs {
   flex: 0 0 auto;
   display: flex;
-  gap: 2px;
-  padding: 6px 8px 0;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3) 0;
 }
 
 #subtabs:empty {
@@ -138,20 +201,22 @@ body {
 }
 
 .subtab {
-  padding: 3px 9px;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
+  padding: 2px var(--space-3);
+  background: var(--parchment-ring);
+  color: var(--ink);
+  border: 2px solid var(--wood-border);
   font: inherit;
   font-size: 11px;
   cursor: default;
 }
 
 .subtab[aria-selected='true'] {
-  border-color: var(--accent-dim);
-  background: var(--surface-2);
-  color: var(--accent);
+  background: var(--gold);
+  box-shadow: inset 0 2px 0 var(--wood-highlight);
+}
+
+.subtab:active {
+  transform: translate(2px, 2px);
 }
 
 /* ---------- 본문 ---------- */
@@ -160,7 +225,7 @@ main {
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 8px;
+  padding: var(--space-2) var(--space-3) var(--space-3);
 }
 
 main::-webkit-scrollbar {
@@ -168,8 +233,11 @@ main::-webkit-scrollbar {
 }
 
 main::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: var(--wood-highlight);
+}
+
+main::-webkit-scrollbar-track {
+  background: var(--parchment-ring);
 }
 
 /* 요약 화면은 스크롤 없이 보여야 한다(INFO-001). */
@@ -178,11 +246,13 @@ main.no-scroll {
 }
 
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 8px;
-  margin-bottom: 8px;
+  background: var(--parchment);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 0 0 2px var(--parchment-ring),
+    var(--drop);
+  padding: var(--space-2);
+  margin-bottom: var(--space-2);
 }
 
 .card:last-child {
@@ -193,30 +263,31 @@ main.no-scroll {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 0 0 6px;
-  color: var(--muted);
-  font-size: 10px;
+  margin: 0 0 var(--space-2);
+  color: var(--ink);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 /* ---------- 프로필 ---------- */
 
 .profile {
   display: flex;
-  gap: 9px;
+  gap: var(--space-3);
   align-items: center;
 }
 
 .pet-thumb {
   flex: 0 0 auto;
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
-  background: var(--surface-2);
+  width: 44px;
+  height: 44px;
+  background: var(--forest-mid);
+  border: 2px solid var(--wood-border);
+  box-shadow: inset 0 0 0 2px var(--forest-darkest);
   display: grid;
   place-items: center;
+  image-rendering: pixelated;
 }
 
 .profile-body {
@@ -227,18 +298,18 @@ main.no-scroll {
 .name-row {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 #trainer-name {
   min-width: 0;
   flex: 1;
-  padding: 2px 5px;
-  border: 1px solid transparent;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text);
+  padding: 2px var(--space-1);
+  background: var(--parchment-ring);
+  color: var(--ink);
+  border: 2px solid transparent;
   font: inherit;
+  font-family: 'Galmuri11', ui-monospace, monospace;
   font-size: 13px;
   font-weight: 700;
   user-select: text;
@@ -246,51 +317,64 @@ main.no-scroll {
 }
 
 #trainer-name:focus {
-  border-color: var(--accent-dim);
-  background: var(--bg);
+  border-color: var(--wood-border);
+  background: var(--parchment);
   outline: none;
 }
 
+.profile-meta {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 10px;
+}
+
+/* ---------- 나무 버튼 ---------- */
+
 .tiny-button {
   flex: 0 0 auto;
-  padding: 2px 6px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-2);
-  color: var(--muted);
+  padding: 2px var(--space-2);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border),
+    var(--drop);
   font: inherit;
   font-size: 10px;
   cursor: default;
 }
 
-.tiny-button:hover:not(:disabled) {
-  border-color: var(--accent-dim);
-  color: var(--text);
+.tiny-button:active:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
 }
 
+/* 비활성 버튼은 회색 표면, 낮은 대비, 눌림 반응 없음. */
 .tiny-button:disabled {
-  opacity: 0.45;
+  background: var(--disabled-dark);
+  color: var(--disabled);
+  box-shadow: none;
 }
 
-.profile-meta {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  margin-top: 2px;
-  color: var(--muted);
-  font-size: 10px;
-}
+/* ---------- 칩 ---------- */
 
 .chip {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--accent);
+  padding: 1px var(--space-2);
+  background: var(--gold);
+  color: var(--ink);
+  border: 2px solid var(--wood-border);
   font-size: 10px;
 }
 
 .chip.plain {
-  color: var(--muted);
+  background: var(--parchment-ring);
+  color: var(--ink);
 }
 
 /* ---------- 수치 그리드 ---------- */
@@ -298,24 +382,25 @@ main.no-scroll {
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .stat {
-  padding: 6px;
-  border-radius: 6px;
-  background: var(--surface-2);
+  padding: var(--space-1);
+  background: var(--parchment-ring);
+  border: 2px solid var(--wood-border);
   text-align: center;
 }
 
 .stat .label {
-  color: var(--muted);
-  font-size: 9px;
+  color: var(--ink);
+  font-size: 10px;
 }
 
 .stat .value {
   margin-top: 1px;
-  font-size: 14px;
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -324,26 +409,37 @@ main.no-scroll {
   font-size: 12px;
 }
 
+/* 오류는 색상만으로 구분하지 않는다. panel.js 가 `!` 표시를 함께 넣는다. */
 .stat .value.error {
-  color: var(--error);
+  color: var(--error-dark);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 400;
+}
+
+.owner-tag {
+  color: var(--ink);
+  font-size: 10px;
 }
 
 /* ---------- 진행 바 ---------- */
 
 .bar {
-  height: 4px;
-  border-radius: 2px;
-  background: var(--surface-2);
+  height: 10px;
+  background: var(--parchment-ring);
+  border: 2px solid var(--wood-border);
   overflow: hidden;
 }
 
+/* 채움은 위에서 아래로 밝은 잎 → 잎 → 짙은 숲. */
 .bar > span {
   display: block;
   height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--forest-light) 0%,
+    var(--forest-leaf) 50%,
+    var(--forest-mid) 100%
+  );
 }
 
 /* ---------- 잔디 ---------- */
@@ -363,25 +459,27 @@ main.no-scroll {
 .grass-cell {
   width: 9px;
   height: 9px;
-  border-radius: 2px;
-  background: var(--surface-2);
+  background: var(--parchment-ring);
+  box-shadow: inset 0 0 0 1px rgba(58, 42, 28, 0.25);
 }
 
 .grass-cell.future {
   background: transparent;
+  box-shadow: none;
 }
 
+/* 네 단계 농도를 숲 색 네 개로 만든다. */
 .grass-cell.l1 {
-  background: #2d5f54;
+  background: var(--forest-darkest);
 }
 .grass-cell.l2 {
-  background: #3f8574;
+  background: var(--forest-mid);
 }
 .grass-cell.l3 {
-  background: #5cb49c;
+  background: var(--forest-leaf);
 }
 .grass-cell.l4 {
-  background: #7ed6bf;
+  background: var(--forest-light);
 }
 
 .grass-legend {
@@ -389,9 +487,9 @@ main.no-scroll {
   align-items: center;
   justify-content: flex-end;
   gap: 3px;
-  margin-top: 5px;
-  color: var(--muted);
-  font-size: 9px;
+  margin-top: var(--space-1);
+  color: var(--ink);
+  font-size: 10px;
 }
 
 /* ---------- 목록 행 ---------- */
@@ -399,12 +497,12 @@ main.no-scroll {
 .row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 0;
+  gap: var(--space-2);
+  padding: 3px 0;
 }
 
 .row + .row {
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--parchment-ring);
 }
 
 .row .name {
@@ -421,30 +519,26 @@ main.no-scroll {
 }
 
 .row .pct {
-  flex: 0 0 34px;
+  flex: 0 0 36px;
   text-align: right;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * 도구 배지.
+ *
+ * 희귀도 색을 쓰지 않는다 — 가이드가 그 색은 희귀도를 알리는 데만 쓰라고 정한다.
+ * 도구는 희귀도가 아니므로 나무 계열 중립색으로 둔다.
+ */
 .badge {
   flex: 0 0 auto;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--surface-2);
-  color: var(--muted);
-  font-size: 9px;
-}
-
-.badge.claude_code {
-  color: #d8a06a;
-}
-.badge.codex {
-  color: #a3b8e8;
-}
-.badge.gemini_cli {
-  color: #9ad0a0;
+  padding: 1px var(--space-1);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  font-size: 10px;
 }
 
 /* ---------- 수집 카드 ---------- */
@@ -452,43 +546,47 @@ main.no-scroll {
 .collect-card .head {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .collect-card .head .name {
   flex: 1;
-  font-weight: 600;
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-weight: 700;
 }
 
 .status {
-  padding: 1px 6px;
-  border-radius: 999px;
-  font-size: 9px;
-  background: var(--surface-2);
-  color: var(--muted);
+  padding: 1px var(--space-1);
+  background: var(--parchment-ring);
+  color: var(--ink);
+  border: 2px solid var(--wood-border);
+  font-size: 10px;
 }
 
 .status.connected {
-  color: var(--accent);
-}
-.status.not_found {
-  color: var(--warn);
-}
-.status.error {
-  color: var(--error);
-}
-.status.paused {
-  color: var(--muted);
+  background: var(--forest-leaf);
+  color: var(--light-text);
 }
 
+.status.not_found {
+  background: var(--warn-dark);
+  color: var(--light-text);
+}
+
+.status.error {
+  background: var(--error-dark);
+  color: var(--light-text);
+}
+
+.status.paused,
 .status.scanning {
-  color: var(--muted);
+  background: var(--disabled-dark);
+  color: var(--light-text);
 }
 
 .path {
   margin-top: 3px;
-  color: var(--muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink);
   font-size: 10px;
   user-select: text;
   -webkit-user-select: text;
@@ -497,9 +595,9 @@ main.no-scroll {
 .collect-card .foot {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 5px;
-  color: var(--muted);
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--ink);
   font-size: 10px;
 }
 
@@ -509,21 +607,21 @@ main.no-scroll {
 
 .error-text {
   margin-top: 3px;
-  color: var(--error);
+  color: var(--error-dark);
   font-size: 10px;
 }
 
-/* ---------- 토글 ---------- */
+/* ---------- 설정 ---------- */
 
 .setting-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 0;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
 }
 
 .setting-row + .setting-row {
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--parchment-ring);
 }
 
 .setting-row .text {
@@ -532,17 +630,16 @@ main.no-scroll {
 }
 
 .setting-row .text .note {
-  color: var(--muted);
-  font-size: 9px;
+  color: var(--ink);
+  font-size: 10px;
 }
 
 .switch {
   flex: 0 0 auto;
   width: 32px;
   height: 18px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
+  background: var(--parchment-ring);
+  border: 2px solid var(--wood-border);
   padding: 0;
   cursor: default;
   position: relative;
@@ -551,25 +648,21 @@ main.no-scroll {
 .switch::after {
   content: '';
   position: absolute;
-  top: 2px;
-  left: 2px;
+  top: 1px;
+  left: 1px;
   width: 12px;
   height: 12px;
-  border-radius: 50%;
-  background: var(--muted);
-  transition:
-    left 0.12s ease,
-    background 0.12s ease;
+  background: var(--wood-surface);
+  transition: left 0.12s steps(3);
 }
 
 .switch[aria-checked='true'] {
-  border-color: var(--accent-dim);
-  background: var(--accent-dim);
+  background: var(--forest-leaf);
 }
 
 .switch[aria-checked='true']::after {
-  left: 16px;
-  background: var(--accent);
+  left: 15px;
+  background: var(--gold);
 }
 
 .segmented {
@@ -578,19 +671,21 @@ main.no-scroll {
 }
 
 .segmented button {
-  padding: 3px 8px;
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  background: var(--surface-2);
-  color: var(--muted);
+  padding: 2px var(--space-2);
+  background: var(--parchment-ring);
+  color: var(--ink);
+  border: 2px solid var(--wood-border);
   font: inherit;
   font-size: 10px;
   cursor: default;
 }
 
 .segmented button[aria-selected='true'] {
-  border-color: var(--accent-dim);
-  color: var(--accent);
+  background: var(--gold);
+}
+
+.segmented button:active {
+  transform: translate(2px, 2px);
 }
 
 /* ---------- 업적 ---------- */
@@ -599,32 +694,33 @@ main.no-scroll {
   display: flex;
   flex-wrap: wrap;
   gap: 3px;
-  margin-bottom: 7px;
+  margin-bottom: var(--space-2);
 }
 
 .ach {
   display: flex;
-  gap: 7px;
-  padding: 6px 0;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
 }
 
 .ach + .ach {
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--parchment-ring);
 }
 
 .ach .medal {
   flex: 0 0 auto;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
-  background: var(--surface-2);
+  background: var(--parchment-ring);
+  border: 2px solid var(--wood-border);
   display: grid;
   place-items: center;
   font-size: 11px;
 }
 
+/* 달성은 금색 — 가이드가 금색을 쓰라고 한 세 경우 중 하나다. */
 .ach.unlocked .medal {
-  background: var(--accent-dim);
+  background: var(--gold);
 }
 
 .ach .body {
@@ -635,11 +731,12 @@ main.no-scroll {
 .ach .title-line {
   display: flex;
   align-items: baseline;
-  gap: 5px;
+  gap: var(--space-1);
 }
 
 .ach .title-line .name {
-  font-weight: 600;
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -647,12 +744,12 @@ main.no-scroll {
 
 .ach.masked .name,
 .ach.masked .cond {
-  color: var(--muted);
+  color: var(--ink);
   letter-spacing: 0.14em;
 }
 
 .ach .cond {
-  color: var(--muted);
+  color: var(--ink);
   font-size: 10px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -669,7 +766,7 @@ main.no-scroll {
 .ach .progress-line {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   margin-top: 3px;
 }
 
@@ -679,28 +776,40 @@ main.no-scroll {
 
 .ach .progress-line .num {
   flex: 0 0 auto;
-  color: var(--muted);
-  font-size: 9px;
+  color: var(--ink);
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * 업적 티어.
+ *
+ * 희귀도 색을 쓰지 않는다. 티어는 희귀도가 아니므로 금속을 연상시키는 팔레트 색으로 둔다.
+ */
 .tier {
-  font-size: 9px;
+  padding: 0 3px;
+  border: 2px solid var(--wood-border);
+  font-size: 10px;
 }
 
 .tier.골드 {
-  color: var(--gold);
+  background: var(--gold);
+  color: var(--ink);
 }
+
 .tier.실버 {
-  color: var(--silver);
+  background: var(--light-text);
+  color: var(--ink);
 }
+
 .tier.브론즈 {
-  color: var(--bronze);
+  background: var(--wood-highlight);
+  color: var(--ink);
 }
 
 .pending {
-  color: var(--warn);
-  font-size: 9px;
+  color: var(--warn-dark);
+  font-size: 10px;
 }
 
 /* ---------- 원장 ---------- */
@@ -708,18 +817,18 @@ main.no-scroll {
 .ledger-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 3px 0;
+  gap: var(--space-2);
+  padding: 2px 0;
   font-size: 10px;
 }
 
 .ledger-row + .ledger-row {
-  border-top: 1px solid var(--border);
+  border-top: 2px solid var(--parchment-ring);
 }
 
 .ledger-row .when {
   flex: 0 0 62px;
-  color: var(--muted);
+  color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -737,57 +846,65 @@ main.no-scroll {
 }
 
 .ledger-row .delta.plus {
-  color: var(--accent);
+  color: var(--forest-mid);
 }
+
 .ledger-row .delta.minus {
-  color: var(--error);
+  color: var(--error-dark);
 }
 
 /* ---------- 기타 ---------- */
 
 .empty,
 .error-block {
-  padding: 14px 8px;
+  padding: var(--space-5) var(--space-3);
   text-align: center;
-  color: var(--muted);
+  color: var(--ink);
   font-size: 11px;
 }
 
 .error-block {
-  color: var(--error);
+  color: var(--error-dark);
 }
 
 .notice {
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border: 1px solid var(--accent-dim);
-  border-radius: 6px;
-  background: rgba(126, 214, 191, 0.08);
-  color: var(--accent);
+  margin-bottom: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--forest-mid);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow: var(--drop);
   font-size: 10px;
 }
 
 .notice.warn {
-  border-color: var(--warn);
-  background: rgba(240, 183, 117, 0.08);
-  color: var(--warn);
-}
-
-.owner-tag {
-  color: var(--muted);
-  font-size: 8px;
+  background: var(--warn-dark);
 }
 
 .link-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .mono-small {
-  color: var(--muted);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 9px;
-  user-select: text;
-  -webkit-user-select: text;
+  color: var(--ink);
+  font-size: 10px;
+}
+
+/* ---------- 모션 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .screen-tab:active,
+  .icon-button:active,
+  .subtab:active,
+  .tiny-button:active:not(:disabled),
+  .segmented button:active {
+    transform: none;
+  }
 }
