@@ -24,8 +24,6 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
     'STOP',
     'ATTACK',
     'GROWTH',
-    'ASSET_V1',
-    'ASSET_V2',
     'ATTACK_EFFECT',
     'HIT',
     'DEFEAT',
@@ -41,6 +39,8 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
   }
   assert.match(html, /type="range"/);
   assert.match(html, /data-action="OPACITY"/);
+  assert.doesNotMatch(html, /data-action="ASSET_V[12]"/);
+  assert.doesNotMatch(html, /\/v1\//);
 });
 
 test('표시 투명도는 펫을 제외한 전투 환경·적·HP 바에 동일하게 적용된다', async () => {
@@ -90,4 +90,25 @@ test('공격 스프라이트는 한 번만 재생하고 마지막 프레임을 �
     /\.pet-sheet\.animated-sheet\s*\{[^}]*animation:\s*pet-frames[^;]*1 forwards;/s,
   );
   assert.doesNotMatch(css, /animation:\s*pet-frames[^;]*infinite/);
+  assert.match(css, /steps\(var\(--frame-steps\)\)/);
+});
+
+test('v2 펫은 전투 캐릭터와 이펙트보다 위 레이어에 유지된다', async () => {
+  const css = await readFile(new URL('battle.css', UI_ROOT), 'utf8');
+
+  assert.match(css, /\.pet\s*\{[^}]*z-index:\s*7;/s);
+  assert.match(css, /\.enemy\s*\{[^}]*z-index:\s*2;/s);
+  assert.match(css, /\.combat-effects\s*\{[^}]*z-index:\s*3;/s);
+});
+
+test('전투 패키지 공개 계약과 에셋 생성기는 v1 선택 경로를 제공하지 않는다', async () => {
+  const [contracts, overlay, pipeline] = await Promise.all([
+    readFile(new URL('../src/contracts.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
+    readFile(new URL('../rust/src/asset_pipeline.rs', import.meta.url), 'utf8'),
+  ]);
+
+  assert.doesNotMatch(contracts, /AssetVersion|SELECT_ASSET_VERSION|V1/);
+  assert.doesNotMatch(overlay, /ASSET_V1|ASSET_V2|SELECT_ASSET_VERSION/);
+  assert.doesNotMatch(pipeline, /\("v1"/);
 });

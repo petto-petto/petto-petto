@@ -24,7 +24,7 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
   background: 'MUSHROOM_FOREST',
   overlay: null,
   preview: {
-    assetVersion: 'V1',
+    assetVersion: 'V2',
     displayOpacity: 1,
     menu: 'CLOSED',
     petAction: null,
@@ -54,8 +54,8 @@ test('적 단계는 일곱 색을 순환하고 색상에 맞는 배경을 함께
   const rainbow = deriveBattleScene(
     state({ enemyColor: 'RAINBOW', background: 'STARLIGHT_SHRINE' }),
   );
-  assert.equal(rainbow.backgroundAsset, 'assets/backgrounds/v1/starlight-shrine.png');
-  assert.match(rainbow.enemyAsset, /v1\/rainbow-steady\.png$/);
+  assert.equal(rainbow.backgroundAsset, 'assets/backgrounds/v2/starlight-shrine.png');
+  assert.match(rainbow.enemyAsset, /v2\/rainbow-steady\.png$/);
 });
 
 test('HP 미리보기는 표정과 HP 바를 함께 바꾸고 실제 진행도는 수정하지 않는다', () => {
@@ -106,6 +106,7 @@ test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를
 
   assert.match(scene.petAsset, /common-attack\.png$/);
   assert.equal(scene.petSprite.frameCount, 6);
+  assert.equal(scene.petSprite.frameSteps, 5);
   assert.equal(scene.petSprite.animated, true);
 });
 
@@ -150,20 +151,17 @@ test('실제 공격 충돌과 맞기 미리보기는 같은 피격 반응을 시
   assert.equal(shouldStartEnemyHitReaction(previewHit, previewHit), false);
 });
 
-test('scene이 선택할 수 있는 v1/v2 에셋이 패키지 안에 모두 존재한다', async () => {
+test('scene은 v2 에셋만 선택하고 제거된 v1 에셋은 존재하지 않는다', async () => {
   const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'rainbow'];
   const faces = ['steady', 'worried', 'exhausted'];
-  const versions = ['v1', 'v2'];
   const backgrounds = ['mushroom-forest', 'crystal-ruins', 'starlight-shrine'];
   const assetRoot = new URL('../assets/', import.meta.url);
-  const paths = versions.flatMap((version) => [
-    ...colors.flatMap((color) => faces.map((face) => `enemies/${version}/${color}-${face}.png`)),
-    ...backgrounds.map((background) => `backgrounds/${version}/${background}.png`),
-  ]);
+  const paths = [
+    ...colors.flatMap((color) => faces.map((face) => `enemies/v2/${color}-${face}.png`)),
+    ...backgrounds.map((background) => `backgrounds/v2/${background}.png`),
+  ];
 
   paths.push(
-    'pets/v1/cream-fox-idle.png',
-    'pets/v1/cream-fox-attack.png',
     ...['common', 'rare', 'epic'].flatMap((rarity) => [
       `pets/v2/${rarity}-idle.png`,
       `pets/v2/${rarity}-attack.png`,
@@ -171,4 +169,9 @@ test('scene이 선택할 수 있는 v1/v2 에셋이 패키지 안에 모두 존�
   );
 
   await Promise.all(paths.map((path) => access(new URL(path, assetRoot))));
+  await Promise.all([
+    assert.rejects(access(new URL('pets/v1', assetRoot))),
+    assert.rejects(access(new URL('enemies/v1', assetRoot))),
+    assert.rejects(access(new URL('backgrounds/v1', assetRoot))),
+  ]);
 });

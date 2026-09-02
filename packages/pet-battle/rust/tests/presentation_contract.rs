@@ -17,6 +17,7 @@ fn conquest_waits_for_two_step_overlay_click_flow() {
 #[test]
 fn preview_controls_are_independent_and_resettable() {
     let mut preview = MotionPreview::default();
+    assert_eq!(preview.visual(0.0).asset_version, AssetVersion::V2);
     preview.toggle_menu(PreviewMenu::Enemy);
     preview.select_asset_version(AssetVersion::V2);
     assert_eq!(preview.cycle_enemy_size(), EnemyPreviewSize::Small);
