@@ -81,3 +81,13 @@ test('수동 맞기와 실제 공격은 하나의 피격 애니메이션 클래�
   assert.match(css, /\.enemy\.hit-reaction\s*\{[^}]*animation:\s*enemy-hit 420ms/s);
   assert.doesNotMatch(css, /\[data-enemy-phase='HIT'\] \.enemy/);
 });
+
+test('공격 스프라이트는 한 번만 재생하고 마지막 프레임을 유지한다', async () => {
+  const css = await readFile(new URL('battle.css', UI_ROOT), 'utf8');
+
+  assert.match(
+    css,
+    /\.pet-sheet\.animated-sheet\s*\{[^}]*animation:\s*pet-frames[^;]*1 forwards;/s,
+  );
+  assert.doesNotMatch(css, /animation:\s*pet-frames[^;]*infinite/);
+});

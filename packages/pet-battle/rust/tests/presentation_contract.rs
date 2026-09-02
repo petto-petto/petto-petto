@@ -63,6 +63,21 @@ fn manual_motion_and_rarity_effects_keep_their_original_beats() {
 }
 
 #[test]
+fn pet_lunge_stops_at_contact_and_returns_quickly_without_crossing_enemy() {
+    let samples = (0_u32..=1_000).map(|step| {
+        let phase = f64::from(step) / 1_000.0;
+        sample_combat_motion(phase, u64::from(step), false)
+    });
+    let furthest_x = samples
+        .map(|sample| sample.pet_offset.x)
+        .fold(f32::NEG_INFINITY, f32::max);
+
+    assert!(furthest_x <= 34.0, "pet crossed contact point: {furthest_x}");
+    assert!(sample_combat_motion(0.75, 12, false).pet_offset.x <= 8.0);
+    assert_eq!(sample_combat_motion(0.81, 12, false).beat, CombatBeat::Idle);
+}
+
+#[test]
 fn defeat_preview_stays_hidden_until_spawn() {
     let mut preview = MotionPreview::default();
     preview.trigger_enemy(EnemyPreviewAction::Defeat, 2.0);
