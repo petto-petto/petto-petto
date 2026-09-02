@@ -52,7 +52,7 @@ input {
   height: var(--battle-height);
   overflow: hidden;
   border: 2px solid var(--outline);
-  background: var(--forest-deep);
+  background: transparent;
   box-shadow:
     inset 0 0 0 2px rgba(143, 214, 138, 0.22),
     2px 2px 0 rgba(0, 0, 0, 0.38);
@@ -60,6 +60,7 @@ input {
   -webkit-app-region: drag;
 }
 
+.battle-environment,
 .battle-background,
 .vignette {
   position: absolute;
@@ -68,15 +69,20 @@ input {
   height: 100%;
 }
 
-.battle-background {
+.battle-environment {
   z-index: -3;
+  background: var(--forest-deep);
+  transition: opacity 80ms linear;
+}
+
+.battle-background {
+  z-index: 0;
   object-fit: cover;
   image-rendering: pixelated;
-  transition: opacity 80ms steps(2, end);
 }
 
 .vignette {
-  z-index: -2;
+  z-index: 1;
   background:
     linear-gradient(90deg, rgba(8, 14, 20, 0.42), transparent 28% 72%, rgba(8, 14, 20, 0.5)),
     linear-gradient(0deg, rgba(8, 12, 18, 0.48), transparent 42%);
@@ -101,6 +107,7 @@ input {
 
 #stage-label {
   text-shadow: 1px 1px 0 var(--outline);
+  transition: opacity 80ms linear;
 }
 
 .enemy-hp {
@@ -109,6 +116,7 @@ input {
   border: 2px solid var(--outline);
   background: #202439;
   box-shadow: inset 0 0 0 1px #3b4661;
+  transition: opacity 80ms linear;
 }
 
 #enemy-hp-fill {
@@ -164,7 +172,7 @@ input {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  transition: opacity 80ms steps(2, end);
+  transition: opacity 80ms linear;
 }
 
 .ground-shadow {
@@ -218,6 +226,7 @@ input {
   z-index: 3;
   inset: 0;
   pointer-events: none;
+  transition: opacity 80ms linear;
 }
 
 .speed-line,

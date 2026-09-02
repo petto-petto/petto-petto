@@ -26,6 +26,7 @@ type ButtonAction =
   | 'REDUCED_MOTION';
 
 const root = required<HTMLElement>('#battle-overlay');
+const environment = required<HTMLElement>('#battle-environment');
 const pet = required<HTMLElement>('#pet');
 const petSheet = required<HTMLImageElement>('#pet-sheet');
 const enemy = required<HTMLElement>('#enemy');
@@ -35,6 +36,7 @@ const hpBar = required<HTMLElement>('.enemy-hp');
 const hpFill = required<HTMLElement>('#enemy-hp-fill');
 const hpLabel = required<HTMLElement>('#enemy-hp-label');
 const stageLabel = required<HTMLElement>('#stage-label');
+const combatEffects = required<HTMLElement>('.combat-effects');
 const toast = required<HTMLElement>('#battle-toast');
 const petMenu = required<HTMLElement>('#pet-menu');
 const enemyMenu = required<HTMLElement>('#enemy-menu');
@@ -79,9 +81,11 @@ function render(next: BattleState): void {
   petSheet.src = assetUrl(scene.petAsset);
   enemyImage.src = assetUrl(scene.enemyAsset);
   enemy.style.setProperty('--enemy-height', `${scene.enemyHeight}px`);
-  background.style.opacity = String(scene.displayOpacity);
+  environment.style.opacity = String(scene.displayOpacity);
   enemy.style.opacity = scene.enemyVisible ? String(scene.displayOpacity) : '0';
   hpBar.style.opacity = String(scene.displayOpacity);
+  stageLabel.style.opacity = String(scene.displayOpacity);
+  combatEffects.style.opacity = String(scene.displayOpacity);
   hpFill.style.width = `${(scene.enemyHpRatio * 100).toFixed(1)}%`;
   hpLabel.textContent = `${Math.round(scene.enemyHpRatio * 100)}%`;
   stageLabel.textContent = `STAGE ${next.activePet?.stage ?? '—'}`;

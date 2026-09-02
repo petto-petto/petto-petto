@@ -8,14 +8,16 @@
   </head>
   <body>
     <main id="battle-overlay" aria-label="펫 자동 전투 오버레이">
-      <img
-        id="battle-background"
-        class="battle-background"
-        src="../assets/backgrounds/v1/mushroom-forest.png"
-        alt=""
-        draggable="false"
-      />
-      <div class="vignette" aria-hidden="true"></div>
+      <div id="battle-environment" class="battle-environment" aria-hidden="true">
+        <img
+          id="battle-background"
+          class="battle-background"
+          src="../assets/backgrounds/v1/mushroom-forest.png"
+          alt=""
+          draggable="false"
+        />
+        <div class="vignette"></div>
+      </div>
 
       <header class="battle-hud">
         <span id="stage-label">STAGE 1</span>
