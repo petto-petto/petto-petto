@@ -69,3 +69,15 @@ test('상태 조회 중에도 사용자의 버튼 명령은 버리지 않는다'
   assert.match(script, /command\.type === 'GET_STATE' && inFlight > 0/);
   assert.doesNotMatch(script, /if \(busy\) return/);
 });
+
+test('수동 맞기와 실제 공격은 하나의 피격 애니메이션 클래스를 공유한다', async () => {
+  const [script, css] = await Promise.all([
+    readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
+    readFile(new URL('battle.css', UI_ROOT), 'utf8'),
+  ]);
+
+  assert.match(script, /shouldStartEnemyHitReaction/);
+  assert.match(script, /enemy\.classList\.add\('hit-reaction'\)/);
+  assert.match(css, /\.enemy\.hit-reaction\s*\{[^}]*animation:\s*enemy-hit 420ms/s);
+  assert.doesNotMatch(css, /\[data-enemy-phase='HIT'\] \.enemy/);
+});

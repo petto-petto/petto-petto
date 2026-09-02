@@ -2,7 +2,12 @@ import assert from 'node:assert/strict';
 import { access } from 'node:fs/promises';
 import { test } from 'node:test';
 
-import { deriveBattleScene, enemyColorForStage, type BattleState } from '../src/index.ts';
+import {
+  deriveBattleScene,
+  enemyColorForStage,
+  shouldStartEnemyHitReaction,
+  type BattleState,
+} from '../src/index.ts';
 
 const state = (overrides: Partial<BattleState> = {}): BattleState => ({
   activePet: {
@@ -114,6 +119,35 @@ test('일시 정지 상태의 v2 펫은 idle 첫 프레임에서 멈춘다', () 
   assert.match(scene.petAsset, /common-idle\.png$/);
   assert.equal(scene.petSprite.frameCount, 4);
   assert.equal(scene.petSprite.animated, false);
+});
+
+test('실제 공격 충돌과 맞기 미리보기는 같은 피격 반응을 시작한다', () => {
+  const idle = state({
+    motion: {
+      beat: 'DASH',
+      petOffset: { x: 30, y: 0 },
+      enemyOffset: { x: 0, y: 0 },
+      petScale: { x: 1, y: 1 },
+      enemyScale: { x: 1, y: 1 },
+      speedLineOpacity: 1,
+      slashOpacity: 0,
+      impactFlashOpacity: 0,
+      afterimageOpacity: 0.2,
+    },
+  });
+  const actualHit = {
+    ...idle,
+    motion: { ...idle.motion!, beat: 'IMPACT' as const },
+  };
+  const previewHit = {
+    ...idle,
+    preview: { ...idle.preview, enemyAction: 'HIT' as const, enemyPhase: 'HIT' as const },
+  };
+
+  assert.equal(shouldStartEnemyHitReaction(idle, actualHit), true);
+  assert.equal(shouldStartEnemyHitReaction(idle, previewHit), true);
+  assert.equal(shouldStartEnemyHitReaction(actualHit, actualHit), false);
+  assert.equal(shouldStartEnemyHitReaction(previewHit, previewHit), false);
 });
 
 test('scene이 선택할 수 있는 v1/v2 에셋이 패키지 안에 모두 존재한다', async () => {
