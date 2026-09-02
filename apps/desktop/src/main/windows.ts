@@ -26,10 +26,15 @@ const gachaUiDir = join(
   dirname(fileURLToPath(import.meta.resolve('@pet/gacha/package.json'))),
   'ui',
 );
+const combineUiDir = join(
+  dirname(fileURLToPath(import.meta.resolve('@pet/combine/package.json'))),
+  'ui',
+);
 
 let petWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
+let combineWindow: BrowserWindow | undefined;
 
 export const getPetWindow = (): BrowserWindow | undefined => petWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
@@ -106,6 +111,30 @@ export function createGachaWindow(): BrowserWindow {
     gachaWindow = undefined;
   });
   return gachaWindow;
+}
+
+export function createCombineWindow(): BrowserWindow {
+  if (combineWindow && !combineWindow.isDestroyed()) {
+    combineWindow.show();
+    combineWindow.focus();
+    return combineWindow;
+  }
+  combineWindow = new BrowserWindow({
+    width: 1120,
+    height: 820,
+    minWidth: 920,
+    minHeight: 700,
+    backgroundColor: '#161828',
+    title: 'Petto Petto — 비전 합성소',
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  void combineWindow.loadFile(join(combineUiDir, 'index.html'), {
+    query: { assets: pathToFileURL(join(rendererDir, 'assets')).href },
+  });
+  combineWindow.on('closed', () => {
+    combineWindow = undefined;
+  });
+  return combineWindow;
 }
 
 /** 창의 논리 픽셀 사각형. */

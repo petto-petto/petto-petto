@@ -1,0 +1,492 @@
+@font-face {
+  font-family: Galmuri11;
+  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2309@1.1/Galmuri11-Bold.woff2');
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 720px;
+  overflow: hidden;
+  background: #161828;
+  color: #f5ecd8;
+  font-family: Galmuri11, ui-monospace, monospace;
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+}
+
+.combine-shell {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 286px;
+  height: 100vh;
+  padding: 18px;
+  background: #10231a;
+}
+.combine-panel {
+  display: grid;
+  grid-template-areas:
+    'tabs token action'
+    'tabs selection action'
+    'message pets result';
+  grid-template-columns: 132px minmax(0, 1fr) 122px;
+  grid-template-rows: 28px 112px 82px;
+  gap: 9px 12px;
+  align-items: stretch;
+  padding: 16px;
+  color: #3b2a1a;
+  background: #f3e3c0;
+  border: 3px solid #3a2a1c;
+}
+.combine-tabs,
+.selection-slots,
+.pet-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.combine-tabs {
+  grid-area: tabs;
+  flex-direction: column;
+}
+.combine-tabs button {
+  flex: 1;
+}
+.token-readout {
+  grid-area: token;
+}
+.selection-slots {
+  grid-area: selection;
+}
+.pet-grid {
+  grid-area: pets;
+}
+.combine-tabs button,
+.combine-button {
+  font: inherit;
+  font-size: 11px;
+  border: 2px solid #3a2a1c;
+  background: #6b4a2e;
+  color: #f5ecd8;
+  padding: 6px 8px;
+}
+.combine-tabs button.active {
+  background: #6c37a0;
+}
+.combine-message {
+  grid-area: message;
+  margin: 0;
+  color: #762f35;
+}
+.combine-result {
+  grid-area: result;
+  color: #1c4a34;
+  font-weight: bold;
+}
+.combine-button {
+  grid-area: action;
+  align-self: stretch;
+}
+
+.selection-slots {
+  align-content: flex-start;
+}
+
+.selection-card,
+.pet-card {
+  display: grid;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid #3a2a1c;
+  color: #f5ecd8;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  image-rendering: pixelated;
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 35%);
+}
+
+.selection-card {
+  grid-template-columns: 1fr;
+  width: calc((100% - 36px) / 10);
+  min-width: 58px;
+  height: 52px;
+  padding: 3px;
+  background: #4e3b70;
+}
+
+.pet-card {
+  grid-template-columns: 72px minmax(0, 1fr);
+  width: 190px;
+  height: 82px;
+  padding: 4px;
+  background: #4e3b70;
+}
+
+.selection-card img,
+.pet-card img {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.card-text {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  padding: 2px 5px;
+}
+
+.card-text small {
+  overflow: hidden;
+  color: #d8c7f4;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-text strong {
+  overflow: hidden;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  width: 16px;
+  height: 16px;
+  place-items: center;
+  border: 1px solid #f5ecd8;
+  color: #f5ecd8;
+  background: #3a2a1c;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.selection-card.rare,
+.pet-card.rare {
+  background: #4a3b76;
+  border-color: #9a83d8;
+}
+
+.selection-card.epic,
+.pet-card.epic {
+  background: #6a3f79;
+  border-color: #e2a6ed;
+}
+
+.selection-card:hover,
+.pet-card:hover {
+  transform: translate(-1px, -1px);
+  filter: brightness(1.16);
+}
+
+.combine-stage {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+  border: 3px solid #3a2a1c;
+  box-shadow:
+    inset 0 0 0 2px #a5763f,
+    2px 2px 0 rgb(0 0 0 / 35%);
+  background: #161828 var(--combine-background) center / cover no-repeat;
+  image-rendering: pixelated;
+}
+
+.combine-stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, rgb(0 0 0 / 10%) 3px 4px);
+}
+
+.stage-copy {
+  position: absolute;
+  z-index: 2;
+  top: 18px;
+  left: 18px;
+  padding: 12px 14px;
+  color: #3b2a1a;
+  background: #f3e3c0;
+  border: 3px solid #3a2a1c;
+  box-shadow:
+    inset 0 0 0 2px #e0c894,
+    2px 2px 0 rgb(0 0 0 / 35%);
+}
+.stage-copy p {
+  margin: 0;
+  font-size: 10px;
+  color: #6c37a0;
+}
+.stage-copy h1 {
+  margin: 6px 0;
+  font-size: 16px;
+}
+.stage-copy span {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.combine-space {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cauldron-reaction {
+  position: absolute;
+  left: 50%;
+  bottom: 3%;
+  width: 180px;
+  height: 130px;
+  transform: translateX(-50%);
+}
+
+.toxic-lava {
+  position: absolute;
+  bottom: 30px;
+  left: 52px;
+  width: 76px;
+  height: 28px;
+  opacity: 0;
+  border: 3px solid #2c2438;
+  background: #53652d;
+  box-shadow:
+    inset 0 4px 0 #89954b,
+    inset 0 -5px 0 #2f3d20,
+    0 0 0 3px #202a1b;
+  clip-path: polygon(
+    0 70%,
+    12% 28%,
+    28% 47%,
+    42% 0,
+    58% 35%,
+    73% 15%,
+    88% 44%,
+    100% 20%,
+    100% 100%,
+    0 100%
+  );
+}
+
+.lava-bubble {
+  position: absolute;
+  bottom: 42px;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  border: 2px solid #2c2438;
+  background: #788541;
+  box-shadow: inset 2px 2px 0 #a3ad61;
+}
+
+.bubble-one {
+  left: 38px;
+}
+
+.bubble-two {
+  left: 104px;
+  width: 14px;
+  height: 14px;
+}
+
+.bubble-three {
+  left: 138px;
+  bottom: 36px;
+  width: 7px;
+  height: 7px;
+}
+
+.forge-result-card {
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  display: grid;
+  grid-template-rows: 108px auto;
+  width: 142px;
+  min-height: 154px;
+  padding: 7px;
+  opacity: 0;
+  border: 3px solid #2c2438;
+  color: #f5ecd8;
+  background: #62676c;
+  box-shadow: 3px 3px 0 rgb(0 0 0 / 45%);
+  pointer-events: auto;
+  transform: translate(-50%, 32px) scale(0.35);
+  transform-origin: bottom center;
+}
+
+.forge-result-card.rare {
+  border-color: #4aa3ff;
+  background: #1f5a99;
+}
+
+.forge-result-card.epic {
+  border-color: #b46bff;
+  background: #6c37a0;
+}
+
+.forge-result-card img {
+  width: 100%;
+  height: 108px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.forge-result-card .card-text {
+  gap: 1px;
+  padding: 2px 0 0;
+  text-align: center;
+}
+
+.forge-result-card .card-text small,
+.forge-result-card .card-text strong {
+  font-size: 10px;
+}
+
+.forge-result-close {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  place-items: center;
+  border: 2px solid #2c2438;
+  color: #f5ecd8;
+  background: #3a2a1c;
+  font:
+    16px/1 ui-monospace,
+    monospace;
+  cursor: pointer;
+}
+
+.forge-result-card.revealed {
+  opacity: 1;
+  transform: translate(-50%, -152px) scale(1);
+}
+
+.combine-stage.combining .toxic-lava {
+  animation: toxic-splash 180ms steps(2, end) 4 both;
+}
+
+.combine-stage.combining .lava-bubble {
+  animation: toxic-pop-left 520ms steps(4, end) 2 both;
+}
+
+.combine-stage.combining .bubble-two {
+  animation-delay: 100ms;
+  animation-name: toxic-pop-center;
+}
+
+.combine-stage.combining .bubble-three {
+  animation-delay: 190ms;
+  animation-name: toxic-pop-right;
+}
+
+.combine-stage.combining .forge-result-card {
+  animation: forge-card-launch 720ms steps(6, end) 760ms both;
+}
+
+@keyframes toxic-splash {
+  0%,
+  100% {
+    opacity: 0.9;
+    transform: translateY(0) scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-11px) scale(1.18);
+  }
+}
+
+@keyframes toxic-pop-left {
+  0% {
+    opacity: 0;
+    transform: translate(4px, 10px) scale(0.5);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-42px, -78px) scale(1.25);
+  }
+}
+
+@keyframes toxic-pop-center {
+  0% {
+    opacity: 0;
+    transform: translate(0, 12px) scale(0.45);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, -106px) scale(1.5);
+  }
+}
+
+@keyframes toxic-pop-right {
+  0% {
+    opacity: 0;
+    transform: translate(-3px, 8px) scale(0.5);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(38px, -70px) scale(1.1);
+  }
+}
+
+@keyframes forge-card-launch {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 32px) scale(0.35);
+  }
+  20% {
+    opacity: 1;
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-50%, -164px) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -152px) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .combine-stage.combining .toxic-lava,
+  .combine-stage.combining .lava-bubble,
+  .combine-stage.combining .forge-result-card {
+    animation: none;
+  }
+
+  .combine-stage.combining .forge-result-card {
+    opacity: 1;
+    transform: translate(-50%, -152px) scale(1);
+  }
+}
