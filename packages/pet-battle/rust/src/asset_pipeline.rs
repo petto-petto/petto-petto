@@ -45,7 +45,10 @@ pub fn colorize_enemy_image(
         let lightness = red.max(green).max(blue) / 255.0;
         let (target_red, target_green, target_blue) =
             stage_color(stage, x, y, source.width(), source.height());
-        let strength = (0.28 + lightness * 0.68).min(0.92);
+        let strength = match stage {
+            EnemyColorStage::Rainbow => (0.76 + lightness * 0.22).min(0.96),
+            _ => (0.28 + lightness * 0.68).min(0.92),
+        };
         pixel[0] = (f32::from(target_red) * strength).min(255.0) as u8;
         pixel[1] = (f32::from(target_green) * strength).min(255.0) as u8;
         pixel[2] = (f32::from(target_blue) * strength).min(255.0) as u8;
@@ -67,77 +70,77 @@ fn stage_color(stage: EnemyColorStage, x: u32, y: u32, width: u32, height: u32) 
 
 #[must_use]
 pub fn rainbow_mottle_color(x: u32, y: u32, width: u32, height: u32) -> (u8, u8, u8) {
-    const BASE: (u8, u8, u8) = (95, 68, 139);
+    const BASE: (u8, u8, u8) = (184, 173, 211);
     const SPOTS: [RainbowSpot; 14] = [
         RainbowSpot {
             center: (10, 22),
             radius: (6, 5),
-            color: (190, 83, 109),
+            color: (232, 174, 193),
         },
         RainbowSpot {
             center: (27, 12),
             radius: (6, 6),
-            color: (196, 126, 74),
+            color: (235, 195, 164),
         },
         RainbowSpot {
             center: (47, 21),
             radius: (5, 6),
-            color: (190, 157, 75),
+            color: (232, 216, 166),
         },
         RainbowSpot {
             center: (68, 12),
             radius: (6, 5),
-            color: (79, 160, 121),
+            color: (169, 214, 188),
         },
         RainbowSpot {
             center: (86, 24),
             radius: (5, 7),
-            color: (64, 158, 161),
+            color: (162, 207, 213),
         },
         RainbowSpot {
             center: (78, 42),
             radius: (5, 5),
-            color: (74, 115, 177),
+            color: (165, 186, 222),
         },
         RainbowSpot {
             center: (91, 57),
             radius: (6, 5),
-            color: (143, 91, 181),
+            color: (204, 174, 224),
         },
         RainbowSpot {
             center: (80, 77),
             radius: (6, 6),
-            color: (180, 81, 143),
+            color: (228, 172, 207),
         },
         RainbowSpot {
             center: (60, 87),
             radius: (5, 6),
-            color: (196, 126, 74),
+            color: (235, 195, 164),
         },
         RainbowSpot {
             center: (44, 70),
             radius: (6, 5),
-            color: (79, 160, 121),
+            color: (169, 214, 188),
         },
         RainbowSpot {
             center: (24, 86),
             radius: (5, 7),
-            color: (64, 158, 161),
+            color: (162, 207, 213),
         },
         RainbowSpot {
             center: (10, 65),
             radius: (6, 5),
-            color: (74, 115, 177),
+            color: (165, 186, 222),
         },
         RainbowSpot {
             center: (30, 49),
             radius: (5, 5),
-            color: (143, 91, 181),
+            color: (204, 174, 224),
         },
         RainbowSpot {
             center: (54, 48),
             radius: (6, 5),
-            color: (190, 83, 109),
+            color: (232, 174, 193),
         },
     ];
 

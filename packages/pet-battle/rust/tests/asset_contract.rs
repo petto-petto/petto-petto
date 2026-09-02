@@ -30,13 +30,25 @@ fn rainbow_uses_small_two_dimensional_pastel_spots_instead_of_bands() {
     assert!((1_000..=2_200).contains(&spotted));
     assert!(one_column.len() >= 3);
 
-    for color in (0..HEIGHT)
-        .step_by(5)
-        .flat_map(|y| (0..WIDTH).step_by(5).map(move |x| rainbow_mottle_color(x, y, WIDTH, HEIGHT)))
-    {
+    for color in (0..HEIGHT).step_by(5).flat_map(|y| {
+        (0..WIDTH)
+            .step_by(5)
+            .map(move |x| rainbow_mottle_color(x, y, WIDTH, HEIGHT))
+    }) {
         let min = *[color.0, color.1, color.2].iter().min().expect("rgb");
         let max = *[color.0, color.1, color.2].iter().max().expect("rgb");
         assert!(min >= 150, "pastel channels stay light: {color:?}");
-        assert!(max - min <= 85, "pastel colors stay softly saturated: {color:?}");
+        assert!(
+            max - min <= 85,
+            "pastel colors stay softly saturated: {color:?}"
+        );
     }
+
+    let source = RgbaImage::from_pixel(4, 4, Rgba([130, 90, 160, 255]));
+    let rendered = colorize_enemy_image(&source, EnemyColorStage::Rainbow, true);
+    let body = rendered.get_pixel(1, 1);
+    assert!(
+        body[0].min(body[1]).min(body[2]) >= 140,
+        "rendered rainbow body should remain visibly pastel: {body:?}"
+    );
 }
