@@ -1,5 +1,5 @@
 import type { BattleCommand, BattleGateway, BattleState } from '../contracts.ts';
-import { deriveBattleScene } from '../view/scene.ts';
+import { deriveBattleScene, shouldStartEnemyHitReaction } from '../view/scene.ts';
 import { DemoBattleGateway } from './demo-gateway.ts';
 
 declare global {
@@ -45,6 +45,7 @@ const opacity = required<HTMLInputElement>('#display-opacity');
 const gateway: BattleGateway = window.petBattle ?? new DemoBattleGateway();
 let state: BattleState | undefined;
 let inFlight = 0;
+let enemyHitTimer: number | undefined;
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -65,8 +66,9 @@ async function execute(command: BattleCommand, message?: string): Promise<void> 
   inFlight += 1;
   try {
     const result = await gateway.execute(command);
+    const previous = state;
     state = result.state;
-    render(state);
+    render(state, previous);
     if (message) showToast(message);
   } catch (error) {
     showToast(`연결 오류 · ${String(error)}`, true);
@@ -75,7 +77,7 @@ async function execute(command: BattleCommand, message?: string): Promise<void> 
   }
 }
 
-function render(next: BattleState): void {
+function render(next: BattleState, previous?: BattleState): void {
   const scene = deriveBattleScene(next);
   background.src = assetUrl(scene.backgroundAsset);
   petSheet.src = assetUrl(scene.petAsset);
@@ -101,6 +103,7 @@ function render(next: BattleState): void {
   petMenu.hidden = next.preview.menu !== 'PET';
   enemyMenu.hidden = next.preview.menu !== 'ENEMY';
   updateMotion(next);
+  if (shouldStartEnemyHitReaction(previous, next)) triggerEnemyHitReaction();
   updateSprite(scene.petSprite);
   updateControlLabels(next);
 }
@@ -117,6 +120,17 @@ function updateMotion(next: BattleState): void {
   root.style.setProperty('--slash-opacity', String(motion.slashOpacity));
   root.style.setProperty('--impact-opacity', String(motion.impactFlashOpacity));
   root.style.setProperty('--speed-opacity', String(motion.speedLineOpacity));
+}
+
+function triggerEnemyHitReaction(): void {
+  if (enemyHitTimer !== undefined) window.clearTimeout(enemyHitTimer);
+  enemy.classList.remove('hit-reaction');
+  void enemy.offsetWidth;
+  enemy.classList.add('hit-reaction');
+  enemyHitTimer = window.setTimeout(() => {
+    enemy.classList.remove('hit-reaction');
+    enemyHitTimer = undefined;
+  }, 420);
 }
 
 function updateSprite(sprite: ReturnType<typeof deriveBattleScene>['petSprite']): void {

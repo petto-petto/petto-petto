@@ -353,7 +353,7 @@ input {
   }
 }
 
-[data-enemy-phase='HIT'] .enemy {
+.enemy.hit-reaction {
   animation: enemy-hit 420ms steps(6, end);
 }
 

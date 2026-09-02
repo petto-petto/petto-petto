@@ -103,6 +103,17 @@ export function attackEffectForRarity(rarity: Rarity): AttackEffectProfile {
   }
 }
 
+export function shouldStartEnemyHitReaction(
+  previous: BattleState | undefined,
+  next: BattleState,
+): boolean {
+  const actualImpactStarted =
+    previous?.motion?.beat !== 'IMPACT' && next.motion?.beat === 'IMPACT';
+  const previewHitStarted =
+    previous?.preview.enemyPhase !== 'HIT' && next.preview.enemyPhase === 'HIT';
+  return actualImpactStarted || previewHitStarted;
+}
+
 export function deriveBattleScene(state: BattleState): BattleScene {
   const version = state.preview.assetVersion.toLowerCase();
   const hpRatio = Math.max(0, Math.min(1, state.preview.enemyHpRatio ?? state.enemyHpRatio));
