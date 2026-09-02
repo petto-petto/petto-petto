@@ -1,0 +1,17 @@
+{
+  "name": "@pet/gacha",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "펫 뽑기의 확률, 10연차 보장, 천장 규칙을 소유하는 도메인 패키지",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./ui/*": "./ui/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

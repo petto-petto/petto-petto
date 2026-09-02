@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>petto-petto | 숲의 소환소</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="gacha-shell">
+      <header class="topbar">
+        <div class="brand" aria-label="petto-petto">
+          <span class="brand-mark" aria-hidden="true">P</span>
+          <span>petto-petto</span>
+        </div>
+        <div class="title-block">
+          <p>FOREST SUMMON</p>
+          <h1>숲의 소환소</h1>
+        </div>
+        <div class="token-box pixel-panel" aria-label="보유 Token">
+          <span>보유 TOKEN</span>
+          <strong id="token-balance">9,999,999,999</strong>
+        </div>
+      </header>
+
+      <section class="summon-stage" id="summon-stage" aria-live="polite">
+        <div class="stage-copy pixel-panel">
+          <p id="stage-kicker">새로운 인연을 기다리는 숲</p>
+          <h2 id="stage-heading">잠든 씨앗에 Token을 건네보세요</h2>
+        </div>
+
+        <div class="portal" id="portal" aria-hidden="true">
+          <span class="rune-ring rune-ring-outer"></span>
+          <span class="rune-ring rune-ring-middle"></span>
+          <span class="rune-ring rune-ring-inner"></span>
+          <div class="awakening-pod">
+            <span class="pod-aura"></span>
+            <div class="sprout-crown">
+              <i class="sprout-leaf sprout-leaf-left"></i>
+              <i class="sprout-stem"></i>
+              <i class="sprout-leaf sprout-leaf-right"></i>
+            </div>
+            <div class="pod-shell">
+              <span class="pod-half pod-half-left">
+                <i class="sleep-mark sleep-mark-left"></i>
+              </span>
+              <span class="pod-half pod-half-right">
+                <i class="sleep-mark sleep-mark-right"></i>
+              </span>
+              <span class="pod-core-light"></span>
+            </div>
+            <span class="soil-mound"></span>
+          </div>
+          <div class="fruit-burst" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          </div>
+          <p class="pod-status"><span></span><b id="pod-status">새근 · 새근 · 새근</b></p>
+        </div>
+        <div class="particle-field" id="particle-field" aria-hidden="true"></div>
+
+        <button class="pixel-button skip-button" id="skip-button" type="button" hidden>
+          연출 건너뛰기
+        </button>
+      </section>
+
+      <section class="controls pixel-panel" aria-label="뽑기 조작">
+        <div class="pity-box">
+          <div class="pity-label">
+            <span>EPIC 천장</span>
+            <strong id="pity-counter">0 / 100</strong>
+          </div>
+          <div
+            class="pity-track"
+            role="progressbar"
+            aria-label="EPIC 천장 진행도"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            aria-valuenow="0"
+            id="pity-track"
+          >
+            <span id="pity-fill"></span>
+          </div>
+        </div>
+
+        <button class="pixel-button draw-button" id="draw-one" type="button">
+          <span>1회 소환</span>
+          <small>100,000 Token</small>
+        </button>
+        <button class="pixel-button draw-button primary" id="draw-ten" type="button">
+          <span>10회 소환</span>
+          <small>1,000,000 Token · RARE 이상 보장</small>
+        </button>
+        <button
+          class="pixel-button odds-button"
+          id="odds-button"
+          type="button"
+          aria-expanded="false"
+          aria-controls="odds-panel"
+        >
+          확률 보기
+        </button>
+      </section>
+    </main>
+
+    <section
+      class="modal odds-panel"
+      id="odds-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="odds-title"
+      hidden
+    >
+      <div class="modal-card pixel-panel">
+        <header class="modal-heading">
+          <div>
+            <p>SUMMON RATE</p>
+            <h2 id="odds-title">소환 확률</h2>
+          </div>
+          <button class="pixel-button" id="odds-close" type="button">닫기</button>
+        </header>
+        <p class="modal-description">
+          등급을 먼저 정한 뒤, 해당 등급의 모든 펫을 같은 확률로 선택합니다.
+        </p>
+        <div class="odds-list" id="odds-list"></div>
+      </div>
+    </section>
+
+    <section
+      class="modal reveal"
+      id="reveal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reveal-heading"
+      aria-hidden="true"
+    >
+      <div class="reveal-flash"></div>
+      <div class="reveal-content">
+        <p class="reveal-kicker" id="reveal-kicker">새로운 인연</p>
+        <h2 id="reveal-heading">숲의 문이 열립니다</h2>
+        <div class="result-grid" id="result-grid"></div>
+        <button class="pixel-button close-results" id="close-results" type="button" hidden>
+          확인
+        </button>
+      </div>
+    </section>
+
+    <script type="module" src="../dist/ui/app.js"></script>
+  </body>
+</html>

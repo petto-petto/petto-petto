@@ -6,7 +6,7 @@
  */
 
 import { BrowserWindow, screen } from 'electron';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, petSizePixels, type Rect } from '@pet/meta';
@@ -22,9 +22,14 @@ const preloadPath = join(appRoot, 'src', 'preload', 'preload.cjs');
  * 모듈 해석으로 구한다 — 패키지가 옮겨져도 깨지지 않는다.
  */
 const metaUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/meta/package.json'))), 'ui');
+const gachaUiDir = join(
+  dirname(fileURLToPath(import.meta.resolve('@pet/gacha/package.json'))),
+  'ui',
+);
 
 let petWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
+let gachaWindow: BrowserWindow | undefined;
 
 export const getPetWindow = (): BrowserWindow | undefined => petWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
@@ -71,6 +76,36 @@ export function createPanelWindow(): BrowserWindow {
   });
   void panelWindow.loadFile(join(metaUiDir, 'index.html'));
   return panelWindow;
+}
+
+/** 가챠 프로토타입은 오버레이와 수명·창 옵션을 공유하지 않는 독립 창이다. */
+export function createGachaWindow(): BrowserWindow {
+  if (gachaWindow && !gachaWindow.isDestroyed()) {
+    gachaWindow.show();
+    gachaWindow.focus();
+    return gachaWindow;
+  }
+
+  gachaWindow = new BrowserWindow({
+    width: 1120,
+    height: 820,
+    minWidth: 920,
+    minHeight: 700,
+    backgroundColor: '#10231a',
+    title: 'Petto Petto — 소환의 숲',
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), {
+    query: { assets: pathToFileURL(join(rendererDir, 'assets')).href },
+  });
+  gachaWindow.on('closed', () => {
+    gachaWindow = undefined;
+  });
+  return gachaWindow;
 }
 
 /** 창의 논리 픽셀 사각형. */

@@ -1,0 +1,24 @@
+{
+  "petId": "001",
+  "slug": "acorn_squirrel",
+  "name": "도토리다람쥐",
+  "grade": "EPIC",
+  "stageCount": 3,
+  "palette": {
+    "outline": "#2C2438",
+    "body": "#C97B3F",
+    "sub": [
+      "#FFE9C4",
+      "#4FD9C0",
+      "#FFD84D"
+    ],
+    "bodyShadow": "#A5622E",
+    "bodyHighlight": "#D2905E"
+  },
+  "canvas": {
+    "stage1": 32,
+    "stage2": 32,
+    "stage3": 48
+  },
+  "note": "body/outline은 종 단위 고정. Stage 2·3을 그릴 때 이 값을 그대로 쓴다."
+}
