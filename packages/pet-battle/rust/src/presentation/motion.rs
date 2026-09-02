@@ -93,7 +93,7 @@ pub fn sample_combat_motion(phase: f64, frame: u64, reduced_motion: bool) -> Com
         return CombatMotionSample {
             beat: CombatBeat::Dash,
             pet_offset: Vec2::new(
-                -8.0 + 55.0 * eased,
+                -8.0 + 42.0 * eased,
                 -2.0 * (progress * std::f32::consts::PI).sin(),
             ),
             pet_scale: Vec2::new(0.93, 1.06),
@@ -108,7 +108,7 @@ pub fn sample_combat_motion(phase: f64, frame: u64, reduced_motion: bool) -> Com
         let shake = if frame.is_multiple_of(2) { 6.0 } else { -6.0 };
         return CombatMotionSample {
             beat: CombatBeat::Impact,
-            pet_offset: Vec2::new(47.0 - progress * 3.0, 0.0),
+            pet_offset: Vec2::new(34.0 - progress * 2.0, 0.0),
             enemy_offset: Vec2::new(shake * (1.0 - progress * 0.35), 1.0),
             pet_scale: Vec2::new(1.08, 0.94),
             enemy_scale: Vec2::new(1.15, 0.82),
@@ -119,12 +119,12 @@ pub fn sample_combat_motion(phase: f64, frame: u64, reduced_motion: bool) -> Com
         };
     }
 
-    if (0.70..0.90).contains(&phase) {
-        let progress = normalized(phase, 0.70, 0.90);
-        let eased = smoothstep(progress);
+    if (0.70..0.80).contains(&phase) {
+        let progress = normalized(phase, 0.70, 0.80);
+        let eased = 1.0 - (1.0 - progress).powi(3);
         return CombatMotionSample {
             beat: CombatBeat::Recovery,
-            pet_offset: Vec2::new(44.0 * (1.0 - eased), 0.0),
+            pet_offset: Vec2::new(32.0 * (1.0 - eased), 0.0),
             pet_scale: Vec2::new(1.0 - 0.04 * (1.0 - eased), 1.0 + 0.05 * (1.0 - eased)),
             afterimage_opacity: 0.18 * (1.0 - progress),
             ..Default::default()

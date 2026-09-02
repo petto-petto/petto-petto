@@ -204,7 +204,7 @@ input {
 }
 
 .pet-sheet.animated-sheet {
-  animation: pet-frames var(--sheet-duration) steps(var(--frame-count)) infinite;
+  animation: pet-frames var(--sheet-duration) steps(var(--frame-count)) 1 forwards;
 }
 
 .enemy img {
