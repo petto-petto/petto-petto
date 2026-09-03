@@ -32,7 +32,7 @@ import {
 const NOW = '2026-08-24T14:37:12+09:00';
 
 class Harness {
-  state: MetaState = createMetaState(1);
+  state: MetaState = createMetaState();
   catalog = AchievementCatalog.embedded();
   currency = new InMemoryCurrency();
   collection = new InMemoryCollection();
