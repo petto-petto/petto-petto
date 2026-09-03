@@ -147,8 +147,8 @@ export interface MetaState {
   settings: MetaSettings;
 }
 
-/** 새 설치 상태를 만든다. `nameSeed`는 조련사 이름 생성에만 쓰인다. */
-export function createMetaState(nameSeed: number): MetaState {
+/** 새 설치 상태를 만든다. */
+export function createMetaState(): MetaState {
   const sources = new Map<Provider, SourceState>();
   for (const provider of PROVIDERS) sources.set(provider, createSourceState(provider));
 
@@ -162,7 +162,7 @@ export function createMetaState(nameSeed: number): MetaState {
     eventFacts: createEventFacts(),
     progress: new Map(),
     rewards: new Map(),
-    profile: createProfile(nameSeed),
+    profile: createProfile(),
     settings: defaultSettings(),
   };
 }

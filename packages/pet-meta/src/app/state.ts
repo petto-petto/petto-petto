@@ -37,8 +37,8 @@ import {
   StubGrowth,
 } from '../testing/fakes.ts';
 
-/** 조련사 이름 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
-const NAME_SEED = 20_260_824;
+/** 데모 사용량 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
+const DEMO_SEED = 20_260_824;
 
 export class MetaAppState {
   /** meta 도메인 상태. 메모리에서 돌고, 변경 뒤에 로컬 파일로 저장된다. */
@@ -91,7 +91,7 @@ export class MetaAppState {
     }
 
     this.isFreshInstall = restored === undefined;
-    this.meta = restored ?? createMetaState(NAME_SEED);
+    this.meta = restored ?? createMetaState();
     this.currency.setNow(this.clock.now());
   }
 
@@ -107,7 +107,7 @@ export class MetaAppState {
    */
   seedDemoUsage(): void {
     if (!this.isFreshInstall) return;
-    seedDemoUsage(this.collector, this.today(), NAME_SEED);
+    seedDemoUsage(this.collector, this.today(), DEMO_SEED);
   }
 
   /** 한 번의 집계와 판정. 앱 시작·1분 주기·수동 재스캔이 모두 이 함수를 지난다. */

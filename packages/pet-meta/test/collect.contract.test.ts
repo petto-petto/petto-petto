@@ -39,7 +39,7 @@ class Harness {
     this.clock = new FixedClock(NOW);
     this.currency = new InMemoryCurrency();
     this.currency.setNow(this.clock.now());
-    this.state = createMetaState(1);
+    this.state = createMetaState();
   }
 
   runFull(): AggregationRun {

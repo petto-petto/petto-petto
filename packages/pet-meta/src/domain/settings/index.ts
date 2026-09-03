@@ -45,4 +45,4 @@ export function defaultSettings(): MetaSettings {
 
 /** 패널 규약(기획서 4.2). 값이 코드 여기저기 흩어지지 않도록 상수로 모은다. */
 export const PANEL_WIDTH = 400;
-export const PANEL_HEIGHT = 462;
+export const PANEL_HEIGHT = 510;

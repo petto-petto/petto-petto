@@ -115,7 +115,23 @@ export interface BattlePort {
   totalWins(): number;
 }
 
+/**
+ * 펫의 경험치.
+ *
+ * 기획서에 없던 요구다. 레벨 옆에 EXP 진행을 보여주려면 현재 경험치와 다음 레벨까지
+ * 필요한 양을 알아야 한다. `meta` 는 성장 규칙을 소유하지 않으므로 계산하지 않고 받는다.
+ */
+export interface PetExperience {
+  level: number;
+  /** 현재 레벨에서 쌓은 경험치. */
+  current: number;
+  /** 다음 레벨까지 필요한 경험치. */
+  required: number;
+}
+
 /** overlay-growth 조회. */
 export interface GrowthPort {
   highestLevel(): number;
+  /** 오버레이 펫의 경험치. 최고 레벨이면 `required` 가 0 이다. */
+  petExperience(petId: PetId): PetExperience;
 }

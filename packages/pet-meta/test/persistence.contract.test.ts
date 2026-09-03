@@ -24,7 +24,6 @@ import {
   type MetaState,
   needsFirstRunCollectTab,
   observedTotal,
-  renameTrainer,
   runAggregation,
   saveState,
   setSourceEnabled,
@@ -38,7 +37,7 @@ import {
 const NOW = '2026-08-26T14:37:12+09:00';
 
 class Session {
-  state: MetaState = createMetaState(1);
+  state: MetaState = createMetaState();
   collector = FixtureCollector.withEmptySnapshots();
   currency = new InMemoryCurrency();
   clock = new FixedClock(NOW);
@@ -113,15 +112,13 @@ test('기획서 4.3: 재실행은 최초 실행이 아니다', () => {
   );
 });
 
-test('기획서 5.1: 조련사 이름과 칭호가 재실행 후에도 그대로다', () => {
+test('기획서 5.1: 칭호가 재실행 후에도 그대로다', () => {
   const store = new InMemoryMetaStore();
   const session = new Session();
-  renameTrainer(session.state.profile, '졸린 수달');
   grantTitle(session.state.profile, '초보 조련사');
 
   session.restart(store);
 
-  assert.equal(session.state.profile.displayName, '졸린 수달');
   assert.equal(session.state.profile.equippedTitle, '초보 조련사');
   assert.equal(session.state.profile.ownedTitles.length, 1);
 });
@@ -222,6 +219,35 @@ test('Map을 그대로 직렬화하면 내용이 사라진다는 것을 고정�
   // 스냅샷 계층이 왜 필요한지에 대한 증거. 이 성질이 바뀌면 계층을 다시 검토해야 한다.
   const naive = JSON.parse(JSON.stringify({ rows: new Map([['a', 1]]), seen: new Set(['b']) }));
   assert.deepEqual(naive, { rows: {}, seen: {} }, 'Map과 Set은 JSON에 실리지 않는다');
+});
+
+test('INFO-002: 프로필은 사용자 이름을 만들지도 저장하지도 않는다', () => {
+  const session = new Session();
+  session.run();
+
+  assert.deepEqual(Object.keys(session.state.profile).sort(), ['equippedTitle', 'ownedTitles']);
+  assert.equal('displayName' in snapshotOf(session.state).profile, false);
+});
+
+test('조련사 이름을 담고 있던 v1 저장 파일도 그대로 열린다', () => {
+  const session = new Session();
+  session.run();
+  grantTitle(session.state.profile, '초보 조련사');
+  session.collector.accumulate('claude_code', '2026-08-24', 'claude-opus-5', tokenCounts(9_000));
+  session.run();
+
+  // 이름을 쓰던 시절의 파일을 그대로 재현한다.
+  const legacy = JSON.parse(JSON.stringify(snapshotOf(session.state)));
+  legacy.schemaVersion = 1;
+  legacy.profile.displayName = '졸린 수달';
+
+  const restored = loadState(InMemoryMetaStore.withSnapshot(legacy));
+
+  assert.ok(restored, '옛 파일을 버리지 않는다');
+  assert.equal(restored.profile.equippedTitle, '초보 조련사');
+  assert.equal(observedTotal(restored), 9_000);
+  // 읽지 않는 키라 상태에 살아남지 않는다.
+  assert.equal('displayName' in restored.profile, false);
 });
 
 test('알 수 없는 스키마 버전은 추측하지 않고 거절한다', () => {
