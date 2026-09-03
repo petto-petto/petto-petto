@@ -1,7 +1,8 @@
 use pet_battle::{
     BattleConfig, BattleController, BattleEvent, BattleInput, BattleMode, EnemyColorStage,
-    PetRarity,
+    PetRarity, generate_background_asset_set,
 };
+use std::path::PathBuf;
 
 const CONFIG: BattleConfig = BattleConfig {
     common_interval_xp: 120,
@@ -80,4 +81,34 @@ fn battle_can_pause_without_changing_progress() {
     let after = controller.active_pet().expect("active pet");
     assert_eq!(after.stage, before.stage);
     assert_eq!(after.interval_xp, before.interval_xp);
+}
+
+#[test]
+fn background_assets_are_generated_by_battle_graphic_pipeline() {
+    let output = unique_test_dir("battle-background-assets");
+    generate_background_asset_set(&output).expect("background assets are generated");
+
+    for slug in ["mushroom-forest", "crystal-ruins", "starlight-shrine"] {
+        let path = output.join("v2").join(format!("{slug}.png"));
+        let image = image::open(&path)
+            .unwrap_or_else(|error| panic!("{} should be readable: {error}", path.display()))
+            .to_rgba8();
+
+        assert_eq!(image.width(), 360);
+        assert_eq!(image.height(), 180);
+        assert!(image.pixels().any(|pixel| pixel[3] == 255));
+    }
+}
+
+fn unique_test_dir(name: &str) -> PathBuf {
+    let path = std::env::temp_dir().join(format!(
+        "{name}-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after unix epoch")
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&path).expect("test output directory should be created");
+    path
 }
