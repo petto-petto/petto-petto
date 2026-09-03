@@ -1,0 +1,20 @@
+{
+  "petId": "003",
+  "slug": "mole_digger",
+  "name": "두더지",
+  "grade": "COMMON",
+  "stageCount": 3,
+  "palette": {
+    "outline": "#2C2438",
+    "body": "#8B6B4A",
+    "sub": [
+      "#F0DCC0"
+    ]
+  },
+  "canvas": {
+    "stage1": 32,
+    "stage2": 32,
+    "stage3": 32
+  },
+  "note": "body/outline은 종 단위 고정. Stage 2·3을 그릴 때 이 값을 그대로 쓴다."
+}

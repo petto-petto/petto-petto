@@ -1,0 +1,25 @@
+{
+  "petId": "002",
+  "slug": "midnight_zebra",
+  "name": "미드나잇얼룩말",
+  "grade": "RARE",
+  "stageCount": 3,
+  "palette": {
+    "outline": "#2C2438",
+    "body": "#4A5B8C",
+    "sub": [
+      "#E8EEF7",
+      "#B9C6E8"
+    ],
+    "accent": "#FFD84D",
+    "bodyShadow": "#3B4970",
+    "bodyHighlight": "#5569A1",
+    "eyeHighlight": "#FFFFFF"
+  },
+  "canvas": {
+    "stage1": 32,
+    "stage2": 32,
+    "stage3": 32
+  },
+  "note": "body/outline은 종 단위 고정. Stage 2·3을 그릴 때 이 값을 그대로 쓴다. 색 수는 단계별 하한(RARE 6/7/8)에 맞춰 S1=6, S2=+#B9C6E8, S3=+#FFFFFF(눈 하이라이트)로 늘린다."
+}

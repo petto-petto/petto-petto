@@ -1,0 +1,79 @@
+{
+  "id": "bg_003",
+  "name": "비전 합성 동굴",
+  "preset": "arcane_cavern",
+  "kind": "outdoor",
+  "layout": "interior",
+  "width": 560,
+  "height": 240,
+  "seamless": false,
+  "horizon": 112,
+  "groundTop": 184,
+  "petAnchor": {
+    "x": 248,
+    "y": 120,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_003_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_003_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_003_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_003_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_003_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#161828",
+      "#171525",
+      "#1C1D33",
+      "#252541",
+      "#2D2C4A",
+      "#363455",
+      "#363953",
+      "#3D365A",
+      "#464869",
+      "#505173",
+      "#5B5B86",
+      "#5D5184",
+      "#686893",
+      "#6D6C99",
+      "#796AA6",
+      "#7D583A",
+      "#8578A7",
+      "#8886A9",
+      "#9391B0",
+      "#9D9AAD",
+      "#9E754C",
+      "#B9B2D0",
+      "#E7E6EB",
+      "#FAF9FA"
+    ],
+    "rampOverride": []
+  }
+}

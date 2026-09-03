@@ -1,0 +1,17 @@
+{
+  "name": "@pet/combine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "펫 합성 제단 프로토타입 UI",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./ui/*": "./ui/*"
+  }
+}

@@ -2,6 +2,8 @@
   "files": [],
   "references": [
     { "path": "packages/pet-core" },
+    { "path": "packages/pet-combine" },
+    { "path": "packages/pet-gacha" },
     { "path": "packages/pet-meta" },
     { "path": "apps/desktop" }
   ]
