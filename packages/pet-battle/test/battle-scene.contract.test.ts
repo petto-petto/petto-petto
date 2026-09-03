@@ -173,3 +173,14 @@ test('scene은 v2 에셋만 선택하고 제거된 v1 에셋은 존재하지 않
     assert.rejects(access(new URL('backgrounds/v1', assetRoot))),
   ]);
 });
+
+test('v2 전투 배경은 background-generator scene 소스를 함께 보관한다', async () => {
+  const assetRoot = new URL('../assets/', import.meta.url);
+  const generatedSources = [
+    'backgrounds/generated/bg_201_mushroom_forest/scene.json',
+    'backgrounds/generated/bg_202_crystal_ruins/scene.json',
+    'backgrounds/generated/bg_203_starlight_shrine/scene.json',
+  ];
+
+  await Promise.all(generatedSources.map((path) => access(new URL(path, assetRoot))));
+});
