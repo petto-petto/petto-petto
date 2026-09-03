@@ -28,6 +28,7 @@ import type {
   GrowthPort,
   LedgerEntry,
   MetaSnapshot,
+  PetExperience,
   MetaStore,
   PetSummary,
   TrophyPlacement,
@@ -260,9 +261,15 @@ export class StubBattle implements BattlePort {
 export class StubGrowth implements GrowthPort {
   #failQueries = false;
   readonly #level: number;
+  #experience: PetExperience;
 
-  constructor(level: number) {
+  constructor(level: number, experience?: PetExperience) {
     this.#level = level;
+    this.#experience = experience ?? { level: 21, current: 340, required: 500 };
+  }
+
+  setExperience(experience: PetExperience): void {
+    this.#experience = experience;
   }
 
   setQueryFailure(failing: boolean): void {
@@ -272,6 +279,11 @@ export class StubGrowth implements GrowthPort {
   highestLevel(): number {
     if (this.#failQueries) throw new PortError('성장 기록을 불러오지 못했어요');
     return this.#level;
+  }
+
+  petExperience(): PetExperience {
+    if (this.#failQueries) throw new PortError('경험치를 불러오지 못했어요');
+    return this.#experience;
   }
 }
 

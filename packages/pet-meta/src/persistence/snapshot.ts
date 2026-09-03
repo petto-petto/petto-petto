@@ -55,7 +55,7 @@ import {
  *
  * 처음부터 넣는다. 나중에 넣으면 "버전 없는 파일"을 위한 특수 처리가 영구히 남는다.
  */
-export const SNAPSHOT_SCHEMA_VERSION = 1;
+export const SNAPSHOT_SCHEMA_VERSION = 2;
 
 /** 사용량 한 줄. 맵의 합성 키를 필드로 펴 놓은 것이다. */
 export interface UsageRow {
@@ -102,7 +102,6 @@ export interface PendingGrant {
  * 저장하고 읽으면 키 자체가 사라진다. 저장 형식은 "없음"을 `null`로 명시한다.
  */
 export interface ProfileSnapshot {
-  displayName: string;
   equippedTitle: string | null;
   ownedTitles: string[];
 }
@@ -213,7 +212,6 @@ export function snapshotOf(state: MetaState): MetaSnapshot {
     // 보상 기록은 자기 `achievementId`를 들고 있으므로 펴서 담고 읽을 때 다시 묶는다.
     rewards,
     profile: {
-      displayName: state.profile.displayName,
       equippedTitle: state.profile.equippedTitle ?? null,
       ownedTitles: [...state.profile.ownedTitles],
     },
@@ -234,20 +232,32 @@ export class SnapshotError extends Error {
 /**
  * 옛 버전 파일을 현재 형식으로 올린다.
  *
- * 지금은 버전이 하나뿐이라 할 일이 없다. 형식이 바뀌면 여기에 단계별 변환을 넣는다.
- * 이 자리를 미리 만들어 두는 이유는, 나중에 만들면 호출부가 여기저기 흩어지기 때문이다.
+ * 단계별 변환을 여기 한곳에 모은다. 호출부에 흩어지면 "어느 버전에서 무엇이 바뀌었나"를
+ * 다시 추적할 수 없게 된다.
  */
 export function migrateSnapshot(snapshot: MetaSnapshot): MetaSnapshot {
   if (snapshot.schemaVersion === SNAPSHOT_SCHEMA_VERSION) return snapshot;
+
+  /*
+   * v1 → v2: 조련사 이름을 없앴다.
+   *
+   * 남아 있는 `profile.displayName`은 지우지 않고 그냥 읽지 않는다. 삭제하려면 저장
+   * 형식마다 대응하는 제거 코드가 영구히 쌓이고, 읽지 않는 키는 다음 저장에서 저절로
+   * 사라진다.
+   */
+  if (snapshot.schemaVersion === 1) return { ...snapshot, schemaVersion: 2 };
+
   throw new SnapshotError(
     `지원하지 않는 저장 형식 버전 ${snapshot.schemaVersion}`,
-    '저장 파일이 이 버전보다 새롭습니다',
+    snapshot.schemaVersion > SNAPSHOT_SCHEMA_VERSION
+      ? '저장 파일이 이 버전보다 새롭습니다'
+      : '저장 파일 형식이 너무 오래되어 읽을 수 없습니다',
   );
 }
 
 /** 저장 형식을 런타임 상태로 되돌린다. */
 export function stateOf(snapshot: MetaSnapshot): MetaState {
-  const state = createMetaState(0);
+  const state = createMetaState();
 
   const sources = new Map<Provider, SourceState>();
   for (const row of snapshot.sources) {
@@ -317,7 +327,6 @@ export function stateOf(snapshot: MetaSnapshot): MetaState {
   }
   state.rewards = rewards;
   state.profile = {
-    displayName: snapshot.profile.displayName,
     equippedTitle: snapshot.profile.equippedTitle ?? undefined,
     ownedTitles: [...snapshot.profile.ownedTitles],
   };

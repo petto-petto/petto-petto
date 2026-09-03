@@ -8,6 +8,7 @@ import type {
   CurrencyPort,
   GachaPort,
   GrowthPort,
+  PetExperience,
 } from '../ports/index.ts';
 import { completionRatio, unlockedCount } from '../domain/achievement/engine.ts';
 import type { AchievementCatalog } from '../domain/achievement/catalog.ts';
@@ -16,18 +17,26 @@ import { failedField, fieldOf, okField, type Field } from './field.ts';
 
 /** 프로필 카드(기획서 5.1). */
 export interface ProfileCard {
-  trainerName: string;
   equippedTitle: string | undefined;
   /** 현재 오버레이 펫. 별도 대표 펫 상태를 만들지 않는다(INFO-003). */
   petName: Field<string>;
   petLevel: Field<number>;
   petSprite: Field<string>;
+  /** 레벨 옆에 보여줄 경험치 진행. 성장 도메인이 계산한 값을 그대로 받는다. */
+  experience: Field<PetExperience>;
   /** 기획서 5.1: `이 기기` 표기. 계정도 동기화도 없다는 사실을 알린다. */
   deviceLabel: string;
 }
 
 export interface SummaryScreen {
   profile: ProfileCard;
+  /**
+   * 지금 쓸 수 있는 재화. 화면에서 가장 강조되는 값이다.
+   *
+   * 기획서의 코인 잔액을 사용자 표현으로는 `사용 가능 토큰` 이라 부른다 — 토큰 사용으로
+   * 얻은 것이므로 그 이름이 직관적이다. 저장과 계약에서는 계속 코인이다.
+   */
+  availableTokens: Field<number>;
   totalObservedTokens: number;
   ownedPets: Field<number>;
   dexOwned: Field<number>;
@@ -75,20 +84,27 @@ export function summaryScreen(
   today: LocalDate,
   collection: CollectionPort,
   currency: CurrencyPort,
+  growth: GrowthPort,
 ): SummaryScreen {
   const pet = fieldOf(() => collection.overlayPet());
+  // 클로저 안에서는 `pet.value` 의 좁힘이 유지되지 않으므로 지역 상수로 고정한다.
+  const overlayPet = pet.value;
   const dex = fieldOf(() => collection.dexProgress());
   const togetherMinutes = state.activityMinutes.size;
 
   return {
     profile: {
-      trainerName: state.profile.displayName,
       equippedTitle: state.profile.equippedTitle,
       petName: pet.value ? okField(pet.value.name) : failedField(pet.error ?? '조회 실패'),
       petLevel: pet.value ? okField(pet.value.level) : failedField(pet.error ?? '조회 실패'),
       petSprite: pet.value ? okField(pet.value.sprite) : failedField(pet.error ?? '조회 실패'),
+      // 펫을 못 읽으면 경험치도 물어볼 대상이 없다.
+      experience: overlayPet
+        ? fieldOf(() => growth.petExperience(overlayPet.petId))
+        : failedField<PetExperience>(pet.error ?? '조회 실패'),
       deviceLabel: '이 기기',
     },
+    availableTokens: fieldOf(() => currency.balance()),
     totalObservedTokens: observedTotal(state),
     ownedPets: fieldOf(() => collection.ownedPetCount()),
     dexOwned: dex.value ? okField(dex.value.owned) : failedField(dex.error ?? '조회 실패'),

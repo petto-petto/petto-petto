@@ -8,7 +8,6 @@ import {
   AchievementCatalog,
   createMetaState,
   FixtureCollector,
-  generateTrainerName,
   GRASS_WEEKS,
   InMemoryCollection,
   InMemoryCurrency,
@@ -21,7 +20,6 @@ import {
   PET_SIZES,
   placePanel,
   type Rect,
-  renameTrainer,
   runAggregation,
   setSourceEnabled,
   settingsScreen,
@@ -41,7 +39,7 @@ const today = (): LocalDate => {
 };
 
 class Harness {
-  state: MetaState = createMetaState(1);
+  state: MetaState = createMetaState();
   catalog = AchievementCatalog.embedded();
   collector = FixtureCollector.withEmptySnapshots();
   currency = new InMemoryCurrency();
@@ -69,7 +67,14 @@ class Harness {
   }
 
   summary() {
-    return summaryScreen(this.state, this.catalog, today(), this.collection, this.currency);
+    return summaryScreen(
+      this.state,
+      this.catalog,
+      today(),
+      this.collection,
+      this.currency,
+      this.growth,
+    );
   }
 
   settings() {
@@ -83,7 +88,6 @@ test('INFO-001: 요약이 프로필과 여섯 핵심 수치를 제공한다', ()
 
   const summary = harness.summary();
 
-  assert.ok(summary.profile.trainerName.length > 0);
   assert.equal(summary.profile.deviceLabel, '이 기기');
   assert.equal(summary.profile.petName.value, '별빛마법사');
 
@@ -99,6 +103,64 @@ test('INFO-001: 요약이 프로필과 여섯 핵심 수치를 제공한다', ()
   assert.equal(summary.hasNoRecords, false);
 });
 
+test('INFO-001: 사용 가능 토큰이 재화 잔액을 그대로 보여준다', () => {
+  const harness = new Harness();
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 40_000]]);
+
+  const summary = harness.summary();
+
+  // 요약이 자체 계산하지 않고 재화 도메인이 소유한 잔액을 그대로 옮긴다.
+  assert.equal(summary.availableTokens.value, harness.currency.balance());
+});
+
+test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', () => {
+  const harness = new Harness();
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 7_000]]);
+  harness.currency.setQueryFailure(true);
+
+  const summary = harness.summary();
+
+  assert.ok(summary.availableTokens.error);
+  assert.equal(summary.totalObservedTokens, 7_000);
+  assert.equal(summary.profile.petName.value, '별빛마법사');
+});
+
+test('INFO-003: 경험치는 성장 도메인 값을 계산 없이 옮긴다', () => {
+  const harness = new Harness();
+  harness.run();
+  harness.growth.setExperience({ level: 21, current: 340, required: 500 });
+
+  const summary = harness.summary();
+
+  assert.deepEqual(summary.profile.experience.value, {
+    level: 21,
+    current: 340,
+    required: 500,
+  });
+});
+
+test('INFO-003: 최고 레벨은 남은 경험치가 없다고 알린다', () => {
+  const harness = new Harness();
+  harness.run();
+  // 화면이 0으로 나누지 않도록, 성장 도메인은 최고 레벨에서 `required: 0`을 준다.
+  harness.growth.setExperience({ level: 60, current: 0, required: 0 });
+
+  const summary = harness.summary();
+
+  assert.equal(summary.profile.experience.value?.required, 0);
+});
+
+test('INFO-007: 펫을 못 읽으면 경험치도 실패로 표시된다', () => {
+  const harness = new Harness();
+  harness.run();
+  harness.collection.setQueryFailure(true);
+
+  const summary = harness.summary();
+
+  // 어느 펫의 경험치인지 물어볼 대상 자체가 없다. 0으로 꾸미지 않는다.
+  assert.ok(summary.profile.experience.error);
+});
+
 test('INFO-001: 기록이 없는 설치는 오류가 아니라 빈 상태다', () => {
   const harness = new Harness();
   harness.run();
@@ -107,25 +169,6 @@ test('INFO-001: 기록이 없는 설치는 오류가 아니라 빈 상태다', (
   assert.equal(summary.hasNoRecords, true);
   assert.equal(summary.totalObservedTokens, 0);
   assert.equal(summary.ownedPets.error, undefined);
-});
-
-test('INFO-002: 익명 한글 이름이 한 번 생성되고 수정·재생성된다', () => {
-  const state = createMetaState(20_260_824);
-  const generated = state.profile.displayName;
-  assert.ok(generated.includes(' '), '형용사 + 동물 조합');
-  assert.equal(state.profile.displayName, generated, '읽어도 바뀌지 않는다');
-
-  renameTrainer(state.profile, '나의 조련사');
-  assert.equal(state.profile.displayName, '나의 조련사');
-
-  assert.throws(() => renameTrainer(state.profile, ''), /이름을 입력해/);
-  assert.equal(state.profile.displayName, '나의 조련사', '실패하면 이전 값이 유지된다');
-
-  assert.throws(() => renameTrainer(state.profile, '가'.repeat(21)), /20자까지/);
-  assert.throws(() => renameTrainer(state.profile, '줄\n바꿈'), /줄바꿈/);
-
-  assert.ok(generateTrainerName(7).includes(' '));
-  assert.equal(generateTrainerName(99), generateTrainerName(99), '같은 시드는 같은 이름');
 });
 
 test('INFO-004: 잔디가 최근 12주 고정이고 0과 값을 구분한다', () => {
@@ -271,7 +314,7 @@ test('INFO-007: 펫 조회가 실패해도 meta가 소유한 수치는 보인다
   assert.ok(summary.profile.petName.error);
   assert.ok(summary.ownedPets.error);
   assert.equal(summary.totalObservedTokens, 7_000);
-  assert.ok(summary.profile.trainerName.length > 0);
+  assert.equal(summary.profile.deviceLabel, '이 기기');
 });
 
 test('INFO-003: 프로필 펫이 현재 오버레이 펫을 따라간다', () => {

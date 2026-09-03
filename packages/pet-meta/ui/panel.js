@@ -59,6 +59,33 @@ function stat(label, valueNode) {
   return el('div', { class: 'stat' }, [el('div', { class: 'label', text: label }), valueNode]);
 }
 
+/**
+ * EXP 진행 줄. 레벨 옆에 지금 얼마나 찼는지 보여준다.
+ *
+ * 최고 레벨이면 성장 도메인이 `required: 0`을 준다. 이때 0으로 나누지 않고 꽉 찬 막대와
+ * `MAX`를 보여준다.
+ */
+function expRow(field) {
+  if (field.error) {
+    return el('div', { class: 'exp-row' }, [
+      el('span', { class: 'exp-label', text: 'EXP' }),
+      el('span', { class: 'exp-value error', text: '⚠ 조회 실패' }),
+    ]);
+  }
+  const { current, required } = field.value;
+  const atMax = required === 0;
+  return el('div', { class: 'exp-row' }, [
+    el('span', { class: 'exp-label', text: 'EXP' }),
+    bar(atMax ? 1 : current / required),
+    el('span', {
+      class: 'exp-value',
+      text: atMax
+        ? 'MAX'
+        : `${current.toLocaleString('ko-KR')} / ${required.toLocaleString('ko-KR')}`,
+    }),
+  ]);
+}
+
 function bar(ratio) {
   const clamped = Math.max(0, Math.min(1, ratio || 0));
   return el('div', { class: 'bar' }, [
@@ -103,11 +130,29 @@ const subtabBar = document.getElementById('subtabs');
 function selectScreen(screen, { resetSubtab = true } = {}) {
   ui.screen = screen;
   if (resetSubtab) ui.subtab = DEFAULT_SUBTAB[screen] ?? '';
-  for (const tab of document.querySelectorAll('.screen-tab')) {
+  // 탭(정보·업적)과 하단 설정 아이콘이 같은 선택 상태를 공유한다.
+  for (const tab of document.querySelectorAll('[data-screen]')) {
     tab.setAttribute('aria-selected', String(tab.dataset.screen === screen));
   }
+  applyChrome(screen);
   renderSubtabs();
   render();
+}
+
+/**
+ * 화면에 맞춰 창 테두리(탭·제목·설정 입구)를 바꾼다.
+ *
+ * 설정은 전용 화면이다. 들어가면 다른 화면의 탭을 감추고 설정만 남긴다. 대신
+ * 나가는 길(`←`)을 반드시 함께 띄운다 — 이게 없으면 설정에 갇힌다.
+ */
+function applyChrome(screen) {
+  const settingsMode = screen === 'settings';
+  for (const tab of document.querySelectorAll('.screen-tab')) {
+    tab.hidden = settingsMode;
+  }
+  document.getElementById('settings-button').hidden = settingsMode;
+  document.getElementById('back-button').hidden = !settingsMode;
+  document.getElementById('mode-title').hidden = !settingsMode;
 }
 
 function renderSubtabs() {
@@ -162,51 +207,63 @@ async function renderSummary() {
     }),
   ]);
 
-  const nameInput = el('input', {
-    attrs: { id: 'trainer-name', value: data.profile.trainerName, maxlength: 40 },
-  });
-  nameInput.addEventListener('change', async () => {
-    try {
-      const saved = await api.renameTrainer(nameInput.value);
-      nameInput.value = saved;
-    } catch (message) {
-      nameInput.value = data.profile.trainerName;
-      flash(String(message), true);
-    }
-  });
-
+  /*
+   * 조련사 이름이 없으므로 펫이 프로필의 머리줄이다.
+   *
+   * 계정도 동기화도 없는 앱에서 사용자를 부를 이름은 아무것도 식별하지 않았다.
+   * 정체성은 화면에 떠 있는 펫이 이미 맡고 있다.
+   */
   const profile = el('div', { class: 'card' }, [
     el('div', { class: 'profile' }, [
       petThumb,
       el('div', { class: 'profile-body' }, [
-        el('div', { class: 'name-row' }, [
-          nameInput,
-          el('button', {
-            class: 'tiny-button',
-            text: '다시 만들기',
-            on: {
-              click: async () => {
-                nameInput.value = await api.regenerateTrainerName();
-              },
-            },
-          }),
-        ]),
+        el('div', {
+          class: 'pet-headline',
+          text: data.profile.petName.error
+            ? '펫 정보를 불러오지 못했어요'
+            : `${data.profile.petName.value} · Lv.${data.profile.petLevel.value}`,
+        }),
         el('div', { class: 'profile-meta' }, [
           data.profile.equippedTitle
             ? el('span', { class: 'chip', text: data.profile.equippedTitle })
             : el('span', { class: 'chip plain', text: '칭호 없음' }),
-          el('span', {
-            text: data.profile.petName.error
-              ? '펫 정보를 불러오지 못했어요'
-              : `${data.profile.petName.value} · Lv.${data.profile.petLevel.value}`,
-          }),
           el('span', { class: 'chip plain', text: data.profile.deviceLabel }),
         ]),
+        expRow(data.profile.experience),
       ]),
     ]),
   ]);
 
-  const cumulative = el('div', { class: 'card' }, [
+  /*
+   * 화면에서 가장 강조되는 값. 사용자가 지금 쓸 수 있는 재화다.
+   *
+   * 가이드가 글자 크기를 16px까지만 허용하므로 크기만으로는 부족하다. 자기 카드를
+   * 독차지하고, 금색을 쓰고(획득·보상용 색), 맨 위에 놓아 위계를 만든다.
+   */
+  const hero = el('div', { class: 'card hero' }, [
+    el('div', { class: 'hero-label', text: '사용 가능 토큰' }),
+    el('div', { class: 'hero-figure' }, [
+      data.availableTokens.error
+        ? el('span', { class: 'hero-value error', text: '⚠ 조회 실패' })
+        : el('span', {
+            class: 'hero-value',
+            text: data.availableTokens.value.toLocaleString('ko-KR'),
+          }),
+      el('span', {
+        class: 'hero-sub',
+        text: data.todayEarnedCoins.error ? '오늘 ⚠' : `오늘 +${data.todayEarnedCoins.value}`,
+      }),
+    ]),
+  ]);
+
+  /*
+   * 누적과 오늘을 한 카드에 담는다.
+   *
+   * 따로 두면 카드 테두리·안쪽 여백·바깥 여백이 한 벌 더 붙어 요약이 패널 높이를
+   * 넘긴다. 패널 크기는 기획서 4.2가 고정하고 요약은 스크롤이 없어야 하므로
+   * (INFO-001), 남는 예산을 여기서 만든다. 보여주는 수치는 그대로다.
+   */
+  const numbers = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [
       el('span', { text: '설치 이후 누적' }),
       el('span', { text: data.hasNoRecords ? '기록이 아직 없습니다' : '' }),
@@ -224,13 +281,10 @@ async function renderSummary() {
             }),
       ),
     ]),
-  ]);
-
-  const today = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [el('span', { text: '오늘' })]),
-    el('div', { class: 'stat-grid' }, [
+    el('h2', { class: 'section-title spaced' }, [el('span', { text: '오늘' })]),
+    // 오늘 획득 코인은 위 히어로가 `오늘 +N`으로 이미 보여준다. 여기서 또 쓰지 않는다.
+    el('div', { class: 'stat-grid two' }, [
       stat('관측 토큰', el('div', { class: 'value', text: compact(data.todayObservedTokens) })),
-      stat('획득 코인', fieldValue(data.todayEarnedCoins)),
       stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
     ]),
   ]);
@@ -245,7 +299,7 @@ async function renderSummary() {
     bar(data.achievementsTotal ? data.achievementsUnlocked / data.achievementsTotal : 0),
   ]);
 
-  content.replaceChildren(profile, cumulative, today, achievements);
+  content.replaceChildren(hero, profile, numbers, achievements);
 }
 
 /* ---------- 정보 · 사용량 ---------- */
@@ -814,10 +868,12 @@ function flash(message, isError = false) {
  * 버튼 클릭이 드래그로 먹히지 않게 한다(app.css 참고). JS가 관여할 일이 없다.
  */
 
-for (const tab of document.querySelectorAll('.screen-tab')) {
+for (const tab of document.querySelectorAll('[data-screen]')) {
   tab.addEventListener('click', () => selectScreen(tab.dataset.screen));
 }
 document.getElementById('close-button').addEventListener('click', () => api.closePanel());
+document.getElementById('back-button').addEventListener('click', () => selectScreen('info'));
+
 document.getElementById('demo-button').addEventListener('click', () => selectScreen('demo'));
 
 // 펫 메뉴나 트레이에서 패널을 열면 기본 서브탭으로 진입한다(기획서 4.2).
@@ -897,6 +953,43 @@ async function runSelftest() {
     expanded > collapsed
       ? `[SELFTEST] info/usage 모델 접힘 ${collapsed}행 → 펼침 ${expanded}행`
       : `[SELFTEST] info/usage 실패 — 전체 보기가 행을 늘리지 못했다`,
+  );
+
+  /*
+   * 화면 버튼이 실제로 화면을 바꾸는지 확인한다.
+   *
+   * 렌더러는 순수 JS라 선택자가 어긋나도 타입 검사가 잡지 못한다. 정보는 텍스트 탭,
+   * 설정·업적은 아이콘 버튼이라 둘이 같은 배선을 공유하는지 눈으로 볼 수 없는
+   * 환경에서 확인할 수단이 필요하다.
+   */
+  for (const button of document.querySelectorAll('[data-screen]')) {
+    const target = button.dataset.screen;
+    button.click();
+    const moved = ui.screen === target;
+    const marked = button.getAttribute('aria-selected') === 'true';
+    await api.debugLog(
+      moved && marked
+        ? `[SELFTEST] 화면 버튼 ${target.padEnd(13)} 이동·선택 표시 정상`
+        : `[SELFTEST] 화면 버튼 ${target} 실패 — 화면 ${ui.screen}, 선택 ${button.getAttribute('aria-selected')}`,
+    );
+  }
+
+  /*
+   * 설정 전용 모드가 실제로 다른 탭을 감추고, 되돌아올 수 있는지 확인한다.
+   *
+   * 나가는 길이 끊기면 사용자가 설정에 갇힌다. 화면을 눈으로 볼 수 없으므로
+   * 여기서 확인한다.
+   */
+  selectScreen('settings');
+  const tabsHidden = [...document.querySelectorAll('.screen-tab')].every((tab) => tab.hidden);
+  const escapeShown = !document.getElementById('back-button').hidden;
+  document.getElementById('back-button').click();
+  const returned = ui.screen === 'info';
+  const tabsBack = [...document.querySelectorAll('.screen-tab')].every((tab) => !tab.hidden);
+  await api.debugLog(
+    tabsHidden && escapeShown && returned && tabsBack
+      ? '[SELFTEST] 설정 전용 모드   탭 감춤·나가기 표시·복귀 정상'
+      : `[SELFTEST] 설정 전용 모드 실패 — 감춤 ${tabsHidden}, 나가기 ${escapeShown}, 복귀 ${returned}, 탭 복원 ${tabsBack}`,
   );
 
   selectScreen('info');

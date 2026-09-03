@@ -33,8 +33,6 @@ contextBridge.exposeInMainWorld('petApi', {
   setNotification: (key, value) => ipcRenderer.invoke('settings:notification', key, value),
 
   // 프로필
-  renameTrainer: (name) => ipcRenderer.invoke('profile:rename', name),
-  regenerateTrainerName: () => ipcRenderer.invoke('profile:regenerate'),
   equipTitle: (title) => ipcRenderer.invoke('profile:equip-title', title),
 
   // 창

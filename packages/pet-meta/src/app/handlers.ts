@@ -21,12 +21,10 @@ import {
   bubbleMessage,
   equipTitle,
   factSnapshot,
-  generateTrainerName,
   isCategory,
   isPeriod,
   isPetSize,
   performanceScreen,
-  renameTrainer,
   setSourceEnabled,
   settingsScreen,
   summaryScreen,
@@ -143,7 +141,14 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
   /* ---------- 조회 ---------- */
 
   handle('info:summary', () =>
-    summaryScreen(state.meta, state.catalog, state.today(), state.collection, state.currency),
+    summaryScreen(
+      state.meta,
+      state.catalog,
+      state.today(),
+      state.collection,
+      state.currency,
+      state.growth,
+    ),
   );
 
   handle('info:usage', (period) =>
@@ -240,18 +245,6 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
   });
 
   /* ---------- 프로필 ---------- */
-
-  handle('profile:rename', (name) => {
-    renameTrainer(state.meta.profile, String(name));
-    state.persist();
-    return state.meta.profile.displayName;
-  });
-
-  handle('profile:regenerate', () => {
-    state.meta.profile.displayName = generateTrainerName(Date.now() % 2_147_483_647);
-    state.persist();
-    return state.meta.profile.displayName;
-  });
 
   handle('profile:equip-title', (title) => {
     const equipped = equipTitle(state.meta.profile, typeof title === 'string' ? title : undefined);

@@ -68,9 +68,19 @@ body {
   overflow: hidden;
 }
 
+/*
+ * `hidden` 속성을 실제로 존중하게 만든다.
+ *
+ * 브라우저 기본 시트의 `[hidden] { display: none }`은 우선순위가 가장 낮아서
+ * 작성자 규칙 하나에 그냥 진다. 설정 모드가 탭을 감추는 데 이걸 쓴다.
+ */
+[hidden] {
+  display: none !important;
+}
+
 body {
   width: 400px;
-  height: 462px;
+  height: 510px;
   background: var(--parchment);
   color: var(--ink);
   /*
@@ -182,6 +192,11 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.icon-button[aria-selected='true'] {
+  background: var(--gold);
+  color: var(--ink);
+}
+
 .icon-button:active {
   transform: translate(2px, 2px);
   box-shadow: none;
@@ -221,6 +236,30 @@ body {
 
 /* ---------- 본문 ---------- */
 
+/*
+ * 하단 설정 줄.
+ *
+ * 떠 있는 버튼으로 두지 않은 이유: 요약은 패널을 꽉 채우므로 겹치면 업적 막대를
+ * 가린다. 자기 줄을 차지하게 하고 그만큼 패널을 키웠다.
+ */
+#panel-footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-1) var(--space-3) var(--space-2);
+  /* 버튼을 뺀 나머지는 창을 잡아 끄는 여백으로 쓴다. */
+  -webkit-app-region: drag;
+}
+
+/* 설정 모드에서 감춘 탭을 대신하는 제목. 남는 폭을 먹어 오른쪽 버튼을 밀어낸다. */
+#mode-title {
+  flex: 1;
+  color: var(--light-text);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 main {
   flex: 1 1 auto;
   overflow-y: auto;
@@ -259,6 +298,11 @@ main.no-scroll {
   margin-bottom: 0;
 }
 
+/* 한 카드 안에서 두 번째 구획을 여는 제목. */
+.section-title.spaced {
+  margin-top: var(--space-3);
+}
+
 .section-title {
   display: flex;
   align-items: baseline;
@@ -295,31 +339,12 @@ main.no-scroll {
   flex: 1;
 }
 
-.name-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-
-#trainer-name {
-  min-width: 0;
-  flex: 1;
-  padding: 2px var(--space-1);
-  background: var(--parchment-ring);
+/* 조련사 이름을 뺀 뒤 프로필의 머리줄. */
+.pet-headline {
   color: var(--ink);
-  border: 2px solid transparent;
-  font: inherit;
   font-family: 'Galmuri11', ui-monospace, monospace;
   font-size: 13px;
   font-weight: 700;
-  user-select: text;
-  -webkit-user-select: text;
-}
-
-#trainer-name:focus {
-  border-color: var(--wood-border);
-  background: var(--parchment);
-  outline: none;
 }
 
 .profile-meta {
@@ -383,6 +408,98 @@ main.no-scroll {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-1);
+}
+
+.stat-grid.two {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* ---------- 사용 가능 토큰 (요약의 머리값) ---------- */
+
+/*
+ * 화면에서 가장 강조되는 카드.
+ *
+ * 가이드가 글자를 16px까지만 허용하므로 크기 하나로는 위계가 안 선다. 그래서
+ * 어두운 숲 바탕으로 뒤집어 양피지 카드들과 분리하고, 값에만 금색을 쓴다
+ * (금색은 획득·보상 전용이고, 이 값이 정확히 그것이다).
+ */
+/*
+ * 한 줄로 눕힌 이유: 요약은 스크롤 없이 들어가야 하고(INFO-001), 패널 높이는
+ * 기획서 4.2가 고정한다. 세로로 쌓으면 그 예산을 넘긴다.
+ */
+.hero {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--forest-mid);
+  box-shadow:
+    inset 0 0 0 2px var(--forest-leaf),
+    var(--drop);
+}
+
+.hero-label {
+  color: var(--light-text);
+  font-size: 10px;
+}
+
+.hero-figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.hero-value {
+  color: var(--gold);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 오류는 색만으로 구분하지 않는다. panel.js 가 `⚠` 를 함께 넣는다. */
+.hero-value.error {
+  color: var(--warn);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+.hero-sub {
+  color: var(--light-text);
+  font-size: 10px;
+}
+
+/* ---------- EXP ---------- */
+
+.exp-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.exp-label {
+  color: var(--ink);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* 막대가 남는 폭을 다 먹고, 숫자는 자기 폭만 쓴다. */
+.exp-row .bar {
+  flex: 1;
+}
+
+.exp-value {
+  color: var(--ink);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.exp-value.error {
+  color: var(--error-dark);
 }
 
 .stat {
