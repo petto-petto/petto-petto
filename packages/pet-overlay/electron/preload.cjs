@@ -22,4 +22,10 @@ contextBridge.exposeInMainWorld('overlay', {
   dragMove: (sx, sy) => ipcRenderer.send('drag-move', { sx, sy }),
   dragEnd: () => ipcRenderer.send('drag-end'),
   quit: () => ipcRenderer.send('overlay-quit'),
+  // renderer에는 성장 저장에 필요한 명령만 노출한다.
+  hydrateGrowth: (legacySnapshots) => ipcRenderer.invoke('growth:hydrate', legacySnapshots),
+  saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
+  clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),
+  loadOverlayState: () => ipcRenderer.invoke('overlay:load-state'),
+  saveOverlayState: (state) => ipcRenderer.invoke('overlay:save-state', state),
 });

@@ -34,3 +34,16 @@ npm run electron:dev
 
 이 패키지는 원본 프로토타입의 hook 수신, 창 위치 영속, 클릭 통과 제어까지 포함한다.
 SQLite 통합과 모노레포 앱 연결은 후속 통합 단계에서 수행한다.
+
+## 로컬 SQLite
+
+Electron main 프로세스가 `userData/pet-overlay.sqlite`를 소유하며, renderer는 preload의
+성장 저장 API만 사용한다. DB 파일·마이그레이션·트랜잭션은
+`electron/database/`의 범용 계층에, 펫 성장 테이블은 `electron/persistence/`에 분리했다.
+
+`better-sqlite3`를 설치하거나 Electron 버전을 올린 뒤에는 현재 플랫폼의 ABI에 맞춰 다음을
+실행한다.
+
+```bash
+npm run rebuild:native
+```
