@@ -90,6 +90,10 @@ grep -F -q -- 'animation' "$canonical_root/scripts/bg_check.py"
 grep -F -q -- 'animation' "$canonical_root/references/layers.md"
 grep -F -q -- '미검증' "$canonical_root/references/layers.md"
 
+# P1-3. 작은 원본을 크게 확대하면 4px 블록이 된다. 고해상도 변형이 있는데도
+# 작은 쪽을 확대해 쓰는 경우를 정적으로 잡는다.
+grep -F -q -- '고해상도 변형' "$canonical_root/scripts/bg_check.py"
+
 for required in \
   evals/evals.json \
   references/quality.md \

@@ -42,7 +42,7 @@ import bg_pillow_gate  # noqa: F401
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bgcore import REF_H, hex_rgba, preset, size_note
+from bgcore import list_stamps, REF_H, hex_rgba, preset, size_note
 
 LIMITS = {
     # --- 색 예산 ---
@@ -229,6 +229,37 @@ def main():
     r.add("composite opaque", comp.getchannel("A").getextrema()[0] == 255,
           f"min alpha={comp.getchannel('A').getextrema()[0]}")
     px_par = [l["parallax"] for l in ls]
+    # ── 스탬프 과확대 ------------------------------------------------------
+    # 9x6짜리 rock 을 scale 4 로 키우면 4px 블록 덩어리가 되지, 디테일이 생기지
+    # 않는다 — 확대는 픽셀을 늘릴 뿐 형태를 늘리지 않는다(stamps.md).
+    # 큰 원본을 크게 쓰는 것(window_snow 46px x4)은 문제가 아니므로, **작은
+    # 원본을 크게 쓰는데 고해상도 변형이 이미 있는 경우**만 잡는다.
+    try:
+        _st = {n: (w, h) for n, (_sub, w, h) in list_stamps().items()}
+    except Exception:
+        _st = {}
+    SMALL, LOUD = 14, 3
+    over = []
+    for lay in scene.get("layers", []):
+        for o in lay.get("ops", []):
+            if o.get("op") not in ("stamp", "scatter", "scatter_depth"):
+                continue
+            nm = o.get("name")
+            if nm not in _st:
+                continue
+            sc_ = o.get("scale", 1)
+            sc_ = max(sc_) if isinstance(sc_, (list, tuple)) else sc_
+            base = max(_st[nm])
+            if base > SMALL or sc_ < LOUD:
+                continue
+            alt = [v for v in _st
+                   if v != nm and v.startswith(nm + "_") and max(_st[v]) >= base * 1.5]
+            if alt:
+                over.append(f"{nm}({base}px) x{sc_} -> 고해상도 변형 {alt[0]}"
+                            f"({max(_st[alt[0]])}px)")
+    r.add("스탬프 과확대 없음", not over,
+          "ok" if not over else " / ".join(over[:3]))
+
     r.add("layers 3~5", 3 <= len(ls) <= 5, f"{len(ls)}개 {[l['name'] for l in ls]}")
 
     # ── 애니메이션 프레임 -------------------------------------------------

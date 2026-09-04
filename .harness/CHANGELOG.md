@@ -85,6 +85,10 @@
 - `references/layers.md` documents the runtime contract and marks it unvalidated:
   nothing consumes it yet, so a first consumer that finds it lacking should have
   the contract changed rather than work around it.
+- `bg_check.py` now fails a scene that scales a stamp whose longest side is 14px
+  or less by 3 or more when a higher-resolution variant of it already exists.
+  Enlarging adds pixels, not form. Large sources used large are untouched — the
+  defect is a 9px stamp filling a 36px slot, not a 46px one filling 184px.
 
 ### Changed
 
