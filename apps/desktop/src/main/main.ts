@@ -17,6 +17,8 @@ import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
 import {
   applyOverlayVisibility,
   broadcast,
+  createCombineWindow,
+  createGachaWindow,
   createPanelWindow,
   createPetWindow,
   showPanel,
@@ -36,6 +38,9 @@ let tray: Tray | undefined;
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = { showRoom, broadcast };
+
+const shouldOpenGachaPrototype = (): boolean => process.env['GACHA_PROTO_OPEN'] !== undefined;
+const shouldOpenCombinePrototype = (): boolean => process.env['COMBINE_PROTO_OPEN'] !== undefined;
 
 /**
  * 트레이 진입점. 기획서 2.1은 트레이를 MVP에 포함한다.
@@ -152,6 +157,8 @@ app.whenReady().then(() => {
   buildTray(state);
   buildAppMenu(state);
   applyOverlayVisibility(state.meta.settings.overlayVisible);
+  if (shouldOpenGachaPrototype()) createGachaWindow();
+  if (shouldOpenCombinePrototype()) createCombineWindow();
 
   // 앱 시작 집계. 기획서 8.2에 따라 이 스캔은 기준점만 만들고 아무것도 적립하지 않는다.
   // 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
@@ -191,6 +198,8 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
       createPetWindow(state.meta.settings.petSize);
       createPanelWindow();
+      if (shouldOpenGachaPrototype()) createGachaWindow();
+      if (shouldOpenCombinePrototype()) createCombineWindow();
     }
   });
 });

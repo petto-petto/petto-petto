@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Petto Petto — 비전 합성소</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="combine-shell">
+      <section class="combine-stage" aria-labelledby="combine-title">
+        <div class="stage-copy">
+          <p>ARCANE COMBINE</p>
+          <h1 id="combine-title">비전 합성소</h1>
+          <span>10장의 카드를 섞어 새로운 친구를 만드세요</span>
+        </div>
+        <div class="combine-space" aria-label="합성 항아리">
+          <div class="cauldron-reaction" aria-hidden="true">
+            <span class="toxic-lava"></span>
+            <span class="lava-bubble bubble-one"></span>
+            <span class="lava-bubble bubble-two"></span>
+            <span class="lava-bubble bubble-three"></span>
+            <article class="forge-result-card"></article>
+          </div>
+        </div>
+      </section>
+      <section class="combine-panel" aria-label="합성 재료 선택">
+        <div class="combine-tabs">
+          <button data-grade="common">COMMON 합성</button
+          ><button data-grade="rare">RARE 합성</button>
+        </div>
+        <strong class="token-readout"></strong>
+        <p class="combine-message" role="status"></p>
+        <div class="selection-slots"></div>
+        <div class="pet-grid"></div>
+        <button class="combine-button">합성하기</button><output class="combine-result"></output>
+      </section>
+    </main>
+    <script type="module" src="./app.mjs"></script>
+  </body>
+</html>

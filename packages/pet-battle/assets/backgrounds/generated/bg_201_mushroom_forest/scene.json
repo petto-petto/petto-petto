@@ -1,0 +1,398 @@
+{
+  "id": "bg_201",
+  "name": "Mushroom Forest",
+  "preset": "forest",
+  "canvas": [
+    360,
+    180
+  ],
+  "layout": "ground",
+  "seamless": false,
+  "horizon": 81,
+  "groundTop": 141,
+  "petAnchor": {
+    "x": 148,
+    "y": 77,
+    "w": 64,
+    "h": 64
+  },
+  "layers": [
+    {
+      "name": "sky",
+      "z": 0,
+      "parallax": 0.0,
+      "ops": [
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 4,
+          "to": 0,
+          "y0": 0,
+          "y1": 180,
+          "block": 2
+        },
+        {
+          "op": "rays",
+          "xs": [
+            28,
+            122,
+            237
+          ],
+          "y0": 0,
+          "y1": 180,
+          "slope": 2.4,
+          "width": 3,
+          "strength": 0.22,
+          "color": "light.4"
+        }
+      ]
+    },
+    {
+      "name": "far",
+      "z": 1,
+      "parallax": 0.25,
+      "ops": [
+        {
+          "op": "foliage",
+          "box": [
+            0,
+            0,
+            360,
+            8
+          ],
+          "ramp": "far",
+          "base": 0,
+          "rim": 2,
+          "shadow": 0,
+          "r": [
+            6,
+            10
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 2
+        },
+        {
+          "op": "hills",
+          "base": 69,
+          "amp": 6,
+          "period": 194,
+          "phase": 0.4,
+          "color": "far.1",
+          "edge": "far.3",
+          "edgeH": 3,
+          "to": 180
+        },
+        {
+          "op": "foliage",
+          "box": [
+            0,
+            69,
+            360,
+            36
+          ],
+          "ramp": "far",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [
+            6,
+            9
+          ],
+          "spacing": 1.0,
+          "rimW": 3,
+          "depthRange": 1,
+          "seed": 21,
+          "fillBelow": 180
+        },
+        {
+          "op": "scatter_depth",
+          "name": "tree_pine",
+          "y0": 78,
+          "y1": 120,
+          "count": 4,
+          "scale": [
+            2,
+            2
+          ],
+          "shade": [
+            3,
+            2
+          ],
+          "seed": 31,
+          "avoid": [
+            148,
+            212
+          ]
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "mid",
+      "z": 2,
+      "parallax": 0.55,
+      "ops": [
+        {
+          "op": "fringe",
+          "from": "bottom",
+          "base": 114,
+          "r": 14,
+          "spacing": 20,
+          "jitter": 4,
+          "seed": 4,
+          "to": 180,
+          "color": "mid.1",
+          "edge": "mid.3",
+          "edgeH": 3
+        },
+        {
+          "op": "foliage",
+          "box": [
+            0,
+            111,
+            360,
+            30
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            8,
+            14
+          ],
+          "spacing": 1.1,
+          "rimW": 3,
+          "depthRange": 1,
+          "seed": 23,
+          "fillBelow": 180
+        },
+        {
+          "op": "scatter_depth",
+          "name": "tree_round",
+          "y0": 117,
+          "y1": 141,
+          "count": 3,
+          "scale": [
+            2,
+            2
+          ],
+          "shade": [
+            2,
+            0
+          ],
+          "seed": 33,
+          "avoid": [
+            148,
+            212
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "bush",
+          "y0": 123,
+          "y1": 141,
+          "count": 6,
+          "scale": [
+            2,
+            3
+          ],
+          "shade": [
+            1,
+            0
+          ],
+          "seed": 35,
+          "avoid": [
+            148,
+            212
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "flower",
+          "y0": 126,
+          "y1": 141,
+          "count": 4,
+          "scale": [
+            2,
+            2
+          ],
+          "shade": [
+            0,
+            1
+          ],
+          "seed": 39
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "near",
+      "z": 3,
+      "parallax": 1.0,
+      "ops": [
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 18,
+          "h": 180,
+          "color": "near.0"
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 0,
+          "w": 3,
+          "h": 180,
+          "color": "near.2"
+        },
+        {
+          "op": "rect",
+          "x": 15,
+          "y": 0,
+          "w": 3,
+          "h": 180,
+          "color": "near.1"
+        },
+        {
+          "op": "texture",
+          "box": [
+            0,
+            0,
+            18,
+            180
+          ],
+          "color": "near.1",
+          "marks": "grain",
+          "density": 0.05,
+          "seed": 41
+        },
+        {
+          "op": "rect",
+          "x": 342,
+          "y": 0,
+          "w": 18,
+          "h": 180,
+          "color": "near.0"
+        },
+        {
+          "op": "rect",
+          "x": 342,
+          "y": 0,
+          "w": 3,
+          "h": 180,
+          "color": "near.2"
+        },
+        {
+          "op": "rect",
+          "x": 357,
+          "y": 0,
+          "w": 3,
+          "h": 180,
+          "color": "near.1"
+        },
+        {
+          "op": "texture",
+          "box": [
+            342,
+            0,
+            18,
+            180
+          ],
+          "color": "near.1",
+          "marks": "grain",
+          "density": 0.05,
+          "seed": 43
+        },
+        {
+          "op": "stamp",
+          "name": "vine",
+          "x": 24,
+          "y": 0,
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "stamp",
+          "name": "vine",
+          "x": 336,
+          "y": 0,
+          "anchor": "top",
+          "flip": true,
+          "scale": 2
+        },
+        {
+          "op": "ground_plane",
+          "y": 141,
+          "h": 39,
+          "ramp": "wood",
+          "far": 3,
+          "near": 0,
+          "cell": [
+            3,
+            15
+          ],
+          "seed": 5,
+          "edge": "leaf.2",
+          "edgeH": 3,
+          "furrow0": 1,
+          "furrowShift": 2,
+          "furrowStrength": 0.7,
+          "markShift": -1
+        },
+        {
+          "op": "vgradient",
+          "ramp": "near",
+          "from": 0,
+          "to": 2,
+          "box": [
+            0,
+            144,
+            360,
+            9
+          ],
+          "dither": true
+        },
+        {
+          "op": "scatter_depth",
+          "name": "grass_tuft",
+          "y0": 145,
+          "y1": 177,
+          "count": 12,
+          "scale": [
+            2,
+            3
+          ],
+          "shade": [
+            0,
+            1
+          ],
+          "seed": 37
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1,
+          "only": [
+            "leaf",
+            "accent"
+          ]
+        }
+      ]
+    }
+  ]
+}

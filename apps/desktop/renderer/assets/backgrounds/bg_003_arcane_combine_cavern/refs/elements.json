@@ -1,0 +1,12 @@
+{
+  "reference": "user-provided layout reference (Image #1)",
+  "structure": "horizontal",
+  "elements": [
+    {"name": "상단과 중앙을 비운 넓은 동굴 벽면", "op": "vgradient", "min": 1},
+    {"name": "천장 종유석과 암반 실루엣", "op": "fringe", "min": 1},
+    {"name": "좌우의 거대한 석주 프레이밍", "op": "tree_column", "min": 2},
+    {"name": "중앙 하단의 룬 마법광", "op": "glow", "min": 3},
+    {"name": "합성 제단", "op": "stamp:platform", "min": 1},
+    {"name": "깊이감 있는 동굴 바닥", "op": "ground_plane", "min": 1}
+  ]
+}
