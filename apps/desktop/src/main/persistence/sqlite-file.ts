@@ -49,8 +49,10 @@ export class SqliteFileDatabase {
     this.#database = undefined;
   }
 
-  prepare(sql: string): Database.Statement {
-    return this.#requireDatabase().prepare(sql);
+  prepare<BindParameters extends unknown[] = unknown[], Result = unknown>(
+    sql: string,
+  ): Database.Statement<BindParameters, Result> {
+    return this.#requireDatabase().prepare<BindParameters, Result>(sql);
   }
 
   exec(sql: string): void {

@@ -14,6 +14,9 @@ import { RoomCollectionPort } from './collection.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
+import { registerOverlayGrowthIpc } from './overlay/growth-ipc.ts';
+import { PetGrowthRepository } from './overlay/pet-growth-repository.ts';
+import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
 import {
   applyOverlayVisibility,
   beginOverlayDrag,
@@ -40,6 +43,7 @@ const appRoot = join(here, '..', '..');
 let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
+let growthRepository: PetGrowthRepository | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -177,6 +181,15 @@ app.whenReady().then(() => {
   const directory = app.getPath('userData');
   const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
+  const growthDatabase = new SqliteFileDatabase({ filePath: join(directory, 'petto.sqlite') });
+  growthRepository = new PetGrowthRepository(growthDatabase, {
+    legacyDatabasePaths: [
+      join(directory, 'pet-overlay.sqlite'),
+      join(app.getPath('appData'), 'Electron', 'pet-overlay.sqlite'),
+    ],
+  });
+  growthRepository.open();
+  registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
   // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
@@ -249,4 +262,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   state?.persist();
   room?.persist();
+  growthRepository?.close();
 });

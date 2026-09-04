@@ -95,6 +95,11 @@ contextBridge.exposeInMainWorld('overlay', {
   dragMove: (screenX, screenY) => ipcRenderer.send('overlay:drag-move', { screenX, screenY }),
   dragEnd: () => ipcRenderer.send('overlay:drag-end'),
   quit: () => ipcRenderer.send('overlay:quit'),
+  hydrateGrowth: (legacySnapshots) => ipcRenderer.invoke('growth:hydrate', legacySnapshots),
+  saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
+  clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),
+  loadOverlayState: () => ipcRenderer.invoke('overlay:load-state'),
+  saveOverlayState: (state) => ipcRenderer.invoke('overlay:save-state', state),
   onMenuClose: (listener) => {
     const wrapped = () => listener();
     ipcRenderer.on('overlay:menu-close', wrapped);
