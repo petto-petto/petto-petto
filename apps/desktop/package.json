@@ -5,11 +5,19 @@
   "type": "module",
   "description": "데스크톱 앱 — 도메인 패키지를 조립하고 창을 그린다",
   "main": "dist/main/main.js",
+  "scripts": {
+    "rebuild:native": "electron-rebuild -f -w better-sqlite3"
+  },
   "dependencies": {
     "@pet/combine": "*",
     "@pet/core": "*",
     "@pet/gacha": "*",
     "@pet/meta": "*",
-    "@pet/room": "*"
+    "@pet/room": "*",
+    "better-sqlite3": "^12.11.1"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.2.0",
+    "@types/better-sqlite3": "^9.6.0"
   }
 }
