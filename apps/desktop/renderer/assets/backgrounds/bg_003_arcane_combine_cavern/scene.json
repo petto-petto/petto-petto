@@ -1,0 +1,301 @@
+{
+  "id": "bg_003",
+  "name": "비전 합성 동굴",
+  "preset": "arcane_cavern",
+  "canvas": [
+    560,
+    240
+  ],
+  "layout": "interior",
+  "seamless": false,
+  "horizon": 112,
+  "groundTop": 184,
+  "petAnchor": {
+    "x": 248,
+    "y": 120,
+    "w": 64,
+    "h": 64
+  },
+  "layers": [
+    {
+      "name": "sky",
+      "z": 0,
+      "parallax": 0.0,
+      "ops": [
+        {
+          "op": "vgradient",
+          "ramp": "near",
+          "from": 4,
+          "to": 0,
+          "y0": 0,
+          "y1": 184,
+          "block": 2
+        },
+        {
+          "op": "rays",
+          "xs": [
+            52
+          ],
+          "y0": 0,
+          "y1": 132,
+          "slope": 1.7,
+          "width": 4,
+          "strength": 0.07,
+          "color": "light.3"
+        },
+        {
+          "op": "glow",
+          "x": 64,
+          "y": 34,
+          "rx": 50,
+          "ry": 40,
+          "strength": 0.12,
+          "gamma": 2.2,
+          "color": "light.4"
+        },
+        {
+          "op": "ground_plane",
+          "y": 184,
+          "h": 56,
+          "ramp": "near",
+          "far": 2,
+          "near": 0,
+          "cell": [
+            4,
+            28
+          ],
+          "seed": 91,
+          "edge": "accent.1",
+          "edgeH": 3,
+          "furrow0": 1,
+          "furrowShift": 2,
+          "furrowStrength": 0.72,
+          "markShift": -1
+        },
+        {
+          "op": "vignette",
+          "color": "near.0",
+          "edge": 34,
+          "strength": 0.38
+        }
+      ]
+    },
+    {
+      "name": "far",
+      "z": 1,
+      "parallax": 0.25,
+      "ops": [
+        {
+          "op": "foliage",
+          "box": [
+            0,
+            0,
+            560,
+            48
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            16,
+            28
+          ],
+          "spacing": 1.5,
+          "rimW": 4,
+          "spread": 2.4,
+          "depthRange": 1,
+          "seed": 71,
+          "fillBelow": false
+        },
+        {
+          "op": "fringe",
+          "from": "top",
+          "base": 4,
+          "r": 20,
+          "spacing": 40,
+          "jitter": 9,
+          "seed": 73,
+          "to": 62,
+          "color": "mid.0",
+          "edge": "mid.2",
+          "edgeH": 3
+        },
+        {
+          "op": "hills",
+          "base": 164,
+          "amp": 10,
+          "period": 246,
+          "phase": 0.7,
+          "color": "far.0",
+          "edge": "far.2",
+          "edgeH": 3,
+          "to": 184
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 160,
+          "w": 560,
+          "h": 3,
+          "color": "far.1"
+        }
+      ]
+    },
+    {
+      "name": "mid",
+      "z": 2,
+      "parallax": 0.55,
+      "ops": [
+        {
+          "op": "tree_column",
+          "x": 36,
+          "y0": 0,
+          "y1": 184,
+          "w": [
+            44,
+            62
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "lit": 4,
+          "dark": 0,
+          "sway": 2,
+          "period": 102,
+          "edge": "near.0",
+          "grooves": 2,
+          "flare": 7,
+          "flareTop": 5,
+          "seed": 81
+        },
+        {
+          "op": "tree_column",
+          "x": 524,
+          "y0": 0,
+          "y1": 184,
+          "w": [
+            44,
+            62
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "lit": 4,
+          "dark": 0,
+          "sway": 2,
+          "period": 98,
+          "phase": 1.4,
+          "edge": "near.0",
+          "grooves": 2,
+          "flare": 7,
+          "flareTop": 5,
+          "seed": 83
+        },
+        {
+          "op": "glow",
+          "x": 280,
+          "y": 181,
+          "rx": 94,
+          "ry": 38,
+          "strength": 0.34,
+          "gamma": 2.3,
+          "color": "light.3"
+        },
+        {
+          "op": "glow",
+          "x": 56,
+          "y": 55,
+          "rx": 40,
+          "ry": 66,
+          "strength": 0.14,
+          "gamma": 2.0,
+          "color": "light.2"
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 182,
+          "w": 560,
+          "h": 1,
+          "color": "accent.2"
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "near",
+      "z": 3,
+      "parallax": 1.0,
+      "ops": [
+        {
+          "op": "clearing",
+          "x": 280,
+          "y": 205,
+          "rx": 96,
+          "ry": 30,
+          "color": "light.2",
+          "core": 0.55,
+          "ring": 0.82
+        },
+        {
+          "op": "stamp",
+          "name": "platform",
+          "x": 280,
+          "y": 221,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 3
+        },
+        {
+          "op": "glow",
+          "x": 280,
+          "y": 194,
+          "rx": 48,
+          "ry": 20,
+          "strength": 0.48,
+          "gamma": 2.0,
+          "color": "light.4"
+        },
+        {
+          "op": "contact_shadow",
+          "x": 280,
+          "y": 222,
+          "w": 86,
+          "h": 4,
+          "color": "near.0",
+          "strength": 0.68
+        },
+        {
+          "op": "stamp",
+          "name": "rock",
+          "x": 104,
+          "y": 216,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 3,
+          "shade": 0
+        },
+        {
+          "op": "stamp",
+          "name": "rock",
+          "x": 456,
+          "y": 218,
+          "align": "center",
+          "anchor": "bottom",
+          "scale": 3,
+          "shade": 0
+        },
+        {
+          "op": "vignette",
+          "color": "near.0",
+          "edge": 24,
+          "strength": 0.28
+        }
+      ]
+    }
+  ]
+}

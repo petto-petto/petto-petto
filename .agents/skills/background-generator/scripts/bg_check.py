@@ -42,7 +42,7 @@ import bg_pillow_gate  # noqa: F401
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bgcore import REF_H, hex_rgba, preset, size_note
+from bgcore import list_stamps, REF_H, hex_rgba, preset, size_note
 
 LIMITS = {
     # --- 색 예산 ---
@@ -229,7 +229,78 @@ def main():
     r.add("composite opaque", comp.getchannel("A").getextrema()[0] == 255,
           f"min alpha={comp.getchannel('A').getextrema()[0]}")
     px_par = [l["parallax"] for l in ls]
+    # ── 스탬프 과확대 ------------------------------------------------------
+    # 9x6짜리 rock 을 scale 4 로 키우면 4px 블록 덩어리가 되지, 디테일이 생기지
+    # 않는다 — 확대는 픽셀을 늘릴 뿐 형태를 늘리지 않는다(stamps.md).
+    # 큰 원본을 크게 쓰는 것(window_snow 46px x4)은 문제가 아니므로, **작은
+    # 원본을 크게 쓰는데 고해상도 변형이 이미 있는 경우**만 잡는다.
+    try:
+        _st = {n: (w, h) for n, (_sub, w, h) in list_stamps().items()}
+    except Exception:
+        _st = {}
+    SMALL, LOUD = 14, 3
+    over = []
+    for lay in scene.get("layers", []):
+        for o in lay.get("ops", []):
+            if o.get("op") not in ("stamp", "scatter", "scatter_depth"):
+                continue
+            nm = o.get("name")
+            if nm not in _st:
+                continue
+            sc_ = o.get("scale", 1)
+            sc_ = max(sc_) if isinstance(sc_, (list, tuple)) else sc_
+            base = max(_st[nm])
+            if base > SMALL or sc_ < LOUD:
+                continue
+            alt = [v for v in _st
+                   if v != nm and v.startswith(nm + "_") and max(_st[v]) >= base * 1.5]
+            if alt:
+                over.append(f"{nm}({base}px) x{sc_} -> 고해상도 변형 {alt[0]}"
+                            f"({max(_st[alt[0]])}px)")
+    r.add("스탬프 과확대 없음", not over,
+          "ok" if not over else " / ".join(over[:3]))
+
     r.add("layers 3~5", 3 <= len(ls) <= 5, f"{len(ls)}개 {[l['name'] for l in ls]}")
+
+    # ── 애니메이션 프레임 -------------------------------------------------
+    # 프레임을 안 재면 승격이 아니라 위치 변경이다. 깨진 프레임, 크기가 다른
+    # 프레임, 선언한 레이어 말고 다른 게 바뀐 프레임이 조용히 통과한다.
+    anim = meta.get("animation")
+    if anim:
+        names = anim.get("frames") or []
+        layer_names = [l["name"] for l in ls]
+        r.add("animation: 레이어가 실재", anim.get("layer") in layer_names,
+              f"{anim.get('layer')} (레이어 {layer_names})")
+        r.add("animation: 프레임 2장 이상", len(names) >= 2, f"{len(names)}장")
+        r.add("animation: fps 1~30", 1 <= int(anim.get("fps", 0)) <= 30,
+              f"{anim.get('fps')}fps")
+        missing = [n for n in names
+                   if not os.path.isfile(os.path.join(a.outdir, n))]
+        r.add("animation: 프레임 파일 존재", not missing,
+              "모두 있음" if not missing else f"없음 {missing[:3]}")
+        r.add("animation: frames/ 하위에 둠",
+              all(n.startswith("frames/") for n in names),
+              "ok" if all(n.startswith("frames/") for n in names)
+              else "최상단 PNG는 레이어로 오인된다")
+        if not missing and names:
+            from PIL import Image as _I
+            sizes, sigs = set(), []
+            for n in names:
+                im = _I.open(os.path.join(a.outdir, n)).convert("RGBA")
+                sizes.add(im.size)
+                sigs.append(im.tobytes())
+            r.add("animation: 프레임 캔버스 일치", sizes == {(W, H)},
+                  f"{sorted(sizes)} (캔버스 {W}x{H})")
+            # 전부 같으면 애니메이션이 아니다. 12장을 굽고도 위상이 안 먹은
+            # 경우가 실제로 나온다.
+            r.add("animation: 프레임이 서로 다름", len(set(sigs)) > 1,
+                  f"서로 다른 프레임 {len(set(sigs))}/{len(sigs)}")
+            # 선언한 레이어의 원본과 크기가 같아야 교체가 성립한다.
+            lf = next((l["file"] for l in ls if l["name"] == anim.get("layer")), None)
+            if lf and os.path.isfile(os.path.join(a.outdir, lf)):
+                base = _I.open(os.path.join(a.outdir, lf)).size
+                r.add("animation: 교체 대상과 크기 일치", sizes == {base},
+                      f"{sorted(sizes)} vs {lf} {base}")
     r.add("parallax 단조증가", all(x < y for x, y in zip(px_par, px_par[1:])), f"{px_par}")
 
     # ============================================================ 색 예산

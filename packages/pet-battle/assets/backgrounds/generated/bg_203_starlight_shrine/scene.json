@@ -1,0 +1,246 @@
+{
+  "id": "bg_203",
+  "name": "Starlight Shrine",
+  "preset": "battle_starlight_crystal_shrine",
+  "canvas": [360, 180],
+  "layout": "ground",
+  "seamless": false,
+  "horizon": 84,
+  "groundTop": 138,
+  "petAnchor": {
+    "x": 148,
+    "y": 74,
+    "w": 64,
+    "h": 64
+  },
+  "layers": [
+    {
+      "name": "sky",
+      "z": 0,
+      "parallax": 0.0,
+      "ops": [
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 4,
+          "to": 0,
+          "y0": 0,
+          "y1": 180,
+          "block": 2
+        },
+        {
+          "op": "rays",
+          "xs": [28, 122, 237],
+          "y0": 0,
+          "y1": 180,
+          "slope": 2.4,
+          "width": 3,
+          "strength": 0.22,
+          "color": "light.4"
+        },
+        {
+          "op": "specks",
+          "box": [16, 8, 328, 70],
+          "count": 42,
+          "color": "light.4",
+          "seed": 203
+        }
+      ]
+    },
+    {
+      "name": "far",
+      "z": 1,
+      "parallax": 0.25,
+      "ops": [
+        {
+          "op": "hills",
+          "base": 72,
+          "amp": 6,
+          "period": 194,
+          "phase": 0.4,
+          "color": "far.2",
+          "edge": "far.4",
+          "edgeH": 3,
+          "to": 180
+        },
+        {
+          "op": "foliage",
+          "box": [0, 72, 360, 30],
+          "ramp": "far",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [6, 9],
+          "spacing": 1.0,
+          "rimW": 3,
+          "depthRange": 1,
+          "seed": 21,
+          "fillBelow": 180
+        },
+        {
+          "op": "scatter_depth",
+          "name": "spire",
+          "y0": 81,
+          "y1": 117,
+          "count": 4,
+          "scale": [2, 2],
+          "shade": [3, 2],
+          "seed": 31,
+          "avoid": [148, 212]
+        },
+        {
+          "op": "glow",
+          "x": 180,
+          "y": 82,
+          "rx": 34,
+          "ry": 24,
+          "color": "light.4",
+          "strength": 0.34,
+          "gamma": 1.8
+        },
+        {
+          "op": "rect",
+          "x": 166,
+          "y": 92,
+          "w": 28,
+          "h": 46,
+          "color": "accent.2"
+        },
+        {
+          "op": "rect",
+          "x": 174,
+          "y": 78,
+          "w": 12,
+          "h": 14,
+          "color": "accent.4"
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "mid",
+      "z": 2,
+      "parallax": 0.55,
+      "ops": [
+        {
+          "op": "fringe",
+          "from": "bottom",
+          "base": 111,
+          "r": 14,
+          "spacing": 20,
+          "jitter": 4,
+          "seed": 4,
+          "to": 180,
+          "color": "mid.2",
+          "edge": "mid.4",
+          "edgeH": 3
+        },
+        {
+          "op": "foliage",
+          "box": [0, 108, 360, 30],
+          "ramp": "mid",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [8, 14],
+          "spacing": 1.1,
+          "rimW": 3,
+          "depthRange": 1,
+          "seed": 23,
+          "fillBelow": 180
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock",
+          "y0": 114,
+          "y1": 138,
+          "count": 3,
+          "scale": [2, 2],
+          "shade": [2, 0],
+          "seed": 33,
+          "avoid": [148, 212]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock",
+          "y0": 120,
+          "y1": 138,
+          "count": 6,
+          "scale": [2, 3],
+          "shade": [1, 0],
+          "seed": 35,
+          "avoid": [148, 212]
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "near",
+      "z": 3,
+      "parallax": 1.0,
+      "ops": [
+        {
+          "op": "ground_plane",
+          "y": 138,
+          "h": 42,
+          "ramp": "near",
+          "far": 4,
+          "near": 1,
+          "cell": [3, 15],
+          "seed": 5,
+          "edge": "leaf.2",
+          "edgeH": 3,
+          "furrow0": 1,
+          "furrowShift": 2,
+          "furrowStrength": 0.7,
+          "markShift": -1
+        },
+        {
+          "op": "vgradient",
+          "ramp": "near",
+          "from": 0,
+          "to": 2,
+          "box": [0, 141, 360, 9],
+          "dither": true
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock",
+          "y0": 142,
+          "y1": 177,
+          "count": 6,
+          "scale": [2, 3],
+          "shade": [1, 0],
+          "seed": 37
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock",
+          "y0": 144,
+          "y1": 174,
+          "count": 3,
+          "scale": [2, 3],
+          "shade": [0, -1],
+          "seed": 45
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1,
+          "only": ["leaf", "accent"]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "frameWidth": 32,
+  "frameHeight": 32,
+  "frameCount": 6,
+  "columns": 6,
+  "fps": 11,
+  "loop": false
+}

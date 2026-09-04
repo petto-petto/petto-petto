@@ -1,0 +1,82 @@
+{
+  "id": "bg_202",
+  "name": "Crystal Ruins",
+  "preset": "battle_crystal_ruins",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 360,
+  "height": 180,
+  "seamless": false,
+  "horizon": 84,
+  "groundTop": 138,
+  "petAnchor": {
+    "x": 148,
+    "y": 74,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_202_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_202_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_202_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_202_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_202_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#161828",
+      "#1C1D33",
+      "#21130C",
+      "#252541",
+      "#2D2C4A",
+      "#311E12",
+      "#363455",
+      "#363953",
+      "#463E68",
+      "#464869",
+      "#49301D",
+      "#505173",
+      "#5B5B86",
+      "#5D4027",
+      "#5D5184",
+      "#686893",
+      "#6D6C99",
+      "#6E6097",
+      "#775535",
+      "#8886A9",
+      "#9391B0",
+      "#B2B0C4",
+      "#D2D0DC",
+      "#D4D3DD",
+      "#F8F7F9",
+      "#FAF9FA",
+      "#FAF9FB"
+    ],
+    "rampOverride": []
+  }
+}

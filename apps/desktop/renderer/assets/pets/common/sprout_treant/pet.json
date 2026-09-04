@@ -1,0 +1,20 @@
+{
+  "petId": "004",
+  "slug": "sprout_treant",
+  "name": "새싹나무",
+  "grade": "COMMON",
+  "stageCount": 3,
+  "palette": {
+    "outline": "#2C2438",
+    "body": "#8B6A4A",
+    "sub": [
+      "#6FB03A"
+    ]
+  },
+  "canvas": {
+    "stage1": 32,
+    "stage2": 32,
+    "stage3": 32
+  },
+  "note": "body/outline은 종 단위 고정. Stage 2·3을 그릴 때 이 값을 그대로 쓴다."
+}

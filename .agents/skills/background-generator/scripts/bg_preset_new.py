@@ -122,6 +122,108 @@ def dedupe(ramps):
     return ramps
 
 
+def derive(src_ramps, burn):
+    """기존 프리셋을 태워 새 램프를 만든다.
+
+    단일 곡선으로는 안 된다. 두 게이트가 반대로 당기기 때문이다 —
+    **레이어 분리**(각 레이어가 뒤와 명도차 0.10 이상)는 어두운 쪽 간격을 벌리라
+    하고, **명도 10구간**(각 2% 이상)은 바닥을 채우라 한다. 감마 하나를 올리면
+    앞이 깨지고 내리면 뒤가 깨진다(둘 다 실측으로 겪었다).
+
+    그래서 램프마다 **명도 밴드**를 잡고 사다리를 강제한다.
+
+      1. 램프의 원본 명도 범위를 태워 새 밴드로 옮긴다
+      2. 깊이 램프(sky>far>mid>near)의 간격을 원본의 85% 이상으로 되돌린다
+      3. `wood`(지면·기둥)는 `mid` 아래로 내린다 — 전경 레이어의 실체다
+      4. 가장 어두운 램프의 바닥을 0.06 이하로 눌러 최하 구간을 채운다
+      5. 색은 **RGB를 곱해** 목표 명도로 옮긴다. HLS의 L만 내리면 옅은 색이
+         채도를 그대로 유지해 쨍해진다 — 첫 번째 함정이다
+      6. 무채색 원본은 색이 실제로 있는 가장 가까운 단에서 색상을 물려받는다.
+         L이 1.0이면 재구성이 흰색이라 천장 아래로 먼저 내린다 — 두 번째 함정
+
+    burn 0 이면 원본 그대로, 1 이면 가장 많이 탄다.
+    """
+    names = list(src_ramps)
+
+    def band(ramp):
+        ls = [hls(c)[1] for c in ramp]
+        return min(ls), max(ls)
+
+    src_band = {n: band(src_ramps[n]) for n in names}
+    src_mean = {n: sum(hls(c)[1] for c in src_ramps[n]) / len(src_ramps[n]) for n in names}
+
+    # 1) 밴드를 태운다. light 는 표면색이 아니라 광원이라 덜 태운다 —
+    #    여기까지 누르면 화면에서 하이라이트가 사라져 동적 범위가 무너진다.
+    tgt = {}
+    for n in names:
+        w = 0.25 if n == "light" else 1.0
+        ceiling = 1.0 - 0.34 * burn * w
+        lo, hi = src_band[n]
+        tgt[n] = (max(0.02, ceiling * lo), max(0.04, ceiling * hi))
+
+    # 2) 깊이 사다리 복원. 태우면 간격이 줄어드는데, 줄어든 만큼 레이어 분리가 깨진다.
+    depth = [n for n in ("sky", "far", "mid", "near") if n in tgt]
+    for a, b in zip(depth, depth[1:]):
+        want = (src_mean[a] - src_mean[b]) * 0.85
+        mid_a = sum(tgt[a]) / 2
+        mid_b = sum(tgt[b]) / 2
+        short = want - (mid_a - mid_b)
+        if short > 0:
+            lo, hi = tgt[b]
+            tgt[b] = (max(0.02, lo - short), max(0.04, hi - short))
+
+    # 3) wood 는 지면과 기둥이다 — 전경 레이어의 실체이므로 mid 아래에 둔다.
+    if "wood" in tgt and "mid" in tgt:
+        want_mid = sum(tgt["mid"]) / 2 - 0.06 * (0.5 + burn)
+        cur = sum(tgt["wood"]) / 2
+        if cur > want_mid:
+            d = cur - want_mid
+            lo, hi = tgt["wood"]
+            tgt["wood"] = (max(0.02, lo - d), max(0.04, hi - d))
+
+    # 4) 최하 구간을 채운다. 바닥이 비면 '명도 10구간' 이 깨진다.
+    darkest = min(tgt, key=lambda n: tgt[n][0])
+    if tgt[darkest][0] > 0.06:
+        lo, hi = tgt[darkest]
+        d = lo - 0.05
+        tgt[darkest] = (lo - d, max(0.06, hi - d))
+
+    out = {}
+    for n in names:
+        ramp = src_ramps[n]
+        hues = [hls(c)[0] for c in ramp]
+        sats = [hls(c)[2] for c in ramp]
+        lo, hi = src_band[n]
+        lo2, hi2 = tgt[n]
+        new = []
+        for i, hx in enumerate(ramp):
+            h, l, sa = hls(hx)
+            if sa < 0.06:                      # 6) 무채색 상속
+                order = sorted(range(len(ramp)), key=lambda k: (abs(k - i), k))
+                j = next((k for k in order if sats[k] >= 0.15), None)
+                if j is None:
+                    j = max(range(len(ramp)), key=lambda k: sats[k])
+                h, sa = hues[j], max(sats[j], 0.18)
+                l = min(l, 0.94)
+            src_hue = h
+            t = (l - lo) / (hi - lo) if hi > lo else 0.0
+            target = lo2 + (hi2 - lo2) * t
+            r, g, bb = colorsys.hls_to_rgb(h / 360.0, l, sa)
+            f = max(0.04, min(1.0, target / max(l, 1e-4)))     # 5) RGB 곱
+            nh, nl, ns = colorsys.rgb_to_hls(r * f, g * f, bb * f)
+            # RGB를 곱하면 쨍해지지는 않지만 HLS 채도가 같이 떨어져 큰 면이
+            # 탁하게 읽힌다. 잃은 만큼의 일부만 되돌린다 — 전부 되돌리면 함정 1.
+            hue_out = nh * 360.0 if ns > 0.05 else src_hue
+            new.append(mk(hue_out, nl, min(0.95, ns + (sa - ns) * 0.40)))
+        for i in range(1, len(new)):
+            pl = hls(new[i - 1])[1]
+            ch, cl, cs = hls(new[i])
+            if cl <= pl:
+                new[i] = mk(ch, min(1.0, pl + 0.02), cs)
+        out[n] = new
+    return out
+
+
 def build(mood, anchors=None, terrain=None):
     t = terrain or pick(mood, TERRAIN_WORDS) or "forest"
     a_sky, a_far, a_mid, a_near = anchors or TERRAIN[t]
@@ -208,7 +310,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--name", required=True, help="프리셋 키 (영문 소문자+언더스코어)")
-    ap.add_argument("--mood", required=True, help="분위기 키워드, 쉼표 구분")
+    ap.add_argument("--mood", help="분위기 키워드, 쉼표 구분 (--from 이면 생략 가능)")
+    ap.add_argument("--from", dest="src", help="기존 프리셋을 태워 파생한다")
+    ap.add_argument("--burn", type=float, default=0.7,
+                    help="--from 과 함께. 0=원본 그대로, 1=가장 많이 탄다 (기본 0.7)")
     ap.add_argument("--label", help="한 줄 설명")
     ap.add_argument("--terrain", help=f"자동 판정 대신 직접 지정: {sorted(TERRAIN)}")
     ap.add_argument("--anchors", help="'하늘,원경,중경,전경' hex 4개로 직접 지정")
@@ -227,19 +332,55 @@ def main():
             raise SystemExit(
                 f"'{a.name}' 프리셋이 이미 있다. 기존 프리셋은 다른 배경들이 쓰고 있으므로\n"
                 f"조용히 덮지 않는다. 다른 이름을 쓰거나, 정말 갈아엎을 거면 --force.")
-    anchors = [x.strip() for x in a.anchors.split(",")] if a.anchors else None
-    terrain, tm, ramps = build(a.mood, anchors, a.terrain)
+    if a.src:
+        src = json.load(open(PRESET_PATH, encoding="utf-8")).get(a.src)
+        if not src:
+            raise SystemExit(f"'{a.src}' 프리셋이 없다.")
+        ramps = dedupe(derive(src["ramps"], a.burn))
+        # 태우면 레이어 분리가 먼저 깨진다. 렌더하기 전에 알려 준다 —
+        # 실측: jungle 을 burn 0.9 로 태우면 near 레이어의 명도차가 0.086 으로
+        # 떨어져 bg_check 가 걸린다(기준 0.10).
+        def _mean(r):
+            return sum(hls(c)[1] for c in r) / len(r)
+        gaps = []
+        order = [n for n in ("sky", "far", "mid", "near") if n in ramps]
+        for x, y in zip(order, order[1:]):
+            gaps.append((f"{x}->{y}", _mean(ramps[x]) - _mean(ramps[y]),
+                         _mean(src["ramps"][x]) - _mean(src["ramps"][y])))
+        if "wood" in ramps and "mid" in ramps:
+            gaps.append(("mid->wood", _mean(ramps["mid"]) - _mean(ramps["wood"]),
+                         _mean(src["ramps"]["mid"]) - _mean(src["ramps"]["wood"])))
+        print("# 레이어 분리 예측 (bg_check 의 '뒤와 명도차' 는 씬에 따라 달라진다)",
+              file=sys.stderr)
+        for label, now, was in gaps:
+            flag = "ok" if now >= 0.10 else "얇음"
+            print(f"#   [{flag}] {label:<11} {now:.3f}  (원본 {was:+.3f})", file=sys.stderr)
+        if any(now < 0.10 for _, now, _ in gaps):
+            print("#   -> --burn 을 낮추거나, 씬에서 base/lit/dark 로 단을 벌릴 것",
+                  file=sys.stderr)
+        terrain = a.terrain or src.get("terrain", "forest")
+        tm = f"burn {a.burn}"
+        a.layout = a.layout if a.layout != "ground" else src.get("layout", "ground")
+        a.kind = a.kind if a.kind != "outdoor" else src.get("kind", "outdoor")
+        a.mood = a.mood or ",".join(src.get("mood", []))
+    else:
+        if not a.mood:
+            raise SystemExit("--mood 또는 --from 중 하나는 있어야 한다.")
+        anchors = [x.strip() for x in a.anchors.split(",")] if a.anchors else None
+        terrain, tm, ramps = build(a.mood, anchors, a.terrain)
     muted_ok = terrain in MUTED_OK
     entry = {
         "label": a.label or f"{a.mood} — {terrain}",
-        "source": f"mood:{a.mood}",
+        "source": (f"derived:{a.src} (burn {a.burn})" if a.src else f"mood:{a.mood}"),
         "kind": a.kind,
         "layout": a.layout,
         "terrain": terrain,
         "paletteMode": "cool" if muted_ok else "vivid",
         "mood": [m.strip() for m in re.split(r"[,\s]+", a.mood) if m.strip()],
         "ramps": ramps,
-        "defaults": {"horizon": 56, "groundTop": 92},
+        "defaults": (dict(json.load(open(PRESET_PATH, encoding="utf-8"))[a.src]
+                          .get("defaults", {})) if a.src
+                     else {"horizon": 56, "groundTop": 92}),
     }
     print(f"# 판정: 지형={terrain}  시간대={tm or 'day'}  "
           f"팔레트모드={entry['paletteMode']}", file=sys.stderr)

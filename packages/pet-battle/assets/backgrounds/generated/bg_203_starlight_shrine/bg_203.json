@@ -1,0 +1,86 @@
+{
+  "id": "bg_203",
+  "name": "Starlight Shrine",
+  "preset": "battle_starlight_crystal_shrine",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 360,
+  "height": 180,
+  "seamless": false,
+  "horizon": 84,
+  "groundTop": 138,
+  "petAnchor": {
+    "x": 148,
+    "y": 74,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_203_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_203_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_203_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_203_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_203_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#1A1925",
+      "#21150C",
+      "#23202F",
+      "#2E2A3C",
+      "#312112",
+      "#363145",
+      "#3C3B4E",
+      "#403A4F",
+      "#49341D",
+      "#4E4661",
+      "#4E4C63",
+      "#59566E",
+      "#5D4527",
+      "#665A7B",
+      "#66627E",
+      "#746F8C",
+      "#775B35",
+      "#786A8E",
+      "#787391",
+      "#7D623A",
+      "#908BA2",
+      "#9B96AB",
+      "#9E814C",
+      "#AF9560",
+      "#B7B3C1",
+      "#BCA97F",
+      "#D5D2DA",
+      "#D6D4DB",
+      "#F8F8F9",
+      "#F9F7F9",
+      "#FAF9FA"
+    ],
+    "rampOverride": []
+  }
+}

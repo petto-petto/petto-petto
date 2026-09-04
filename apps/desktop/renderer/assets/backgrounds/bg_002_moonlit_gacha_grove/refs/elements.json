@@ -1,0 +1,16 @@
+{
+  "reference": "apps/desktop/renderer/assets/backgrounds/bg_001_cozy_study/bg_001_composite.png 및 design.md",
+  "structure": "horizontal",
+  "note": "공통 배경의 도트 밀도와 레이어 구조를 숲속 가챠 공터로 재해석",
+  "elements": [
+    { "name": "중앙 돌 소환 제단", "op": "stamp:platform", "min": 1 },
+    { "name": "좌우 프레이밍 고목", "op": "tree_column", "min": 2 },
+    { "name": "전경·중경 잎 군락", "op": "foliage", "min": 3 },
+    { "name": "늘어진 덩굴", "op": "stamp:vine", "min": 2 },
+    { "name": "제단 주변 룬석", "op": "stamp:rock", "min": 1 },
+    { "name": "제단 주변 뾰족 룬석", "op": "stamp:spire", "min": 1 },
+    { "name": "중앙 확산광", "op": "glow", "min": 1 },
+    { "name": "물러나는 숲 지면", "op": "ground_plane", "min": 1 },
+    { "name": "접지 그림자", "op": "contact_shadow", "min": 1 }
+  ]
+}

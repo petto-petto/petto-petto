@@ -2,6 +2,9 @@ dist
 node_modules
 package-lock.json
 
+# 파이썬 가상환경. background-generator가 Pillow를 여기서 쓴다. 프로젝트 소스가 아니다.
+.venv
+
 # 펫 도트 에셋. 팀원이 만든 원본이라 형식을 건드리지 않는다.
 apps/desktop/renderer/assets
 

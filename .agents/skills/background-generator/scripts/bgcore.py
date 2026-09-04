@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """bg_* 스크립트 공용 — 프리셋 로딩, 색 해석, 디더, 스탬프 로딩."""
+import colorsys
 import json
+import math
 import os
 import re
 
@@ -62,6 +64,49 @@ def preset(name):
     validate_preset(name, p[name])
     p[name].setdefault("layout", "ground")
     return p[name]
+
+
+def accent_contrast(pre):
+    """accent 램프가 화면을 채우는 색과 얼마나 떨어져 있나 (도).
+
+    `color.md`는 accent를 '색조를 넓히는 자리'라고 정한다. 그런데 accent가 매스
+    램프(mid·leaf·near)와 같은 계열이면 그 일을 못 하고, 화면이 단색 인상으로
+    읽힌다 — 초록 숲에 청록 accent를 쓰면 어디에도 초록 아닌 것이 없다.
+
+    실측(2026-09-03): forest 32도 / sky 43도 / interior 8도 / jungle 60도.
+    다섯 프리셋 중 셋이 대비를 만들지 못하는 상태였다.
+
+    반환: (매스 평균 색상, accent 평균 색상, 원형 거리). 색이 무채색뿐이면 None.
+    """
+    def mean_hue(ramp):
+        xs = ys = 0.0
+        for hx in ramp:
+            r, g, b = (int(hx[i:i + 2], 16) / 255 for i in (1, 3, 5))
+            h, _l, s = colorsys.rgb_to_hls(r, g, b)
+            if s < 0.10:
+                continue
+            xs += math.cos(h * math.tau)
+            ys += math.sin(h * math.tau)
+        if not (xs or ys):
+            return None
+        return math.degrees(math.atan2(ys, xs)) % 360
+
+    ramps = pre.get("ramps", {})
+    if "accent" not in ramps:
+        return None
+    xs = ys = 0.0
+    for key in ("mid", "leaf", "near"):
+        h = mean_hue(ramps[key]) if key in ramps else None
+        if h is None:
+            continue
+        xs += math.cos(math.radians(h))
+        ys += math.sin(math.radians(h))
+    ah = mean_hue(ramps["accent"])
+    if ah is None or not (xs or ys):
+        return None
+    mh = math.degrees(math.atan2(ys, xs)) % 360
+    d = abs(ah - mh)
+    return mh, ah, min(d, 360 - d)
 
 
 def validate_preset(name, pre):

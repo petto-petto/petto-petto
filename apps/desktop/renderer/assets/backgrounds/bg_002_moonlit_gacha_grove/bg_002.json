@@ -1,0 +1,89 @@
+{
+  "id": "bg_002",
+  "name": "달빛 소환 숲",
+  "preset": "forest",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 560,
+  "height": 240,
+  "seamless": false,
+  "horizon": 108,
+  "groundTop": 188,
+  "petAnchor": {
+    "x": 248,
+    "y": 124,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_002_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_002_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_002_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_002_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_002_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#172808",
+      "#1F4213",
+      "#22380F",
+      "#2D6520",
+      "#2E4810",
+      "#31701F",
+      "#3C5C18",
+      "#3E7F2C",
+      "#3FA98C",
+      "#47912E",
+      "#4A3A18",
+      "#4E7422",
+      "#4E7A46",
+      "#569A43",
+      "#5BC657",
+      "#5FAE3E",
+      "#6B9A5C",
+      "#6C6E1F",
+      "#6FB554",
+      "#84CC5B",
+      "#8CB877",
+      "#8ECF6E",
+      "#8FE07A",
+      "#979548",
+      "#A7CE92",
+      "#ABB67D",
+      "#B8F0A2",
+      "#C4E0B0",
+      "#C8EDCF",
+      "#C9D0A0",
+      "#DCF5E0",
+      "#DEF3D4",
+      "#EFFAF0",
+      "#FFFFF4"
+    ],
+    "rampOverride": []
+  }
+}
