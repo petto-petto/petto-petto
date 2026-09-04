@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 
-import { PetGrowthRepository } from './pet-growth-repository.ts';
+import { PetGrowthRepository } from '../persistence/repositories/pet-growth-repository.ts';
 
 /** renderer가 성장 저장소에 접근하는 명시적 IPC 채널만 등록한다. */
 export function registerOverlayGrowthIpc(repository: PetGrowthRepository): void {

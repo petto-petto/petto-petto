@@ -49,7 +49,8 @@ test('공용 저장소는 기존 오버레이 SQLite를 한 번 이관하고 loc
   createLegacyDatabase(legacyPath);
 
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
-  const { PetGrowthRepository } = await import('../dist/main/overlay/pet-growth-repository.js');
+  const { PetGrowthRepository } =
+    await import('../dist/main/persistence/repositories/pet-growth-repository.js');
   const repository = new PetGrowthRepository(new SqliteFileDatabase({ filePath: targetPath }), {
     legacyDatabasePaths: [join(directory, 'missing.sqlite'), legacyPath],
   });

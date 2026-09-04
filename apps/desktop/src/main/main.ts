@@ -14,8 +14,8 @@ import { RoomCollectionPort } from './collection.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
-import { registerOverlayGrowthIpc } from './overlay/growth-ipc.ts';
-import { PetGrowthRepository } from './overlay/pet-growth-repository.ts';
+import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
 import {
   applyOverlayVisibility,

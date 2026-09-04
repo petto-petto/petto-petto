@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 
 import Database from 'better-sqlite3';
 
-import { SqliteFileDatabase, type SqliteMigration } from '../persistence/sqlite-file.ts';
+import { SqliteFileDatabase, type SqliteMigration } from '../sqlite-file.ts';
 
 const LOCAL_STORAGE_MIGRATION_KEY = 'migration.localstorage.pet-growth-v1';
 const LEGACY_DATABASE_MIGRATION_KEY = 'migration.database.pet-overlay-v1';
