@@ -92,7 +92,11 @@ export function applyXp(pet: GrowthPet, amount: number): XpApplication {
 }
 
 /** 진화는 자동으로 일어나지 않으며, 사용자의 명시적 요청에서만 실행한다. */
-export function evolve(pet: GrowthPet): { pet: GrowthPet; evolved: boolean; events: readonly GrowthEvent[] } {
+export function evolve(pet: GrowthPet): {
+  pet: GrowthPet;
+  evolved: boolean;
+  events: readonly GrowthEvent[];
+} {
   if (!isEvolutionAvailable(pet)) return { pet, evolved: false, events: [] };
   const previousStage = pet.evolutionStage;
   const next = { ...pet, evolutionStage: previousStage + 1 };

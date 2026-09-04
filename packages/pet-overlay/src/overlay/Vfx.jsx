@@ -20,7 +20,17 @@ function drawStar(ctx, x, y, outer, inner, points) {
 
 const Vfx = forwardRef(function Vfx(_, ref) {
   const canvasRef = useRef(null);
-  const S = useRef({ particles: [], wisps: [], rings: [], flash: 0, aura: null, t: 0, raf: 0, running: false, ctx: null });
+  const S = useRef({
+    particles: [],
+    wisps: [],
+    rings: [],
+    flash: 0,
+    aura: null,
+    t: 0,
+    raf: 0,
+    running: false,
+    ctx: null,
+  });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,26 +52,37 @@ const Vfx = forwardRef(function Vfx(_, ref) {
       const dt = Math.min(40, now - last) / 1000;
       last = now;
       step(dt);
-      const busy = s.particles.length || s.wisps.length || s.rings.length || s.flash > 0 || (s.aura && s.aura.life > 0);
+      const busy =
+        s.particles.length ||
+        s.wisps.length ||
+        s.rings.length ||
+        s.flash > 0 ||
+        (s.aura && s.aura.life > 0);
       if (busy) s.raf = requestAnimationFrame(tick);
-      else { s.running = false; s.ctx.clearRect(0, 0, SIZE, SIZE); }
+      else {
+        s.running = false;
+        s.ctx.clearRect(0, 0, SIZE, SIZE);
+      }
     };
     s.raf = requestAnimationFrame(tick);
   }
 
-  function push(p) { S.current.particles.push(p); }
+  function push(p) {
+    S.current.particles.push(p);
+  }
 
   function spawnWisp() {
     const s = S.current;
     const life = 0.7 + Math.random() * 1.1;
     s.wisps.push({
-      r: 46 + Math.random() * 92,                         // 펫을 감싸는 반경
+      r: 46 + Math.random() * 92, // 펫을 감싸는 반경
       theta: Math.random() * Math.PI * 2,
       omega: (2.0 + Math.random() * 2.4) * (Math.random() < 0.85 ? 1 : -1), // 대부분 한 방향 → 휘몰아침
-      dr: -(8 + Math.random() * 22),                       // 안쪽으로 빨려드는 소용돌이
-      arc: 0.5 + Math.random() * 1.1,                      // 필라멘트 길이(호)
+      dr: -(8 + Math.random() * 22), // 안쪽으로 빨려드는 소용돌이
+      arc: 0.5 + Math.random() * 1.1, // 필라멘트 길이(호)
       hue: Math.floor(Math.random() * 360),
-      life, max: life,
+      life,
+      max: life,
     });
   }
 
@@ -73,14 +94,30 @@ const Vfx = forwardRef(function Vfx(_, ref) {
     // 오라: 지속적으로 위스프(필라멘트) 생성
     if (s.aura && s.aura.life > 0) {
       s.aura.life -= dt;
-      if (s.aura.life > 0.25) { const n = 3; for (let i = 0; i < n; i++) spawnWisp(); }
+      if (s.aura.life > 0.25) {
+        const n = 3;
+        for (let i = 0; i < n; i++) spawnWisp();
+      }
     }
 
-    for (const w of s.wisps) { w.life -= dt; w.theta += w.omega * dt; w.r = Math.max(16, w.r + w.dr * dt); w.hue = (w.hue + dt * 120) % 360; }
+    for (const w of s.wisps) {
+      w.life -= dt;
+      w.theta += w.omega * dt;
+      w.r = Math.max(16, w.r + w.dr * dt);
+      w.hue = (w.hue + dt * 120) % 360;
+    }
     s.wisps = s.wisps.filter((w) => w.life > 0);
-    for (const p of s.particles) { p.life -= dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.g * dt; }
+    for (const p of s.particles) {
+      p.life -= dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.vy += p.g * dt;
+    }
     s.particles = s.particles.filter((p) => p.life > 0);
-    for (const r of s.rings) { r.life -= dt; r.r += r.vr * dt; }
+    for (const r of s.rings) {
+      r.life -= dt;
+      r.r += r.vr * dt;
+    }
     s.rings = s.rings.filter((r) => r.life > 0);
     if (s.flash > 0) s.flash = Math.max(0, s.flash - dt / 0.5);
 
@@ -119,7 +156,9 @@ const Vfx = forwardRef(function Vfx(_, ref) {
       ctx.lineWidth = r.width;
       ctx.shadowBlur = 16;
       ctx.shadowColor = r.color;
-      ctx.beginPath(); ctx.arc(CX, CY, r.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(CX, CY, r.r, 0, Math.PI * 2);
+      ctx.stroke();
     }
 
     // 화이트 플래시
@@ -140,7 +179,11 @@ const Vfx = forwardRef(function Vfx(_, ref) {
       ctx.shadowBlur = 12;
       ctx.shadowColor = p.color;
       if (p.kind === 'star') drawStar(ctx, p.x, p.y, p.size * 1.8, p.size * 0.7, 4);
-      else { ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fill(); }
+      else {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
     ctx.restore();
   }
@@ -160,10 +203,16 @@ const Vfx = forwardRef(function Vfx(_, ref) {
         const rad = 20 + Math.random() * 90;
         const life = 0.5 + Math.random() * 1.1;
         push({
-          x: CX + Math.cos(ang) * rad, y: CY + Math.sin(ang) * rad,
-          vx: (Math.random() - 0.5) * 24, vy: -(24 + Math.random() * 60), g: -6,
-          life, max: life, size: 1.4 + Math.random() * 2,
-          color: `hsl(${Math.floor(Math.random() * 360)},100%,74%)`, kind: 'star',
+          x: CX + Math.cos(ang) * rad,
+          y: CY + Math.sin(ang) * rad,
+          vx: (Math.random() - 0.5) * 24,
+          vy: -(24 + Math.random() * 60),
+          g: -6,
+          life,
+          max: life,
+          size: 1.4 + Math.random() * 2,
+          color: `hsl(${Math.floor(Math.random() * 360)},100%,74%)`,
+          kind: 'star',
         });
       }
       loop();
@@ -177,9 +226,14 @@ const Vfx = forwardRef(function Vfx(_, ref) {
         const spd = 150 + Math.random() * 260;
         const life = 0.7 + Math.random() * 1.0;
         push({
-          x: CX, y: CY + 8,
-          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd, g: 280,
-          life, max: life, size: 2 + Math.random() * 3,
+          x: CX,
+          y: CY + 8,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd,
+          g: 280,
+          life,
+          max: life,
+          size: 2 + Math.random() * 3,
           color: Math.random() < 0.5 ? '#ffd35a' : '#fff4c0',
           kind: Math.random() < 0.25 ? 'star' : 'dot',
         });
@@ -194,10 +248,16 @@ const Vfx = forwardRef(function Vfx(_, ref) {
         const spd = 60 + Math.random() * 130;
         const life = 0.5 + Math.random() * 0.5;
         push({
-          x: CX, y: CY + 4,
-          vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd - 40, g: 120,
-          life, max: life, size: 1.5 + Math.random() * 2.5,
-          color: Math.random() < 0.5 ? '#6dffa0' : '#38e6ff', kind: 'dot',
+          x: CX,
+          y: CY + 4,
+          vx: Math.cos(ang) * spd,
+          vy: Math.sin(ang) * spd - 40,
+          g: 120,
+          life,
+          max: life,
+          size: 1.5 + Math.random() * 2.5,
+          color: Math.random() < 0.5 ? '#6dffa0' : '#38e6ff',
+          kind: 'dot',
         });
       }
       loop();

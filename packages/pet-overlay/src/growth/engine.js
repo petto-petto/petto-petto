@@ -1,8 +1,13 @@
 // 성장 엔진 — 프레임워크 비의존, node/브라우저 공용
 // 기획: 성장시스템.md (XP 환산, 레벨 곡선, 순차 진화)
 import {
-  TOKENS_PER_XP, SESSION_STEP_MIN, SESSION_STEP_BONUS, SESSION_BONUS_MAX,
-  LEVEL_MIN, LEVEL_MAX, EVOLUTION_LEVELS,
+  TOKENS_PER_XP,
+  SESSION_STEP_MIN,
+  SESSION_STEP_BONUS,
+  SESSION_BONUS_MAX,
+  LEVEL_MIN,
+  LEVEL_MAX,
+  EVOLUTION_LEVELS,
 } from './constants.js';
 
 // 레벨 k -> k+1 에 필요한 XP (완만한 곡선)
@@ -21,7 +26,8 @@ export function isEvolutionAvailable(pet) {
 
 export function createPet(id = 'pet-001', name = 'MOCHI') {
   return {
-    id, name,
+    id,
+    name,
     level: LEVEL_MIN,
     xpIntoLevel: 0,
     totalXp: 0,
@@ -52,8 +58,11 @@ export function applyXp(pet, gain) {
     p.xpIntoLevel += gain;
     while (p.level < LEVEL_MAX) {
       const req = requiredXp(p.level);
-      if (p.xpIntoLevel >= req) { p.xpIntoLevel -= req; p.level += 1; leveledUp = true; }
-      else break;
+      if (p.xpIntoLevel >= req) {
+        p.xpIntoLevel -= req;
+        p.level += 1;
+        leveledUp = true;
+      } else break;
     }
     if (p.level >= LEVEL_MAX) p.xpIntoLevel = 0; // 만렙: 레벨 내 XP 고정
   }

@@ -1,4 +1,9 @@
-import { GrowthController, type GrowthResult, type GrowthSnapshot, type UsageInput } from '../domain/controller.ts';
+import {
+  GrowthController,
+  type GrowthResult,
+  type GrowthSnapshot,
+  type UsageInput,
+} from '../domain/controller.ts';
 import { createGrowthPet } from '../domain/growth.ts';
 import { PETS, type PetKey } from '../domain/pets.ts';
 import type { GrowthStore } from '../ports/index.ts';
@@ -14,7 +19,10 @@ export class OverlayGrowthState {
     for (const descriptor of PETS) {
       this.#controllers.set(
         descriptor.key,
-        new GrowthController(createGrowthPet(descriptor.key, descriptor.name), stored[descriptor.key]),
+        new GrowthController(
+          createGrowthPet(descriptor.key, descriptor.name),
+          stored[descriptor.key],
+        ),
       );
     }
   }
@@ -45,7 +53,8 @@ export class OverlayGrowthState {
 
   persist(): void {
     const snapshots = {} as Record<PetKey, GrowthSnapshot>;
-    for (const descriptor of PETS) snapshots[descriptor.key] = this.growthFor(descriptor.key).snapshot();
+    for (const descriptor of PETS)
+      snapshots[descriptor.key] = this.growthFor(descriptor.key).snapshot();
     this.#store.save(snapshots);
   }
 }

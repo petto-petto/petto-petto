@@ -59,7 +59,9 @@ export class GrowthController {
     const remainder = this.#tokenBank % TOKENS_PER_XP;
     const fractionalXp = remainder / TOKENS_PER_XP;
     const progress =
-      this.#pet.level >= 50 ? 1 : Math.min(1, (this.#pet.xpIntoLevel + fractionalXp) / requiredXp(this.#pet.level));
+      this.#pet.level >= 50
+        ? 1
+        : Math.min(1, (this.#pet.xpIntoLevel + fractionalXp) / requiredXp(this.#pet.level));
     return {
       pet: { ...this.#pet },
       levelProgress: progress,

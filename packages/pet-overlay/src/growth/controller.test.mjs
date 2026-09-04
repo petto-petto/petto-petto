@@ -20,7 +20,7 @@ assert.strictEqual(e.pet.totalXp, before + 5);
 // 실시간(applyNow): 5,000 미만은 누적만, 경계 넘으면 즉시 지급 (잔여 토큰 손실 없음)
 const rt = new GrowthController();
 let a = rt.applyNow({ tokens: 3000, timestamp: 0 });
-assert.strictEqual(a.gained, 0);            // 3000 < 5000 -> 누적만
+assert.strictEqual(a.gained, 0); // 3000 < 5000 -> 누적만
 assert.strictEqual(a.toNext, 2000);
 a = rt.applyNow({ tokens: 3000, timestamp: 50 }); // 누적 6000 -> 1 XP 즉시
 assert.strictEqual(a.gained, 1);
