@@ -21,6 +21,7 @@ import {
   applyOverlayVisibility,
   beginOverlayDrag,
   broadcast,
+  createBattleWindow,
   createOverlayWindow,
   createCombineWindow,
   createGachaWindow,
@@ -74,6 +75,9 @@ function mountOverlayWindowIpc(): void {
   });
   ipcMain.on('overlay:drag-end', () => endOverlayDrag());
   ipcMain.on('overlay:quit', () => app.quit());
+  ipcMain.handle('battle:open', () => {
+    createBattleWindow();
+  });
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */

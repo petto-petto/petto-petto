@@ -10,6 +10,7 @@
     "test:storage": "tsc --build && ELECTRON_RUN_AS_NODE=1 electron --test test/pet-growth-repository.test.cjs"
   },
   "dependencies": {
+    "@pet/battle": "*",
     "@pet/combine": "*",
     "@pet/core": "*",
     "@pet/gacha": "*",

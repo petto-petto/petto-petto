@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { openPanel, openPetRoom } from '../platform/bridge.js';
+import { openBattle, openPanel, openPetRoom } from '../platform/bridge.js';
 
 const ACCENTS = {
   info: '#f5ecd8',
-  achievement: '#ffd166',
-  settings: '#f5ecd8',
   petmgmt: '#8fd68a',
   battle: '#f5ecd8',
 };
@@ -28,23 +26,6 @@ function Icon({ name }) {
           <circle cx="12" cy="12" r="9" />
           <line x1="12" y1="11" x2="12" y2="16.5" />
           <circle cx="12" cy="7.6" r="1.15" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case 'achievement':
-      return (
-        <svg {...c}>
-          <path d="M6 4h12v3.5a6 6 0 0 1-12 0V4z" />
-          <path d="M6 5H3.5v1.5A3.5 3.5 0 0 0 7 10" />
-          <path d="M18 5h2.5v1.5A3.5 3.5 0 0 1 17 10" />
-          <line x1="9.5" y1="20" x2="14.5" y2="20" />
-          <path d="M10.5 15.5V20M13.5 15.5V20" />
-        </svg>
-      );
-    case 'settings':
-      return (
-        <svg {...c}>
-          <circle cx="12" cy="12" r="3.3" />
-          <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5 5l2.1 2.1M16.9 16.9L19 19M19 5l-2.1 2.1M7.1 16.9L5 19" />
         </svg>
       );
     case 'petmgmt':
@@ -73,13 +54,11 @@ function Icon({ name }) {
   }
 }
 
-// 기획: 정보 · 업적 · 설정 · 펫 관리 · 전투 (오버레이는 진입만). 링이 기존 펫을 감싼다.
+// 전투 · 정보 · 펫 관리만 상단 호에 둔다. 링과 각 메뉴의 기존 동작은 유지한다.
 const ITEMS = [
-  { key: 'info', label: '정보', panelScreen: 'info' },
-  { key: 'achievement', label: '업적', panelScreen: 'achievements' },
-  { key: 'settings', label: '설정', panelScreen: 'settings' },
-  { key: 'petmgmt', label: '펫 관리', opensRoom: true },
-  { key: 'battle', label: '전투' },
+  { key: 'battle', label: '전투', opensBattle: true, angle: 198 },
+  { key: 'info', label: '정보', panelScreen: 'info', angle: -90 },
+  { key: 'petmgmt', label: '펫 관리', opensRoom: true, angle: -18 },
 ];
 
 export default function RadialMenu({ g, onClose }) {
@@ -90,6 +69,11 @@ export default function RadialMenu({ g, onClose }) {
   const selectItem = (item) => {
     if (item.panelScreen) {
       void openPanel(item.panelScreen);
+      onClose();
+      return;
+    }
+    if (item.opensBattle) {
+      void openBattle();
       onClose();
       return;
     }
@@ -106,8 +90,8 @@ export default function RadialMenu({ g, onClose }) {
       <div className="radial-bg" onClick={onClose} />
       <div className="radial-orbit" aria-hidden="true" />
       <div className="radial-controls" aria-label="펫 제어 메뉴">
-        {ITEMS.map((it, i) => {
-          const angle = (-90 + i * (360 / ITEMS.length)) * (Math.PI / 180);
+        {ITEMS.map((it) => {
+          const angle = it.angle * (Math.PI / 180);
           const x = Math.cos(angle) * R;
           const y = Math.sin(angle) * R;
           return (

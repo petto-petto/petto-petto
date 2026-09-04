@@ -97,6 +97,7 @@ contextBridge.exposeInMainWorld('overlay', {
   quit: () => ipcRenderer.send('overlay:quit'),
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
   openPetRoom: () => ipcRenderer.invoke('room:open'),
+  openBattle: () => ipcRenderer.invoke('battle:open'),
   hydrateGrowth: (legacySnapshots) => ipcRenderer.invoke('growth:hydrate', legacySnapshots),
   saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
   clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),

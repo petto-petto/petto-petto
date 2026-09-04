@@ -31,3 +31,6 @@ export function openPanel(screen) {
 export function openPetRoom() {
   return api?.openPetRoom?.() ?? Promise.resolve();
 }
+export function openBattle() {
+  return api?.openBattle?.() ?? Promise.resolve();
+}

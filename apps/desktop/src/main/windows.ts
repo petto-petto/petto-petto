@@ -39,6 +39,10 @@ const combineUiDir = join(
 );
 const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
 const overlayUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/main-overlay/ui'))));
+const battleUiDir = join(
+  dirname(fileURLToPath(import.meta.resolve('@pet/battle/package.json'))),
+  'ui',
+);
 
 /**
  * 정적 에셋의 루트.
@@ -54,11 +58,13 @@ let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
+let battleWindow: BrowserWindow | undefined;
 
 export const getPetWindow = (): BrowserWindow | undefined => petWindow;
 export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
 export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
+export const getBattleWindow = (): BrowserWindow | undefined => battleWindow;
 
 /**
  * 열려 있는 **모든** 창에 같은 이벤트를 보낸다.
@@ -320,6 +326,46 @@ export function createCombineWindow(): BrowserWindow {
     combineWindow = undefined;
   });
   return combineWindow;
+}
+
+/**
+ * 전투 UI와 에셋은 `@pet/battle`이 소유하고, 데스크톱 앱은 창 수명만 맡는다.
+ *
+ * 공통 preload에는 `window.petBattle`을 노출하지 않는다. 전투 UI가 제공하는 브라우저
+ * fallback gateway를 사용하므로 Rust sidecar·개별 Electron 실행 없이도 같은 앱에서
+ * 전투 화면을 확인할 수 있다.
+ */
+export function createBattleWindow(): BrowserWindow | undefined {
+  if (battleWindow && !battleWindow.isDestroyed()) {
+    battleWindow.show();
+    battleWindow.focus();
+    return battleWindow;
+  }
+
+  battleWindow = new BrowserWindow({
+    width: 360,
+    height: 180,
+    useContentSize: true,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  battleWindow.setMenuBarVisibility(false);
+  injectFonts(battleWindow);
+  void battleWindow.loadFile(join(battleUiDir, 'index.html'));
+  battleWindow.once('ready-to-show', () => battleWindow?.show());
+  battleWindow.on('closed', () => {
+    battleWindow = undefined;
+  });
+  return battleWindow;
 }
 
 /**
