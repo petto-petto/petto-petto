@@ -1,12 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('overlay', {
-  // AI 사용량 수신(hook 서버 -> 메인 -> 렌더러). 구독 해제 함수 반환.
-  onUsage: (cb) => {
-    const listener = (_e, data) => cb(data);
-    ipcRenderer.on('ai-usage', listener);
-    return () => ipcRenderer.removeListener('ai-usage', listener);
-  },
   // 펫/메뉴 hover 시 창 입력 활성화(클릭 통과 해제) 토글
   setInteractive: (v) => ipcRenderer.send('set-interactive', !!v),
   // 메뉴 열릴 때 창 포커스(그래야 바깥 클릭 시 blur로 닫을 수 있음)

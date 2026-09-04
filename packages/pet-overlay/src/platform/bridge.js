@@ -3,11 +3,6 @@ const api = typeof window !== 'undefined' ? window.overlay : undefined;
 
 export const isElectron = !!api;
 
-export function onUsage(cb) {
-  if (api?.onUsage) return api.onUsage(cb);
-  return () => {}; // 브라우저: hook 수신 없음 (DevPanel로 시뮬)
-}
-
 export function setInteractive(v) {
   api?.setInteractive?.(v);
 }

@@ -4,7 +4,6 @@ import { createPet, requiredXp } from './engine.js';
 import { TOKENS_PER_XP } from './constants.js';
 import { getPet } from '../pets/registry.js';
 import { loadAll, saveAll, clearAll } from './storage.js';
-import { onUsage } from '../platform/bridge.js';
 
 let seq = 0;
 
@@ -99,7 +98,7 @@ export function useGrowth(activePetKey) {
     setMood((m) => (m === 'bored' ? 'normal' : m));
   }, []);
 
-  // 실시간: hook 이벤트가 오면 즉시 활성 펫에 적용 (토큰은 누적되어 5,000 단위로 반영)
+  // 수동 시연·향후 외부 연동이 호출하는 경험치 반영 진입점.
   const ingestTokens = useCallback(
     (tokens) => {
       if (!hydrated) return;
@@ -149,12 +148,6 @@ export function useGrowth(activePetKey) {
     setOverlayState('idle');
     setMood('normal');
   }, [getCtrl]);
-
-  // 저장 상태를 읽기 전 hook을 처리하면, 기본값에 적용된 XP가 hydrate로 덮어써질 수 있다.
-  useEffect(() => {
-    if (!hydrated) return undefined;
-    return onUsage(({ tokens }) => ingestTokens(tokens));
-  }, [hydrated, ingestTokens]);
 
   useEffect(() => {
     let alive = true;

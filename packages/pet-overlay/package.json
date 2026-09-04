@@ -10,7 +10,7 @@
     "preview": "vite preview --port 4173 --strictPort",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV=1 electron electron/main.cjs\"",
     "electron": "vite build && electron electron/main.cjs",
-    "test": "node src/growth/engine.test.mjs && node src/growth/controller.test.mjs && node electron/ingest.test.cjs && cross-env ELECTRON_RUN_AS_NODE=1 electron --test test/database/*.test.cjs && node --test test/**/*.test.ts",
+    "test": "node src/growth/engine.test.mjs && node src/growth/controller.test.mjs && cross-env ELECTRON_RUN_AS_NODE=1 electron --test test/database/*.test.cjs && node --test test/**/*.test.ts",
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "domain:build": "tsc -p tsconfig.json"
