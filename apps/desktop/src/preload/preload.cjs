@@ -80,3 +80,32 @@ contextBridge.exposeInMainWorld('petApi', {
     return () => ipcRenderer.removeListener(channel, wrapped);
   },
 });
+
+/**
+ * 메인 오버레이 전용 API.
+ *
+ * 기존 오버레이 UI가 기대하는 `window.overlay` 계약을 공통 데스크톱 host가 제공한다.
+ * 성장 저장·사용량 수집은 아직 이관 전이므로 3단계에서 이 표면을 확장한다.
+ */
+contextBridge.exposeInMainWorld('overlay', {
+  setInteractive: (interactive) =>
+    ipcRenderer.send('overlay:set-interactive', Boolean(interactive)),
+  focusWindow: () => ipcRenderer.send('overlay:focus'),
+  dragStart: (screenX, screenY) => ipcRenderer.send('overlay:drag-start', { screenX, screenY }),
+  dragMove: (screenX, screenY) => ipcRenderer.send('overlay:drag-move', { screenX, screenY }),
+  dragEnd: () => ipcRenderer.send('overlay:drag-end'),
+  quit: () => ipcRenderer.send('overlay:quit'),
+  openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
+  openPetRoom: () => ipcRenderer.invoke('room:open'),
+  openBattle: () => ipcRenderer.invoke('battle:open'),
+  hydrateGrowth: (legacySnapshots) => ipcRenderer.invoke('growth:hydrate', legacySnapshots),
+  saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
+  clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),
+  loadOverlayState: () => ipcRenderer.invoke('overlay:load-state'),
+  saveOverlayState: (state) => ipcRenderer.invoke('overlay:save-state', state),
+  onMenuClose: (listener) => {
+    const wrapped = () => listener();
+    ipcRenderer.on('overlay:menu-close', wrapped);
+    return () => ipcRenderer.removeListener('overlay:menu-close', wrapped);
+  },
+});

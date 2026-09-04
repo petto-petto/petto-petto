@@ -1,6 +1,6 @@
 /** Electron 진입점. 창을 만들고, 트레이를 달고, 1분 주기 집계를 돌린다. */
 
-import { BrowserWindow, Menu, Tray, app } from 'electron';
+import { BrowserWindow, Menu, Tray, app, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -14,13 +14,23 @@ import { RoomCollectionPort } from './collection.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
+import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
+import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
+import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
 import {
   applyOverlayVisibility,
+  beginOverlayDrag,
   broadcast,
+  createBattleWindow,
+  createOverlayWindow,
   createCombineWindow,
   createGachaWindow,
   createPanelWindow,
-  createPetWindow,
+  endOverlayDrag,
+  focusOverlayWindow,
+  moveOverlayDrag,
+  setOverlayInteractive,
   showPanel,
   showRoom,
 } from './windows.ts';
@@ -35,6 +45,41 @@ const appRoot = join(here, '..', '..');
 let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
+let appDatabase: SqliteFileDatabase | undefined;
+
+interface OverlayPointer {
+  screenX: number;
+  screenY: number;
+}
+
+function isOverlayPointer(value: unknown): value is OverlayPointer {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.screenX === 'number' &&
+    Number.isFinite(candidate.screenX) &&
+    typeof candidate.screenY === 'number' &&
+    Number.isFinite(candidate.screenY)
+  );
+}
+
+function mountOverlayWindowIpc(): void {
+  ipcMain.on('overlay:set-interactive', (_event, interactive: unknown) => {
+    setOverlayInteractive(interactive === true);
+  });
+  ipcMain.on('overlay:focus', () => focusOverlayWindow());
+  ipcMain.on('overlay:drag-start', (_event, point: unknown) => {
+    if (isOverlayPointer(point)) beginOverlayDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('overlay:drag-move', (_event, point: unknown) => {
+    if (isOverlayPointer(point)) moveOverlayDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('overlay:drag-end', () => endOverlayDrag());
+  ipcMain.on('overlay:quit', () => app.quit());
+  ipcMain.handle('battle:open', () => {
+    createBattleWindow();
+  });
+}
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = { showRoom, broadcast };
@@ -141,6 +186,19 @@ app.whenReady().then(() => {
   const directory = app.getPath('userData');
   const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
+  appDatabase = new SqliteFileDatabase({
+    filePath: join(directory, 'petto.sqlite'),
+    migrations: APP_MIGRATIONS,
+  });
+  appDatabase.open();
+  const growthRepository = new PetGrowthRepository(appDatabase, {
+    legacyDatabasePaths: [
+      join(directory, 'pet-overlay.sqlite'),
+      join(app.getPath('appData'), 'Electron', 'pet-overlay.sqlite'),
+    ],
+  });
+  growthRepository.migrateLegacyData();
+  registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
   // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
@@ -151,8 +209,9 @@ app.whenReady().then(() => {
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);
+  mountOverlayWindowIpc();
 
-  createPetWindow(state.meta.settings.petSize);
+  createOverlayWindow();
   createPanelWindow();
   buildTray(state);
   buildAppMenu(state);
@@ -196,7 +255,7 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
-      createPetWindow(state.meta.settings.petSize);
+      createOverlayWindow();
       createPanelWindow();
       if (shouldOpenGachaPrototype()) createGachaWindow();
       if (shouldOpenCombinePrototype()) createCombineWindow();
@@ -212,4 +271,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   state?.persist();
   room?.persist();
+  appDatabase?.close();
 });

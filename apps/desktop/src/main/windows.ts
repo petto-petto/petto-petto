@@ -5,11 +5,18 @@
  * 창에 적용한다. 규칙이 이 파일에 섞이면 창을 띄우지 않고는 테스트할 수 없어진다.
  */
 
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, app, screen } from 'electron';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, petSizePixels, type Rect } from '@pet/meta';
+
+import {
+  OVERLAY_WINDOW_HEIGHT,
+  OVERLAY_WINDOW_WIDTH,
+  overlayWindowOptions,
+} from './overlay/window-options.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 /** `dist/main`에서 두 단계 올라가면 앱 루트다. */
@@ -31,6 +38,11 @@ const combineUiDir = join(
   'ui',
 );
 const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
+const overlayUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/main-overlay/ui'))));
+const battleUiDir = join(
+  dirname(fileURLToPath(import.meta.resolve('@pet/battle/package.json'))),
+  'ui',
+);
 
 /**
  * 정적 에셋의 루트.
@@ -41,14 +53,18 @@ const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/pack
 const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).href });
 
 let petWindow: BrowserWindow | undefined;
+let overlayWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
+let battleWindow: BrowserWindow | undefined;
 
 export const getPetWindow = (): BrowserWindow | undefined => petWindow;
+export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
 export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
+export const getBattleWindow = (): BrowserWindow | undefined => battleWindow;
 
 /**
  * 열려 있는 **모든** 창에 같은 이벤트를 보낸다.
@@ -79,6 +95,133 @@ function commonOptions() {
       sandbox: true,
     },
   } as const;
+}
+
+interface OverlayWindowState {
+  x: number;
+  y: number;
+}
+
+interface OverlayDragOrigin {
+  windowX: number;
+  windowY: number;
+  screenX: number;
+  screenY: number;
+}
+
+let overlayDragOrigin: OverlayDragOrigin | undefined;
+
+function overlayWindowStatePath(): string {
+  return join(app.getPath('userData'), 'overlay-window.json');
+}
+
+function loadOverlayWindowState(): OverlayWindowState | undefined {
+  try {
+    const raw: unknown = JSON.parse(readFileSync(overlayWindowStatePath(), 'utf8'));
+    if (typeof raw !== 'object' || raw === null) return undefined;
+    const candidate = raw as Record<string, unknown>;
+    if (
+      typeof candidate.x === 'number' &&
+      Number.isFinite(candidate.x) &&
+      typeof candidate.y === 'number' &&
+      Number.isFinite(candidate.y)
+    ) {
+      return { x: candidate.x, y: candidate.y };
+    }
+  } catch {
+    // 첫 실행 또는 잘못된 위치 파일이면 기본 위치를 사용한다.
+  }
+  return undefined;
+}
+
+function saveOverlayWindowState(): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const [x, y] = overlayWindow.getPosition();
+  writeFileSync(overlayWindowStatePath(), JSON.stringify({ x, y }));
+}
+
+function overlayPositionIsVisible(state: OverlayWindowState): boolean {
+  const centerX = state.x + OVERLAY_WINDOW_WIDTH / 2;
+  const centerY = state.y + OVERLAY_WINDOW_HEIGHT / 2;
+  return screen.getAllDisplays().some(({ bounds }) => {
+    return (
+      centerX >= bounds.x &&
+      centerX <= bounds.x + bounds.width &&
+      centerY >= bounds.y &&
+      centerY <= bounds.y + bounds.height
+    );
+  });
+}
+
+function initialOverlayPosition(): OverlayWindowState {
+  const { workArea } = screen.getPrimaryDisplay();
+  const fallback = {
+    x: workArea.x + workArea.width - OVERLAY_WINDOW_WIDTH,
+    y: workArea.y + workArea.height - OVERLAY_WINDOW_HEIGHT,
+  };
+  const restored = loadOverlayWindowState();
+  return restored && overlayPositionIsVisible(restored) ? restored : fallback;
+}
+
+/** 공통 데스크톱 앱이 여는 첫 번째 투명 오버레이 창. */
+export function createOverlayWindow(): BrowserWindow {
+  if (overlayWindow && !overlayWindow.isDestroyed()) {
+    overlayWindow.show();
+    overlayWindow.focus();
+    return overlayWindow;
+  }
+
+  const position = initialOverlayPosition();
+  overlayWindow = new BrowserWindow({
+    ...overlayWindowOptions(preloadPath),
+    x: position.x,
+    y: position.y,
+  });
+  overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  void overlayWindow.loadFile(join(overlayUiDir, 'index.html'));
+  overlayWindow.on('blur', () => {
+    overlayWindow?.webContents.send('overlay:menu-close');
+  });
+  overlayWindow.on('closed', () => {
+    overlayWindow = undefined;
+    overlayDragOrigin = undefined;
+  });
+  return overlayWindow;
+}
+
+export function setOverlayInteractive(interactive: boolean): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  overlayWindow.setIgnoreMouseEvents(!interactive, { forward: true });
+}
+
+export function focusOverlayWindow(): void {
+  overlayWindow?.focus();
+}
+
+export function beginOverlayDrag(screenX: number, screenY: number): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const { x: windowX, y: windowY } = overlayWindow.getBounds();
+  overlayDragOrigin = { windowX, windowY, screenX, screenY };
+}
+
+export function moveOverlayDrag(screenX: number, screenY: number): void {
+  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayDragOrigin) return;
+  const bounds = overlayWindow.getBounds();
+  const allDisplays = screen.getAllDisplays();
+  const left = Math.min(...allDisplays.map(({ bounds: display }) => display.x));
+  const top = Math.min(...allDisplays.map(({ bounds: display }) => display.y));
+  const right = Math.max(...allDisplays.map(({ bounds: display }) => display.x + display.width));
+  const bottom = Math.max(...allDisplays.map(({ bounds: display }) => display.y + display.height));
+  const desiredX = overlayDragOrigin.windowX + screenX - overlayDragOrigin.screenX;
+  const desiredY = overlayDragOrigin.windowY + screenY - overlayDragOrigin.screenY;
+  const x = Math.max(left - bounds.width / 2, Math.min(desiredX, right - bounds.width / 2));
+  const y = Math.max(top - bounds.height / 2, Math.min(desiredY, bottom - bounds.height / 2));
+  overlayWindow.setPosition(Math.round(x), Math.round(y));
+}
+
+export function endOverlayDrag(): void {
+  overlayDragOrigin = undefined;
+  saveOverlayWindowState();
 }
 
 export function createPetWindow(petSize: string): BrowserWindow {
@@ -186,6 +329,46 @@ export function createCombineWindow(): BrowserWindow {
 }
 
 /**
+ * 전투 UI와 에셋은 `@pet/battle`이 소유하고, 데스크톱 앱은 창 수명만 맡는다.
+ *
+ * 공통 preload에는 `window.petBattle`을 노출하지 않는다. 전투 UI가 제공하는 브라우저
+ * fallback gateway를 사용하므로 Rust sidecar·개별 Electron 실행 없이도 같은 앱에서
+ * 전투 화면을 확인할 수 있다.
+ */
+export function createBattleWindow(): BrowserWindow | undefined {
+  if (battleWindow && !battleWindow.isDestroyed()) {
+    battleWindow.show();
+    battleWindow.focus();
+    return battleWindow;
+  }
+
+  battleWindow = new BrowserWindow({
+    width: 360,
+    height: 180,
+    useContentSize: true,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    alwaysOnTop: true,
+    show: false,
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  battleWindow.setMenuBarVisibility(false);
+  injectFonts(battleWindow);
+  void battleWindow.loadFile(join(battleUiDir, 'index.html'));
+  battleWindow.once('ready-to-show', () => battleWindow?.show());
+  battleWindow.on('closed', () => {
+    battleWindow = undefined;
+  });
+  return battleWindow;
+}
+
+/**
  * 펫룸 창 크기.
  *
  * 장면은 배경 원본 그대로 960x360이다. 픽셀 아트는 정수 배율만 허용되므로(design.md §4)
@@ -265,8 +448,9 @@ function workAreaFor(window: BrowserWindow): Rect {
  * 구조적으로 성립한다. 화면을 바꾸는 것은 같은 창의 내용을 갈아 끼우는 일이다.
  */
 export function showPanel(): void {
-  if (!petWindow || !panelWindow) return;
-  const placement = placePanel(windowRect(petWindow), workAreaFor(petWindow));
+  const anchorWindow = overlayWindow ?? petWindow;
+  if (!anchorWindow || !panelWindow) return;
+  const placement = placePanel(windowRect(anchorWindow), workAreaFor(anchorWindow));
   panelWindow.setPosition(Math.round(placement.x), Math.round(placement.y));
   panelWindow.show();
   panelWindow.focus();
@@ -282,11 +466,12 @@ export function hidePanel(): void {
  * 오버레이를 숨겨도 앱과 수집기는 계속 실행된다. 그래서 창을 닫는 게 아니라 감춘다.
  */
 export function applyOverlayVisibility(visible: boolean): void {
-  if (!petWindow) return;
+  const activeOverlay = overlayWindow ?? petWindow;
+  if (!activeOverlay) return;
   if (visible) {
-    petWindow.show();
+    activeOverlay.show();
   } else {
-    petWindow.hide();
+    activeOverlay.hide();
     hidePanel();
   }
 }
