@@ -5,6 +5,8 @@
   "type": "module",
   "description": "메인 펫 오버레이와 성장 도메인",
   "scripts": {
+    "generate:pets": "node scripts/generate-renderer-pet-catalog.mjs",
+    "prebuild": "npm run generate:pets",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview --port 4173 --strictPort",

@@ -1,31 +1,10 @@
-export type PetKey =
-  | 'mole_digger'
-  | 'sprout_treant'
-  | 'cheek_hamster'
-  | 'midnight_zebra'
-  | 'acorn_squirrel'
-  | 'star_wizard';
+import { PETS, type PetDescriptor, type PetKey } from '../pets/renderer-catalog.generated.ts';
+
+export { PETS, type PetDescriptor, type PetKey };
 
 export type SpriteMotion = 'idle' | 'click' | 'click2' | 'attack';
 
-export interface PetDescriptor {
-  key: PetKey;
-  petId: string;
-  slug: string;
-  grade: 'COMMON' | 'RARE' | 'EPIC';
-  name: string;
-}
-
-export const PETS: readonly PetDescriptor[] = [
-  { key: 'mole_digger', petId: '003', slug: 'mole_digger', grade: 'COMMON', name: '두더지' },
-  { key: 'sprout_treant', petId: '004', slug: 'sprout_treant', grade: 'COMMON', name: '새싹나무' },
-  { key: 'cheek_hamster', petId: '005', slug: 'cheek_hamster', grade: 'RARE', name: '볼주머니햄' },
-  { key: 'midnight_zebra', petId: '002', slug: 'midnight_zebra', grade: 'RARE', name: '미드나잇얼룩말' },
-  { key: 'acorn_squirrel', petId: '001', slug: 'acorn_squirrel', grade: 'EPIC', name: '도토리다람쥐' },
-  { key: 'star_wizard', petId: '006', slug: 'star_wizard', grade: 'EPIC', name: '별빛마법사' },
-];
-
-export const DEFAULT_PET_KEY: PetKey = 'mole_digger';
+export const DEFAULT_PET_KEY: PetKey = PETS[0].key;
 
 export function petByKey(key: PetKey): PetDescriptor {
   const found = PETS.find((pet) => pet.key === key);

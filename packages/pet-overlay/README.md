@@ -2,6 +2,8 @@
 
 공통 데스크톱 앱이 표시하는 메인 펫 오버레이의 React UI와 성장 도메인 패키지다.
 Electron 창·preload·SQLite는 `apps/desktop`이 소유한다.
+펫 정보와 스프라이트는 `apps/desktop/renderer/assets/pets`를 단일 원본으로 사용하며,
+빌드 전에 해당 JSON에서 카탈로그를 생성한다.
 
 ## 화면 확인
 

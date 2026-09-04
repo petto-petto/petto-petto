@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { GrowthController } from './controller.js';
 import { createPet, requiredXp } from './engine.js';
 import { TOKENS_PER_XP } from './constants.js';
-import { getPet } from '../pets/registry.js';
+import { getPet } from '../pets/catalog.ts';
 import { loadAll, saveAll, clearAll } from './storage.js';
 
 let seq = 0;

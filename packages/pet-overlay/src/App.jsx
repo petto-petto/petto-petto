@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useGrowth } from './growth/useGrowth.js';
 import Overlay from './overlay/Overlay.jsx';
-import { getPet, DEFAULT_PET_KEY } from './pets/registry.js';
+import { getPet, DEFAULT_PET_KEY } from './pets/catalog.ts';
 import { loadOverlayState, saveOverlayState } from './overlay/state-storage.js';
 
 export default function App() {

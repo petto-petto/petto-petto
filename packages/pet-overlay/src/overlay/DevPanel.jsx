@@ -1,7 +1,7 @@
 import React from 'react';
 import { requiredXp } from '../growth/engine.js';
 import { isElectron } from '../platform/bridge.js';
-import { PETS } from '../pets/registry.js';
+import { PETS } from '../pets/catalog.ts';
 
 // 실제 Claude Code 없이도 성장/오버레이를 시연하기 위한 디버그 패널
 export default function DevPanel({ g, open, onToggle, petKey, setPetKey }) {

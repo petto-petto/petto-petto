@@ -8,7 +8,7 @@ import LevelUpFx from './LevelUpFx.jsx';
 import EvolutionFx from './EvolutionFx.jsx';
 import Vfx from './Vfx.jsx';
 import { setInteractive, dragStart, dragMove, dragEnd } from '../platform/bridge.js';
-import { stageForEvolution, randomClick } from '../pets/registry.js';
+import { stageForEvolution, randomClick } from '../pets/catalog.ts';
 
 export default function Overlay({ g, activePet, petKey, setPetKey }) {
   const { pet, overlayState, toasts, levelUpFx, evolveFx, xpFx, attackFx, mood } = g;
