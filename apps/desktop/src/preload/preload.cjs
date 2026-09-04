@@ -11,8 +11,18 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-/** 메인이 렌더러로 보내는 이벤트 채널. 이 목록 밖은 구독할 수 없다. */
-const EVENT_CHANNELS = ['panel:show', 'usage:aggregated'];
+/**
+ * 메인이 렌더러로 보내는 이벤트 채널. 이 목록 밖은 구독할 수 없다.
+ *
+ * `room:*` 두 개는 **모든 창**이 받는다. 활성 펫을 바꾼 창 자신도 예외가 아니다 —
+ * 화면 갱신은 오직 이 push 를 받고 나서 한다(`src/main/room.ts` 참조).
+ */
+const EVENT_CHANNELS = [
+  'panel:show',
+  'usage:aggregated',
+  'room:activePetChanged',
+  'room:backgroundChanged',
+];
 
 contextBridge.exposeInMainWorld('petApi', {
   // 조회
@@ -35,6 +45,11 @@ contextBridge.exposeInMainWorld('petApi', {
   // 프로필
   equipTitle: (title) => ipcRenderer.invoke('profile:equip-title', title),
 
+  // 펫룸
+  roomScene: () => ipcRenderer.invoke('room:scene'),
+  openRoom: () => ipcRenderer.invoke('room:open'),
+  setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
+
   // 창
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
   closePanel: () => ipcRenderer.invoke('panel:close'),
@@ -52,9 +67,16 @@ contextBridge.exposeInMainWorld('petApi', {
   demoFailNextReward: () => ipcRenderer.invoke('demo:fail-next-reward'),
   demoBreakSource: (provider) => ipcRenderer.invoke('demo:break-source', provider),
 
-  /** 메인이 보내는 이벤트를 구독한다. 허용된 채널만 받는다. */
+  /**
+   * 메인이 보내는 이벤트를 구독한다. 허용된 채널만 받는다.
+   *
+   * 해제 함수를 돌려준다. 펫룸은 창이 열리고 닫히는 화면이라, 구독을 못 끊으면 닫힌 창의
+   * 콜백이 계속 남는다.
+   */
   on: (channel, listener) => {
-    if (!EVENT_CHANNELS.includes(channel)) return;
-    ipcRenderer.on(channel, (_event, payload) => listener(payload));
+    if (!EVENT_CHANNELS.includes(channel)) return () => {};
+    const wrapped = (_event, payload) => listener(payload);
+    ipcRenderer.on(channel, wrapped);
+    return () => ipcRenderer.removeListener(channel, wrapped);
   },
 });

@@ -9,6 +9,7 @@
   "references": [
     { "path": "../../packages/pet-core" },
     { "path": "../../packages/pet-gacha" },
-    { "path": "../../packages/pet-meta" }
+    { "path": "../../packages/pet-meta" },
+    { "path": "../../packages/pet-room" }
   ]
 }

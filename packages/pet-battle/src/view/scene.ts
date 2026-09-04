@@ -108,8 +108,7 @@ export function shouldStartEnemyHitReaction(
   previous: BattleState | undefined,
   next: BattleState,
 ): boolean {
-  const actualImpactStarted =
-    previous?.motion?.beat !== 'IMPACT' && next.motion?.beat === 'IMPACT';
+  const actualImpactStarted = previous?.motion?.beat !== 'IMPACT' && next.motion?.beat === 'IMPACT';
   const previewHitStarted =
     previous?.preview.enemyPhase !== 'HIT' && next.preview.enemyPhase === 'HIT';
   return actualImpactStarted || previewHitStarted;

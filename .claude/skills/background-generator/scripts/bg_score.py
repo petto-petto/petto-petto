@@ -54,6 +54,16 @@ from bgcore import hex_rgba, preset
 PASS_SCORE = 80
 
 
+def pct_lum(counts, n, p):
+    """면적 가중 밝기 백분위. 화소 몇 개가 튀어도 흔들리지 않는다."""
+    acc = 0
+    for v, c in sorted((lum(c), c) for c in counts):
+        acc += counts[c]
+        if acc >= n * p:
+            return v
+    return 1.0
+
+
 def lum(p):
     return colorsys.rgb_to_hls(p[0] / 255, p[1] / 255, p[2] / 255)[1]
 
@@ -229,9 +239,18 @@ def main():
     sub.append(f"레이어 간 명도/채도 차 {dl:.2f}/{ds:.2f} (0.15 이상) {3 if ok2 else 0}점")
     hi = sum(n for c, n in counts.items() if lum(c) >= 0.75) / N
     lo = sum(n for c, n in counts.items() if lum(c) <= 0.25) / N
-    ok3 = hi >= 0.02 and lo >= 0.02
+    # 하이라이트·그림자를 절대 밝기로 재면 **의도적으로 태운 화면이 감점된다.**
+    # 실측: 레퍼런스 3장이 L>=0.75 면적 4.1~34.9%로 제각각이고, 승인된 어두운
+    # 배경 둘은 1.0%·1.3%였다. 절대값은 주제에 따라 달라지므로 기준이 될 수 없다.
+    #
+    # 대신 화면 **자신의 동적 범위**를 본다 — 상위 2% 밝기와 하위 2% 밝기의 차.
+    # "명암이 살아 있는가"를 재는 것이라 밝은 화면과 태운 화면에 같은 잣대가 된다.
+    # 백분위라 튀는 화소 몇 개에 흔들리지 않는다.
+    dynamic_range = pct_lum(counts, N, 0.98) - pct_lum(counts, N, 0.02)
+    ok3 = dynamic_range >= 0.55
     pts += 3 if ok3 else 0
-    sub.append(f"하이라이트 {hi*100:.1f}% / 그림자 {lo*100:.1f}% (각 2% 이상) {3 if ok3 else 0}점")
+    sub.append(f"동적 범위 {dynamic_range:.2f} (0.55 이상) {3 if ok3 else 0}점"
+               f"  [하이라이트 {hi*100:.1f}% / 그림자 {lo*100:.1f}%]")
     # 색조 다양성 — 단일 초록 일변도 방지
     hb = {}
     for c, n in counts.items():

@@ -6,3 +6,4 @@ dist
 logs/*
 .venv/
 **/__pycache__/
+**/.omc/

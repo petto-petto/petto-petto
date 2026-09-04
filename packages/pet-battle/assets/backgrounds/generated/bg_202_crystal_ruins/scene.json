@@ -2,10 +2,7 @@
   "id": "bg_202",
   "name": "Crystal Ruins",
   "preset": "battle_crystal_ruins",
-  "canvas": [
-    360,
-    180
-  ],
+  "canvas": [360, 180],
   "layout": "ground",
   "seamless": false,
   "horizon": 84,
@@ -33,11 +30,7 @@
         },
         {
           "op": "rays",
-          "xs": [
-            28,
-            122,
-            237
-          ],
+          "xs": [28, 122, 237],
           "y0": 0,
           "y1": 180,
           "slope": 2.4,
@@ -65,20 +58,12 @@
         },
         {
           "op": "foliage",
-          "box": [
-            0,
-            72,
-            360,
-            30
-          ],
+          "box": [0, 72, 360, 30],
           "ramp": "far",
           "base": 2,
           "rim": 4,
           "shadow": 1,
-          "r": [
-            6,
-            9
-          ],
+          "r": [6, 9],
           "spacing": 1.0,
           "rimW": 3,
           "depthRange": 1,
@@ -91,19 +76,10 @@
           "y0": 81,
           "y1": 117,
           "count": 4,
-          "scale": [
-            2,
-            2
-          ],
-          "shade": [
-            3,
-            2
-          ],
+          "scale": [2, 2],
+          "shade": [3, 2],
           "seed": 31,
-          "avoid": [
-            148,
-            212
-          ]
+          "avoid": [148, 212]
         },
         {
           "op": "autoshade",
@@ -133,20 +109,12 @@
         },
         {
           "op": "foliage",
-          "box": [
-            0,
-            108,
-            360,
-            30
-          ],
+          "box": [0, 108, 360, 30],
           "ramp": "mid",
           "base": 2,
           "rim": 4,
           "shadow": 1,
-          "r": [
-            8,
-            14
-          ],
+          "r": [8, 14],
           "spacing": 1.1,
           "rimW": 3,
           "depthRange": 1,
@@ -159,19 +127,10 @@
           "y0": 114,
           "y1": 138,
           "count": 3,
-          "scale": [
-            2,
-            2
-          ],
-          "shade": [
-            2,
-            0
-          ],
+          "scale": [2, 2],
+          "shade": [2, 0],
           "seed": 33,
-          "avoid": [
-            148,
-            212
-          ]
+          "avoid": [148, 212]
         },
         {
           "op": "scatter_depth",
@@ -179,19 +138,10 @@
           "y0": 120,
           "y1": 138,
           "count": 6,
-          "scale": [
-            2,
-            3
-          ],
-          "shade": [
-            1,
-            0
-          ],
+          "scale": [2, 3],
+          "shade": [1, 0],
           "seed": 35,
-          "avoid": [
-            148,
-            212
-          ]
+          "avoid": [148, 212]
         },
         {
           "op": "autoshade",
@@ -213,10 +163,7 @@
           "ramp": "near",
           "far": 4,
           "near": 1,
-          "cell": [
-            3,
-            15
-          ],
+          "cell": [3, 15],
           "seed": 5,
           "edge": "leaf.2",
           "edgeH": 3,
@@ -230,12 +177,7 @@
           "ramp": "near",
           "from": 0,
           "to": 2,
-          "box": [
-            0,
-            141,
-            360,
-            9
-          ],
+          "box": [0, 141, 360, 9],
           "dither": true
         },
         {
@@ -244,14 +186,8 @@
           "y0": 142,
           "y1": 177,
           "count": 6,
-          "scale": [
-            2,
-            3
-          ],
-          "shade": [
-            1,
-            0
-          ],
+          "scale": [2, 3],
+          "shade": [1, 0],
           "seed": 37
         },
         {
@@ -260,14 +196,8 @@
           "y0": 144,
           "y1": 174,
           "count": 3,
-          "scale": [
-            2,
-            3
-          ],
-          "shade": [
-            0,
-            -1
-          ],
+          "scale": [2, 3],
+          "shade": [0, -1],
           "seed": 45
         },
         {
@@ -275,10 +205,7 @@
           "depth": 1,
           "highlight": 1,
           "shadow": 1,
-          "only": [
-            "leaf",
-            "accent"
-          ]
+          "only": ["leaf", "accent"]
         }
       ]
     }

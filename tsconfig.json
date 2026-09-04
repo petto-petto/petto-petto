@@ -5,6 +5,7 @@
     { "path": "packages/pet-combine" },
     { "path": "packages/pet-gacha" },
     { "path": "packages/pet-meta" },
+    { "path": "packages/pet-room" },
     { "path": "apps/desktop" }
   ]
 }
