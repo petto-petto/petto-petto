@@ -1,15 +1,14 @@
-// 펫 창.
+// 펫 창(오버레이).
 //
-// 스프라이트 로딩·재생은 팀원이 만든 에셋 가이드(`pets/README.md`)를 그대로 따른다.
-// 특히 다음 네 가지는 가이드가 실패 원인 1~4순위로 꼽은 것들이라 코드에 못박아 둔다.
+// 스프라이트 로딩·재생은 `sprite.js`가 하고, 그 규칙은 `@pet/room`의 도메인 함수에 있다.
+// 예전에는 이 파일이 재생기를 직접 들고 있어서 펫룸이 같은 코드를 다시 쓸 수 없었고,
+// 에셋 가이드가 실패 원인 1~4순위로 꼽은 규칙들에 테스트가 하나도 없었다.
 //
-//   - 프레임 크기와 개수는 **옆 JSON에서 읽는다**. 32로 하드코딩하지 않는다
-//     (EPIC stage 3만 48px이라 그 종만 잘린다).
-//   - 프레임 i의 소스 사각형은 `(i × frameWidth, 0, frameWidth, frameHeight)`.
-//   - 확대는 정수 배율 nearest-neighbor만. 보간을 끈다.
-//   - `click`과 `click2`를 랜덤으로 번갈아 재생한다.
-//
-// 어떤 펫을 그릴지는 `collection` 도메인이 정한다. meta는 파일 경로를 모른다.
+// 이 파일에 남은 것은 오버레이 고유의 일뿐이다 — 창 크기에 맞춘 배율, 우클릭 메뉴,
+// 말풍선, 그리고 활성 펫이 바뀌면 재시작 없이 갈아 끼우는 것.
+
+import { stageOfLevel } from '../../../packages/pet-room/dist/index.js';
+import { drawFrame, SpritePlayer } from './sprite.js';
 
 // preload가 노출한 API. 렌더러는 Node에도 임의 IPC 채널에도 닿지 못한다.
 const api = window.petApi;
@@ -20,156 +19,70 @@ const menu = document.getElementById('menu');
 const bubble = document.getElementById('bubble');
 const ctx = canvas.getContext('2d');
 
-/* ---------- 경로 조립 (에셋 가이드 §1·§6) ---------- */
+/** 지금 그리는 펫. 활성 펫이 바뀌면 통째로 갈린다. */
+const overlay = { player: null, scale: 1 };
 
-/** 레벨 → 진화 단계. 가이드 §3. */
-function stageOfLevel(level) {
-  if (level < 10) return 1;
-  if (level < 20) return 2;
-  return 3;
-}
+/* ---------- 재생 ---------- */
 
-function motionPath(pet, motion) {
-  const { grade, slug, petId, stageNumber } = pet;
-  return `assets/pets/${grade}/${slug}/stage${stageNumber}/pet_${petId}_s${stageNumber}_${motion}`;
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`${url} — HTTP ${response.status}`);
-  return response.json();
-}
-
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(`${url} — 이미지를 읽지 못함`));
-    image.src = url;
-  });
-}
-
-/* ---------- 재생 상태 ---------- */
-
-const player = {
-  pet: null,
-  /** motion 이름 → { meta, image } */
-  motions: {},
-  current: 'idle',
-  startedAt: 0,
-  scale: 1,
-};
-
-/** 프레임 인덱스. 루프면 순환하고, 1회 재생이면 마지막에서 멈춘다(가이드 §5). */
-function frameIndex(meta, elapsedMs) {
-  const advanced = Math.floor(elapsedMs / (1000 / meta.fps));
-  return meta.loop ? advanced % meta.frameCount : Math.min(advanced, meta.frameCount - 1);
-}
-
-/** 창 크기에 맞는 **정수** 배율. 비정수 배율은 픽셀을 뭉갠다(가이드 §7). */
+/** 창 크기에 맞는 **정수** 배율. 비정수 배율은 픽셀을 뭉갠다(에셋 가이드 §7). */
 function fitScale(meta) {
   const available = Math.min(window.innerWidth, window.innerHeight) - 8;
   return Math.max(1, Math.floor(available / meta.frameWidth));
 }
 
 function resizeCanvas() {
-  const idle = player.motions.idle;
-  if (!idle) return;
-  player.scale = fitScale(idle.meta);
-  canvas.width = idle.meta.frameWidth * player.scale;
-  canvas.height = idle.meta.frameHeight * player.scale;
+  if (!overlay.player) return;
+  const meta = overlay.player.meta;
+  overlay.scale = fitScale(meta);
+  canvas.width = meta.frameWidth * overlay.scale;
+  canvas.height = meta.frameHeight * overlay.scale;
   // 캔버스 크기를 바꾸면 컨텍스트 설정이 초기화되므로 다시 끈다.
   ctx.imageSmoothingEnabled = false;
 }
 
-function draw(now) {
-  const motion = player.motions[player.current] ?? player.motions.idle;
-  if (!motion) return;
-
-  const { meta, image } = motion;
-  const elapsed = now - player.startedAt;
-  const index = frameIndex(meta, elapsed);
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(
-    image,
-    index * meta.frameWidth,
-    0,
-    meta.frameWidth,
-    meta.frameHeight,
-    0,
-    0,
-    meta.frameWidth * player.scale,
-    meta.frameHeight * player.scale,
-  );
-
-  // 1회 재생이 끝나면 idle로 돌아간다(가이드 §8).
-  if (!meta.loop && elapsed >= (meta.frameCount / meta.fps) * 1000) {
-    play('idle');
-  }
-}
-
 function loop(now) {
-  draw(now);
+  if (overlay.player) {
+    const frame = overlay.player.frameAt(now);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawFrame(ctx, frame, 0, 0, overlay.scale);
+  }
   requestAnimationFrame(loop);
-}
-
-function play(motion) {
-  if (!player.motions[motion]) return;
-  player.current = motion;
-  player.startedAt = performance.now();
-}
-
-/** 클릭 반응. 두 종을 랜덤으로 번갈아야 반복 클릭이 죽어 보이지 않는다(가이드 §8). */
-function playClick() {
-  const choices = ['click', 'click2'].filter((name) => player.motions[name]);
-  if (!choices.length) return;
-  play(choices[Math.floor(Math.random() * choices.length)]);
 }
 
 /* ---------- 적재 ---------- */
 
-async function loadOverlayPet() {
-  const summary = await api.overlayPet();
+/**
+ * 오버레이 펫을 갈아 끼운다.
+ *
+ * `pet:overlay`가 주는 `PetSummary`와 `room:activePetChanged`가 주는 `RoomPetView`는
+ * 필드 이름이 조금 다르다. 여기서 한 모양으로 맞춘다.
+ */
+function speciesOfPayload(payload) {
+  return {
+    rarity: payload.rarity,
+    // PetSummary는 `sprite`, RoomPetView는 `slug`로 같은 값을 부른다.
+    slug: payload.slug ?? payload.sprite,
+    petId: payload.petId,
+    stage: payload.stage ?? stageOfLevel(payload.level),
+  };
+}
 
-  // 등급 폴더는 소문자, `pet.json`의 `grade`는 대문자다(가이드 §1).
-  const grade = String(summary.rarity).toLowerCase();
-  const slug = summary.sprite;
-  const stageNumber = stageOfLevel(summary.level);
-
-  // 파일명에 필요한 `petId`는 슬러그만으로 알 수 없다. 종 메타에서 읽는다(가이드 §6).
-  const species = await fetchJson(`assets/pets/${grade}/${slug}/pet.json`);
-
-  player.pet = { grade, slug, petId: species.petId, stageNumber, species };
-
-  // idle은 필수, 클릭 반응은 없으면 없는 대로 둔다.
-  player.motions.idle = await loadMotion('idle');
-  for (const motion of ['click', 'click2']) {
-    try {
-      player.motions[motion] = await loadMotion(motion);
-    } catch (error) {
-      api.debugLog(`${motion} 생략 — ${error.message}`);
-    }
-  }
-
+async function showPet(payload) {
+  const species = speciesOfPayload(payload);
+  overlay.player = await SpritePlayer.load(species);
+  stage.classList.remove('sprite-missing');
   resizeCanvas();
-  play('idle');
-  requestAnimationFrame(loop);
 
-  reportDrawnPixels();
-
-  const idle = player.motions.idle.meta;
+  const meta = overlay.player.meta;
   api.debugLog(
-    `${species.name}(${species.grade}) Lv.${summary.level} → stage${stageNumber} · ` +
-      `프레임 ${idle.frameWidth}×${idle.frameHeight} ${idle.frameCount}장 @${idle.fps}fps · ` +
-      `배율 ${player.scale}x → ${canvas.width}px · ` +
-      `모션 ${Object.keys(player.motions).join('/')}`,
+    `${payload.name}(${species.rarity}) Lv.${payload.level} → stage${species.stage} · ` +
+      `프레임 ${meta.frameWidth}×${meta.frameHeight} ${meta.frameCount}장 @${meta.fps}fps · ` +
+      `배율 ${overlay.scale}x → ${canvas.width}px`,
   );
 }
 
 /**
- * 캔버스에 실제로 칠해진 픽셀이 있는지 확인하고, 요청이 있으면 그 화면을 PNG로 남긴다.
+ * 캔버스에 실제로 칠해진 픽셀이 있는지 확인한다.
  *
  * 스프라이트 파일을 읽는 데 성공했다는 것과 화면에 그려졌다는 것은 다른 얘기다.
  * 배율 계산이나 소스 사각형이 틀리면 파일은 멀쩡한데 캔버스가 비어 있을 수 있다.
@@ -177,6 +90,7 @@ async function loadOverlayPet() {
 function reportDrawnPixels() {
   // 첫 프레임이 그려질 때까지 한 박자 기다린다.
   setTimeout(() => {
+    if (!canvas.width || !canvas.height) return;
     const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let opaque = 0;
     for (let index = 3; index < pixels.length; index += 4) {
@@ -185,13 +99,6 @@ function reportDrawnPixels() {
     const total = canvas.width * canvas.height;
     api.debugLog(`그려진 픽셀 ${opaque} / ${total} (${((opaque / total) * 100).toFixed(1)}%)`);
   }, 250);
-}
-
-async function loadMotion(motion) {
-  const base = motionPath(player.pet, motion);
-  const meta = await fetchJson(`${base}.json`);
-  const image = await loadImage(`${base}.png`);
-  return { meta, image };
 }
 
 /* ---------- 입력 ---------- */
@@ -205,10 +112,10 @@ async function loadMotion(motion) {
 canvas.addEventListener('mousedown', (event) => {
   if (event.button !== 0) return;
   hideMenu();
-  playClick();
+  overlay.player?.playClick();
 });
 
-/* 우클릭으로 세 메타 화면을 연다(META-001). 펫뿐 아니라 창 아무 곳에서나 받는다. */
+/* 우클릭으로 메타 화면과 펫룸을 연다(META-001). 펫뿐 아니라 창 아무 곳에서나 받는다. */
 stage.addEventListener('contextmenu', (event) => {
   event.preventDefault();
   showMenuAt(event.clientX, event.clientY);
@@ -249,7 +156,11 @@ function showMenuAt(x, y) {
 
 for (const button of menu.querySelectorAll('button')) {
   button.addEventListener('click', () => {
-    api.openPanel(button.dataset.screen);
+    if (button.dataset.action === 'room') {
+      api.openRoom();
+    } else {
+      api.openPanel(button.dataset.screen);
+    }
     hideMenu();
   });
 }
@@ -280,6 +191,20 @@ function say(message) {
 }
 
 api.on('usage:aggregated', (payload) => say(payload?.bubble));
+
+/**
+ * 활성 펫이 바뀌면 **재시작 없이** 스프라이트를 갈아 끼운다.
+ *
+ * 이 창은 활성 펫을 스스로 정하지 않는다. 펫룸에서 바꾸든 어디서 바꾸든, 여기 도달하는
+ * 경로는 이 push 하나뿐이다.
+ */
+api.on('room:activePetChanged', (view) => {
+  if (!view) return;
+  showPet(view).catch((error) => {
+    stage.classList.add('sprite-missing');
+    api.debugLog(`활성 펫 교체 실패 — ${error.message}`);
+  });
+});
 
 /**
  * 우클릭 메뉴가 창 안에 들어오는지 모서리마다 확인한다.
@@ -332,8 +257,12 @@ window.addEventListener('load', async () => {
 
   if (await api.selftestEnabled()) checkMenuPlacement();
 
+  // 그리기 루프는 한 번만 켠다. 활성 펫이 바뀌어도 루프는 그대로고 `overlay.player`만 갈린다.
+  requestAnimationFrame(loop);
+
   try {
-    await loadOverlayPet();
+    await showPet(await api.overlayPet());
+    reportDrawnPixels();
   } catch (error) {
     // 스프라이트를 못 읽어도 창은 살아 있어야 한다. 우클릭 메뉴는 계속 동작한다.
     stage.classList.add('sprite-missing');

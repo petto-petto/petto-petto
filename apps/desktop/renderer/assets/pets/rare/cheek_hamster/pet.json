@@ -1,0 +1,21 @@
+{
+  "petId": "005",
+  "slug": "cheek_hamster",
+  "name": "볼주머니햄",
+  "grade": "RARE",
+  "stageCount": 3,
+  "palette": {
+    "outline": "#2C2438",
+    "body": "#E8BE86",
+    "sub": [
+      "#FFF0D2",
+      "#35D6B0"
+    ]
+  },
+  "canvas": {
+    "stage1": 32,
+    "stage2": 32,
+    "stage3": 32
+  },
+  "note": "body/outline은 종 단위 고정. Stage 2·3을 그릴 때 이 값을 그대로 쓴다."
+}

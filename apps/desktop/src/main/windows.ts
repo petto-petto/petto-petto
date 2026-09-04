@@ -6,7 +6,7 @@
  */
 
 import { BrowserWindow, screen } from 'electron';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, petSizePixels, type Rect } from '@pet/meta';
@@ -25,14 +25,22 @@ const metaUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/meta/pack
 
 let petWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
+let roomWindow: BrowserWindow | undefined;
 
 export const getPetWindow = (): BrowserWindow | undefined => petWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
+export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
 
-/** 두 창에 같은 이벤트를 보낸다. 말풍선은 펫이, 갱신은 패널이 받는다. */
+/**
+ * 열려 있는 **모든** 창에 같은 이벤트를 보낸다.
+ *
+ * 창 목록을 여기 나열하지 않고 `getAllWindows()`를 쓴다. 나열하면 창을 새로 추가할 때마다
+ * 이 배열에 넣는 것을 잊게 되고, 그 창만 조용히 상태 갱신을 못 받는다. 활성 펫 동기화가
+ * 정확히 그렇게 깨진다 — 그래서 목록을 사람이 관리하지 않는다.
+ */
 export function broadcast(channel: string, payload: unknown): void {
-  for (const window of [petWindow, panelWindow]) {
-    if (window && !window.isDestroyed()) window.webContents.send(channel, payload);
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (!window.isDestroyed()) window.webContents.send(channel, payload);
   }
 }
 
@@ -62,6 +70,37 @@ export function createPetWindow(petSize: string): BrowserWindow {
   return petWindow;
 }
 
+/**
+ * 도트 폰트를 창에 넣는다.
+ *
+ * `@pet/meta`의 패널 화면은 `panel.css`에서 Galmuri를 쓰지만, 폰트 파일은 **앱이** 가진다
+ * (`renderer/assets/fonts/`). 패키지가 앱의 파일 경로를 알면 앱 밖에서 못 쓰게 되므로,
+ * 패키지는 폰트 이름만 말하고 파일은 호스트인 앱이 대 준다.
+ *
+ * 같은 디렉터리에 있는 창(`pet.html`·`petroom.html`)은 `fonts.css`를 직접 링크하면 되므로
+ * 이 주입이 필요 없다.
+ */
+function injectFonts(window: BrowserWindow): void {
+  const url = (file: string) => pathToFileURL(join(rendererDir, 'assets', 'fonts', file)).href;
+  const css = `
+    @font-face {
+      font-family: 'Galmuri9';
+      src: url('${url('Galmuri9.woff2')}') format('woff2');
+      font-weight: 400;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Galmuri11';
+      src: url('${url('Galmuri11-Bold.woff2')}') format('woff2');
+      font-weight: 700;
+      font-display: swap;
+    }
+  `;
+  window.webContents.on('did-finish-load', () => {
+    void window.webContents.insertCSS(css);
+  });
+}
+
 export function createPanelWindow(): BrowserWindow {
   panelWindow = new BrowserWindow({
     ...commonOptions(),
@@ -69,8 +108,59 @@ export function createPanelWindow(): BrowserWindow {
     height: PANEL_HEIGHT,
     show: false,
   });
+  injectFonts(panelWindow);
   void panelWindow.loadFile(join(metaUiDir, 'index.html'));
   return panelWindow;
+}
+
+/**
+ * 펫룸 창 크기.
+ *
+ * 장면은 배경 원본 그대로 960x360이다. 픽셀 아트는 정수 배율만 허용되므로(design.md §4)
+ * 1배로 두어 확대 보간이 아예 일어나지 않게 한다.
+ *
+ * 상세 패널은 장면을 덮지 않고 **옆 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을 막지
+ * 않는 자리에). 그래서 창은 장면보다 패널 폭만큼 넓다.
+ */
+const SCENE_WIDTH = 960;
+const SIDE_WIDTH = 264;
+export const ROOM_WIDTH = SCENE_WIDTH + SIDE_WIDTH;
+export const ROOM_HEIGHT = 360;
+
+/**
+ * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
+ *
+ * 오버레이·패널과 달리 투명 프레임리스가 아니다. 펫룸은 오버레이가 아니라 들여다보는
+ * 화면이라 창 크롬이 있어야 옮기고 닫을 수 있다.
+ */
+export function showRoom(): void {
+  if (roomWindow && !roomWindow.isDestroyed()) {
+    roomWindow.show();
+    roomWindow.focus();
+    return;
+  }
+
+  roomWindow = new BrowserWindow({
+    width: ROOM_WIDTH,
+    height: ROOM_HEIGHT,
+    // 배경이 정수 배율만 허용하므로 임의 크기 조절을 막는다.
+    resizable: false,
+    useContentSize: true,
+    title: '펫룸',
+    backgroundColor: '#10231A',
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+
+  roomWindow.on('closed', () => {
+    roomWindow = undefined;
+  });
+
+  void roomWindow.loadFile(join(rendererDir, 'petroom.html'));
 }
 
 /** 창의 논리 픽셀 사각형. */

@@ -1,31 +1,55 @@
 /** Electron 진입점. 창을 만들고, 트레이를 달고, 1분 주기 집계를 돌린다. */
 
-import { BrowserWindow, Menu, Tray, app, nativeImage } from 'electron';
-import { join } from 'node:path';
+import { BrowserWindow, Menu, Tray, app } from 'electron';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+import { systemClock } from '@pet/core';
 
 import { MetaAppState } from '@pet/meta';
+import type { RoomSnapshot } from '@pet/room';
+import type { MetaSnapshot } from '@pet/meta';
 
+import { RoomCollectionPort } from './collection.ts';
 import { mountMeta } from './mount.ts';
-import { JsonFileStore } from './store.ts';
+import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
+import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
 import {
   applyOverlayVisibility,
   broadcast,
   createPanelWindow,
   createPetWindow,
   showPanel,
+  showRoom,
 } from './windows.ts';
 
 /** 기획서 8.3: 수집은 앱 시작, 실행 중 매 1분, 카드별 수동 재스캔에서 실행한다. */
 const AGGREGATION_INTERVAL_MS = 60_000;
 
+const here = dirname(fileURLToPath(import.meta.url));
+/** `dist/main`에서 두 단계 올라가면 앱 루트다. */
+const appRoot = join(here, '..', '..');
+
 let state: MetaAppState | undefined;
+let room: RoomState | undefined;
 let tray: Tray | undefined;
 
-/** 트레이 진입점. 기획서 2.1은 트레이를 MVP에 포함한다. */
+/** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
+const roomHost: RoomHost = { showRoom, broadcast };
+
+/**
+ * 트레이 진입점. 기획서 2.1은 트레이를 MVP에 포함한다.
+ *
+ * 아이콘은 반드시 실제 그림이어야 한다. 예전에는 `nativeImage.createEmpty()`를 썼는데,
+ * 트레이 항목은 폭 16px로 **존재하지만 아무것도 그려지지 않아** 메뉴 바에서 눈에 띄지
+ * 않았다. 열 수 있는 창이 트레이 뒤에만 있으면 앱에 들어갈 방법이 없는 것과 같다.
+ *
+ * 파일명이 `Template`로 끝나면 macOS가 알파만 읽어 메뉴 바 색에 맞춰 칠한다
+ * (`tools/tray-icon.py`가 그 규칙대로 그린다).
+ */
 function buildTray(current: MetaAppState): void {
-  // 아이콘 파일이 없어도 트레이가 뜨도록 빈 이미지로 시작한다.
-  tray = new Tray(nativeImage.createEmpty());
-  tray.setToolTip('tamagotchi-pet 프로토타입');
+  tray = new Tray(join(appRoot, 'resources', 'trayTemplate.png'));
+  tray.setToolTip('petto-petto — 클릭해서 펫룸·정보·설정·업적 열기');
   tray.setContextMenu(
     Menu.buildFromTemplate([
       {
@@ -54,6 +78,11 @@ function buildTray(current: MetaAppState): void {
       },
       { type: 'separator' },
       {
+        label: '펫룸',
+        click: () => showRoom(),
+      },
+      { type: 'separator' },
+      {
         label: '오버레이 표시 전환',
         click: () => {
           current.meta.settings.overlayVisible = !current.meta.settings.overlayVisible;
@@ -68,20 +97,60 @@ function buildTray(current: MetaAppState): void {
 
 // `userData` 경로가 앱 이름에서 나오므로 `whenReady` 전에 정해야 한다. 이걸 빼면
 // 저장 파일이 `Application Support/Electron/`에 들어가 다른 Electron 개발 앱과 섞인다.
+/**
+ * 앱 메뉴. 트레이와 별개로 **항상 보이는** 진입점이다.
+ *
+ * 트레이 아이콘은 메뉴 바가 붐비면 가려지고, 오버레이 우클릭 메뉴는 펫을 찾아 눌러야
+ * 한다는 것을 알아야 쓸 수 있다. 앱 메뉴는 둘 다 아니어서, 앱이 떠 있으면 언제나 같은
+ * 자리에 있고 단축키도 붙는다.
+ */
+function buildAppMenu(current: MetaAppState): void {
+  const openPanel = (screen: string) => () => {
+    current.panelScreen = screen;
+    showPanel();
+    broadcast('panel:show', screen);
+  };
+
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      { role: 'appMenu' },
+      {
+        label: '펫',
+        submenu: [
+          { label: '펫룸', accelerator: 'CommandOrControl+1', click: () => showRoom() },
+          { type: 'separator' },
+          { label: '정보', accelerator: 'CommandOrControl+2', click: openPanel('info') },
+          { label: '설정', accelerator: 'CommandOrControl+3', click: openPanel('settings') },
+          { label: '업적', accelerator: 'CommandOrControl+4', click: openPanel('achievements') },
+        ],
+      },
+      { role: 'windowMenu' },
+    ]),
+  );
+}
+
 app.setName('tamagotchi-pet');
 
 app.whenReady().then(() => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
-  const store = new JsonFileStore(directory);
+  const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
+  const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
-  state = new MetaAppState(store, store.path, app.getVersion());
+  // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
+  // 자리에 테스트 대역이 들어가 상수를 돌려주고 있었다.
+  const ownedPets = loadRoomCollection(roomStore);
+  const collection = new RoomCollectionPort(ownedPets);
+  state = new MetaAppState(store, store.path, app.getVersion(), collection);
+  room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
+  mountRoom(room, roomHost);
 
   createPetWindow(state.meta.settings.petSize);
   createPanelWindow();
   buildTray(state);
+  buildAppMenu(state);
   applyOverlayVisibility(state.meta.settings.overlayVisible);
 
   // 앱 시작 집계. 기획서 8.2에 따라 이 스캔은 기준점만 만들고 아무것도 적립하지 않는다.
@@ -105,6 +174,8 @@ app.whenReady().then(() => {
 
   // 1분 주기 집계.
   setInterval(() => {
+    // 낮↔밤이 넘어갔으면 열려 있는 펫룸의 배경을 바꾼다. 창을 다시 열 필요가 없다.
+    room?.refreshBackground(roomHost);
     if (!state) return;
     const { run, outcome } = state.aggregate();
     state.persist();
@@ -131,4 +202,5 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   state?.persist();
+  room?.persist();
 });

@@ -6,5 +6,9 @@
     "lib": ["ES2023"]
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../../packages/pet-core" }, { "path": "../../packages/pet-meta" }]
+  "references": [
+    { "path": "../../packages/pet-core" },
+    { "path": "../../packages/pet-meta" },
+    { "path": "../../packages/pet-room" }
+  ]
 }
