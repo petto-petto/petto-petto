@@ -27,7 +27,8 @@ import {
   spawnRoamingPet,
   stepRoaming,
   walkAreaOf,
-} from '../../../packages/pet-room/dist/index.js';
+} from '../dist/index.js';
+import { assetUrl } from './assets.js';
 import { drawFrame, fetchJson, loadImage, SpritePlayer } from './sprite.js';
 
 const api = window.petApi;
@@ -100,7 +101,7 @@ async function buildLayers(background, meta) {
     if (layer.name === animatedLayer) {
       const frames = await Promise.all(
         meta.animation.frames.map((file) =>
-          loadImage(backgroundAssetPath(background.directory, file)),
+          loadImage(assetUrl(backgroundAssetPath(background.directory, file))),
         ),
       );
       frames.forEach((image, index) => {
@@ -112,7 +113,7 @@ async function buildLayers(background, meta) {
       continue;
     }
 
-    const image = await loadImage(backgroundAssetPath(background.directory, layer.file));
+    const image = await loadImage(assetUrl(backgroundAssetPath(background.directory, layer.file)));
     image.alt = '';
     layersEl.append(image);
   }
@@ -277,7 +278,7 @@ function startLoop() {
 /* ---------- 적재 ---------- */
 
 async function applyBackground(background) {
-  const metaUrl = backgroundAssetPath(background.directory, background.metaFile);
+  const metaUrl = assetUrl(backgroundAssetPath(background.directory, background.metaFile));
   const meta = await fetchJson(metaUrl);
 
   canvas.width = meta.width;

@@ -94,9 +94,9 @@ test('낮에는 bg_002, 밤에는 bg_003을 쓴다', () => {
   assert.equal(night.metaFile, 'bg_003.json');
 });
 
-test('배경 경로는 renderer 기준 상대 경로다 — 선두 슬래시는 파일 시스템 루트를 가리킨다', () => {
+test('배경 경로는 에셋 루트 기준 상대 경로다 — 선두 슬래시는 파일 시스템 루트를 가리킨다', () => {
   const path = backgroundAssetPath('bg_002_deep_forest', 'frames/near_00.png');
-  assert.equal(path, 'assets/backgrounds/bg_002_deep_forest/frames/near_00.png');
+  assert.equal(path, 'backgrounds/bg_002_deep_forest/frames/near_00.png');
   assert.ok(!path.startsWith('/'));
 });
 

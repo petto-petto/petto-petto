@@ -30,6 +30,15 @@ const combineUiDir = join(
   dirname(fileURLToPath(import.meta.resolve('@pet/combine/package.json'))),
   'ui',
 );
+const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
+
+/**
+ * 정적 에셋의 루트.
+ *
+ * 에셋은 **앱이** 갖고 UI 는 패키지가 갖는다. 패키지가 앱의 파일 경로를 알면 앱 밖에서 못
+ * 쓰게 되므로, 창을 열 때 `?assets=` 로 알려 준다. 모든 feature 창이 같은 규약을 쓴다.
+ */
+const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).href });
 
 let petWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
@@ -75,7 +84,8 @@ function commonOptions() {
 export function createPetWindow(petSize: string): BrowserWindow {
   const side = petSizePixels(petSize as never) + 24;
   petWindow = new BrowserWindow({ ...commonOptions(), width: side, height: side });
-  void petWindow.loadFile(join(rendererDir, 'pet.html'));
+  injectFonts(petWindow);
+  void petWindow.loadFile(join(roomUiDir, 'pet.html'), { query: assetsQuery() });
   placePetInitially();
   return petWindow;
 }
@@ -83,12 +93,12 @@ export function createPetWindow(petSize: string): BrowserWindow {
 /**
  * 도트 폰트를 창에 넣는다.
  *
- * `@pet/meta`의 패널 화면은 `panel.css`에서 Galmuri를 쓰지만, 폰트 파일은 **앱이** 가진다
- * (`renderer/assets/fonts/`). 패키지가 앱의 파일 경로를 알면 앱 밖에서 못 쓰게 되므로,
- * 패키지는 폰트 이름만 말하고 파일은 호스트인 앱이 대 준다.
+ * 다섯 UI(`meta`·`room`·`gacha`·`combine`·`battle`)가 전부 `Galmuri11`을 쓰는데 폰트 파일은
+ * **앱이** 가진다(`renderer/assets/fonts/`). 패키지가 앱의 파일 경로를 알면 앱 밖에서 못
+ * 쓰게 되므로, 패키지는 폰트 이름만 말하고 파일은 호스트인 앱이 대 준다.
  *
- * 같은 디렉터리에 있는 창(`pet.html`·`petroom.html`)은 `fonts.css`를 직접 링크하면 되므로
- * 이 주입이 필요 없다.
+ * 앱이 여는 모든 창에 넣는다. 창마다 따로 챙기면 새 창을 추가할 때 빠뜨리고, 그 창만 조용히
+ * 기본 고정폭으로 떨어진다 — 실제로 `gacha`·`battle`·`meta` 가 그 상태였다.
  */
 function injectFonts(window: BrowserWindow): void {
   const url = (file: string) => pathToFileURL(join(rendererDir, 'assets', 'fonts', file)).href;
@@ -144,9 +154,8 @@ export function createGachaWindow(): BrowserWindow {
       sandbox: true,
     },
   });
-  void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), {
-    query: { assets: pathToFileURL(join(rendererDir, 'assets')).href },
-  });
+  injectFonts(gachaWindow);
+  void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), { query: assetsQuery() });
   gachaWindow.on('closed', () => {
     gachaWindow = undefined;
   });
@@ -168,9 +177,8 @@ export function createCombineWindow(): BrowserWindow {
     title: 'Petto Petto — 비전 합성소',
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
-  void combineWindow.loadFile(join(combineUiDir, 'index.html'), {
-    query: { assets: pathToFileURL(join(rendererDir, 'assets')).href },
-  });
+  injectFonts(combineWindow);
+  void combineWindow.loadFile(join(combineUiDir, 'index.html'), { query: assetsQuery() });
   combineWindow.on('closed', () => {
     combineWindow = undefined;
   });
@@ -224,7 +232,8 @@ export function showRoom(): void {
     roomWindow = undefined;
   });
 
-  void roomWindow.loadFile(join(rendererDir, 'petroom.html'));
+  injectFonts(roomWindow);
+  void roomWindow.loadFile(join(roomUiDir, 'petroom.html'), { query: assetsQuery() });
 }
 
 /** 창의 논리 픽셀 사각형. */

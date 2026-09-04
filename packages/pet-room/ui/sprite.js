@@ -8,13 +8,14 @@
 // `@pet/room`의 도메인 함수다(`node --test`로 검증된다). 이 파일은 그 결과를 캔버스에
 // 옮기는 일만 한다.
 
+import { assetUrl } from './assets.js';
 import {
   frameIndexAt,
   isMotionFinished,
   petAssetPath,
   pickClickMotion,
   spriteMetaPath,
-} from '../../../packages/pet-room/dist/index.js';
+} from '../dist/index.js';
 
 export async function fetchJson(url) {
   const response = await fetch(url);
@@ -33,7 +34,10 @@ export function loadImage(url) {
 
 /** 모션 하나의 시트와 메타. 프레임 크기는 **항상 이 메타에서** 온다. */
 async function loadMotion(species, motion) {
-  const png = petAssetPath(species.rarity, species.slug, species.petId, species.stage, motion);
+  // 도메인은 에셋 루트 기준 상대 경로만 안다. 실제 URL 로 바꾸는 것은 여기서 한 번만 한다.
+  const png = assetUrl(
+    petAssetPath(species.rarity, species.slug, species.petId, species.stage, motion),
+  );
   const [meta, image] = await Promise.all([fetchJson(spriteMetaPath(png)), loadImage(png)]);
   return { meta, image };
 }

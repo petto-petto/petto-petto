@@ -7,7 +7,7 @@
 // 이 파일에 남은 것은 오버레이 고유의 일뿐이다 — 창 크기에 맞춘 배율, 우클릭 메뉴,
 // 말풍선, 그리고 활성 펫이 바뀌면 재시작 없이 갈아 끼우는 것.
 
-import { stageOfLevel } from '../../../packages/pet-room/dist/index.js';
+import { stageOfLevel } from '../dist/index.js';
 import { drawFrame, SpritePlayer } from './sprite.js';
 
 // preload가 노출한 API. 렌더러는 Node에도 임의 IPC 채널에도 닿지 못한다.

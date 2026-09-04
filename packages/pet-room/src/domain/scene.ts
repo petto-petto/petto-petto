@@ -98,9 +98,13 @@ export function backgroundAt(at: Date): BackgroundChoice {
   return phaseAt(at) === 'day' ? DAY : NIGHT;
 }
 
-/** 배경 디렉터리 기준 상대 경로를 `renderer/` 기준 경로로 바꾼다. */
+/**
+ * 배경 디렉터리 기준 상대 경로를 **에셋 루트 기준** 경로로 바꾼다.
+ *
+ * `petAssetPath` 와 같은 규약이다 — 에셋 루트가 어디인지는 UI 의 `assetUrl()` 이 안다.
+ */
 export function backgroundAssetPath(directory: string, file: string): string {
-  return `assets/backgrounds/${directory}/${file}`;
+  return `backgrounds/${directory}/${file}`;
 }
 
 /** 레이어를 그릴 순서(z 오름차순)로 돌려준다. json의 배열 순서를 믿지 않는다. */

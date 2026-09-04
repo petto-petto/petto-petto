@@ -33,21 +33,19 @@ import {
 } from '@pet/room';
 
 const here = dirname(fileURLToPath(import.meta.url));
-/** `packages/pet-room/test` 에서 리포 루트로. */
-const rendererDir = join(here, '..', '..', '..', 'apps', 'desktop', 'renderer');
+/**
+ * 에셋 루트. 도메인 함수가 내는 경로는 **이 디렉터리 기준**이다.
+ *
+ * 런타임에는 창을 여는 쪽이 `?assets=` 로 알려 주고, 테스트에서는 워크스페이스 배치를 알고
+ * 있으므로 직접 짚는다.
+ */
+const assetsDir = join(here, '..', '..', '..', 'apps', 'desktop', 'renderer', 'assets');
 
 /* ---------- 종 카탈로그 ---------- */
 
 test('종 카탈로그는 실제 에셋의 pet.json과 어긋나지 않는다', () => {
   for (const species of PET_SPECIES) {
-    const path = join(
-      rendererDir,
-      'assets',
-      'pets',
-      species.rarity.toLowerCase(),
-      species.slug,
-      'pet.json',
-    );
+    const path = join(assetsDir, 'pets', species.rarity.toLowerCase(), species.slug, 'pet.json');
     const asset = JSON.parse(readFileSync(path, 'utf8')) as {
       petId: string;
       slug: string;
@@ -149,18 +147,20 @@ test('XP 비율은 진짜 경험치가 아니라 레벨에서 만든 표시값�
 
 test('경로는 등급 소문자 폴더로 조립되고, 조립한 파일이 실제로 존재한다', () => {
   const path = petAssetPath('EPIC', 'star_wizard', '006', 3, 'idle');
-  assert.equal(path, 'assets/pets/epic/star_wizard/stage3/pet_006_s3_idle.png');
+  // 에셋 루트 기준 상대 경로다. `assets/` 접두사는 붙지 않는다 — 루트가 어디인지는
+  // `?assets=` 로 주입되고 도메인은 모른다.
+  assert.equal(path, 'pets/epic/star_wizard/stage3/pet_006_s3_idle.png');
   assert.ok(!path.startsWith('/'), 'loadFile 앱에서 선두 슬래시는 파일 시스템 루트다');
 
   for (const species of PET_SPECIES) {
     for (const stage of [1, 2, 3] as const) {
       for (const motion of ['idle', 'click', 'click2', 'attack'] as const) {
         const relative = petAssetPath(species.rarity, species.slug, species.petId, stage, motion);
-        readFileSync(join(rendererDir, relative));
-        readFileSync(join(rendererDir, spriteMetaPath(relative)));
+        readFileSync(join(assetsDir, relative));
+        readFileSync(join(assetsDir, spriteMetaPath(relative)));
       }
       readFileSync(
-        join(rendererDir, petAssetPath(species.rarity, species.slug, species.petId, stage, 'card')),
+        join(assetsDir, petAssetPath(species.rarity, species.slug, species.petId, stage, 'card')),
       );
     }
   }
@@ -172,12 +172,12 @@ test('모션 메타의 frameWidth × frameCount가 실제 PNG 폭과 맞는다',
     for (const stage of [1, 2, 3] as const) {
       const png = petAssetPath(species.rarity, species.slug, species.petId, stage, 'idle');
       const meta = JSON.parse(
-        readFileSync(join(rendererDir, spriteMetaPath(png)), 'utf8'),
+        readFileSync(join(assetsDir, spriteMetaPath(png)), 'utf8'),
       ) as SpriteMeta;
       assert.equal(meta.columns, meta.frameCount, `${species.slug} s${stage}: 가로 1행이 아니다`);
 
       // PNG 헤더(IHDR)의 폭·높이를 직접 읽는다.
-      const bytes = readFileSync(join(rendererDir, png));
+      const bytes = readFileSync(join(assetsDir, png));
       const width = bytes.readUInt32BE(16);
       const height = bytes.readUInt32BE(20);
       assert.equal(
@@ -192,7 +192,7 @@ test('모션 메타의 frameWidth × frameCount가 실제 PNG 폭과 맞는다',
 
 test('card는 메타가 없다 — 없는 json을 찾으면 실패한다 (에셋 가이드 §5)', () => {
   const card = petAssetPath('EPIC', 'star_wizard', '006', 3, 'card');
-  assert.throws(() => readFileSync(join(rendererDir, spriteMetaPath(card))));
+  assert.throws(() => readFileSync(join(assetsDir, spriteMetaPath(card))));
 });
 
 const idleMeta: SpriteMeta = {

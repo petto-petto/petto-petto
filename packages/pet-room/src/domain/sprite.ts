@@ -33,8 +33,10 @@ export interface SpriteMeta {
  * 에셋 경로. 가이드 §1의 폴더 구조를 그대로 조립한다.
  *
  * 등급 폴더는 **소문자**이고 `pet.json`의 `grade`는 대문자다. 그 변환이 여기서 일어난다.
- * 반환값은 `renderer/` 기준 상대 경로다 — 이 앱은 `loadFile`로 뜨므로 선두 슬래시를
- * 붙이면 파일 시스템 루트를 가리켜 아무것도 못 읽는다.
+ *
+ * 반환값은 **에셋 루트 기준 상대 경로**다(`pets/…`). 루트가 어디인지는 이 함수가 알지
+ * 못한다 — 창을 여는 쪽이 `?assets=` 로 알려 주고, UI 의 `assetUrl()` 이 합친다.
+ * 선두 슬래시를 붙이면 안 된다. `loadFile` 로 뜬 창에서 그것은 파일 시스템 루트다.
  */
 export function petAssetPath(
   rarity: Rarity,
@@ -43,7 +45,7 @@ export function petAssetPath(
   stage: PetStage,
   motion: PetMotion | 'card',
 ): string {
-  return `assets/pets/${rarity.toLowerCase()}/${slug}/stage${stage}/pet_${petId}_s${stage}_${motion}.png`;
+  return `pets/${rarity.toLowerCase()}/${slug}/stage${stage}/pet_${petId}_s${stage}_${motion}.png`;
 }
 
 /** 시트 PNG 옆의 메타 경로. `card`에는 쓰면 안 된다(가이드 §5). */
