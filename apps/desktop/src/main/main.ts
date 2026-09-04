@@ -15,6 +15,7 @@ import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
 import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
 import {
@@ -44,7 +45,7 @@ const appRoot = join(here, '..', '..');
 let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
-let growthRepository: PetGrowthRepository | undefined;
+let appDatabase: SqliteFileDatabase | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -185,14 +186,18 @@ app.whenReady().then(() => {
   const directory = app.getPath('userData');
   const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
-  const growthDatabase = new SqliteFileDatabase({ filePath: join(directory, 'petto.sqlite') });
-  growthRepository = new PetGrowthRepository(growthDatabase, {
+  appDatabase = new SqliteFileDatabase({
+    filePath: join(directory, 'petto.sqlite'),
+    migrations: APP_MIGRATIONS,
+  });
+  appDatabase.open();
+  const growthRepository = new PetGrowthRepository(appDatabase, {
     legacyDatabasePaths: [
       join(directory, 'pet-overlay.sqlite'),
       join(app.getPath('appData'), 'Electron', 'pet-overlay.sqlite'),
     ],
   });
-  growthRepository.open();
+  growthRepository.migrateLegacyData();
   registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
@@ -266,5 +271,5 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   state?.persist();
   room?.persist();
-  growthRepository?.close();
+  appDatabase?.close();
 });

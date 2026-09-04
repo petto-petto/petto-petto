@@ -2,38 +2,11 @@ import { existsSync } from 'node:fs';
 
 import Database from 'better-sqlite3';
 
-import { SqliteFileDatabase, type SqliteMigration } from '../sqlite-file.ts';
+import { SqliteFileDatabase } from '../sqlite-file.ts';
 
 const LOCAL_STORAGE_MIGRATION_KEY = 'migration.localstorage.pet-growth-v1';
 const LEGACY_DATABASE_MIGRATION_KEY = 'migration.database.pet-overlay-v1';
 const ACTIVE_PET_KEY = 'overlay.active-pet-key';
-
-const GROWTH_MIGRATIONS: readonly SqliteMigration[] = [
-  {
-    version: 1,
-    name: 'create pet growth profiles',
-    up(database) {
-      database.exec(`
-        CREATE TABLE pet_profiles (
-          pet_key TEXT PRIMARY KEY,
-          display_name TEXT NOT NULL,
-          level INTEGER NOT NULL CHECK (level >= 1),
-          xp_into_level INTEGER NOT NULL CHECK (xp_into_level >= 0),
-          total_xp INTEGER NOT NULL CHECK (total_xp >= 0),
-          evolution_stage INTEGER NOT NULL CHECK (evolution_stage BETWEEN 0 AND 2),
-          token_bank INTEGER NOT NULL CHECK (token_bank >= 0),
-          last_base_xp INTEGER NOT NULL CHECK (last_base_xp >= 0),
-          updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE overlay_metadata (
-          key TEXT PRIMARY KEY,
-          value TEXT NOT NULL
-        );
-      `);
-    },
-  },
-];
 
 interface PersistedPet {
   id: string;
@@ -94,14 +67,9 @@ export class PetGrowthRepository {
     this.#legacyDatabasePaths = legacyDatabasePaths;
   }
 
-  open(): void {
-    this.#database.open();
-    this.#database.applyMigrations(GROWTH_MIGRATIONS);
+  /** 별도 파일을 쓰던 구버전 overlay 데이터를 공용 DB로 한 번만 가져온다. */
+  migrateLegacyData(): void {
     this.#migrateLegacyDatabase();
-  }
-
-  close(): void {
-    this.#database.close();
   }
 
   /** 브라우저 미리보기 시절의 localStorage는 DB가 비어 있을 때만 한 번 가져온다. */

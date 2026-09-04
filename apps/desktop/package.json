@@ -7,7 +7,7 @@
   "main": "dist/main/main.js",
   "scripts": {
     "rebuild:native": "electron-rebuild -f -w better-sqlite3",
-    "test:storage": "tsc --build && ELECTRON_RUN_AS_NODE=1 electron --test test/pet-growth-repository.test.cjs"
+    "test:storage": "tsc --build && ELECTRON_RUN_AS_NODE=1 electron --test test/*.test.cjs"
   },
   "dependencies": {
     "@pet/battle": "*",

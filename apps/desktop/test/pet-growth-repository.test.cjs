@@ -4,7 +4,7 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const test = require('node:test');
 
-const Database = require('../node_modules/better-sqlite3');
+const Database = require('better-sqlite3');
 
 function temporaryDirectory(name) {
   return mkdtempSync(join(tmpdir(), `petto-desktop-${name}-`));
@@ -49,14 +49,17 @@ test('공용 저장소는 기존 오버레이 SQLite를 한 번 이관하고 loc
   createLegacyDatabase(legacyPath);
 
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
+  const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
   const { PetGrowthRepository } =
     await import('../dist/main/persistence/repositories/pet-growth-repository.js');
-  const repository = new PetGrowthRepository(new SqliteFileDatabase({ filePath: targetPath }), {
+  const database = new SqliteFileDatabase({ filePath: targetPath, migrations: APP_MIGRATIONS });
+  const repository = new PetGrowthRepository(database, {
     legacyDatabasePaths: [join(directory, 'missing.sqlite'), legacyPath],
   });
 
   try {
-    repository.open();
+    database.open();
+    repository.migrateLegacyData();
     const hydrated = repository.hydrate({
       mole_digger: {
         pet: {
@@ -90,7 +93,7 @@ test('공용 저장소는 기존 오버레이 SQLite를 한 번 이관하고 loc
     });
     assert.equal(repository.loadAll().star_wizard.pet.level, 4);
   } finally {
-    repository.close();
+    database.close();
     rmSync(directory, { recursive: true, force: true });
   }
 });
