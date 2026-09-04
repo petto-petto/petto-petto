@@ -1,6 +1,6 @@
 /** Electron 진입점. 창을 만들고, 트레이를 달고, 1분 주기 집계를 돌린다. */
 
-import { BrowserWindow, Menu, Tray, app } from 'electron';
+import { BrowserWindow, Menu, Tray, app, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -16,11 +16,16 @@ import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
 import {
   applyOverlayVisibility,
+  beginOverlayDrag,
   broadcast,
+  createOverlayWindow,
   createCombineWindow,
   createGachaWindow,
   createPanelWindow,
-  createPetWindow,
+  endOverlayDrag,
+  focusOverlayWindow,
+  moveOverlayDrag,
+  setOverlayInteractive,
   showPanel,
   showRoom,
 } from './windows.ts';
@@ -35,6 +40,37 @@ const appRoot = join(here, '..', '..');
 let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
+
+interface OverlayPointer {
+  screenX: number;
+  screenY: number;
+}
+
+function isOverlayPointer(value: unknown): value is OverlayPointer {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.screenX === 'number' &&
+    Number.isFinite(candidate.screenX) &&
+    typeof candidate.screenY === 'number' &&
+    Number.isFinite(candidate.screenY)
+  );
+}
+
+function mountOverlayWindowIpc(): void {
+  ipcMain.on('overlay:set-interactive', (_event, interactive: unknown) => {
+    setOverlayInteractive(interactive === true);
+  });
+  ipcMain.on('overlay:focus', () => focusOverlayWindow());
+  ipcMain.on('overlay:drag-start', (_event, point: unknown) => {
+    if (isOverlayPointer(point)) beginOverlayDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('overlay:drag-move', (_event, point: unknown) => {
+    if (isOverlayPointer(point)) moveOverlayDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('overlay:drag-end', () => endOverlayDrag());
+  ipcMain.on('overlay:quit', () => app.quit());
+}
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = { showRoom, broadcast };
@@ -151,8 +187,9 @@ app.whenReady().then(() => {
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);
+  mountOverlayWindowIpc();
 
-  createPetWindow(state.meta.settings.petSize);
+  createOverlayWindow();
   createPanelWindow();
   buildTray(state);
   buildAppMenu(state);
@@ -196,7 +233,7 @@ app.whenReady().then(() => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
-      createPetWindow(state.meta.settings.petSize);
+      createOverlayWindow();
       createPanelWindow();
       if (shouldOpenGachaPrototype()) createGachaWindow();
       if (shouldOpenCombinePrototype()) createCombineWindow();

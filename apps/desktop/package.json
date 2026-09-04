@@ -12,6 +12,7 @@
     "@pet/combine": "*",
     "@pet/core": "*",
     "@pet/gacha": "*",
+    "@pet/main-overlay": "*",
     "@pet/meta": "*",
     "@pet/room": "*",
     "better-sqlite3": "^12.11.1"
