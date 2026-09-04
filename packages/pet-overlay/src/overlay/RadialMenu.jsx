@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { openPanel, openPetRoom } from '../platform/bridge.js';
 
 const ACCENTS = {
   info: '#f5ecd8',
@@ -74,10 +75,10 @@ function Icon({ name }) {
 
 // 기획: 정보 · 업적 · 설정 · 펫 관리 · 전투 (오버레이는 진입만). 링이 기존 펫을 감싼다.
 const ITEMS = [
-  { key: 'info', label: '정보' },
-  { key: 'achievement', label: '업적' },
-  { key: 'settings', label: '설정' },
-  { key: 'petmgmt', label: '펫 관리' },
+  { key: 'info', label: '정보', panelScreen: 'info' },
+  { key: 'achievement', label: '업적', panelScreen: 'achievements' },
+  { key: 'settings', label: '설정', panelScreen: 'settings' },
+  { key: 'petmgmt', label: '펫 관리', opensRoom: true },
   { key: 'battle', label: '전투' },
 ];
 
@@ -85,6 +86,21 @@ export default function RadialMenu({ g, onClose }) {
   const { pet } = g;
   const [panel, setPanel] = useState(null);
   const R = 116;
+
+  const selectItem = (item) => {
+    if (item.panelScreen) {
+      void openPanel(item.panelScreen);
+      onClose();
+      return;
+    }
+    if (item.opensRoom && !pet.evolutionAvailable) {
+      void openPetRoom();
+      onClose();
+      return;
+    }
+    setPanel(item);
+  };
+
   return (
     <div className="radial">
       <div className="radial-bg" onClick={onClose} />
@@ -103,7 +119,7 @@ export default function RadialMenu({ g, onClose }) {
                 '--item-x': `${x}px`,
                 '--item-y': `${y}px`,
               }}
-              onClick={() => setPanel(it)}
+              onClick={() => selectItem(it)}
             >
               <span className="ri-icon">
                 <Icon name={it.key} />
@@ -129,16 +145,28 @@ export default function RadialMenu({ g, onClose }) {
             (프로토타입: 오버레이는 진입 라우팅만)
           </div>
           {panel.key === 'petmgmt' && pet.evolutionAvailable && (
-            <button
-              className="evo-btn"
-              onClick={() => {
-                g.doEvolve();
-                setPanel(null);
-                onClose();
-              }}
-            >
-              ✨ 진화 실행
-            </button>
+            <>
+              <button
+                className="evo-btn"
+                onClick={() => {
+                  g.doEvolve();
+                  setPanel(null);
+                  onClose();
+                }}
+              >
+                ✨ 진화 실행
+              </button>
+              <button
+                className="panel-close"
+                onClick={() => {
+                  void openPetRoom();
+                  setPanel(null);
+                  onClose();
+                }}
+              >
+                펫룸 열기
+              </button>
+            </>
           )}
           <button className="panel-close" onClick={() => setPanel(null)}>
             닫기
