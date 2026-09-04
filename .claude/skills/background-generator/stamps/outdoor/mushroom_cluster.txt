@@ -1,0 +1,20 @@
+[legend]
+c = accent.1
+w = light.3
+h = wood.4
+s = wood.2
+[grid]
+.....cccccc.....
+...cccccccccc...
+..cccwccccwccc..
+.cccccccwcccccc.
+.cccccccccccccc.
+..ccccccccccc...
+....ccccccc.....
+.....hhss.......
+.....hhss...ccc.
+.....hhss..ccccc
+.....hhss.cccwcc
+.....hhss..ccccc
+....hhhsss..hhs.
+...hhhssss..hhs.

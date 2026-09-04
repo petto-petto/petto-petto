@@ -4,3 +4,5 @@ dist
 .omx/*
 .omc/*
 logs/*
+__pycache__/
+**/.omc/

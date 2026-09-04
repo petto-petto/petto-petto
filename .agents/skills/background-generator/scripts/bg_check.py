@@ -230,6 +230,46 @@ def main():
           f"min alpha={comp.getchannel('A').getextrema()[0]}")
     px_par = [l["parallax"] for l in ls]
     r.add("layers 3~5", 3 <= len(ls) <= 5, f"{len(ls)}개 {[l['name'] for l in ls]}")
+
+    # ── 애니메이션 프레임 -------------------------------------------------
+    # 프레임을 안 재면 승격이 아니라 위치 변경이다. 깨진 프레임, 크기가 다른
+    # 프레임, 선언한 레이어 말고 다른 게 바뀐 프레임이 조용히 통과한다.
+    anim = meta.get("animation")
+    if anim:
+        names = anim.get("frames") or []
+        layer_names = [l["name"] for l in ls]
+        r.add("animation: 레이어가 실재", anim.get("layer") in layer_names,
+              f"{anim.get('layer')} (레이어 {layer_names})")
+        r.add("animation: 프레임 2장 이상", len(names) >= 2, f"{len(names)}장")
+        r.add("animation: fps 1~30", 1 <= int(anim.get("fps", 0)) <= 30,
+              f"{anim.get('fps')}fps")
+        missing = [n for n in names
+                   if not os.path.isfile(os.path.join(a.outdir, n))]
+        r.add("animation: 프레임 파일 존재", not missing,
+              "모두 있음" if not missing else f"없음 {missing[:3]}")
+        r.add("animation: frames/ 하위에 둠",
+              all(n.startswith("frames/") for n in names),
+              "ok" if all(n.startswith("frames/") for n in names)
+              else "최상단 PNG는 레이어로 오인된다")
+        if not missing and names:
+            from PIL import Image as _I
+            sizes, sigs = set(), []
+            for n in names:
+                im = _I.open(os.path.join(a.outdir, n)).convert("RGBA")
+                sizes.add(im.size)
+                sigs.append(im.tobytes())
+            r.add("animation: 프레임 캔버스 일치", sizes == {(W, H)},
+                  f"{sorted(sizes)} (캔버스 {W}x{H})")
+            # 전부 같으면 애니메이션이 아니다. 12장을 굽고도 위상이 안 먹은
+            # 경우가 실제로 나온다.
+            r.add("animation: 프레임이 서로 다름", len(set(sigs)) > 1,
+                  f"서로 다른 프레임 {len(set(sigs))}/{len(sigs)}")
+            # 선언한 레이어의 원본과 크기가 같아야 교체가 성립한다.
+            lf = next((l["file"] for l in ls if l["name"] == anim.get("layer")), None)
+            if lf and os.path.isfile(os.path.join(a.outdir, lf)):
+                base = _I.open(os.path.join(a.outdir, lf)).size
+                r.add("animation: 교체 대상과 크기 일치", sizes == {base},
+                      f"{sorted(sizes)} vs {lf} {base}")
     r.add("parallax 단조증가", all(x < y for x, y in zip(px_par, px_par[1:])), f"{px_par}")
 
     # ============================================================ 색 예산

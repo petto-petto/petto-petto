@@ -33,38 +33,59 @@ import bg_pillow_gate  # noqa: F401
 # 가중치는 "이게 비면 결과가 얼마나 갈리는가"로 정했다. 위 두 프롬프트를 이
 # 표로 채점하면 각각 12% / 88% 가 나온다 — 체감과 맞는다.
 SLOTS = [
-    ("space_kind", 12, "공간 종류",
+    ("space_kind", 10, "공간 종류",
      "서재 / 숲 / 동굴 / 설원 / 하늘 플랫폼 …",
      "무엇을 그리는 장면인지. 이게 없으면 아무것도 시작 못 한다"),
-    ("objects", 18, "주요 오브젝트 (3개 이상)",
+    ("objects", 14, "주요 오브젝트 (3개 이상)",
      "소파, 난로, 창, 액자, 사슴뿔 장식 / 고목, 이끼 발판, 로프 다리",
      "화면을 채우는 건 분위기 형용사가 아니라 물건이다. 가장 무거운 슬롯"),
-    ("structure", 12, "공간 구조",
+    ("structure", 10, "공간 구조",
      "가로형 / 다층 수직 / 실내 정면 / 좌우로 열린 시야",
      "레이아웃(ground/canopy/interior)을 여기서 정한다. 나중에 바꾸면 전부 다시 그린다"),
-    ("size", 10, "캔버스 크기",
+    ("size", 8, "캔버스 크기",
      "560x240 / 480x200",
      "구도 상수가 전부 여기 비례한다"),
-    ("placement", 10, "배치와 관계",
+    ("placement", 8, "배치와 관계",
      "쇼파 위에 담요 / 벽 오른쪽에 액자 / 중앙은 비움",
      "물건 목록만 있고 배치가 없으면 나열이 된다"),
-    ("light", 10, "조명과 광원",
+    ("light", 8, "조명과 광원",
      "난롯불 / 창으로 드는 빛 / 역광 안개 / 낮·밤",
      "명암 설계의 근거. 없으면 평평해진다"),
-    ("color_tone", 10, "색·톤 방향",
+    ("color_tone", 8, "색·톤 방향",
      "따뜻한 주황 / 차가운 청록 / 선명하게 / 차분하게",
      "팔레트 선택이나 새 프리셋 생성의 입력"),
-    ("contrast", 8, "대비 구조",
+    ("motion", 8, "움직이는 요소",
+     "반딧불이가 떠다님 12프레임 / 물결 / 없음(정지 한 장)",
+     "스킬의 기본 산출물은 정지 한 장이다. 움직임이 필요하면 어느 레이어가 "
+     "움직이는지 처음부터 알아야 한다 — 나중에 넣으면 프레임을 다시 굽는다"),
+    ("contrast", 6, "대비 구조",
      "창밖은 춥고 방 안은 따뜻하게 / 원경은 안개, 전경은 짙게",
      "좋은 배경은 대개 대비 하나를 축으로 삼는다"),
-    ("character_spot", 6, "캐릭터 자리",
+    ("variants", 6, "변형 개수",
+     "낮·밤 2본 / 사계절 4본 / 1본",
+     "같은 구도를 여러 톤으로 굽는지. 2본 이상이면 프리셋을 파생시켜야 하고 "
+     "구도 스크립트도 프리셋을 인자로 받게 짠다"),
+    ("exposure", 6, "노출·톤 강도",
+     "밝고 화사하게 / 중간 / 태운(어둡고 차분한)",
+     "'색·톤 방향'은 색상을 정하고 이건 밝기를 정한다. 뒤늦게 바꾸면 팔레트부터 "
+     "다시 잡아야 해서 전부 다시 굽는다"),
+    ("character_spot", 5, "캐릭터 자리",
      "중앙 바닥 / 왼쪽 발판 위 / 지정 없음",
      "petAnchor 위치"),
-    ("time_weather", 4, "시간대·날씨",
+    ("time_weather", 3, "시간대·날씨",
      "눈 내림 / 노을 / 비 / 맑음",
      "있으면 좋고 없어도 기본값으로 진행 가능"),
 ]
 THRESHOLD = 20
+
+# 그림의 디테일이 아니라 **무엇을 굽는지**를 정하는 슬롯이다. 비운 채로 시작하면
+# 나중에 채워도 그림 한 구석을 고치는 게 아니라 전부 다시 굽게 된다 — 프레임
+# 시퀀스, 프리셋 파생, 팔레트 명도 재배치. 그래서 모호도가 임계치 아래라도
+# 이 셋이 비어 있으면 진행하지 않는다.
+#
+# 무인 실행이라 물을 수 없으면 `assumed`에 적는다 — 기본값 자체는 싸다
+# (움직임 없음 / 1본 / 중간). 비싼 건 나중에 뒤집히는 것이다.
+BLOCKING = ("motion", "variants", "exposure")
 
 
 def template():
@@ -73,6 +94,19 @@ def template():
             "request": "",
             "slots": {k: "" for k, *_ in SLOTS},
             "assumed": {}}
+
+
+def blocked(spec):
+    """비어 있고 assumed 에도 없는 차단 슬롯."""
+    assumed = {k for k in (spec.get("assumed") or {})}
+    out = []
+    for key, w, name, ex, why in SLOTS:
+        if key not in BLOCKING:
+            continue
+        v = str(spec.get("slots", {}).get(key, "")).strip()
+        if not v and key not in assumed:
+            out.append(name)
+    return out
 
 
 def score(spec):
@@ -115,15 +149,32 @@ def main():
             v = str(spec.get("slots", {}).get(key, "")).strip()
             mark = "O" if v else "X"
             print(f"  [{mark}] {name:<22} {w:>3}점  {v[:56] or '— 비어 있음'}")
+        stuck = blocked(spec)
+        if stuck:
+            print("\n차단 — 이 슬롯은 그림이 아니라 '무엇을 굽는지'를 정한다."
+                  " 비운 채로 시작하면 나중에 전부 다시 굽는다:")
+            for n in stuck:
+                print(f"  · {n}")
+            print("  물을 수 없으면 기본값을 골라 assumed 에 적고 결과 보고에 밝힌다.")
         if spec.get("assumed"):
             print("\n추측으로 채운 것 (결과 보고에 반드시 밝힐 것):")
             for k, v in spec["assumed"].items():
                 print(f"  - {k}: {v}")
-        print(f"\n판정: {'진행 가능' if amb <= THRESHOLD else '아직 묻는다'}")
+        print(f"\n판정: {'진행 가능' if amb <= THRESHOLD and not blocked(spec) else '아직 묻는다'}")
         sys.exit(0 if amb <= THRESHOLD else 1)
 
     if a.cmd == "next":
         if amb <= THRESHOLD:
+            stuck = blocked(spec)
+        if stuck:
+            print(f"모호도 {amb}% 지만 차단 슬롯이 비어 있다 — 이것부터 묻는다:")
+            for key, w, name, ex, why in SLOTS:
+                if name in stuck:
+                    print(f"\n■ {name}  (+{w}점)")
+                    print(f"   왜 필요한가: {why}")
+                    print(f"   보기: {ex}")
+                    print("   -> 선택지를 주고 고르게 한다. 기본값으로 넘기면 나중에 전부 다시 굽는다.")
+        else:
             print(f"모호도 {amb}% — 더 묻지 않는다. 그리기 시작할 것."); return
         print(f"모호도 {amb}%. 아래를 묻는다 (가중치 큰 것부터, 한 번에 3~4개까지).\n")
         for w, key, name, ex, why in missing[:4]:
