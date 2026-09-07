@@ -11,6 +11,7 @@
   "scripts": {
     "format:check": "prettier --check .",
     "format": "prettier --write .",
+    "postinstall": "node scripts/rebuild-native.mjs",
     "typecheck": "tsc --build && tsc -p tsconfig.test.json",
     "test": "tsc --build && node --experimental-strip-types --test \"packages/*/test/**/*.test.ts\"",
     "build": "npm run build --workspace @pet/main-overlay && tsc --build",
