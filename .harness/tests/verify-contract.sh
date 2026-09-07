@@ -167,6 +167,7 @@ for path in \
   .harness/CHANGELOG.md \
   .harness/specs/meta-info-settings-achievements-design.md \
   .harness/rules/electron.md \
+  .harness/rules/feature-contracts.md \
   .harness/rules/skill-authoring.md \
   .harness/references/writing-great-skills/SKILL.md \
   .harness/references/writing-great-skills/GLOSSARY.md; do
@@ -176,6 +177,7 @@ done
 for path in \
   .harness/guides/quick-start.html \
   .harness/guides/concept-application.html \
+  .harness/guides/feature-contracts-kr.html \
   .harness/guides/meta-product-overview.html; do
   assert_file "$path"
 done
@@ -183,6 +185,7 @@ done
 for guide in \
   '.harness/guides/quick-start.html' \
   '.harness/guides/concept-application.html' \
+  '.harness/guides/feature-contracts-kr.html' \
   '.harness/guides/meta-product-overview.html'; do
   assert_contains .harness/README.md "$guide" \
     "README is missing Korean guide pointer: $guide"
@@ -351,6 +354,7 @@ fi
 
 for instruction in \
   '.harness/rules/electron.md' \
+  '.harness/rules/feature-contracts.md' \
   'Before creating or changing UI, visual, or interaction design, read `design.md`.' \
   '.harness/references/writing-great-skills/SKILL.md' \
   '.harness/references/writing-great-skills/GLOSSARY.md' \

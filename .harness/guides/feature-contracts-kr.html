@@ -1,0 +1,414 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="feature 패키지끼리 Port, Event, 주입으로 소통하는 팀 규약과 순환 의존을 피하는 방법">
+  <title>기능 간 계약 규약 | tamagochi-pet</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f9fafe;
+      --text: #191c26;
+      --muted: #5b6273;
+      --line: #dde1ec;
+      --primary: #3a4a8c;
+      --primary-soft: #edeff8;
+      --ok: #2f6b43;
+      --ok-soft: #e9f2ec;
+      --warn: #8a5716;
+      --warn-soft: #f9f0df;
+      --code-bg: #14161f;
+      --code-text: #e4e7ef;
+      --radius: 14px;
+      --shadow: 0 14px 40px rgba(25, 28, 38, 0.07);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --surface: #171a22;
+        --surface-soft: #14161d;
+        --text: #e6e8ef;
+        --muted: #9aa0b0;
+        --line: #292d38;
+        --primary: #96a6e8;
+        --primary-soft: #1b1f31;
+        --ok: #7cc08b;
+        --ok-soft: #17241b;
+        --warn: #deae6e;
+        --warn-soft: #262015;
+        --code-bg: #0b0d13;
+        --code-text: #dfe3ec;
+        --shadow: none;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 20px 88px;
+    }
+
+    header.page {
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      margin: 0 0 10px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: 34px;
+      line-height: 1.25;
+      letter-spacing: -0.02em;
+    }
+
+    .lede {
+      margin: 0;
+      max-width: 60ch;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    section {
+      margin-bottom: 44px;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: 23px;
+      letter-spacing: -0.01em;
+    }
+
+    h3 {
+      margin: 28px 0 8px;
+      font-size: 17px;
+    }
+
+    p { margin: 0 0 14px; max-width: 68ch; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 18px 0;
+      font-size: 15px;
+    }
+
+    th {
+      text-align: left;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      padding: 0 14px 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    td {
+      padding: 12px 14px 12px 0;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+    }
+
+    td:first-child { font-weight: 600; white-space: nowrap; }
+
+    code {
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.88em;
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 5px;
+    }
+
+    pre {
+      margin: 16px 0;
+      padding: 18px 20px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+
+    pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+    pre .cmt { color: #8b93a7; }
+
+    .callout {
+      margin: 18px 0;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      box-shadow: var(--shadow);
+    }
+
+    .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+    .callout.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+    .callout p:last-child { margin-bottom: 0; }
+
+    .callout strong { font-weight: 700; }
+
+    .arrows {
+      margin: 18px 0;
+      padding: 16px 20px;
+      background: var(--surface-soft);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.9;
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    ul { margin: 0 0 14px; padding-left: 22px; max-width: 68ch; }
+    li { margin-bottom: 8px; }
+
+    .rulebox {
+      margin: 18px 0;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .rulebox ol { margin: 0; padding-left: 22px; }
+    .rulebox li { margin-bottom: 10px; }
+    .rulebox li:last-child { margin-bottom: 0; }
+
+    footer.page {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    a { color: var(--primary); }
+  </style>
+</head>
+<body>
+<main id="main-content">
+
+  <header class="page">
+    <p class="eyebrow">팀 규약</p>
+    <h1>기능 간 계약 규약</h1>
+    <p class="lede">
+      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능과 맞닿는 면만 이 규약을 따릅니다.
+    </p>
+  </header>
+
+  <section>
+    <h2>규약 네 줄</h2>
+    <div class="rulebox">
+      <ol>
+        <li><strong>Port는 생산자가 공표하고</strong> 소비자가 가져다 씁니다.</li>
+        <li><strong>필요한 계약 목록은 소비자가</strong> 요구사항으로 가져옵니다.</li>
+        <li><strong>한 쌍 사이에 Port는 한 방향만.</strong> 반대 방향은 Event나 주입입니다.</li>
+        <li><strong><code>pet-core</code>는 어휘만.</strong> 계약을 여기 두지 않습니다.</li>
+      </ol>
+    </div>
+    <p>
+      3번이 1·2번을 지켜 주고, 4번이 3번의 탈출구를 막습니다. 셋째와 넷째가 왜 필요한지는 아래
+      순환 케이스에서 드러납니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>소통 창구는 셋입니다</h2>
+    <p>다른 기능에 닿는 방법은 이 셋 중 하나입니다.</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>창구</th>
+          <th>성격</th>
+          <th>컴파일 의존</th>
+          <th>언제 쓰나</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Port</td>
+          <td>질의 · 명령 — 내가 당겨온다</td>
+          <td>소비자 → 생산자</td>
+          <td>지금 값이나 행위가 필요하고, 낡으면 버그일 때</td>
+        </tr>
+        <tr>
+          <td>Event</td>
+          <td>사실 통지 — 발행자는 듣는 사람을 모른다</td>
+          <td>없음</td>
+          <td>일어난 일을 알릴 때. 수신자가 0명이어도 정상</td>
+        </tr>
+        <tr>
+          <td>주입</td>
+          <td>값 전달 — 앱이 쥐여준다</td>
+          <td>없음</td>
+          <td>받는 쪽이 자기 입력 타입을 선언하고 앱이 채울 때</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <p>
+        <strong>Event와 주입 구분법 — 문법으로 가릅니다.</strong>
+        과거형 문장으로 쓸 수 있으면 Event입니다(“펫이 진화했다”). 현재 상태 명사면 주입입니다
+        (“지금 표시 크기”).
+      </p>
+    </div>
+
+    <p>
+      의존을 만드는 건 <strong>Port 하나뿐</strong>입니다. 그래서 순환이 생기면 나머지 둘 중
+      하나로 바꾸면 풀립니다.
+    </p>
+  </section>
+
+  <section>
+    <h2>누가 무엇을 소유하나</h2>
+    <ul>
+      <li>
+        <strong>Port</strong> — 생산자가 인터페이스와 구현체를 같은 패키지에 둡니다. 소비자는
+        인터페이스만 import해서 호출합니다.
+      </li>
+      <li>
+        <strong>요구 목록</strong> — 소비자가 가져옵니다. 생산자가 소비자의 필요를 추측하지
+        않습니다.
+      </li>
+      <li>
+        <strong>Event 내용물</strong> — 발행하는 도메인 것입니다. 봉투(이벤트 id, 시각, 스키마
+        버전)는 어휘라서 <code>pet-core</code>에 둡니다.
+      </li>
+      <li>
+        <strong>주입 타입</strong> — 받는 쪽 것이고, 이름에 남의 도메인이 나오지 않습니다. 다른
+        기능이 없어도 그 값은 필요하기 때문에 Port가 아닙니다.
+      </li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>한 쌍 사이에 Port는 한 방향만</h2>
+    <p>
+      Port는 곧 <strong>의존 화살표</strong>입니다. 화살표를 양쪽으로 그릴 수는 없습니다.
+    </p>
+    <p>
+      어느 쪽이 Port가 되는가 — <strong>행위가 필요한 쪽</strong>입니다.
+      <strong>값만 필요한 쪽</strong>은 주입받습니다.
+    </p>
+
+    <div class="callout warn">
+      <p>
+        <strong>양쪽 다 행위가 필요하면 경계가 잘못된 것입니다.</strong>
+        보통 두 기능 사이의 개념 하나가 주인을 못 찾은 상태입니다. 우회하지 말고 그 주인을
+        정하세요.
+      </p>
+      <p>
+        그리고 <strong><code>pet-core</code>로 계약을 옮겨 순환을 푸는 것은 금지</strong>입니다.
+        순환 참조는 <code>tsc --build</code>를 실패시키는데, 그 실패가 “이 화살표 하나는 Port가
+        아니어야 한다”는 신호입니다. core로 옮기면 빌드만 통과하고 결합은 그대로 남습니다.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>케이스: 서로가 서로를 필요로 할 때</h2>
+    <p>
+      기능 <code>A</code>는 <code>B</code>의 <strong>행위</strong>가 필요하고, <code>B</code>는
+      <code>A</code>가 소유한 <strong>값</strong>이 필요합니다. 둘 다 Port로 만들면 순환이고
+      빌드가 실패합니다. <code>A → B</code>만 Port로 둡니다.
+    </p>
+
+    <h3>생산자 쪽 — 상대 기능의 이름을 모릅니다</h3>
+<pre><code><span class="cmt">// packages/feature-b</span>
+
+<span class="cmt">// 소비자가 가져다 쓸 계약. 생산자인 여기서 공표한다.</span>
+export interface BPort {
+  perform(): Result;
+}
+
+<span class="cmt">// B 자신의 입력. 이름에 남의 도메인이 나오지 않는다.</span>
+export interface BOptions {
+  mode: 'compact' | 'full';
+}
+
+export class BService implements BPort {
+  #options: BOptions = { mode: 'full' };
+
+  <span class="cmt">// 앱이 넣어준다. Port 가 아니다.</span>
+  applyOptions(options: BOptions): void {
+    this.#options = options;
+  }
+
+  perform(): Result { <span class="cmt">/* … */</span> }
+}</code></pre>
+
+    <h3>앱 — 양쪽을 아는 유일한 곳</h3>
+<pre><code><span class="cmt">// apps/desktop</span>
+const b = new BService();
+const a = new AService(b);   <span class="cmt">// A → B 는 Port</span>
+
+const push = () =&gt; b.applyOptions({ mode: a.settings().mode });
+push();                      <span class="cmt">// 시작할 때 한 번</span>
+a.onSettingsChanged(push);   <span class="cmt">// 바뀔 때마다</span></code></pre>
+
+    <div class="arrows">feature-a ──BPort──▶ feature-b
+feature-b ──────────▶ (없음)          ← 순환 없음
+
+apps/desktop ──▶ feature-a
+             ──▶ feature-b           ← 앱만 양쪽을 안다</div>
+
+    <div class="callout ok">
+      <p>
+        <strong>이게 왜 “소비자가 선언”이 아닌가.</strong>
+        <code>BPort</code>는 <em>남의 도메인</em>에 대한 계약이라 생산자가 소유합니다. 반면
+        <code>BOptions</code>는 <em>B 자신의 입력</em>입니다 — <code>A</code>가 없어도 B는 모드가
+        필요합니다. 나중에 커맨드라인 옵션이 이 값을 채워도 <code>feature-b</code>는 한 줄도
+        바뀌지 않습니다.
+      </p>
+      <p>
+        값을 복사해 들고 있기 곤란하면 생성자로 <code>() =&gt; BOptions</code>를 주입받으면
+        됩니다. <code>B</code>는 여전히 <code>feature-a</code>를 import하지 않습니다.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>실패는 던지세요</h2>
+    <p>
+      Port는 실패할 때 예외를 던집니다. <code>null</code>이나 <code>0</code>을 돌려주지 않습니다.
+      <code>0</code>을 받은 소비자는 <strong>“데이터가 없음”과 “조회 실패”를 구분할 수
+      없고</strong>, 틀린 값을 그리면서 그것을 알아챌 방법도 없습니다.
+    </p>
+  </section>
+
+  <footer class="page">
+    이 문서는 사람이 읽는 버전입니다. 에이전트가 따르는 정본은
+    <code>.harness/rules/feature-contracts.md</code>이며, 규칙이 바뀌면 그쪽을 먼저 고칩니다.
+  </footer>
+
+</main>
+</body>
+</html>

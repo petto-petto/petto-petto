@@ -15,6 +15,16 @@
 
 ### Added
 
+- `.harness/rules/feature-contracts.md`는 feature 패키지끼리 맞닿는 면을 다스린다.
+  창구는 셋(Port · Event · 주입)이고, Port는 생산자가 공표하며, **한 쌍 사이에 Port는
+  한 방향만** 둔다. 2026-09-03 팀 결정을 정본으로 옮긴 것이다.
+- 순환이 생겼을 때 계약을 `pet-core`로 옮기는 것을 금지한다. 순환 참조는
+  `tsc --build`를 실패시키는데, 그 실패 자체가 "이 화살표 하나는 Port가 아니어야
+  한다"는 신호다. core로 옮기면 빌드만 통과하고 결합은 남는다.
+- `.harness/guides/feature-contracts-kr.html`은 그 규칙의 한국어 읽기판이다. 규칙을
+  중복하지 않고, 정본은 계속 `rules/feature-contracts.md`다.
+- 계약 검사가 규칙 문서·가이드·`AGENTS.md` 포인터·README 포인터 네 가지를 강제한다.
+
 - `background-generator` now ships high-detail outdoor stamp variants
   (`rock_mossy`, `mushroom_cluster`, `log_mossy`, `bush_leafy`) and a rule for
   when to reach for them, so large canvases stop upscaling 5-9px props into
