@@ -32,6 +32,7 @@ import {
   usageScreen,
   type AggregationRun,
   type EvaluationOutcome,
+  type PetSummary,
 } from '../index.ts';
 
 import type { MetaAppState } from './state.ts';
@@ -52,6 +53,14 @@ export interface MetaHost {
   broadcast(channel: string, payload: unknown): void;
   openExternal(url: string): Promise<void>;
   revealPath(path: string): void;
+  /**
+   * 오버레이 펫의 초상화 주소.
+   *
+   * 에셋이 어디에 어떤 이름으로 놓이는지는 앱만 안다 — `PetSummary.sprite`는 슬러그일
+   * 뿐이고, 파일명에 필요한 `petId`는 종 메타에, 진화 단계는 레벨 규칙에 있다. 그래서
+   * `meta`는 펫 요약만 넘기고 주소를 받는다. 에셋이 없으면 `undefined`.
+   */
+  petPortrait(pet: PetSummary): string | undefined;
 }
 
 /** 채널 이름 → 처리 함수. 앱이 이것을 자기 IPC에 붙인다. */
@@ -150,6 +159,19 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       state.growth,
     ),
   );
+
+  /*
+   * 프로필 초상화. 뷰 모델에 넣지 않고 별도 채널로 둔 이유: 주소는 앱의 에셋 배치에
+   * 딸린 값이라 순수한 `view/`가 만들 수 없다. 요약 모델은 규칙만 담는다.
+   */
+  handle('info:pet-portrait', () => {
+    try {
+      return host.petPortrait(state.collection.overlayPet());
+    } catch {
+      // 펫 조회가 실패하면 초상화도 없다. 요약의 나머지는 이 실패와 무관하다.
+      return undefined;
+    }
+  });
 
   handle('info:usage', (period) =>
     usageScreen(

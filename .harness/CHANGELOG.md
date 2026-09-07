@@ -112,8 +112,18 @@
   `specs/meta-info-settings-achievements-design.md` path and made that naming
   convention part of the harness contract.
 
+### Changed
+
+- Renamed the meta product specification to the stable, content-focused
+  `specs/meta-info-settings-achievements-design.md` path and made that naming
+  convention part of the harness contract.
+
 ### Added
 
+- Approved meta product specification for information, settings, achievements,
+  three-source local usage collection, and macOS/Windows acceptance criteria.
+- Contract assertions for the meta specification and its implementation-facing
+  requirement ID families.
 - Local `background-generator` Skill and deterministic `320x180` forest-background renderer for the desktop pet room, with one shared source exposed to both Codex and Claude.
 - Korean one-page meta product overview for briefing teammates on the approved
   information, settings, achievements, local collection, and reward design.
