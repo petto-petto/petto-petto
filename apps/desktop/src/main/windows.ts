@@ -22,6 +22,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 /** `dist/main`에서 두 단계 올라가면 앱 루트다. */
 const appRoot = join(here, '..', '..');
 const rendererDir = join(appRoot, 'renderer');
+
+/** 펫 에셋 뿌리. 배치를 아는 곳을 앱 한 군데로 묶는다. */
+export const petAssetsDir = join(rendererDir, 'assets', 'pets');
 const preloadPath = join(appRoot, 'src', 'preload', 'preload.cjs');
 
 /**

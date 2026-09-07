@@ -10,8 +10,11 @@
  */
 
 import { ipcMain, shell } from 'electron';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
-import type { MetaAppState, MetaHost } from '@pet/meta';
+import type { MetaAppState, MetaHost, PetSummary } from '@pet/meta';
 import { metaHandlers } from '@pet/meta';
 
 import {
@@ -19,8 +22,42 @@ import {
   applyPetSize,
   broadcast,
   hidePanel,
+  petAssetsDir,
   showPanel,
 } from './windows.ts';
+
+/** 레벨 → 진화 단계. 에셋 가이드 §3. `renderer/pet.js`와 같은 규칙이다. */
+function stageOfLevel(level: number): number {
+  if (level < 10) return 1;
+  if (level < 20) return 2;
+  return 3;
+}
+
+/**
+ * 펫 요약을 초상화 파일 주소로 바꾼다.
+ *
+ * 슬러그만으로는 파일명을 알 수 없다 — 파일명에 들어가는 `petId`는 종 메타(`pet.json`)에
+ * 있다(에셋 가이드 §6). 등급 폴더는 소문자, `pet.json`의 `grade`는 대문자다(§1).
+ *
+ * 에셋이 하나라도 없으면 던지지 않고 `undefined`를 준다. 초상화가 없는 것은 오류가
+ * 아니고, 화면은 자리표시 글리프로 넘어간다.
+ */
+function petPortrait(pet: PetSummary): string | undefined {
+  try {
+    const speciesDir = join(petAssetsDir, pet.rarity.toLowerCase(), pet.sprite);
+    const manifest = join(speciesDir, 'pet.json');
+    if (!existsSync(manifest)) return undefined;
+
+    const species = JSON.parse(readFileSync(manifest, 'utf8')) as { petId?: string };
+    if (species.petId === undefined) return undefined;
+
+    const stage = stageOfLevel(pet.level);
+    const file = join(speciesDir, `stage${stage}`, `pet_${species.petId}_s${stage}_card.png`);
+    return existsSync(file) ? pathToFileURL(file).href : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 /** Electron 으로 `MetaHost` 를 채운다. */
 const host: MetaHost = {
@@ -31,6 +68,7 @@ const host: MetaHost = {
   broadcast,
   openExternal: (url) => shell.openExternal(url),
   revealPath: (path) => shell.showItemInFolder(path),
+  petPortrait,
 };
 
 /** meta 의 채널을 IPC 에 등록한다. 채널 이름은 meta 가 소유한다. */

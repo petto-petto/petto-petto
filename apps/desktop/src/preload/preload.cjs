@@ -27,6 +27,7 @@ const EVENT_CHANNELS = [
 contextBridge.exposeInMainWorld('petApi', {
   // 조회
   infoSummary: () => ipcRenderer.invoke('info:summary'),
+  petPortrait: () => ipcRenderer.invoke('info:pet-portrait'),
   infoUsage: (period) => ipcRenderer.invoke('info:usage', period),
   infoPerformance: () => ipcRenderer.invoke('info:performance'),
   settingsView: () => ipcRenderer.invoke('settings:view'),

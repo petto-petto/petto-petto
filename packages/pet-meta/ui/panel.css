@@ -324,14 +324,22 @@ main.no-scroll {
 
 .pet-thumb {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  /* 초상화는 32px 또는 48px이다. 큰 쪽이 여백을 갖고 들어가는 크기로 둔다. */
+  width: 52px;
+  height: 52px;
   background: var(--forest-mid);
   border: 2px solid var(--wood-border);
   box-shadow: inset 0 0 0 2px var(--forest-darkest);
   display: grid;
   place-items: center;
+  overflow: hidden;
+}
+
+/* 픽셀 아트는 보간하면 뭉개진다. 원본 크기로만 그린다(가이드 4절). */
+.pet-thumb img {
   image-rendering: pixelated;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .profile-body {
