@@ -178,7 +178,7 @@ export function performanceScreen(
       value: totals.value
         ? okField(Math.abs(totals.value.earned))
         : failedField(totals.error ?? '조회 실패'),
-      owner: 'overlay-growth 재화',
+      owner: '재화',
     },
     {
       key: 'spent',
@@ -186,7 +186,7 @@ export function performanceScreen(
       value: totals.value
         ? okField(Math.abs(totals.value.spent))
         : failedField(totals.error ?? '조회 실패'),
-      owner: 'overlay-growth 재화',
+      owner: '재화',
     },
   ];
 
