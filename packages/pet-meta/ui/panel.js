@@ -38,10 +38,24 @@ const nf = new Intl.NumberFormat('ko-KR');
 const num = (value) => nf.format(value ?? 0);
 
 /** 큰 토큰 수를 짧게. 400px 폭에서 자리수가 넘치지 않게 한다. */
+/**
+ * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다.
+ *
+ * 토큰 수치는 도구가 보고하는 값이고, 그 도구들이 쓰는 단위가 K · M · B다. 한글 단위로
+ * 바꾸면 사용자가 다른 화면에서 본 숫자와 머릿속으로 환산해야 한다.
+ */
 function compact(value) {
   const n = Number(value ?? 0);
-  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`;
-  if (n >= 10_000) return `${(n / 10_000).toFixed(n >= 1_000_000 ? 0 : 1)}만`;
+  const abs = Math.abs(n);
+  // 1000 으로 나눈 자리마다 단위를 올린다. 소수 한 자리까지만 두고 `1.0M`은 `1M`으로 줄인다.
+  const step = (divisor, unit) => {
+    const scaled = n / divisor;
+    const text = Math.abs(scaled) >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
+    return `${text.replace(/\.0$/, '')}${unit}`;
+  };
+  if (abs >= 1_000_000_000) return step(1_000_000_000, 'B');
+  if (abs >= 1_000_000) return step(1_000_000, 'M');
+  if (abs >= 10_000) return step(1_000, 'K');
   return nf.format(n);
 }
 

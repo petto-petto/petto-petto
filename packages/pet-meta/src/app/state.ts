@@ -27,14 +27,8 @@ import {
   type MetaStore,
   type SponsorLinks,
 } from '../index.ts';
-import { createMetaState } from '../index.ts';
-import {
-  InMemoryCurrency,
-  RecordingEventBus,
-  StubBattle,
-  StubGacha,
-  StubGrowth,
-} from '../testing/fakes.ts';
+import { createMetaState, type CurrencyPort } from '../index.ts';
+import { RecordingEventBus, StubBattle, StubGacha, StubGrowth } from '../testing/fakes.ts';
 import type { CollectionPort } from '../ports/index.ts';
 
 /** 데모 사용량 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
@@ -48,7 +42,14 @@ export class MetaAppState {
   readonly catalog = AchievementCatalog.embedded();
   /** 수집기 경계. 프로토타입은 픽스처, 제품은 고정 버전 `ccusage` 어댑터. */
   readonly collector = FixtureCollector.withEmptySnapshots();
-  readonly currency = new InMemoryCurrency();
+  /**
+   * 재화 구현. 앱이 넣어준다.
+   *
+   * 예전에는 여기서 `new InMemoryCurrency()`를 직접 만들었다. 인메모리라 앱을 끌 때마다
+   * 잔액이 0으로 돌아갔고, 멱등 키는 이 패키지의 스냅샷에 남아 다시 지급되지도 않았다 —
+   * 코인이 영구히 사라졌다. 저장 수명이 다른 두 곳에 나뉘어 있던 탓이다.
+   */
+  readonly currency: CurrencyPort;
   /**
    * 보유 펫 조회. **대역이 아니라 앱이 주입한 실제 구현이다.**
    *
@@ -85,11 +86,18 @@ export class MetaAppState {
    * 읽기에 실패해도 앱은 뜬다. 저장 파일 하나 때문에 사용자가 앱을 아예 못 쓰는 것보다,
    * 새로 시작하고 그 사실을 알리는 편이 낫다.
    */
-  constructor(store: MetaStore, dataLocation: string, version: string, collection: CollectionPort) {
+  constructor(
+    store: MetaStore,
+    dataLocation: string,
+    version: string,
+    collection: CollectionPort,
+    currency: CurrencyPort,
+  ) {
     this.store = store;
     this.dataLocation = dataLocation;
     this.version = version;
     this.collection = collection;
+    this.currency = currency;
 
     let restored: MetaState | undefined;
     try {
@@ -100,7 +108,6 @@ export class MetaAppState {
 
     this.isFreshInstall = restored === undefined;
     this.meta = restored ?? createMetaState();
-    this.currency.setNow(this.clock.now());
   }
 
   today(): LocalDate {
