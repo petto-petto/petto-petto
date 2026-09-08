@@ -251,7 +251,9 @@ async function renderSummary() {
           }),
       el('span', {
         class: 'hero-sub',
-        text: data.todayEarnedCoins.error ? '오늘 ⚠' : `오늘 +${data.todayEarnedCoins.value}`,
+        text: data.todayEarnedCoins.error
+          ? '오늘 조회 실패'
+          : `오늘 +${data.todayEarnedCoins.value.toLocaleString('ko-KR')}`,
       }),
     ]),
   ]);

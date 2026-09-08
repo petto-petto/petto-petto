@@ -80,7 +80,7 @@ body {
 
 body {
   width: 400px;
-  height: 510px;
+  height: 544px;
   background: var(--parchment);
   color: var(--ink);
   /*
@@ -424,30 +424,37 @@ main.no-scroll {
  * (금색은 획득·보상 전용이고, 이 값이 정확히 그것이다).
  */
 /*
- * 한 줄로 눕힌 이유: 요약은 스크롤 없이 들어가야 하고(INFO-001), 패널 높이는
- * 기획서 4.2가 고정한다. 세로로 쌓으면 그 예산을 넘긴다.
+ * 화면에서 가장 강조되는 카드.
+ *
+ * 가이드가 글자를 16px까지만 허용하므로(3절) 숫자 크기로는 더 키울 수 없다. 그래서
+ * **면적**으로 위계를 만든다 — 자기 줄을 두 줄 쓰고, 여백을 가장 넉넉히 갖고, 어두운 숲
+ * 바탕으로 양피지 카드들과 분리되고, 값에만 금색(획득·보상 전용 색)을 쓴다.
  */
 .hero {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+  padding: var(--space-4);
   background: var(--forest-mid);
   box-shadow:
     inset 0 0 0 2px var(--forest-leaf),
+    inset 0 0 0 5px var(--forest-darkest),
     var(--drop);
 }
 
+/*
+ * 라벨은 캡션이다. 값과 크기를 겨루면 무엇이 중요한지 흐려진다 — 13px로 뒀더니 굵은
+ * 제목 글꼴이라 16px 값보다 커 보였다. 가이드가 보조 정보에 지정한 10px로 낮춘다.
+ */
 .hero-label {
   color: var(--light-text);
   font-size: 10px;
 }
 
+/* 값과 `오늘 +N`을 같은 기준선에 두고 양끝으로 벌린다. */
 .hero-figure {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .hero-value {
