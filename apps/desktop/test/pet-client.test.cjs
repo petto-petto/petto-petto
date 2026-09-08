@@ -196,7 +196,8 @@ test('기존 성장 DB에 pet migration을 추가해도 기존 데이터는 보�
   });
   database.open();
   database.exec(
-    `INSERT INTO pet_profiles VALUES ('mole_digger', '기존 펫', 7, 3, 63, 0, 9000, 3, '2026-09-13')`,
+    `INSERT INTO pet_profiles (owned_pet_id, pet_key, display_name, level, xp_into_level, total_xp, evolution_stage, token_bank, last_base_xp, updated_at)
+     VALUES ('owned-mole-1', 'mole_digger', '기존 펫', 7, 3, 63, 0, 9000, 3, '2026-09-13')`,
   );
   database.close();
   database = new SqliteFileDatabase({ filePath, migrations: APP_MIGRATIONS });

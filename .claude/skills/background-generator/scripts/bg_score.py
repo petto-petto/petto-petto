@@ -33,7 +33,6 @@ Usage:
         {"name": "이끼 낀 나뭇가지 발판", "op": "branch_platform", "min": 3},
         {"name": "로프 다리", "op": "rope_bridge", "min": 2},
         {"name": "사다리", "op": "ladder", "min": 1},
-        {"name": "역광 안개 개방부", "op": "glow", "min": 2},
         {"name": "덩굴", "op": "stamp:vine", "min": 2}
       ]
     }
@@ -74,6 +73,20 @@ def sat(p):
 
 def hue(p):
     return colorsys.rgb_to_hls(p[0] / 255, p[1] / 255, p[2] / 255)[0] * 360
+
+
+# 이펙트 op 은 "무엇이 있는가"가 아니라 "어떻게 보이는가"다. 핵심 요소로 셀 수
+# 있게 두면 "contact_shadow 를 4개 쓰겠다"고 선언하고 4개 써서 구도 점수를 채우는
+# 자기충족이 된다 — 실제로 배경 7장 중 7장이 이 목록의 op 으로 요소를 늘렸다.
+#
+# `fringe` 는 뺐다. 실측해 보니 이것만은 '중경 실루엣 라인', '천장 종유석' 처럼
+# 진짜 구조를 담고 있었다. 현상만 담는 것들과 섞지 않는다.
+EFFECT_OPS = ("glow", "specks", "rays", "contact_shadow", "autoshade",
+              "scanshade", "vignette", "clearing")
+
+
+def is_effect(spec):
+    return spec.split(":", 1)[0] in EFFECT_OPS
 
 
 def count_op(scene, spec):
@@ -160,15 +173,20 @@ def main():
 
     # ================================================= 2) 레퍼런스 구도 반영 30
     pts, sub, hit = 0, [], 0
-    els = spec.get("elements", [])
+    declared = spec.get("elements", [])
+    els = [e for e in declared if not is_effect(str(e.get("op", "")))]
+    rejected = [e for e in declared if is_effect(str(e.get("op", "")))]
     for e in els:
         n = count_op(scene, e["op"])
         good = n >= e.get("min", 1)
         hit += 1 if good else 0
         sub.append(f"  {'O' if good else 'X'} {e['name']}: {n}개 (요구 {e.get('min',1)})")
+    for e in rejected:
+        sub.append(f"  - {e['name']}: 이펙트({e['op']}) — 핵심 요소로 세지 않는다")
     per = 30.0 / max(1, len(els))
     pts = round(per * hit)
-    sub.insert(0, f"핵심 요소 {hit}/{len(els)} 반영 → {pts}점")
+    sub.insert(0, f"핵심 요소 {hit}/{len(els)} 반영 → {pts}점"
+               + (f"  (이펙트 {len(rejected)}개 제외)" if rejected else ""))
     score["레퍼런스 구도 반영"] = (pts, 30, sub)
     if hit <= 4:
         triggers.append("1. 레퍼런스 핵심 요소가 4개 이하만 반영")

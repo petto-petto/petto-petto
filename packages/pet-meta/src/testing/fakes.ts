@@ -145,6 +145,7 @@ export class InMemoryCollection implements CollectionPort {
     level: 21,
     rarity: 'EPIC',
     sprite: 'star_wizard',
+    stage: 3,
   };
   /** 룸의 남은 빈자리 수. 0이면 트로피가 보관함으로 간다. */
   #roomSlots = 1;
