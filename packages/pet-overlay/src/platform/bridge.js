@@ -34,3 +34,21 @@ export function openPetRoom() {
 export function openBattle() {
   return api?.openBattle?.() ?? Promise.resolve();
 }
+
+/**
+ * 명부 조회·활성 펫 지정·활성 펫 변경 구독.
+ *
+ * 활성 펫은 오버레이가 정하지 않는다. `setActivePet` 은 호출만 하고, 화면은 오직
+ * `onActivePetChanged` 로 받은 값으로 바꾼다 — 펫룸과 같은 규칙이다. 발신 창이 낙관적으로
+ * 먼저 그리면 로컬 상태와 push 상태가 경쟁해 진실의 원천이 둘로 쪼개진다.
+ */
+export function roomScene() {
+  return api?.roomScene?.() ?? Promise.resolve(null);
+}
+export function setActivePet(ownedPetId) {
+  return api?.setActivePet?.(ownedPetId) ?? Promise.resolve();
+}
+export function onActivePetChanged(cb) {
+  if (api?.onActivePetChanged) return api.onActivePetChanged(cb);
+  return () => {};
+}

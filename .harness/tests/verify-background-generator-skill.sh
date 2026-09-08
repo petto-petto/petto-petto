@@ -74,6 +74,10 @@ grep -F -q -- '--from' "$canonical_root/scripts/bg_preset_new.py"
 grep -F -q -- '--burn' "$canonical_root/scripts/bg_preset_new.py"
 grep -F -q -- 'def derive' "$canonical_root/scripts/bg_preset_new.py"
 grep -F -q -- '프리셋 파생' "$canonical_root/references/color.md"
+# accent 는 "한 장면 안에서 온도를 대비시키는 유일한 램프"인데, 색상환에서
+# 중경의 보색으로만 파생되면 지정할 방법이 없다. 초록 숲의 보색은 보라라서
+# 따뜻한 햇살을 accent 로 둘 수 없었다.
+grep -F -q -- '--accent' "$canonical_root/scripts/bg_preset_new.py"
 
 # P4. 절차와 규율 — 이번에 실제로 통한 방식과 실제로 데인 자리.
 grep -F -q -- '격리해' "$canonical_root/SKILL.md"
@@ -121,9 +125,12 @@ find "$codex_root" -type f ! -path '*/__pycache__/*' ! -path '*/.omc/*' | sed "s
 diff -u "$canonical_files" "$codex_files"
 
 file_count=$(wc -l < "$canonical_files" | tr -d ' ')
-test "$file_count" = 72
+test "$file_count" = 76
 while IFS= read -r relative; do
-  cmp -s "$canonical_root/$relative" "$codex_root/$relative"
+  if ! cmp -s "$canonical_root/$relative" "$codex_root/$relative"; then
+    printf 'FAIL: the two Skill trees differ: %s\n' "$relative"
+    exit 1
+  fi
 done < "$canonical_files"
 
 PETTO_BACKGROUND_PYCACHE=/tmp/petto-petto-background-pycache
@@ -150,6 +157,69 @@ for script in "$(dirname "$skill")"/scripts/bg_*.py; do
     exit 1
   fi
   grep -F -q -- 'Pillow is required' "$blocked_output"
+done
+
+# 이펙트 op 은 구도가 아니다. 핵심 요소로 셀 수 있으면 "contact_shadow 를 4개
+# 쓰겠다" 고 선언하고 4개 쓰는 것으로 구도 점수가 만점이 된다 — 자기충족적이다.
+grep -F -q -- 'EFFECT_OPS = (' "$canonical_root/scripts/bg_score.py"
+# 상수가 있는 것만으로는 부족하다 — 요소 집계에서 실제로 걸러야 한다.
+grep -F -q -- 'if not is_effect(' "$canonical_root/scripts/bg_score.py"
+for effect_op in glow specks rays contact_shadow autoshade; do
+  grep -F -q -- "\"$effect_op\"" "$canonical_root/scripts/bg_score.py"
+done
+# 문서의 예시가 잘못을 가르치면 검사보다 예시가 이긴다.
+if grep -F -q -- '"op": "glow"' "$canonical_root/scripts/bg_score.py"; then
+  printf '%s\n' 'FAIL: bg_score.py의 예시가 이펙트 op을 핵심 요소로 가르친다'
+  exit 1
+fi
+
+# 사용자에게 물을 수 있는데 자기 채점한 결과로 최종 통과를 선언할 수 없다.
+grep -F -q -- 'judged_by' "$canonical_root/scripts/bg_visual.py"
+grep -F -q -- 'judged_by' "$canonical_root/scripts/bg_final.py"
+grep -F -q -- '--unattended' "$canonical_root/scripts/bg_final.py"
+
+# `next` 는 "지금 무엇을 물을까"를 답하는 명령이다. 차단 슬롯 조회를 모호도 분기
+# 안에 두면 물을 것이 가장 많은 경우에 이름이 대입되지 않아 크래시했다. 조회는
+# 분기 밖에서 무조건 일어나야 한다.
+python3 - "$canonical_root/scripts/bg_interview.py" <<'PYCHECK'
+import ast, sys
+tree = ast.parse(open(sys.argv[1], encoding="utf-8").read())
+fn = next(n for n in ast.walk(tree)
+          if isinstance(n, ast.FunctionDef) and n.name == "main")
+branch = next(n for n in ast.walk(fn)
+              if isinstance(n, ast.If) and ast.dump(n.test).find("'next'") != -1)
+first = branch.body[0]
+assert isinstance(first, ast.Assign) and first.targets[0].id == "stuck", \
+    "bg_interview.py: `next` 분기는 stuck 대입으로 시작해야 한다 (조건부면 크래시)"
+PYCHECK
+
+# 스킬 본문이 다시 비대해지는 것을 기계적으로 막는다. 두 가지가 함께 커진다 —
+# 길이 자체(sprawl)와, references/ 와 스크립트가 이미 소유한 기준값의 재기술
+# (duplication). 재기술은 지표를 바꿀 때 고칠 자리를 하나 더 만들고, 둘이
+# 어긋나도 읽는 사람은 알 수 없다 — 실제로 프리셋 표의 layout 이 그렇게 어긋났다.
+skill_lines=$(wc -l < "$skill" | tr -d ' ')
+if [ "$skill_lines" -gt 240 ]; then
+  printf 'FAIL: SKILL.md is %s lines (cap 240)\n' "$skill_lines"
+  printf '      기준값·배점표는 references/ 와 스크립트 --help 가 소유한다.\n'
+  exit 1
+fi
+
+# 아래는 전부 다른 곳이 소유하고, 그 소유자가 실행 시 스스로 출력한다.
+#   references/quality.md  — 게이트 기준값
+#   bg_check.py            — 검사할 때마다 항목명과 실측값을 함께 찍는다
+#   bg_score.py            — 배점과 획득 점수를 항목별로 찍는다
+#   bg_final.py --help     — 최종 다섯 조건
+for owned_threshold in \
+  '24~48' \
+  '>= 15%' '≥ 15%' \
+  '>= 7구간' '≥ 7구간' \
+  '75% 이상' '≥75%' \
+  '<= 16%' '≤ 16%' \
+  '검수 결과 첨부'; do
+  if grep -F -q -- "$owned_threshold" "$skill"; then
+    printf 'FAIL: SKILL.md restates a threshold it does not own: %s\n' "$owned_threshold"
+    exit 1
+  fi
 done
 
 printf '%s\n' 'Background generator Skill verification passed.'

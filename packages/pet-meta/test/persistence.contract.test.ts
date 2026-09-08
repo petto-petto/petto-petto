@@ -294,6 +294,7 @@ test('오버레이 펫은 meta가 저장하지 않는다', () => {
     level: 21,
     rarity: 'EPIC',
     sprite: 'star_wizard',
+    stage: 3,
   });
 
   assert.ok(!json.includes('star_wizard'));

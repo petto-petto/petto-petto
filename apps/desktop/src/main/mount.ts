@@ -26,13 +26,6 @@ import {
   showPanel,
 } from './windows.ts';
 
-/** 레벨 → 진화 단계. 에셋 가이드 §3. `renderer/pet.js`와 같은 규칙이다. */
-function stageOfLevel(level: number): number {
-  if (level < 10) return 1;
-  if (level < 20) return 2;
-  return 3;
-}
-
 /**
  * 펫 요약을 초상화 파일 주소로 바꾼다.
  *
@@ -51,7 +44,9 @@ function petPortrait(pet: PetSummary): string | undefined {
     const species = JSON.parse(readFileSync(manifest, 'utf8')) as { petId?: string };
     if (species.petId === undefined) return undefined;
 
-    const stage = stageOfLevel(pet.level);
+    // 단계는 `PetSummary`가 싣고 온다. 레벨에서 유도하면 진화하지 않은 고레벨 펫의
+    // 초상화만 다른 단계로 나온다.
+    const { stage } = pet;
     const file = join(speciesDir, `stage${stage}`, `pet_${species.petId}_s${stage}_card.png`);
     return existsSync(file) ? pathToFileURL(file).href : undefined;
   } catch {

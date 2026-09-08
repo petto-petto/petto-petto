@@ -15,6 +15,7 @@
 
 ### Added
 
+
 - `background-generator` now ships high-detail outdoor stamp variants
   (`rock_mossy`, `mushroom_cluster`, `log_mossy`, `bush_leafy`) and a rule for
   when to reach for them, so large canvases stop upscaling 5-9px props into
@@ -92,6 +93,30 @@
 
 ### Changed
 
+- `bg_score.py` no longer counts effect ops (`glow`, `specks`, `rays`,
+  `contact_shadow`, `autoshade`, `scanshade`, `vignette`, `clearing`) as core
+  elements, and its docstring example no longer teaches the pattern. Declaring
+  "four contact_shadow ops" and then using four had scored full composition
+  marks. `fringe` is deliberately excluded from that list: measuring all seven
+  shipped backgrounds showed it is the one effect op that carries real structure.
+- `bg_final.py` refuses to declare a final pass on a self-scored visual review
+  unless `--unattended` is passed, and `bg_visual.py`'s form now records
+  `judged_by`. A silent self-assessment had been reported as a completed
+  review while the requester was available to look at the picture.
+
+- `background-generator`'s `SKILL.md` shrank from 509 to 240 lines. Every gate
+  threshold, score breakdown, visual-review item and final condition it restated
+  was deleted rather than summarised: `references/quality.md` owns the
+  thresholds, and `bg_check.py`, `bg_score.py` and `bg_final.py --help` each
+  print their own criteria with the measured value beside them. The
+  component-isolation review procedure moved to `references/visual_review.md`,
+  the five reference-analysis axes to `references/reference_analysis.md`, and the
+  interview's questioning rules to `references/interview.md`. Two mechanical
+  guards now hold the line — a 240-line cap and a check that the Skill does not
+  restate a threshold it does not own — and both were negative-tested.
+- The Skill-tree comparison now names the file that differs. It previously failed
+  through `set -e` with no output at all, which cost a debugging cycle.
+
 - `background-generator` now exports every runtime background under Electron's
   `apps/desktop/renderer/assets/backgrounds/` path and verifies that contract.
 - Renamed `pixel-pet-creator-pillow` to `pet-generator` and made Claude and
@@ -152,6 +177,17 @@
   runs `npm install` before the completion gate can run.
 
 ### Fixed
+
+- `bg_final.py` ran its three sub-checks as `python3` instead of the interpreter
+  running it, so under the project virtualenv every sub-check failed with
+  "Pillow is required" and the command could not complete in this repository.
+
+- `bg_interview.py next` crashed with `UnboundLocalError` whenever ambiguity
+  exceeded the threshold — exactly the case the command exists for — because the
+  blocking-slot lookup sat inside the low-ambiguity branch. The same control flow
+  also told the caller to start drawing when a blocking slot was empty. The
+  lookup is now unconditional, and an AST assertion in the Skill verification
+  keeps it that way. Found by running every command the Skill quotes.
 
 - Korean guides now point verification and feature workflow readers to their
   canonical owners; the contract rejects tracked Markdown plans from the index.

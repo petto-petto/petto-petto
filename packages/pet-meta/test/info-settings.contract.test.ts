@@ -327,6 +327,7 @@ test('INFO-003: 프로필 펫이 현재 오버레이 펫을 따라간다', () =>
     level: 21,
     rarity: 'EPIC',
     sprite: 'bird',
+    stage: 3,
   });
 
   const summary = harness.summary();

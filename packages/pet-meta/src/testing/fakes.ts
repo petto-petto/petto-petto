@@ -146,6 +146,7 @@ export class InMemoryCollection implements CollectionPort {
     level: 21,
     rarity: 'EPIC',
     sprite: 'star_wizard',
+    stage: 3,
   };
   #ownedPets = 3;
   #dex: DexProgress = { owned: 3, total: 24 };

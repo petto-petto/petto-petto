@@ -99,11 +99,25 @@ contextBridge.exposeInMainWorld('overlay', {
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
   openPetRoom: () => ipcRenderer.invoke('room:open'),
   openBattle: () => ipcRenderer.invoke('battle:open'),
-  hydrateGrowth: (legacySnapshots) => ipcRenderer.invoke('growth:hydrate', legacySnapshots),
+  loadGrowth: () => ipcRenderer.invoke('growth:load-all'),
   saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
   clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),
-  loadOverlayState: () => ipcRenderer.invoke('overlay:load-state'),
-  saveOverlayState: (state) => ipcRenderer.invoke('overlay:save-state', state),
+
+  /**
+   * 활성 펫은 오버레이가 정하지 않는다.
+   *
+   * 예전에는 오버레이가 자기 활성 펫 키를 따로 저장해서, 펫룸에서 "오버레이로 지정"을 눌러도
+   * 오버레이 창이 바뀌지 않았다. 이제 명부(`room-state.json`)가 단일 정본이고 오버레이는
+   * 펫룸과 **같은 채널**을 쓴다.
+   */
+  roomScene: () => ipcRenderer.invoke('room:scene'),
+  setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
+  onActivePetChanged: (listener) => {
+    const wrapped = (_event, view) => listener(view);
+    ipcRenderer.on('room:activePetChanged', wrapped);
+    return () => ipcRenderer.removeListener('room:activePetChanged', wrapped);
+  },
+
   onMenuClose: (listener) => {
     const wrapped = () => listener();
     ipcRenderer.on('overlay:menu-close', wrapped);

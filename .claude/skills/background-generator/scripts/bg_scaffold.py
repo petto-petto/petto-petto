@@ -514,6 +514,15 @@ def canopy(pre_name, d, W, H):
     return sky, far, mid, near, tiers[0], gt, pet
 
 
+def next_free_id(taken):
+    """bg_### 중 아직 안 쓰인 가장 작은 번호."""
+    used = {int(k[3:]) for k in taken if k.startswith("bg_") and k[3:].isdigit()}
+    n = 1
+    while n in used:
+        n += 1
+    return f"bg_{n:03d}"
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -525,6 +534,33 @@ def main():
     ap.add_argument("--root", help="프로젝트 루트 — 저장 경로를 함께 출력")
     ap.add_argument("--seamless", action="store_true")
     a = ap.parse_args()
+
+    # id 중복 검사 — id 는 배경의 열쇠다. 겹치면 런타임 메타 파일명({id}.json)까지
+    # 겹쳐 두 배경이 서로를 가린다. 이름만 다른 폴더로는 구분되지 않는다.
+    # 겹친 채로 배경을 더 만들수록 나중에 고칠 참조가 늘어난다.
+    if a.root:
+        bg_dir = os.path.join(a.root, "apps/desktop/renderer/assets/backgrounds")
+        taken = {}
+        if os.path.isdir(bg_dir):
+            for d_ in sorted(os.listdir(bg_dir)):
+                sp = os.path.join(bg_dir, d_, "scene.json")
+                if not os.path.isfile(sp):
+                    continue
+                try:
+                    got = json.load(open(sp, encoding="utf-8")).get("id")
+                except (OSError, ValueError):
+                    continue
+                if got:
+                    taken.setdefault(got, []).append(d_)
+        if a.id in taken:
+            raise SystemExit(
+                f"id 중복: '{a.id}' 를 이미 {taken[a.id]} 가 쓰고 있다.\n"
+                f"런타임 메타 파일명이 {a.id}.json 으로 같아져 서로를 가린다.\n"
+                f"다음 빈 번호: {next_free_id(taken)}")
+        # 이미 겹쳐 있는 것이 있으면 알려 준다 — 새 배경을 더 얹기 전에 본다.
+        for got, dirs in sorted(taken.items()):
+            if len(dirs) > 1:
+                sys.stderr.write(f"# 경고: 기존 id 중복 '{got}' — {dirs}\n")
 
     try:
         W, H = (int(v) for v in a.size.lower().split("x"))

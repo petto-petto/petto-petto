@@ -21,10 +21,14 @@ import type { Clock } from '@pet/core';
 import {
   backgroundAt,
   fromSnapshot,
+  growthSeeds,
   roomPetViews,
   toSnapshot,
   withActivePet,
+  withPetGrowth,
   type BackgroundChoice,
+  type PetGrowth,
+  type PetGrowthSeed,
   type RoomCollection,
   type RoomPetView,
   type RoomStore,
@@ -118,6 +122,34 @@ export class RoomState {
     console.log(`[ROOM] 활성 펫 → ${active.name} (${active.ownedPetId})`);
     host.broadcast('room:activePetChanged', active);
     return active;
+  }
+
+  /** 성장 저장소가 개체를 받아들이는 데 필요한 정보. */
+  growthSeeds(): PetGrowthSeed[] {
+    return growthSeeds(this.#collection);
+  }
+
+  /**
+   * 성장 저장소가 말하는 레벨·진화 단계를 명부에 반영하고, 달라졌으면 알린다.
+   *
+   * 레벨과 진화 단계의 정본은 성장 저장소다(`PetGrowthRepository` 참조). 여기서 하는 일은
+   * 그 값을 명부에 **투영**하는 것뿐이라, 이 메서드가 값을 만들어 내지 않는다. 명부가 자기
+   * 레벨을 따로 올리면 프로필(명부에서 읽는다)과 오버레이(성장 저장소에서 읽는다)가 서로
+   * 다른 숫자를 말하게 된다.
+   *
+   * 성장은 활성 펫에게만 적용되므로 알릴 값도 활성 펫 뷰 하나면 충분하다. 실제로 바뀐 게
+   * 없으면 브로드캐스트하지 않는다 — 성장 저장은 자주 일어나고, 매번 전 창을 깨울 이유가
+   * 없다.
+   */
+  applyGrowth(growth: ReadonlyMap<string, PetGrowth>, host: RoomHost): void {
+    const before = this.activeView();
+    this.#collection = withPetGrowth(this.#collection, growth);
+    this.port.update(this.#collection);
+    this.persist();
+
+    const after = this.activeView();
+    if (after.level === before.level && after.stage === before.stage) return;
+    host.broadcast('room:activePetChanged', after);
   }
 
   /**

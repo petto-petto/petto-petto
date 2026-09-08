@@ -224,7 +224,7 @@ def derive(src_ramps, burn):
     return out
 
 
-def build(mood, anchors=None, terrain=None):
+def build(mood, anchors=None, terrain=None, a_accent=None):
     t = terrain or pick(mood, TERRAIN_WORDS) or "forest"
     a_sky, a_far, a_mid, a_near = anchors or TERRAIN[t]
     dl, ds = 0.0, 1.0
@@ -274,7 +274,11 @@ def build(mood, anchors=None, terrain=None):
         # 중경과의 구분은 밝기가 아니라 **따뜻한 색상**으로 낸다.
         "wood":   ramp(mk(32 + hue_push * 0.4, LADDER[3], 0.44),
                        shadow=0.66, light=1.30),
-        "accent": ramp(mk(h_mid + 150, 0.46, min(0.9, max(0.35, hls(a_mid)[2] * 1.2)))),
+        # 기본은 중경의 보색이다. 하지만 "차가운 매스 + 따뜻한 빛"처럼 색상환
+        # 반대편이 아니라 **온도**로 대비시키는 장면이 있다(초록 숲의 보색은
+        # 보라라서 황금빛 햇살을 accent 로 둘 수 없었다). 그때는 색을 직접 준다.
+        "accent": ramp(a_accent) if a_accent else
+                  ramp(mk(h_mid + 150, 0.46, min(0.9, max(0.35, hls(a_mid)[2] * 1.2)))),
         # light 램프는 시간대와 무관하게 위로 끝까지 간다. 밤·동굴이라도 달빛·
         # 횃불·입구 빛이 있어야 명도 히스토그램의 위쪽 구간이 채워진다.
         "light":  ramp(mk(hls(a_sky)[0], 0.80, max(0.10, hls(a_sky)[2] * 0.5)),
@@ -316,6 +320,8 @@ def main():
                     help="--from 과 함께. 0=원본 그대로, 1=가장 많이 탄다 (기본 0.7)")
     ap.add_argument("--label", help="한 줄 설명")
     ap.add_argument("--terrain", help=f"자동 판정 대신 직접 지정: {sorted(TERRAIN)}")
+    ap.add_argument("--accent", help="accent 램프 기준색 hex. 색상환 보색이 아니라 "
+                                     "온도로 대비시킬 때 쓴다 (예: 차가운 숲 + 황금빛 햇살)")
     ap.add_argument("--anchors", help="'하늘,원경,중경,전경' hex 4개로 직접 지정")
     ap.add_argument("--layout", default="ground", choices=["ground", "canopy", "interior"])
     ap.add_argument("--kind", default="outdoor", choices=["outdoor", "interior"])
@@ -367,7 +373,7 @@ def main():
         if not a.mood:
             raise SystemExit("--mood 또는 --from 중 하나는 있어야 한다.")
         anchors = [x.strip() for x in a.anchors.split(",")] if a.anchors else None
-        terrain, tm, ramps = build(a.mood, anchors, a.terrain)
+        terrain, tm, ramps = build(a.mood, anchors, a.terrain, a.accent)
     muted_ok = terrain in MUTED_OK
     entry = {
         "label": a.label or f"{a.mood} — {terrain}",

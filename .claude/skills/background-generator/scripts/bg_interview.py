@@ -164,18 +164,23 @@ def main():
         sys.exit(0 if amb <= THRESHOLD else 1)
 
     if a.cmd == "next":
-        if amb <= THRESHOLD:
-            stuck = blocked(spec)
+        # 차단 슬롯은 모호도와 무관하게 본다. 모호도가 높을 때만 조건부로 구하면
+        # 정작 물을 게 가장 많은 경우에 이 이름이 대입되지 않는다.
+        stuck = blocked(spec)
+        if amb <= THRESHOLD and not stuck:
+            print(f"모호도 {amb}% — 더 묻지 않는다. 그리기 시작할 것.")
+            return
         if stuck:
-            print(f"모호도 {amb}% 지만 차단 슬롯이 비어 있다 — 이것부터 묻는다:")
+            print("차단 슬롯이 비어 있다 — 이것부터 묻는다:")
             for key, w, name, ex, why in SLOTS:
                 if name in stuck:
                     print(f"\n■ {name}  (+{w}점)")
                     print(f"   왜 필요한가: {why}")
                     print(f"   보기: {ex}")
                     print("   -> 선택지를 주고 고르게 한다. 기본값으로 넘기면 나중에 전부 다시 굽는다.")
-        else:
-            print(f"모호도 {amb}% — 더 묻지 않는다. 그리기 시작할 것."); return
+            print()
+        if not missing:
+            return
         print(f"모호도 {amb}%. 아래를 묻는다 (가중치 큰 것부터, 한 번에 3~4개까지).\n")
         for w, key, name, ex, why in missing[:4]:
             print(f"■ {name}  (+{w}점)")

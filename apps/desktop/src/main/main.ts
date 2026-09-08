@@ -7,14 +7,14 @@ import { dirname, join } from 'node:path';
 import { systemClock } from '@pet/core';
 
 import { MetaAppState } from '@pet/meta';
-import type { RoomSnapshot } from '@pet/room';
+import type { StoredRoomSnapshot } from '@pet/room';
 import type { MetaSnapshot } from '@pet/meta';
 
 import { RoomCollectionPort } from './collection.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
-import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
@@ -185,7 +185,7 @@ app.whenReady().then(() => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
   const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
-  const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
+  const roomStore = new JsonFileStore<StoredRoomSnapshot>(directory, ROOM_FILE_NAME);
   appDatabase = new SqliteFileDatabase({
     filePath: join(directory, 'petto.sqlite'),
     migrations: APP_MIGRATIONS,
@@ -198,7 +198,6 @@ app.whenReady().then(() => {
     ],
   });
   growthRepository.migrateLegacyData();
-  registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
   // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
@@ -207,6 +206,29 @@ app.whenReady().then(() => {
   const collection = new RoomCollectionPort(ownedPets);
   state = new MetaAppState(store, store.path, app.getVersion(), collection);
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
+
+  // 명부의 개체가 모두 성장 행을 갖게 하고, 그 값을 명부에 투영한다. 이게 없으면 프로필은
+  // 명부의 레벨을, 오버레이는 성장 저장소의 레벨을 말해 두 화면이 갈라진다.
+  //
+  // 실패해도 앱은 뜬다. 이 줄은 창·IPC·트레이보다 **앞**이라, 여기서 던지면 사용자는 창이
+  // 하나도 없는 죽은 프로세스만 보게 된다 — 손댄 저장 파일 하나가 앱을 통째로 못 쓰게
+  // 만드는 것이 저장 파일을 방어하는 이유 그 자체였다. 성장이 안 붙으면 명부의 값으로
+  // 그리면 되고, 다음 실행에서 다시 시도된다.
+  try {
+    room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
+  } catch (error) {
+    console.log(`[GROWTH] 성장 기록을 명부에 맞추지 못했습니다 — ${String(error)}`);
+  }
+
+  const growthHost: OverlayGrowthHost = {
+    growthChanged: () => room?.applyGrowth(growthRepository.growth(), roomHost),
+    reseed: () => {
+      if (!room) return;
+      room.applyGrowth(growthRepository.resetGrowth(room.growthSeeds()), roomHost);
+    },
+  };
+  registerOverlayGrowthIpc(growthRepository, growthHost);
+
   mountMeta(state);
   mountRoom(room, roomHost);
   mountOverlayWindowIpc();

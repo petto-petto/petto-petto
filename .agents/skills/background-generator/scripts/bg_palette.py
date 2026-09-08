@@ -152,7 +152,11 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("show"); s.add_argument("--preset", required=True); s.set_defaults(fn=cmd_show)
     s = sub.add_parser("list"); s.set_defaults(fn=lambda a: [
-        print(f"  {k:<9} {v['label']}\n            mood: {', '.join(v.get('mood', []))}")
+        # layout 이 구도를 정한다 — ground 는 지평선이 있는 수평, canopy 는 지평선이
+        # 없는 다층 수직, interior 는 정면 벽 + 마루. 프리셋을 고르는 순간 필요한
+        # 정보라 여기서 보여준다(단일 출처는 presets.json).
+        print(f"  {k:<14} [{v.get('layout', 'ground'):<8}] {v['label']}"
+              f"\n            mood: {', '.join(v.get('mood', []))}")
         for k, v in presets().items()])
     s = sub.add_parser("derive"); s.add_argument("--base", required=True)
     s.add_argument("--steps", type=int, default=5); s.set_defaults(fn=cmd_derive)

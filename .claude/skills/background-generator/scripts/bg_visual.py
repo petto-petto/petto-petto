@@ -95,6 +95,11 @@ def form():
         "_howto": "각 항목을 0~만점으로. 근거(evidence)에는 '이미지에서 무엇이 보였는지'를 쓴다. "
                   "수치 게이트 결과나 REPORT의 자기평가를 근거로 쓰지 않는다 — 그림만 본다.",
         "sheet": "검수 시트 PNG 경로",
+        # 누가 그림을 봤는지. 이 서식은 무인 실행용 대체 수단이고, 사람이 있으면
+        # 사람이 본다. 적어 두지 않으면 자기 채점이 사용자 승인처럼 보고된다.
+        "judged_by": "self",
+        "_judged_by": "self = 내가 시트를 보고 채점함 / user = 사용자가 직접 보고 판단함. "
+                      "self 로 최종 통과를 선언하려면 bg_final.py --unattended 가 필요하다.",
         "scores": [{"id": c[0], "max": c[1], "criterion": c[2], "score": None, "evidence": ""}
                    for c in CRITERIA],
         "palette_requirement": {"asked": "", "met": None, "evidence": ""},
@@ -125,6 +130,7 @@ def verify(path):
     need = els.get("required_min", 5)
     print("=" * 60)
     print(f"시각 품질 점수 {total}/100   (통과 {PASS})")
+    print(f"판단 주체 judged_by={v.get('judged_by', 'self')}")
     print(f"핵심 요소 육안 확인 {n}/{need}개: {', '.join(els.get('seen', [])) or '없음'}")
     print(f"팔레트/톤 요구사항 {'충족' if pal.get('met') else '미충족'}"
           + (f" — {pal.get('evidence','')}" if pal.get("evidence") else ""))
