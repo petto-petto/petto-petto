@@ -95,3 +95,81 @@ and touch other owners' packages:
 - The event envelope has not been moved to `pet-core`.
 - `CollectionPort` is still consumer-declared with an adapter in
   `apps/desktop/src/main/collection.ts`.
+
+
+---
+
+# 2026-09-09 — Event 채널을 버리고 테이블 단위 Port 로 좁힘
+
+## Evidence
+
+- Team decision on 2026-09-09: drop the Event channel and the producer-publishes rule.
+  The agreed shape is `call site → Port (one per table) → Port implementation →
+  persistence layer`, and **the consumer builds all of it**.
+- The rule committed on 2026-09-03 now teaches the opposite on two points: it presents
+  Event as one of three channels, and it says the producer publishes the Port.
+- That rule sits in open PR #12. A teammate reading it would build an event bus the
+  team has decided against.
+- Baseline: `bash .harness/tests/verify-contract.sh` exited 0 with the stale rule in
+  place — nothing mechanically noticed that the rule had gone wrong.
+
+## Root cause
+
+Stale guidance. The instruction was correct when written and the decision moved. No
+check pinned the rule's content, only its existence and its pointers.
+
+## Pruning
+
+- Canonical owner unchanged: `.harness/rules/feature-contracts.md`.
+- Removed: the three-channel table, the Event ownership section, the injection
+  walkthrough, and the one-arrow-per-pair rule. All of it described a model the team
+  no longer uses; keeping any of it as "for reference" would be sediment.
+- Kept and re-grounded: throw on failure, one owner per table, and the point that
+  moment-only facts must be stored by the owner — that last one survives the change
+  because it is now a **column** request rather than an event request.
+- The worked example is the currency chain that already ships, so the rule teaches from
+  running code rather than a sketch.
+
+## Approval
+
+Approved by the requester on 2026-09-09: rewrite the rule for the new structure, in
+English, with the Korean guide following it.
+
+## RED
+
+```bash
+bash .harness/tests/verify-contract.sh
+```
+
+```text
+FAIL: feature-contracts.md must state that the consumer builds call site, Port, implementation, and persistence call
+FAIL: feature-contracts.md must not describe the retired Event channel
+```
+
+Exit code 1.
+
+## GREEN
+
+The same command after the rewrite: no `FAIL` lines, exit code 0.
+
+## Contract verification
+
+`bash .harness/tests/verify-contract.sh` ends with `Contract verification passed.`
+
+## CHANGELOG.md
+
+Recorded under `## Unreleased`. Changed canonical files:
+`.harness/rules/feature-contracts.md`, `.harness/guides/feature-contracts-kr.html`,
+`.harness/README.md`, `.harness/tests/verify-contract.sh`.
+
+## Completion
+
+This time the check pins the rule's **content**, not just its existence, so a later
+drift back to the retired model fails the contract run.
+
+Remaining gaps, blocked on the owners rather than on this change:
+
+- `gacha` and `battle` store nothing, so their Ports have no table to read.
+- `collection` keeps pets in `room-state.json`, not a table.
+- `overlay-growth` and `collection` disagree about pet identity and level, so a
+  `GrowthPort` cannot be pointed at `pet_profiles` yet.

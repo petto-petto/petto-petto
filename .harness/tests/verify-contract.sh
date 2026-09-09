@@ -364,6 +364,16 @@ for instruction in \
   assert_contains AGENTS.md "$instruction" "AGENTS.md is missing required guidance: $instruction"
 done
 
+# 팀이 2026-09-09 에 Event 창구를 버리고 테이블 단위 Port 하나로 좁혔다. 규칙이 옛 모델로
+# 돌아가면 팀원이 쓰지 않기로 한 구조를 만들게 된다.
+assert_contains .harness/rules/feature-contracts.md \
+  'The consumer builds the whole chain.' \
+  'feature-contracts.md must state that the consumer builds call site, Port, implementation, and persistence call'
+
+assert_not_contains .harness/rules/feature-contracts.md \
+  'a fact, announced' \
+  'feature-contracts.md must not describe the retired Event channel'
+
 assert_not_contains AGENTS.md \
   'design-kr.md' \
   'AGENTS.md must not use the human-only Korean design guide as an agent instruction source'

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="feature 패키지끼리 Port, Event, 주입으로 소통하는 팀 규약과 순환 의존을 피하는 방법">
+  <meta name="description" content="다른 기능의 데이터를 쓸 때 따르는 팀 규약 — 테이블 단위 Port와 사용하는 사람이 만드는 사슬">
   <title>기능 간 계약 규약 | tamagochi-pet</title>
   <style>
     :root {
@@ -57,11 +57,7 @@
       line-height: 1.75;
     }
 
-    main {
-      max-width: 860px;
-      margin: 0 auto;
-      padding: 48px 20px 88px;
-    }
+    main { max-width: 860px; margin: 0 auto; padding: 48px 20px 88px; }
 
     header.page {
       margin-bottom: 40px;
@@ -77,60 +73,35 @@
       margin: 0 0 10px;
     }
 
-    h1 {
-      margin: 0 0 14px;
-      font-size: 34px;
-      line-height: 1.25;
-      letter-spacing: -0.02em;
-    }
+    h1 { margin: 0 0 14px; font-size: 34px; line-height: 1.25; letter-spacing: -0.02em; }
+    .lede { margin: 0; max-width: 60ch; color: var(--muted); font-size: 17px; }
 
-    .lede {
-      margin: 0;
-      max-width: 60ch;
-      color: var(--muted);
-      font-size: 17px;
-    }
-
-    section {
-      margin-bottom: 44px;
-    }
-
-    h2 {
-      margin: 0 0 8px;
-      font-size: 23px;
-      letter-spacing: -0.01em;
-    }
-
-    h3 {
-      margin: 28px 0 8px;
-      font-size: 17px;
-    }
-
+    section { margin-bottom: 44px; }
+    h2 { margin: 0 0 10px; font-size: 23px; letter-spacing: -0.01em; }
+    h3 { margin: 28px 0 8px; font-size: 17px; }
     p { margin: 0 0 14px; max-width: 68ch; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .chain {
       margin: 18px 0;
-      font-size: 15px;
+      padding: 20px 22px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 14px;
+      line-height: 2;
+      overflow-x: auto;
+      white-space: pre;
     }
 
+    table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
     th {
-      text-align: left;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      padding: 0 14px 10px 0;
-      border-bottom: 1px solid var(--line);
+      text-align: left; font-size: 13px; font-weight: 600; color: var(--muted);
+      padding: 0 14px 10px 0; border-bottom: 1px solid var(--line);
     }
-
-    td {
-      padding: 12px 14px 12px 0;
-      border-bottom: 1px solid var(--line);
-      vertical-align: top;
-    }
-
-    td:first-child { font-weight: 600; white-space: nowrap; }
+    td { padding: 12px 14px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:first-child { font-weight: 600; }
 
     code {
       font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
@@ -152,7 +123,6 @@
       font-size: 13.5px;
       line-height: 1.7;
     }
-
     pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
     pre .cmt { color: #8b93a7; }
 
@@ -164,28 +134,9 @@
       border-radius: 0 var(--radius) var(--radius) 0;
       box-shadow: var(--shadow);
     }
-
     .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
     .callout.ok { border-left-color: var(--ok); background: var(--ok-soft); }
     .callout p:last-child { margin-bottom: 0; }
-
-    .callout strong { font-weight: 700; }
-
-    .arrows {
-      margin: 18px 0;
-      padding: 16px 20px;
-      background: var(--surface-soft);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
-      font-size: 13.5px;
-      line-height: 1.9;
-      white-space: pre;
-      overflow-x: auto;
-    }
-
-    ul { margin: 0 0 14px; padding-left: 22px; max-width: 68ch; }
-    li { margin-bottom: 8px; }
 
     .rulebox {
       margin: 18px 0;
@@ -195,10 +146,12 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
     }
-
     .rulebox ol { margin: 0; padding-left: 22px; }
-    .rulebox li { margin-bottom: 10px; }
+    .rulebox li { margin-bottom: 12px; }
     .rulebox li:last-child { margin-bottom: 0; }
+
+    ul { margin: 0 0 14px; padding-left: 22px; max-width: 68ch; }
+    li { margin-bottom: 8px; }
 
     footer.page {
       margin-top: 56px;
@@ -218,195 +171,164 @@
     <p class="eyebrow">팀 규약</p>
     <h1>기능 간 계약 규약</h1>
     <p class="lede">
-      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능과 맞닿는 면만 이 규약을 따릅니다.
+      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능의 데이터를 쓸 때만 이 규약을
+      따릅니다.
     </p>
   </header>
 
   <section>
-    <h2>규약 네 줄</h2>
-    <div class="rulebox">
-      <ol>
-        <li><strong>Port는 생산자가 공표하고</strong> 소비자가 가져다 씁니다.</li>
-        <li><strong>필요한 계약 목록은 소비자가</strong> 요구사항으로 가져옵니다.</li>
-        <li><strong>한 쌍 사이에 Port는 한 방향만.</strong> 반대 방향은 Event나 주입입니다.</li>
-        <li><strong><code>pet-core</code>는 어휘만.</strong> 계약을 여기 두지 않습니다.</li>
-      </ol>
-    </div>
+    <h2>사슬 하나</h2>
+    <div class="chain">사용 로직  →  Port(테이블 단위)  →  Port 구현체  →  DB 영속성 레이어</div>
     <p>
-      3번이 1·2번을 지켜 주고, 4번이 3번의 탈출구를 막습니다. 셋째와 넷째가 왜 필요한지는 아래
-      순환 케이스에서 드러납니다.
+      <strong>사용하는 사람이 이 사슬을 전부 만듭니다.</strong> 내 화면에 남의 테이블 값이
+      필요하면, 내가 Port를 쓰고 내가 구현체를 쓰고 내가 DB를 부릅니다.
     </p>
-  </section>
+    <p>
+      그래서 <strong>아무도 서로를 기다리지 않습니다.</strong> 소유자는 아직 보이지도 않는
+      호출자를 위해 API를 설계하지 않아도 되고, 호출자는 그 API가 나오길 기다리지 않아도
+      됩니다.
+    </p>
 
-  <section>
-    <h2>소통 창구는 셋입니다</h2>
-    <p>다른 기능에 닿는 방법은 이 셋 중 하나입니다.</p>
-
+    <h3>각 고리가 사는 곳</h3>
     <table>
       <thead>
-        <tr>
-          <th>창구</th>
-          <th>성격</th>
-          <th>컴파일 의존</th>
-          <th>언제 쓰나</th>
-        </tr>
+        <tr><th>고리</th><th>위치</th><th>왜 거기인가</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td>Port</td>
-          <td>질의 · 명령 — 내가 당겨온다</td>
-          <td>소비자 → 생산자</td>
-          <td>지금 값이나 행위가 필요하고, 낡으면 버그일 때</td>
+          <td>Port 인터페이스</td>
+          <td><code>packages/&lt;내 기능&gt;/src/ports/</code></td>
+          <td>테이블이 할 수 있는 전부가 아니라 <b>내가 필요한 것</b>을 적기 때문</td>
         </tr>
         <tr>
-          <td>Event</td>
-          <td>사실 통지 — 발행자는 듣는 사람을 모른다</td>
-          <td>없음</td>
-          <td>일어난 일을 알릴 때. 수신자가 0명이어도 정상</td>
+          <td>구현체</td>
+          <td><code>apps/desktop/src/main/</code></td>
+          <td>DB에 닿는 곳은 앱뿐</td>
         </tr>
         <tr>
-          <td>주입</td>
-          <td>값 전달 — 앱이 쥐여준다</td>
-          <td>없음</td>
-          <td>받는 쪽이 자기 입력 타입을 선언하고 앱이 채울 때</td>
+          <td>Repository</td>
+          <td><code>apps/desktop/src/main/persistence/repositories/</code></td>
+          <td>SQL을 기능마다 한 곳에</td>
         </tr>
       </tbody>
     </table>
 
-    <div class="callout">
+    <div class="callout ok">
       <p>
-        <strong>Event와 주입 구분법 — 문법으로 가릅니다.</strong>
-        과거형 문장으로 쓸 수 있으면 Event입니다(“펫이 진화했다”). 현재 상태 명사면 주입입니다
-        (“지금 표시 크기”).
+        내 패키지는 <strong>다른 feature 패키지도, DB 드라이버도 import 하지 않습니다.</strong>
+        인터페이스만 선언하고, 그걸 만족하는 구현체는 앱이 넣어 줍니다. 덕분에 내 규칙은
+        데이터베이스 없이 테스트됩니다.
       </p>
     </div>
-
-    <p>
-      의존을 만드는 건 <strong>Port 하나뿐</strong>입니다. 그래서 순환이 생기면 나머지 둘 중
-      하나로 바꾸면 풀립니다.
-    </p>
   </section>
 
   <section>
-    <h2>누가 무엇을 소유하나</h2>
-    <ul>
-      <li>
-        <strong>Port</strong> — 생산자가 인터페이스와 구현체를 같은 패키지에 둡니다. 소비자는
-        인터페이스만 import해서 호출합니다.
-      </li>
-      <li>
-        <strong>요구 목록</strong> — 소비자가 가져옵니다. 생산자가 소비자의 필요를 추측하지
-        않습니다.
-      </li>
-      <li>
-        <strong>Event 내용물</strong> — 발행하는 도메인 것입니다. 봉투(이벤트 id, 시각, 스키마
-        버전)는 어휘라서 <code>pet-core</code>에 둡니다.
-      </li>
-      <li>
-        <strong>주입 타입</strong> — 받는 쪽 것이고, 이름에 남의 도메인이 나오지 않습니다. 다른
-        기능이 없어도 그 값은 필요하기 때문에 Port가 아닙니다.
-      </li>
-    </ul>
-  </section>
-
-  <section>
-    <h2>한 쌍 사이에 Port는 한 방향만</h2>
-    <p>
-      Port는 곧 <strong>의존 화살표</strong>입니다. 화살표를 양쪽으로 그릴 수는 없습니다.
-    </p>
-    <p>
-      어느 쪽이 Port가 되는가 — <strong>행위가 필요한 쪽</strong>입니다.
-      <strong>값만 필요한 쪽</strong>은 주입받습니다.
-    </p>
+    <h2>규칙 여섯</h2>
+    <div class="rulebox">
+      <ol>
+        <li>
+          <strong>테이블 하나에 Port 하나.</strong> 메서드는 내가 실제로 읽고 쓰는 것만 둡니다.
+          “온 김에” 넣은 메서드는 아무도 확인하지 않는 약속입니다.
+        </li>
+        <li>
+          <strong>구현체에는 규칙이 없습니다.</strong> 행을 내 호출부가 원하는 모양으로 바꾸는
+          일만 합니다. 데이터베이스가 없어도 성립하는 계산이라면 도메인 패키지 몫입니다.
+        </li>
+        <li>
+          <strong>테이블을 만들고 고치는 것은 소유한 기능만.</strong> 없는 컬럼이 필요하면
+          소유자에게 요청합니다. 남의 migration scope 에 끼워 넣으면 소유자의 다음
+          migration 과 부딪힙니다.
+        </li>
+        <li>
+          <strong>Port 없이 남의 테이블을 조회하지 않습니다.</strong> 호출부에 날 쿼리를 쓰면 그
+          테이블의 스키마가 코드 전체에 퍼지고, 소유자는 자기가 찾을 수도 없는 코드를 깨뜨리지
+          않고는 스키마를 못 바꿉니다.
+        </li>
+        <li>
+          <strong>Port 는 실패하면 던집니다.</strong> <code>null</code> 이나 <code>0</code> 을
+          돌려주지 않습니다. <code>0</code> 을 받은 쪽은 “행이 없음”과 “읽지 못함”을 구분할 수
+          없습니다.
+        </li>
+        <li>
+          <strong>그 순간에만 존재하는 사실은 소유자가 저장해야 합니다.</strong> 현재 상태만 담은
+          테이블은 “역대 최고 연승이 10이었나”나 “그때 부모가 둘 다 COMMON이었나”에 답할 수
+          없습니다.
+        </li>
+      </ol>
+    </div>
 
     <div class="callout warn">
       <p>
-        <strong>양쪽 다 행위가 필요하면 경계가 잘못된 것입니다.</strong>
-        보통 두 기능 사이의 개념 하나가 주인을 못 찾은 상태입니다. 우회하지 말고 그 주인을
-        정하세요.
-      </p>
-      <p>
-        그리고 <strong><code>pet-core</code>로 계약을 옮겨 순환을 푸는 것은 금지</strong>입니다.
-        순환 참조는 <code>tsc --build</code>를 실패시키는데, 그 실패가 “이 화살표 하나는 Port가
-        아니어야 한다”는 신호입니다. core로 옮기면 빌드만 통과하고 결합은 그대로 남습니다.
+        <strong>여섯 번째가 가장 자주 걸립니다.</strong> 예를 들어 업적 <code>무패</code>(10연승)와
+        <code>연금술의 기적</code>(부모 둘 다 COMMON → EPIC)은 <b>현재 상태 조회로 판정할 수
+        없습니다.</b> 이건 소비자가 계산으로 해결할 수 있는 문제가 아니라, 소유자에게
+        <b>컬럼을 요청</b>해야 하는 문제입니다.
       </p>
     </div>
   </section>
 
   <section>
-    <h2>케이스: 서로가 서로를 필요로 할 때</h2>
+    <h2>저장</h2>
     <p>
-      기능 <code>A</code>는 <code>B</code>의 <strong>행위</strong>가 필요하고, <code>B</code>는
-      <code>A</code>가 소유한 <strong>값</strong>이 필요합니다. 둘 다 Port로 만들면 순환이고
-      빌드가 실패합니다. <code>A → B</code>만 Port로 둡니다.
+      <code>petto.sqlite</code> 하나, 기능마다 migration scope 하나, repository 하나입니다.
+      scope · version · 등록 · 수명 절차는
+      <code>apps/desktop/src/main/persistence/README.md</code> 에 있습니다. 테이블을 추가하기
+      전에 읽으세요.
+    </p>
+  </section>
+
+  <section>
+    <h2>예시 — meta 가 코인 잔액을 보여준다</h2>
+    <p>
+      잔액은 meta 것이 아닙니다. 사슬 전체를 소비자인 meta 가 만들었습니다.
     </p>
 
-    <h3>생산자 쪽 — 상대 기능의 이름을 모릅니다</h3>
-<pre><code><span class="cmt">// packages/feature-b</span>
-
-<span class="cmt">// 소비자가 가져다 쓸 계약. 생산자인 여기서 공표한다.</span>
-export interface BPort {
-  perform(): Result;
-}
-
-<span class="cmt">// B 자신의 입력. 이름에 남의 도메인이 나오지 않는다.</span>
-export interface BOptions {
-  mode: 'compact' | 'full';
-}
-
-export class BService implements BPort {
-  #options: BOptions = { mode: 'full' };
-
-  <span class="cmt">// 앱이 넣어준다. Port 가 아니다.</span>
-  applyOptions(options: BOptions): void {
-    this.#options = options;
-  }
-
-  perform(): Result { <span class="cmt">/* … */</span> }
+    <h3>1. Port — 드라이버도 SQL도 없다</h3>
+<pre><code><span class="cmt">// packages/pet-meta/src/ports/</span>
+export interface CurrencyPort {
+  balance(): Coin;
+  grantOnce(rewardKey: string, amount: Coin, reason: string): GrantOutcome;
 }</code></pre>
 
-    <h3>앱 — 양쪽을 아는 유일한 곳</h3>
-<pre><code><span class="cmt">// apps/desktop</span>
-const b = new BService();
-const a = new AService(b);   <span class="cmt">// A → B 는 Port</span>
+    <h3>2. Repository — SQL 만, 규칙 없음</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/persistence/repositories/</span>
+recordGrant(dedupeKey, amount, reason, at): boolean {
+  const result = this.#database
+    .prepare('INSERT OR IGNORE INTO currency_ledger (dedupe_key, delta, reason, occurred_at) VALUES (?, ?, ?, ?)')
+    .run(dedupeKey, amount, reason, at);
+  return result.changes &gt; 0;
+}</code></pre>
 
-const push = () =&gt; b.applyOptions({ mode: a.settings().mode });
-push();                      <span class="cmt">// 시작할 때 한 번</span>
-a.onSettingsChanged(push);   <span class="cmt">// 바뀔 때마다</span></code></pre>
+    <h3>3. 구현체 — 행을 모양으로, 실패를 오류로</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/</span>
+export class SqliteCurrencyPort implements CurrencyPort {
+  balance(): Coin {
+    try {
+      return this.#repository.balance();
+    } catch (error) {
+      throw new PortError(`잔액을 불러오지 못했어요 (${String(error)})`);
+    }
+  }
+}</code></pre>
 
-    <div class="arrows">feature-a ──BPort──▶ feature-b
-feature-b ──────────▶ (없음)          ← 순환 없음
-
-apps/desktop ──▶ feature-a
-             ──▶ feature-b           ← 앱만 양쪽을 안다</div>
-
-    <div class="callout ok">
+    <div class="callout">
       <p>
-        <strong>이게 왜 “소비자가 선언”이 아닌가.</strong>
-        <code>BPort</code>는 <em>남의 도메인</em>에 대한 계약이라 생산자가 소유합니다. 반면
-        <code>BOptions</code>는 <em>B 자신의 입력</em>입니다 — <code>A</code>가 없어도 B는 모드가
-        필요합니다. 나중에 커맨드라인 옵션이 이 값을 채워도 <code>feature-b</code>는 한 줄도
-        바뀌지 않습니다.
+        이 예시에서 <strong>장식이 아니라 계약인 것 둘</strong>이 있습니다.
       </p>
       <p>
-        값을 복사해 들고 있기 곤란하면 생성자로 <code>() =&gt; BOptions</code>를 주입받으면
-        됩니다. <code>B</code>는 여전히 <code>feature-a</code>를 import하지 않습니다.
+        <strong>잔액을 컬럼으로 저장하지 않고 <code>SUM(delta)</code> 로 구합니다.</strong> 반드시
+        일치해야 하는 두 숫자는 언젠가 어긋나고, 그 순간 어느 쪽도 믿을 수 없게 됩니다.
+      </p>
+      <p>
+        <strong>멱등성은 <code>UNIQUE</code> 키와 <code>INSERT OR IGNORE</code> 에 맡깁니다.</strong>
+        조회한 뒤 삽입하면 두 문장 사이에 끼어든 두 번째 삽입을 막지 못합니다.
       </p>
     </div>
-  </section>
-
-  <section>
-    <h2>실패는 던지세요</h2>
-    <p>
-      Port는 실패할 때 예외를 던집니다. <code>null</code>이나 <code>0</code>을 돌려주지 않습니다.
-      <code>0</code>을 받은 소비자는 <strong>“데이터가 없음”과 “조회 실패”를 구분할 수
-      없고</strong>, 틀린 값을 그리면서 그것을 알아챌 방법도 없습니다.
-    </p>
   </section>
 
   <footer class="page">
     이 문서는 사람이 읽는 버전입니다. 에이전트가 따르는 정본은
-    <code>.harness/rules/feature-contracts.md</code>이며, 규칙이 바뀌면 그쪽을 먼저 고칩니다.
+    <code>.harness/rules/feature-contracts.md</code> 이며, 규칙이 바뀌면 그쪽을 먼저 고칩니다.
   </footer>
 
 </main>
