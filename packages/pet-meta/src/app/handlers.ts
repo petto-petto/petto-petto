@@ -44,6 +44,11 @@ import type { MetaAppState } from './state.ts';
  * 직접 부르면 이 패키지가 프레임워크에 묶인다. 그래서 **필요한 동작만 인터페이스로 적고**
  * 구현은 앱이 준다. 다른 도메인에 포트를 두는 것과 같은 규칙이다.
  */
+/** 대역만 가진 데모 기능을 안전하게 확인한다. */
+function hasFailNextGrant(value: unknown): value is { failNextGrant(): void } {
+  return typeof (value as { failNextGrant?: unknown }).failNextGrant === 'function';
+}
+
 export interface MetaHost {
   showPanel(): void;
   hidePanel(): void;
@@ -402,7 +407,14 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     return report(state, host, run, outcome);
   });
 
-  handle('demo:fail-next-reward', () => state.currency.failNextGrant());
+  handle('demo:fail-next-reward', () => {
+    /*
+     * 데모 전용 표면이다. 포트에 넣지 않은 이유: 실제 재화 구현이 "다음 지급을 실패시키는"
+     * 기능을 가질 이유가 없다. 대역이 가진 기능일 때만 부른다.
+     */
+    const currency: unknown = state.currency;
+    if (hasFailNextGrant(currency)) currency.failNextGrant();
+  });
 
   handle('demo:break-source', (provider) => {
     state.collector.setError(providerFromKey(provider), new CollectError('execution_failed'));

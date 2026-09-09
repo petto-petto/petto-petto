@@ -334,6 +334,28 @@ test('INFO-003: 프로필 펫이 현재 오버레이 펫을 따라간다', () =>
   assert.equal(summary.profile.petLevel.value, 21);
 });
 
+test('INFO-007: 실적 타일은 값을 준 도메인을 그대로 표시한다', () => {
+  const harness = new Harness();
+  const screen = performanceScreen(harness.gacha, harness.battle, harness.growth, harness.currency);
+
+  /*
+   * 소유 표시는 화면이 "이 숫자는 남의 도메인 것"이라고 말하는 유일한 자리다. 값의 출처와
+   * 어긋나면 사용자에게도 팀에게도 경계를 잘못 가르친다. 실제로 `획득`·`소비`가
+   * `currency.totals()`에서 오면서 `overlay-growth`로 표시되고 있었다.
+   */
+  assert.deepEqual(
+    screen.tiles.map((tile) => [tile.key, tile.owner]),
+    [
+      ['draw', 'gacha'],
+      ['fusion', 'gacha'],
+      ['battle', 'battle'],
+      ['best_level', 'overlay-growth'],
+      ['earned', '재화'],
+      ['spent', '재화'],
+    ],
+  );
+});
+
 test('INFO-008: 어느 화면에도 USD 비용이 존재하지 않는다', () => {
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 123_456]]);

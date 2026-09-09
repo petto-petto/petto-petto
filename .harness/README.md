@@ -42,6 +42,10 @@ Product specification filenames use stable, content-focused names without date p
 - [Concept application (`.harness/guides/concept-application.html`)](guides/concept-application.html)
   explains adopted design concepts, canonical runtime sharing, and the evidence
   boundary.
+- [Feature contracts (`.harness/guides/feature-contracts-kr.html`)](guides/feature-contracts-kr.html)
+  is the Korean reading of `.harness/rules/feature-contracts.md`: the chain a
+  consumer builds to reach another feature's table, where each link lives, and the
+  worked currency example.
 - [Meta product overview (`.harness/guides/meta-product-overview.html`)](guides/meta-product-overview.html)
   gives teammates a short visual briefing on the approved information,
   settings, achievements, collection, and reward design.

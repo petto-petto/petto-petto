@@ -11,6 +11,8 @@ import type { RoomSnapshot } from '@pet/room';
 import type { MetaSnapshot } from '@pet/meta';
 
 import { RoomCollectionPort } from './collection.ts';
+import { SqliteCurrencyPort } from './currency.ts';
+import { CurrencyRepository } from './persistence/repositories/currency-repository.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
@@ -205,7 +207,10 @@ app.whenReady().then(() => {
   // 자리에 테스트 대역이 들어가 상수를 돌려주고 있었다.
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
-  state = new MetaAppState(store, store.path, app.getVersion(), collection);
+  // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
+  // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
+  const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
+  state = new MetaAppState(store, store.path, app.getVersion(), collection, currency);
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);
