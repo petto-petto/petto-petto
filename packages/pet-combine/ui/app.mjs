@@ -1,4 +1,5 @@
 const assets = new URLSearchParams(window.location.search).get('assets');
+document.querySelector('.window-close')?.addEventListener('click', () => window.close());
 import { createCombineAnimationLock, createCombineEngine } from '../dist/index.js';
 
 if (!assets) throw new Error('Combine UI requires the assets query parameter.');
@@ -154,7 +155,7 @@ panel.querySelector('.combine-button').addEventListener('click', () => {
 });
 
 function playCombineSuccess(outcome) {
-  message.textContent = '항아리가 부글부글 끓고 있습니다…';
+  message.textContent = '';
   result.textContent = '';
   resultCard.className = `forge-result-card ${outcome.grade}`;
   const close = document.createElement('button');

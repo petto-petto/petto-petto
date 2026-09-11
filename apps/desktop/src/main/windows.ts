@@ -288,10 +288,11 @@ export function createGachaWindow(): BrowserWindow {
   }
 
   gachaWindow = new BrowserWindow({
-    width: 1120,
-    height: 820,
-    minWidth: 920,
-    minHeight: 700,
+    width: 640,
+    height: 420,
+    useContentSize: true,
+    frame: false,
+    resizable: false,
     backgroundColor: '#10231a',
     title: 'Petto Petto — 소환의 숲',
     webPreferences: {
@@ -315,10 +316,11 @@ export function createCombineWindow(): BrowserWindow {
     return combineWindow;
   }
   combineWindow = new BrowserWindow({
-    width: 1120,
-    height: 820,
-    minWidth: 920,
-    minHeight: 700,
+    width: 640,
+    height: 420,
+    useContentSize: true,
+    frame: false,
+    resizable: false,
     backgroundColor: '#161828',
     title: 'Petto Petto — 비전 합성소',
     webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
