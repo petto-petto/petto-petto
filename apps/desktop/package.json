@@ -17,7 +17,8 @@
     "@pet/main-overlay": "*",
     "@pet/meta": "*",
     "@pet/room": "*",
-    "better-sqlite3": "^12.11.1"
+    "better-sqlite3": "^12.11.1",
+    "@pet/client": "*"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",
