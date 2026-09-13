@@ -7,6 +7,7 @@
     { "path": "packages/pet-gacha" },
     { "path": "packages/pet-meta" },
     { "path": "packages/pet-room" },
-    { "path": "apps/desktop" }
+    { "path": "apps/desktop" },
+    { "path": "packages/pet-client" }
   ]
 }
