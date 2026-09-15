@@ -4,17 +4,32 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
-test('전투 오버레이는 360×180 픽셀 화면과 양쪽 원형 메뉴를 제공한다', async () => {
+test('전투 오버레이는 640×420 픽셀 화면과 128px 전투 펫을 제공한다', async () => {
   const [html, css] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
   ]);
 
-  assert.match(css, /--battle-width:\s*360px/);
-  assert.match(css, /--battle-height:\s*180px/);
+  assert.match(css, /--battle-width:\s*640px/);
+  assert.match(css, /--battle-height:\s*420px/);
+  assert.match(css, /--pet-size:\s*128px/);
   assert.match(css, /image-rendering:\s*pixelated/);
   assert.match(html, /data-character="pet"/);
   assert.match(html, /data-character="enemy"/);
+});
+
+test('넓어진 전투 무대 양옆에는 응원 관중과 움직이는 반딧불 레이어가 있다', async () => {
+  const [html, css] = await Promise.all([
+    readFile(new URL('index.html', UI_ROOT), 'utf8'),
+    readFile(new URL('battle.css', UI_ROOT), 'utf8'),
+  ]);
+
+  assert.match(html, /class="spectators spectators-left"/);
+  assert.match(html, /class="spectators spectators-right"/);
+  assert.match(html, /class="fireflies"/);
+  assert.match(css, /@keyframes\s+spectator-cheer/);
+  assert.match(css, /@keyframes\s+firefly-drift/);
+  assert.match(css, /@keyframes\s+firefly-blink/);
 });
 
 test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않는다', async () => {
