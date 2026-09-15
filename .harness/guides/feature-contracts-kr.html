@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="다른 기능의 데이터를 쓸 때 따르는 팀 규약 — 테이블 단위 Port와 사용하는 사람이 만드는 사슬">
+  <title>기능 간 계약 규약 | tamagochi-pet</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f9fafe;
+      --text: #191c26;
+      --muted: #5b6273;
+      --line: #dde1ec;
+      --primary: #3a4a8c;
+      --primary-soft: #edeff8;
+      --ok: #2f6b43;
+      --ok-soft: #e9f2ec;
+      --warn: #8a5716;
+      --warn-soft: #f9f0df;
+      --code-bg: #14161f;
+      --code-text: #e4e7ef;
+      --radius: 14px;
+      --shadow: 0 14px 40px rgba(25, 28, 38, 0.07);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --surface: #171a22;
+        --surface-soft: #14161d;
+        --text: #e6e8ef;
+        --muted: #9aa0b0;
+        --line: #292d38;
+        --primary: #96a6e8;
+        --primary-soft: #1b1f31;
+        --ok: #7cc08b;
+        --ok-soft: #17241b;
+        --warn: #deae6e;
+        --warn-soft: #262015;
+        --code-bg: #0b0d13;
+        --code-text: #dfe3ec;
+        --shadow: none;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.75;
+    }
+
+    main { max-width: 860px; margin: 0 auto; padding: 48px 20px 88px; }
+
+    header.page {
+      margin-bottom: 40px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .eyebrow {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      color: var(--primary);
+      margin: 0 0 10px;
+    }
+
+    h1 { margin: 0 0 14px; font-size: 34px; line-height: 1.25; letter-spacing: -0.02em; }
+    .lede { margin: 0; max-width: 60ch; color: var(--muted); font-size: 17px; }
+
+    section { margin-bottom: 44px; }
+    h2 { margin: 0 0 10px; font-size: 23px; letter-spacing: -0.01em; }
+    h3 { margin: 28px 0 8px; font-size: 17px; }
+    p { margin: 0 0 14px; max-width: 68ch; }
+
+    .chain {
+      margin: 18px 0;
+      padding: 20px 22px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 14px;
+      line-height: 2;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    table { width: 100%; border-collapse: collapse; margin: 18px 0; font-size: 15px; }
+    th {
+      text-align: left; font-size: 13px; font-weight: 600; color: var(--muted);
+      padding: 0 14px 10px 0; border-bottom: 1px solid var(--line);
+    }
+    td { padding: 12px 14px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td:first-child { font-weight: 600; }
+
+    code {
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.88em;
+      background: var(--primary-soft);
+      color: var(--primary);
+      padding: 1px 6px;
+      border-radius: 5px;
+    }
+
+    pre {
+      margin: 16px 0;
+      padding: 18px 20px;
+      background: var(--code-bg);
+      color: var(--code-text);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 13.5px;
+      line-height: 1.7;
+    }
+    pre code { background: none; color: inherit; padding: 0; font-size: 1em; }
+    pre .cmt { color: #8b93a7; }
+
+    .callout {
+      margin: 18px 0;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-left: 4px solid var(--primary);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      box-shadow: var(--shadow);
+    }
+    .callout.warn { border-left-color: var(--warn); background: var(--warn-soft); }
+    .callout.ok { border-left-color: var(--ok); background: var(--ok-soft); }
+    .callout p:last-child { margin-bottom: 0; }
+
+    .rulebox {
+      margin: 18px 0;
+      padding: 20px 24px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+    .rulebox ol { margin: 0; padding-left: 22px; }
+    .rulebox li { margin-bottom: 12px; }
+    .rulebox li:last-child { margin-bottom: 0; }
+
+    ul { margin: 0 0 14px; padding-left: 22px; max-width: 68ch; }
+    li { margin-bottom: 8px; }
+
+    footer.page {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    a { color: var(--primary); }
+  </style>
+</head>
+<body>
+<main id="main-content">
+
+  <header class="page">
+    <p class="eyebrow">팀 규약</p>
+    <h1>기능 간 계약 규약</h1>
+    <p class="lede">
+      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능의 데이터를 쓸 때만 이 규약을
+      따릅니다.
+    </p>
+  </header>
+
+  <section>
+    <h2>사슬 하나</h2>
+    <div class="chain">사용 로직  →  Port(테이블 단위)  →  Port 구현체  →  DB 영속성 레이어</div>
+    <p>
+      <strong>사용하는 사람이 이 사슬을 전부 만듭니다.</strong> 내 화면에 남의 테이블 값이
+      필요하면, 내가 Port를 쓰고 내가 구현체를 쓰고 내가 DB를 부릅니다.
+    </p>
+    <p>
+      그래서 <strong>아무도 서로를 기다리지 않습니다.</strong> 소유자는 아직 보이지도 않는
+      호출자를 위해 API를 설계하지 않아도 되고, 호출자는 그 API가 나오길 기다리지 않아도
+      됩니다.
+    </p>
+
+    <h3>각 고리가 사는 곳</h3>
+    <table>
+      <thead>
+        <tr><th>고리</th><th>위치</th><th>왜 거기인가</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Port 인터페이스</td>
+          <td><code>packages/&lt;내 기능&gt;/src/ports/</code></td>
+          <td>테이블이 할 수 있는 전부가 아니라 <b>내가 필요한 것</b>을 적기 때문</td>
+        </tr>
+        <tr>
+          <td>구현체</td>
+          <td><code>apps/desktop/src/main/</code></td>
+          <td>DB에 닿는 곳은 앱뿐</td>
+        </tr>
+        <tr>
+          <td>Repository</td>
+          <td><code>apps/desktop/src/main/persistence/repositories/</code></td>
+          <td>SQL을 기능마다 한 곳에</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout ok">
+      <p>
+        내 패키지는 <strong>다른 feature 패키지도, DB 드라이버도 import 하지 않습니다.</strong>
+        인터페이스만 선언하고, 그걸 만족하는 구현체는 앱이 넣어 줍니다. 덕분에 내 규칙은
+        데이터베이스 없이 테스트됩니다.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>규칙 여섯</h2>
+    <div class="rulebox">
+      <ol>
+        <li>
+          <strong>테이블 하나에 Port 하나.</strong> 메서드는 내가 실제로 읽고 쓰는 것만 둡니다.
+          “온 김에” 넣은 메서드는 아무도 확인하지 않는 약속입니다.
+        </li>
+        <li>
+          <strong>구현체에는 규칙이 없습니다.</strong> 행을 내 호출부가 원하는 모양으로 바꾸는
+          일만 합니다. 데이터베이스가 없어도 성립하는 계산이라면 도메인 패키지 몫입니다.
+        </li>
+        <li>
+          <strong>테이블을 만들고 고치는 것은 소유한 기능만.</strong> 없는 컬럼이 필요하면
+          소유자에게 요청합니다. 남의 migration scope 에 끼워 넣으면 소유자의 다음
+          migration 과 부딪힙니다.
+        </li>
+        <li>
+          <strong>Port 없이 남의 테이블을 조회하지 않습니다.</strong> 호출부에 날 쿼리를 쓰면 그
+          테이블의 스키마가 코드 전체에 퍼지고, 소유자는 자기가 찾을 수도 없는 코드를 깨뜨리지
+          않고는 스키마를 못 바꿉니다.
+        </li>
+        <li>
+          <strong>Port 는 실패하면 던집니다.</strong> <code>null</code> 이나 <code>0</code> 을
+          돌려주지 않습니다. <code>0</code> 을 받은 쪽은 “행이 없음”과 “읽지 못함”을 구분할 수
+          없습니다.
+        </li>
+        <li>
+          <strong>그 순간에만 존재하는 사실은 소유자가 저장해야 합니다.</strong> 현재 상태만 담은
+          테이블은 “역대 최고 연승이 10이었나”나 “그때 부모가 둘 다 COMMON이었나”에 답할 수
+          없습니다.
+        </li>
+      </ol>
+    </div>
+
+    <div class="callout warn">
+      <p>
+        <strong>여섯 번째가 가장 자주 걸립니다.</strong> 예를 들어 업적 <code>무패</code>(10연승)와
+        <code>연금술의 기적</code>(부모 둘 다 COMMON → EPIC)은 <b>현재 상태 조회로 판정할 수
+        없습니다.</b> 이건 소비자가 계산으로 해결할 수 있는 문제가 아니라, 소유자에게
+        <b>컬럼을 요청</b>해야 하는 문제입니다.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>저장</h2>
+    <p>
+      <code>petto.sqlite</code> 하나, 기능마다 migration scope 하나, repository 하나입니다.
+      scope · version · 등록 · 수명 절차는
+      <code>apps/desktop/src/main/persistence/README.md</code> 에 있습니다. 테이블을 추가하기
+      전에 읽으세요.
+    </p>
+  </section>
+
+  <section>
+    <h2>예시 — meta 가 코인 잔액을 보여준다</h2>
+    <p>
+      잔액은 meta 것이 아닙니다. 사슬 전체를 소비자인 meta 가 만들었습니다.
+    </p>
+
+    <h3>1. Port — 드라이버도 SQL도 없다</h3>
+<pre><code><span class="cmt">// packages/pet-meta/src/ports/</span>
+export interface CurrencyPort {
+  balance(): Coin;
+  grantOnce(rewardKey: string, amount: Coin, reason: string): GrantOutcome;
+}</code></pre>
+
+    <h3>2. Repository — SQL 만, 규칙 없음</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/persistence/repositories/</span>
+recordGrant(dedupeKey, amount, reason, at): boolean {
+  const result = this.#database
+    .prepare('INSERT OR IGNORE INTO currency_ledger (dedupe_key, delta, reason, occurred_at) VALUES (?, ?, ?, ?)')
+    .run(dedupeKey, amount, reason, at);
+  return result.changes &gt; 0;
+}</code></pre>
+
+    <h3>3. 구현체 — 행을 모양으로, 실패를 오류로</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/</span>
+export class SqliteCurrencyPort implements CurrencyPort {
+  balance(): Coin {
+    try {
+      return this.#repository.balance();
+    } catch (error) {
+      throw new PortError(`잔액을 불러오지 못했어요 (${String(error)})`);
+    }
+  }
+}</code></pre>
+
+    <div class="callout">
+      <p>
+        이 예시에서 <strong>장식이 아니라 계약인 것 둘</strong>이 있습니다.
+      </p>
+      <p>
+        <strong>잔액을 컬럼으로 저장하지 않고 <code>SUM(delta)</code> 로 구합니다.</strong> 반드시
+        일치해야 하는 두 숫자는 언젠가 어긋나고, 그 순간 어느 쪽도 믿을 수 없게 됩니다.
+      </p>
+      <p>
+        <strong>멱등성은 <code>UNIQUE</code> 키와 <code>INSERT OR IGNORE</code> 에 맡깁니다.</strong>
+        조회한 뒤 삽입하면 두 문장 사이에 끼어든 두 번째 삽입을 막지 못합니다.
+      </p>
+    </div>
+  </section>
+
+  <footer class="page">
+    이 문서는 사람이 읽는 버전입니다. 에이전트가 따르는 정본은
+    <code>.harness/rules/feature-contracts.md</code> 이며, 규칙이 바뀌면 그쪽을 먼저 고칩니다.
+  </footer>
+
+</main>
+</body>
+</html>

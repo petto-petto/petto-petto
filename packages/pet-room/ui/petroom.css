@@ -1,0 +1,341 @@
+/*
+ * 펫룸 창.
+ *
+ * 팀 디자인 가이드(`design.md`)를 따른다 — 둥근 모서리 없음, 블러 없는 2px 그림자,
+ * 정보는 양피지 패널, 조작은 나무 버튼, 선택은 금색.
+ *
+ * 배경은 960x360 원본을 1배로 깐다. 픽셀 아트는 정수 배율만 허용되므로(가이드 §4) 창
+ * 크기를 고정하고 늘이지 않는다. 상세 패널은 그 옆 칸에 두어 장면을 덮지 않는다.
+ */
+
+:root {
+  /* design.md §2 핵심 토큰 */
+  --forest-deep: #10231a;
+  --forest-mid: #1c4a34;
+  --foliage: #3c7a4a;
+  --forest-glow: #8fd68a;
+  --wood-border: #3a2a1c;
+  --wood-surface: #6b4a2e;
+  --wood-highlight: #a5763f;
+  --parchment: #f3e3c0;
+  --parchment-ring: #e0c894;
+  --ink: #3b2a1a;
+  --light-text: #f5ecd8;
+  --gold: #ffd166;
+  --outline: #2c2438;
+  --disabled: #999999;
+  --disabled-dark: #555555;
+
+  /* 등급색 — 등급을 말할 때만 쓴다(design.md §2). */
+  --grade-common: #9aa0a6;
+  --grade-common-dark: #62676c;
+  --grade-rare: #4aa3ff;
+  --grade-rare-dark: #1f5a99;
+  --grade-epic: #b46bff;
+  --grade-epic-dark: #6c37a0;
+
+  /* design.md §5 간격 */
+  --space-1: 4px;
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --space-6: 14px;
+  --space-7: 18px;
+
+  --drop: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  --font-body: 'Galmuri9', ui-monospace, monospace;
+  --font-heading: 'Galmuri11', ui-monospace, monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--forest-deep);
+  color: var(--light-text);
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: var(--font-body);
+  font-size: 12px;
+  /* 도트 폰트는 안티에일리어싱하면 뭉개진다(design.md §3). */
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+}
+
+/* 기본 스타일시트의 `[hidden]`은 우선순위가 가장 낮아 작성자 규칙 하나에 진다. */
+[hidden] {
+  display: none !important;
+}
+
+#room {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#scene {
+  position: relative;
+  flex: none;
+  width: 960px;
+  height: 360px;
+  overflow: hidden;
+}
+
+/* 옆 칸. 어두운 나무 표면 위에 양피지 패널을 얹는다(design.md §1). */
+#side {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--wood-surface);
+  border-left: 3px solid var(--wood-border);
+  box-shadow: inset 3px 0 0 var(--wood-highlight);
+}
+
+#title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--light-text);
+}
+
+#phase {
+  margin: 0;
+  font-size: 10px;
+  color: var(--parchment-ring);
+}
+
+#hint {
+  margin: auto 0 0;
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--parchment-ring);
+}
+
+/*
+ * 배경 레이어와 펫 캔버스.
+ *
+ * 레이어는 z 순으로 겹치고, **펫은 전 레이어 위에 그린다.** `near` 레이어가 지면을
+ * 통째로 담고 있어서(불투명) 그 아래에 두면 펫이 완전히 가려진다. 대신 전경 나무 기둥도
+ * 같은 레이어에 있어 펫이 기둥 앞으로 나올 수 있는데, 배회 영역이 기둥을 피하므로
+ * 실제로는 겹치지 않는다 — 자세한 사정은 `packages/pet-room/src/domain/scene.ts` 참조.
+ */
+#layers img,
+#pets {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* 픽셀 아트는 보간하면 뭉개진다(design.md §4). */
+  image-rendering: pixelated;
+}
+
+#pets {
+  z-index: 10;
+}
+
+/* ---------- 공용 픽셀 크롬 (design.md §5) ---------- */
+
+.pixel-panel {
+  background: var(--parchment);
+  color: var(--ink);
+  border: 3px solid var(--wood-border);
+  box-shadow:
+    inset 0 0 0 2px var(--wood-highlight),
+    inset 0 0 0 5px var(--parchment-ring),
+    var(--drop);
+}
+
+.pixel-button {
+  display: block;
+  width: 100%;
+  padding: var(--space-3);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border),
+    var(--drop);
+  font-family: var(--font-heading);
+  font-size: 12px;
+  cursor: default;
+}
+
+.pixel-button:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.pixel-button:active:not(:disabled) {
+  /* 눌림은 위치로 전한다(design.md §6). */
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
+}
+
+.pixel-button:disabled {
+  background: var(--disabled-dark);
+  color: var(--disabled);
+  box-shadow: none;
+}
+
+.pixel-button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--outline);
+}
+
+/* ---------- 상세 패널 ---------- */
+
+#detail {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+#detail-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+#detail-name {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 15px;
+}
+
+/* 상세가 열리면 안내 문구는 자리를 비켜 준다. */
+#detail:not([hidden]) ~ #hint {
+  display: none;
+}
+
+#detail-close {
+  padding: 0 var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 12px;
+  cursor: default;
+}
+
+#detail-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* 등급 배지 — 어두운 등급색 바탕 + 밝은 등급색 테두리(design.md §6). */
+.grade-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: 2px var(--space-2);
+  border: 2px solid var(--grade-common);
+  background: var(--grade-common-dark);
+  color: var(--light-text);
+  font-family: var(--font-heading);
+  font-size: 11px;
+}
+
+.grade-badge--rare {
+  border-color: var(--grade-rare);
+  background: var(--grade-rare-dark);
+}
+
+.grade-badge--epic {
+  border-color: var(--grade-epic);
+  background: var(--grade-epic-dark);
+}
+
+/* 등급을 색으로만 구분하지 않는다(design.md §8) — 젬 아이콘과 글자를 함께 둔다. */
+.grade-badge__gem {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+#detail-level {
+  margin: 0;
+  font-size: 12px;
+}
+
+.xp-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* XP 바 — 높이 10px, 테두리 2px(design.md §6). */
+.xp-bar {
+  height: 10px;
+  border: 2px solid var(--wood-border);
+  background: var(--outline);
+}
+
+.xp-bar__fill {
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    var(--forest-glow) 0%,
+    var(--foliage) 50%,
+    var(--forest-mid) 100%
+  );
+}
+
+/* 진행은 색만으로 말하지 않는다 — 숫자를 함께 둔다(design.md §6). */
+.xp-label {
+  font-size: 10px;
+  color: var(--ink);
+}
+
+#detail-actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+#detail-note {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+/* ---------- 오류 ---------- */
+
+#error {
+  position: absolute;
+  left: var(--space-7);
+  bottom: var(--space-7);
+  z-index: 30;
+  max-width: 60%;
+  padding: var(--space-3) var(--space-4);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ---------- 접근성 ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  /* 장식용 반복 애니메이션은 줄인다(design.md §8). 반딧불이와 배회는 JS가 멈춘다. */
+  .pixel-button:active:not(:disabled) {
+    transform: none;
+  }
+}

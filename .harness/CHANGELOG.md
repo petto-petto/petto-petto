@@ -15,6 +15,103 @@
 
 ### Changed
 
+- 팀이 2026-09-09 에 Event 창구를 버렸다. `rules/feature-contracts.md` 를 합의된 구조
+  하나로 다시 썼다 — `사용 로직 → 테이블 단위 Port → 구현체 → 영속성 레이어`, 그리고
+  **사용하는 사람이 그 사슬을 전부 만든다**.
+- 세 창구 표·Event 소유 절·주입 워크스루·한 방향 규칙을 걷어냈다. 쓰지 않기로 한 모델을
+  "참고용"으로 남기면 곧 그것이 사실로 읽힌다.
+- 계약 검사가 이제 규칙의 **내용**을 고정한다. 이전에는 파일 존재와 포인터만 봐서, 규칙이
+  결정과 어긋나도 검사가 통과했다.
+
+### Added
+
+- `.harness/rules/feature-contracts.md`는 feature 패키지끼리 맞닿는 면을 다스린다.
+  창구는 셋(Port · Event · 주입)이고, Port는 생산자가 공표하며, **한 쌍 사이에 Port는
+  한 방향만** 둔다. 2026-09-03 팀 결정을 정본으로 옮긴 것이다.
+- 순환이 생겼을 때 계약을 `pet-core`로 옮기는 것을 금지한다. 순환 참조는
+  `tsc --build`를 실패시키는데, 그 실패 자체가 "이 화살표 하나는 Port가 아니어야
+  한다"는 신호다. core로 옮기면 빌드만 통과하고 결합은 남는다.
+- `.harness/guides/feature-contracts-kr.html`은 그 규칙의 한국어 읽기판이다. 규칙을
+  중복하지 않고, 정본은 계속 `rules/feature-contracts.md`다.
+- 계약 검사가 규칙 문서·가이드·`AGENTS.md` 포인터·README 포인터 네 가지를 강제한다.
+
+- `background-generator` now ships high-detail outdoor stamp variants
+  (`rock_mossy`, `mushroom_cluster`, `log_mossy`, `bush_leafy`) and a rule for
+  when to reach for them, so large canvases stop upscaling 5-9px props into
+  blocks. `references/stamps.md` remains the single source for the stamp list.
+- `background-generator` gained the `forest_night` preset for moonlit outdoor
+  scenes. Existing preset colours were not changed.
+- `background-generator`'s `tree_column` gained bark styles (`fissure`, `plate`,
+  `lenticel`), climbing ivy (`ivyStrands`), branch stubs, ringed knots, ragged
+  moss, forked roots, silhouette wobble, and twin trunks (`trunks` +
+  `converge`). The old three signals — sway, cylinder shading, grooves — only
+  reached "not a utility pole"; the largest object on screen needs more.
+  `references/ops.md` documents the parameters and `references/troubleshooting.md`
+  names the five failures found while building it.
+- `background-generator`'s `foliage` gained an opt-in canopy mode (`crest`,
+  `crestFreq`, `litSpan`, `litClumps`, `twigs`) that lights lobes by their place
+  in the mass rather than giving every lobe its own rim, and `ground_plane`
+  gained forest-floor detail (`patches`, `pebbles`, `pebbleMax`, `debris`) plus a
+  ragged grass line. Both default to the previous behaviour, and the disabled
+  path draws no extra random numbers so existing scenes render unchanged.
+- `background-generator` gained the `petroom_grove` preset — `jungle`'s hues with
+  the luminance pulled down and the near-white top removed. Existing preset
+  colours were not changed.
+- `references/gate_conflicts.md` records a sixth conflict: a far foliage crest
+  moves the sky's lower boundary, and a fragmented sky has no left-right light
+  direction for the light-consistency gate to find.
+- `bg_score.py` now judges tone by the image's own dynamic range (98th minus 2nd
+  percentile luminance, floor 0.55) instead of demanding 2% of pixels above an
+  absolute L of 0.75, which penalised deliberately dark scenes. Measured: the
+  three reference images span 0.744-0.835 while their bright-pixel share spans
+  4.1-34.9%, so the absolute figure was never a usable bar.
+- `bgcore.accent_contrast` reports how far a preset's `accent` ramp sits from its
+  mass ramps, and `bg_palette.py show` prints it. Three of the five original
+  presets place `accent` inside the dominant hue family and so cannot produce the
+  hue contrast `references/color.md` asks of it.
+- `references/quality.md` records hue dominance and contrast-hue share as
+  *rejected* metrics, with the measurements that reject them.
+- `bg_interview.py` gained three slots — 움직이는 요소, 변형 개수, 노출·톤 강도 —
+  and rebalanced the existing ten so the weights still total 100. The three are
+  *blocking*: the verdict stays "아직 묻는다" while any is empty and unrecorded in
+  `assumed`, even below the 20% ambiguity threshold, because they decide what
+  gets baked rather than how the picture looks.
+- `bg_preset_new.py` gained `--from <preset> --burn <0..1>`, deriving a burned
+  palette from an existing one instead of generating from keywords. It maps
+  per-ramp luminance bands and re-imposes the depth ladder, because a single
+  curve cannot satisfy layer separation and luminance-bin coverage at once —
+  raising gamma collapses the first, lowering it empties the second. It also
+  scales in RGB rather than HLS lightness, and lets achromatic steps inherit a
+  hue. Measured on `jungle`: burn 0.5-0.7 passes every gate, 0.9 does not, and
+  the tool predicts that before rendering.
+- `SKILL.md` documents isolating a single component for review before touching
+  the whole background, and keeping regeneration tooling in `tools/` rather than
+  a scratch directory.
+- `references/ops.md` states that an opt-in parameter's disabled path must draw
+  no extra random numbers, or the same seed moves layers the change never
+  touched.
+- The Skill's fail-closed Pillow assertion now builds its own clean environment.
+  It previously reported a failure whenever the checking shell could import
+  Pillow, which made the result depend on who ran it.
+- `background-generator` gained `scripts/bg_animate.py`: it reads a background's
+  `scene.json`, re-renders only the ops marked `"animate": true`, collects the
+  moving layer into `frames/`, and writes the runtime `animation` block. Which
+  ops move is now declared by the scene instead of hardcoded, and all movers must
+  sit in one layer because the runtime swaps one layer.
+- `bg_check.py` now validates that block — the named layer exists, at least two
+  frames, a sane fps, every frame file present and under `frames/`, frames
+  matching the canvas and the layer they replace, and frames actually differing
+  from one another.
+- `references/layers.md` documents the runtime contract and marks it unvalidated:
+  nothing consumes it yet, so a first consumer that finds it lacking should have
+  the contract changed rather than work around it.
+- `bg_check.py` now fails a scene that scales a stamp whose longest side is 14px
+  or less by 3 or more when a higher-resolution variant of it already exists.
+  Enlarging adds pixels, not form. Large sources used large are untouched — the
+  defect is a 9px stamp filling a 36px slot, not a 46px one filling 184px.
+
+### Changed
+
 - `background-generator` now exports every runtime background under Electron's
   `apps/desktop/renderer/assets/backgrounds/` path and verifies that contract.
 - Renamed `pixel-pet-creator-pillow` to `pet-generator` and made Claude and
@@ -35,8 +132,18 @@
   `specs/meta-info-settings-achievements-design.md` path and made that naming
   convention part of the harness contract.
 
+### Changed
+
+- Renamed the meta product specification to the stable, content-focused
+  `specs/meta-info-settings-achievements-design.md` path and made that naming
+  convention part of the harness contract.
+
 ### Added
 
+- Approved meta product specification for information, settings, achievements,
+  three-source local usage collection, and macOS/Windows acceptance criteria.
+- Contract assertions for the meta specification and its implementation-facing
+  requirement ID families.
 - Local `background-generator` Skill and deterministic `320x180` forest-background renderer for the desktop pet room, with one shared source exposed to both Codex and Claude.
 - Korean one-page meta product overview for briefing teammates on the approved
   information, settings, achievements, local collection, and reward design.

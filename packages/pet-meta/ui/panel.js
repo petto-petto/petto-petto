@@ -38,10 +38,24 @@ const nf = new Intl.NumberFormat('ko-KR');
 const num = (value) => nf.format(value ?? 0);
 
 /** 큰 토큰 수를 짧게. 400px 폭에서 자리수가 넘치지 않게 한다. */
+/**
+ * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다.
+ *
+ * 토큰 수치는 도구가 보고하는 값이고, 그 도구들이 쓰는 단위가 K · M · B다. 한글 단위로
+ * 바꾸면 사용자가 다른 화면에서 본 숫자와 머릿속으로 환산해야 한다.
+ */
 function compact(value) {
   const n = Number(value ?? 0);
-  if (n >= 100_000_000) return `${(n / 100_000_000).toFixed(1)}억`;
-  if (n >= 10_000) return `${(n / 10_000).toFixed(n >= 1_000_000 ? 0 : 1)}만`;
+  const abs = Math.abs(n);
+  // 1000 으로 나눈 자리마다 단위를 올린다. 소수 한 자리까지만 두고 `1.0M`은 `1M`으로 줄인다.
+  const step = (divisor, unit) => {
+    const scaled = n / divisor;
+    const text = Math.abs(scaled) >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
+    return `${text.replace(/\.0$/, '')}${unit}`;
+  };
+  if (abs >= 1_000_000_000) return step(1_000_000_000, 'B');
+  if (abs >= 1_000_000) return step(1_000_000, 'M');
+  if (abs >= 10_000) return step(1_000, 'K');
   return nf.format(n);
 }
 
@@ -200,11 +214,20 @@ async function renderSummary() {
   // INFO-001: 요약은 스크롤 없이 보인다.
   content.classList.add('no-scroll');
 
+  /*
+   * 실제 오버레이 펫의 초상화를 쓴다. 주소는 앱이 준다 — 에셋 배치는 패널이 모른다.
+   *
+   * 크기를 지정하지 않는 이유: 원본 그대로 그려야 픽셀이 고르다. 32px과 48px 두 종류가
+   * 있어 어느 쪽이든 상자 안에 그대로 놓는다.
+   */
+  const portrait = await api.petPortrait().catch(() => undefined);
   const petThumb = el('div', { class: 'pet-thumb' }, [
-    el('span', {
-      text: data.profile.petName.error ? '❓' : '🐾',
-      attrs: { style: 'font-size:16px' },
-    }),
+    portrait
+      ? el('img', { attrs: { src: portrait, alt: '' } })
+      : el('span', {
+          text: data.profile.petName.error ? '❓' : '🐾',
+          attrs: { style: 'font-size:16px' },
+        }),
   ]);
 
   /*
@@ -251,7 +274,9 @@ async function renderSummary() {
           }),
       el('span', {
         class: 'hero-sub',
-        text: data.todayEarnedCoins.error ? '오늘 ⚠' : `오늘 +${data.todayEarnedCoins.value}`,
+        text: data.todayEarnedCoins.error
+          ? '오늘 조회 실패'
+          : `오늘 +${data.todayEarnedCoins.value.toLocaleString('ko-KR')}`,
       }),
     ]),
   ]);
@@ -973,6 +998,28 @@ async function runSelftest() {
         : `[SELFTEST] 화면 버튼 ${target} 실패 — 화면 ${ui.screen}, 선택 ${button.getAttribute('aria-selected')}`,
     );
   }
+
+  /*
+   * 프로필 초상화가 실제 에셋으로 그려졌는지 확인한다.
+   *
+   * 주소는 앱이 만들어 창을 넘어온다. 순수 JS 렌더러라 타입 검사가 닿지 않고, 경로가
+   * 어긋나도 조용히 빈 상자가 될 뿐이라 여기서 본다.
+   */
+  ui.screen = 'info';
+  ui.subtab = 'summary';
+  await render();
+  const thumb = content.querySelector('.pet-thumb img');
+  if (thumb && !thumb.complete) {
+    await new Promise((done) => {
+      thumb.onload = done;
+      thumb.onerror = done;
+    });
+  }
+  await api.debugLog(
+    thumb && thumb.naturalWidth > 0
+      ? `[SELFTEST] 프로필 초상화     ${thumb.naturalWidth}×${thumb.naturalHeight} 실제 에셋`
+      : `[SELFTEST] 프로필 초상화 실패 — ${thumb ? '주소는 왔는데 못 읽었다' : '자리표시 글리프로 떨어졌다'}`,
+  );
 
   /*
    * 설정 전용 모드가 실제로 다른 탭을 감추고, 되돌아올 수 있는지 확인한다.

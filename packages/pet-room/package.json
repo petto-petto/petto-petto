@@ -1,0 +1,20 @@
+{
+  "name": "@pet/room",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "펫룸 feature — 보유 펫 명부, 배회 장면, 낮/밤 배경 선택",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./ui/*": "./ui/*"
+  },
+  "dependencies": {
+    "@pet/core": "*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

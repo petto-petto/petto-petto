@@ -20,7 +20,7 @@ import sys
 import bg_pillow_gate  # noqa: F401
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from bgcore import hex_rgba, preset, presets, to_hex
+from bgcore import accent_contrast, hex_rgba, preset, presets, to_hex
 
 SHADOW, HIGHLIGHT = 0.80, 1.15
 
@@ -59,6 +59,17 @@ def cmd_show(a):
         print(f"  {name:<7} {line}")
     print(f"  defaults: {p.get('defaults', {})}")
     print("  예약색  #2C2438 (캐릭터 외곽선) — 배경 전체의 3% 초과 금지")
+    # accent 대비 — 이 팔레트로 색조 대비를 만들 수 있는지 고를 때 알려 준다.
+    ac = accent_contrast(p)
+    if ac:
+        mh, ah, d = ac
+        mark = "OK" if d >= 60 else "!!"
+        print(f"  accent 대비  매스 {mh:.0f}도 <-> accent {ah:.0f}도 = {d:.0f}도  [{mark}]")
+        if d < 60:
+            print("      accent가 화면을 채우는 색과 같은 계열이다. 이 팔레트로는 색조")
+            print("      대비를 못 만든다 — 화면이 단색 인상으로 읽힌다(color.md).")
+            print("      대비가 필요하면 accent 램프를 보색 쪽으로 다시 잡거나,")
+            print("      톤·명암 대비로 축을 바꾼다.")
 
 
 def cmd_derive(a):

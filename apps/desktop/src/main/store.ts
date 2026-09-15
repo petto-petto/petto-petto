@@ -1,5 +1,5 @@
 /**
- * JSON 파일 저장소. `MetaStore` 포트의 실제 구현이다.
+ * JSON 파일 저장소. `@pet/meta`의 `MetaStore`와 `@pet/room`의 `RoomStore`를 함께 채운다.
  *
  * 팀 결정: 별도 서버와 DB를 두지 않고 사용자 기기에 저장한다. 그래서 앱 데이터
  * 디렉터리에 파일 하나를 쓴다.
@@ -22,15 +22,27 @@ import { mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 
 import { PortError } from '@pet/meta';
-import type { MetaSnapshot, MetaStore } from '@pet/meta';
 
-const FILE_NAME = 'meta-state.json';
+/**
+ * 저장 파일은 feature마다 하나씩 둔다.
+ *
+ * meta와 room을 한 파일에 합치면 한쪽의 스키마를 고칠 때 다른 쪽이 딸려 나가고, 한쪽이
+ * 깨지면 둘 다 격리된다. 저장 주기와 변경 이유가 다른 것을 같은 파일에 두지 않는다.
+ */
+export const META_FILE_NAME = 'meta-state.json';
+export const ROOM_FILE_NAME = 'room-state.json';
 
-export class JsonFileStore implements MetaStore {
+/**
+ * 스냅샷 한 덩어리를 파일 하나에 담는다.
+ *
+ * 타입 매개변수만 다를 뿐 저장 규칙은 같으므로 구현을 공유한다. `MetaStore`와
+ * `RoomStore` 둘 다 `load`/`save` 두 메서드뿐이라, 이 클래스가 구조적으로 둘 다 만족한다.
+ */
+export class JsonFileStore<T> {
   readonly path: string;
 
-  constructor(directory: string) {
-    this.path = join(directory, FILE_NAME);
+  constructor(directory: string, fileName: string) {
+    this.path = join(directory, fileName);
   }
 
   get #tempPath(): string {
@@ -49,7 +61,7 @@ export class JsonFileStore implements MetaStore {
     }
   }
 
-  load(): MetaSnapshot | undefined {
+  load(): T | undefined {
     let raw: string;
     try {
       raw = readFileSync(this.path, 'utf8');
@@ -60,7 +72,7 @@ export class JsonFileStore implements MetaStore {
     }
 
     try {
-      return JSON.parse(raw) as MetaSnapshot;
+      return JSON.parse(raw) as T;
     } catch (error) {
       this.#quarantine(String(error));
       // 새로 시작한다. 여기서 던지면 앱이 아예 못 뜬다.
@@ -68,7 +80,7 @@ export class JsonFileStore implements MetaStore {
     }
   }
 
-  save(snapshot: MetaSnapshot): void {
+  save(snapshot: T): void {
     try {
       mkdirSync(dirname(this.path), { recursive: true });
     } catch (error) {

@@ -11,9 +11,10 @@
   "scripts": {
     "format:check": "prettier --check .",
     "format": "prettier --write .",
+    "postinstall": "node scripts/rebuild-native.mjs",
     "typecheck": "tsc --build && tsc -p tsconfig.test.json",
     "test": "tsc --build && node --experimental-strip-types --test \"packages/*/test/**/*.test.ts\"",
-    "build": "tsc --build",
+    "build": "npm run build --workspace @pet/main-overlay && tsc --build",
     "start": "npm run build && electron apps/desktop/dist/main/main.js"
   },
   "devDependencies": {

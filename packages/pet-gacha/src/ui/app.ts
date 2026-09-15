@@ -21,6 +21,10 @@ interface DemoPet {
   readonly asset: string;
 }
 
+document.querySelector('.window-close')?.addEventListener('click', () => window.close());
+const pityBox = document.querySelector('.pity-box');
+if (pityBox) document.querySelector('.summon-stage')?.append(pityBox);
+
 const assetRoot = assetRootUrl();
 const asset = (path: string): string => new URL(path, assetRoot).href;
 

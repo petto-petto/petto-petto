@@ -1,0 +1,19 @@
+[legend]
+g = leaf.2
+h = wood.3
+w = wood.1
+s = wood.0
+[grid]
+.....gggggggggggggg.....
+...ggghhhhhhhhhhhhggg...
+..ghhhhhhhhhhhhhhhhhhg..
+.hhhwwwwwwwwwwwwwwwwwhh.
+.hhwwwwwwwwwwwwwwwwwwwh.
+hhwwhhwwwwwwwwwwwwwwwwwh
+hwwhwhwwwwwwwwwwwwwwwwwh
+hwwhwhwwwwwwwwwwwwwwwwsh
+hwwhhwwwwwwwwwwwwwwwssss
+.hwwwwwwwwwwwwwwwwsssss.
+.swwwwwwwwwwwwwsssssss..
+..ssswwwwwwwsssssssss...
+....ssssssssssssssss....

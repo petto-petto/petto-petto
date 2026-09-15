@@ -397,59 +397,116 @@ def op_autoshade(c, o, pre):
 
 
 def op_ground_plane(c, o, pre):
-    """뒤로 물러나는 지면. 배경에 투시를 만드는 핵심 op.
+    """뒤로 물러나는 지면.
 
-    사이드뷰에는 소실점이 없지만 지면은 여전히 위로 갈수록 멀다. 세 가지를
-    행마다 같이 움직여서 그 깊이를 만든다.
-      - 톤: 위(먼 쪽)는 밝고 채도가 낮은 단, 아래(가까운 쪽)는 어두운 단
-      - 텍스처 셀 폭: 위로 갈수록 좁아진다(수렴)
-      - 가로 결 간격: 위로 갈수록 촘촘해진다(압축)
+    깊이 단서(톤 기울기·셀 수렴·결 압축)는 그대로 둔다 — `bg_check`의 지면 압축
+    게이트가 그걸 잰다. 대신 셋을 고친다.
+
+      1. 잔디선이 직선 rect라 자를 댄 것처럼 보인다 → 너덜한 가장자리 + 풀 포기
+      2. 세로 셀 경계가 `(x + row*3) % cw`라 규칙적인 빗이 된다 → 깊이에 비례한
+         흙 얼룩. 직사각형으로 찍으면 글리치, 크고 매끈한 타원이면 연잎이 된다
+      3. 돌·부스러기가 없다 → 크기 기울기를 가진 자갈
+
+    **디테일은 위쪽 2/3에 몰아 둔다.** 아래가 촘촘해지면 지면 압축 판정이
+    뒤집힌다(`gate_conflicts.md` §3).
     """
     ramp = pre["ramps"][o["ramp"]]
+
+    def col(i):
+        return resolve(ramp[max(0, min(len(ramp) - 1, i))], pre)
+
     y0, h = o["y"], o["h"]
     fi, ni = o.get("far", 3), o.get("near", 0)
     cw0, cw1 = o.get("cell", [2, 7])
     rnd = random.Random(o.get("seed", 11))
-    mark_i = o.get("markShift", -1)
+
+    def tone_at(row):
+        return fi + (ni - fi) * (row / max(1, h - 1))
+
     for row in range(h):
         y = y0 + row
-        t = row / max(1, h - 1)
-        f = fi + (ni - fi) * t
+        f = tone_at(row)
         lo, hi = int(math.floor(f)), int(math.ceil(f))
         lo = max(0, min(len(ramp) - 1, lo)); hi = max(0, min(len(ramp) - 1, hi))
-        frac = f - math.floor(f)
         c_lo, c_hi = resolve(ramp[lo], pre), resolve(ramp[hi], pre)
+        frac = f - math.floor(f)
         for x in range(c.w):
             c.put(x, y, c_hi if bayer(x, y, frac) else c_lo)
-        # 세로 셀 경계 — 폭이 t에 따라 넓어진다
+
+    # 흙 얼룩 — 셀 폭에 비례한 작은 것을 많이. 행마다 폭을 흔들어 테두리를 지운다.
+    for _ in range(o.get("patches", 150)):
+        row = int((rnd.random() ** 1.5) * (h - 2))
+        t = row / max(1, h - 1)
         cw = max(2, int(round(cw0 + (cw1 - cw0) * t)))
-        if c.seamless:
-            cw = snap_period(c.w, cw)
-        base_i = max(0, min(len(ramp) - 1, int(round(f)) + mark_i))
-        mark = resolve(ramp[base_i], pre)
-        off = 0 if c.seamless else rnd.randrange(cw)
-        for x in range(c.w):
-            if (x + off + (row * 3 if not c.seamless else 0)) % cw == 0:
-                c.put(x, y, mark)
+        y, x = y0 + row, rnd.randrange(0, c.w)
+        rx = max(1.0, cw * rnd.uniform(0.18, 0.42))
+        ry = max(1.0, rx * rnd.uniform(0.35, 0.7))
+        tone = int(round(tone_at(row))) + rnd.choice((-1, -1, -1, 1))
+        for dy in range(int(-ry) - 1, int(ry) + 2):
+            if abs(dy) > ry:
+                continue
+            span = rx * math.sqrt(max(0.0, 1 - (dy / max(0.5, ry)) ** 2))
+            span = max(0.0, span + rnd.uniform(-0.8, 0.8))
+            for dx in range(int(-span), int(span) + 1):
+                c.put(x + dx, y + dy, col(tone))
+
     # 가로 결 — 아래로 갈수록 간격이 넓어진다(위쪽이 압축돼 보인다)
-    step, row, k = o.get("furrow0", 2), 0, 0
+    row, k = 0, 0
     while row < h:
         y = y0 + row
-        t = row / max(1, h - 1)
-        f = fi + (ni - fi) * t
-        band_i = max(0, min(len(ramp) - 1, int(round(f)) + o.get("furrowShift", 1)))
-        col = resolve(ramp[band_i], pre)
+        bi = max(0, min(len(ramp) - 1,
+                        int(round(tone_at(row))) + o.get("furrowShift", 1)))
+        cc = resolve(ramp[bi], pre)
         for x in range(c.w):
             if bayer(x, y, o.get("furrowStrength", 0.55)):
-                c.put(x, y, col)
+                c.put(x, y, cc)
         k += 1
-        step = o.get("furrow0", 2) + k
-        row += step
+        row += o.get("furrow0", 2) + k
+
+    # 자갈. 위쪽은 작고 아래로 갈수록 커진다. 지면과 같은 램프를 쓴다 —
+    # 다른 램프(far·accent)를 쓰면 흙바닥에 청록 보석이 박힌다('파란 열매').
+    for _ in range(o.get("pebbles", 26)):
+        row = int((rnd.random() ** 1.3) * (h * 0.78))     # 아래 1/4은 비운다
+        y = y0 + row
+        t = row / max(1, h - 1)
+        pr = max(1, int(1 + t * o.get("pebbleMax", 2)))
+        x = rnd.randrange(pr + 1, max(pr + 2, c.w - pr - 1))
+        centre = int(round(tone_at(row)))
+        for dy in range(-pr, pr + 1):
+            for dx in range(-pr, pr + 1):
+                if dx * dx + dy * dy > pr * pr + pr * 0.4:
+                    continue
+                u = (dx + dy) / (2.0 * pr)
+                c.put(x + dx, y + dy,
+                      col(centre + (2 if u < -0.30 else (0 if u < 0.45 else -2))))
+        for dx in range(-pr, pr + 1):
+            c.put(x + dx, y + pr + 1, col(max(0, centre - 2)))
+
+    for _ in range(o.get("debris", 10)):
+        row = int((rnd.random() ** 1.4) * (h * 0.8))
+        y, x = y0 + row, rnd.randrange(2, max(3, c.w - 8))
+        ln = rnd.randint(3, 7)
+        tone = max(0, int(round(tone_at(row))) - 2)
+        for k in range(ln):
+            c.put(x + k, y + (1 if k > ln // 2 else 0), col(tone))
+
+    # 잔디선. 직선 rect는 자를 댄 것처럼 보인다.
     if o.get("edge"):
         ec = resolve(o["edge"], pre)
-        for y in range(y0, y0 + o.get("edgeH", 2)):
-            for x in range(c.w):
-                c.put(x, y, ec)
+        er = pre["ramps"].get(str(o["edge"]).split(".")[0])
+        eh = o.get("edgeH", 2)
+        kn = [rnd.uniform(-1, 1) for _ in range(6)]
+        for x in range(c.w):
+            tt = x / max(1, c.w - 1)
+            n = sum(k * math.sin(2 * math.pi * (i + 1) * tt * 3 + k * 3)
+                    for i, k in enumerate(kn)) / len(kn)
+            top = y0 + int(round(n * 1.6))
+            for dy in range(eh + rnd.randint(0, 1)):
+                c.put(x, top + dy, ec)
+            if er and rnd.random() < 0.16:
+                for k in range(rnd.randint(1, 3)):
+                    c.put(x, top - 1 - k,
+                          resolve(er[min(len(er) - 1, 3 if k == 0 else 2)], pre))
 
 
 def op_scatter_depth(c, o, pre):
@@ -537,14 +594,19 @@ def op_texture(c, o, pre):
 
 
 def op_foliage(c, o, pre):
-    """겹친 잎 로브 덩어리 — 실루엣 하나가 아니라 '덩어리들'을 그린다.
+    """겹친 잎 로브 덩어리.
 
-    평평함의 진짜 원인은 큰 매스가 단색이라는 것이다. 실루엣 윤곽만 예쁘게
-    따면 안쪽은 여전히 한 색이다. 이 op은 상자를 로브(원)로 채우고 로브마다
-    좌상단 림라이트와 우하단 그림자를 붙인다 — 잎 하나하나가 아니라 잎
-    '덩어리' 단위로 명암이 생겨서 구조적 엣지가 실제로 늘어난다.
+    브로콜리로 읽히는 진짜 원인은 로브가 원이라서가 아니라 **로브마다 제 몫의
+    림라이트를 갖기 때문**이다. 실제 수관은 광원이 하나라 덩어리 전체에서 빛을
+    받는 쪽 로브만 밝고, 안쪽은 그늘에 잠긴다. 셋을 바꾼다.
 
-    뒤(작은 y)의 로브부터 그려서 앞의 로브가 뒤를 가린다(겹침 = 깊이 단서).
+      1. 로브 밝기를 **덩어리 안에서의 위치**로 정한다. 직선 기울기로 주면 넓은
+         상자에서 '한쪽만 밝은 벽'이 되므로 저주파 잡음장을 쓴다 — 밝은 뭉치와
+         그늘진 뭉치가 번갈아 나온다.
+      2. 로브 실루엣을 각도에 따라 흔든다(3·5차 하모닉).
+      3. 윗변을 저주파 잡음으로 울렁이게 한다. 격자 커버리지는 그대로 두고 시작
+         높이만 흔들어 **구멍이 뚫리지 않게** 하고, 바닥 줄은 크레스트를 받지
+         않게 해 아래가 새지 않게 한다.
     """
     ramp = pre["ramps"][o["ramp"]]
 
@@ -555,11 +617,36 @@ def op_foliage(c, o, pre):
     r0, r1 = o.get("r", [5, 9])
     base, rim, shad = o.get("base", 1), o.get("rim", 3), o.get("shadow", 0)
     rnd = random.Random(o.get("seed", 7))
+    rimw = o.get("rimW", 2)
+    spread = o.get("spread", 2.2)
+    depth_range = o.get("depthRange", 1)
+    depth_tone = o.get("depthTone", True)
     step = max(3, int(((r0 + r1) / 2) * o.get("spacing", 1.15)))
-    jit = o.get("jitter", 2)
     if c.seamless:
         step = snap_period(c.w, step)
-        jit = 0            # 지터가 있으면 좌우 끝 로브가 어긋난다
+
+    # opt-in이 꺼져 있으면 **난수를 한 번도 더 쓰지 않는다.** 소비 순서가 달라지면
+    # 같은 seed로도 로브 배치가 통째로 바뀌어, 원경 캐노피 선이 달라지고 그 위의
+    # 하늘 조각까지 달라진다.
+    kn = [rnd.uniform(-1, 1) for _ in range(4)] if "crest" in o else [0.0]
+
+    def crest(x):
+        t = (x - x0) / max(1, w)
+        return sum(k * math.sin(2 * math.pi * (i + 1) * t * o.get("crestFreq", 1.6)
+                                + k * 3) for i, k in enumerate(kn)) / len(kn)
+
+    # 새 동작(윗변 울렁임 + 뭉치 단위 명암)은 **opt-in**이다. `crest`를 주지
+    # 않으면 기존 동작 그대로다 — 로브마다 림라이트, 윗변 평평.
+    #
+    # 원경 잎덩어리에는 주지 않는다. 원경의 윗변이 곧 하늘의 아랫경계라, 흔들면
+    # 하늘이 조각나고 조각난 하늘은 세로 그라데이션뿐이라 좌우 광원 방향이 없어
+    # 게이트 판정이 디더 잡음에 좌우된다(`gate_conflicts.md`).
+    organic = "crest" in o
+    lp = [rnd.uniform(0, 6.3) for _ in range(3)] if organic else [0.0, 0.0, 0.0]
+    lw = max(24.0, w / o.get("litClumps", 3.2))
+    ca = o.get("crest", 0.0)
+    lit_span = o.get("litSpan", 1.0)
+
     lobes = []
     y = y0
     while y <= y0 + h:
@@ -567,39 +654,86 @@ def op_foliage(c, o, pre):
         while x < (x0 + w if c.seamless else x0 + w + r1):
             rr = rnd.randint(r0, r1)
             jx = x + (rnd.randint(-2, 2) if not c.seamless else 0)
-            jy = y + rnd.randint(-2, 2)
-            lobes.append((jy, jx, rr))
+            jy = y + rnd.randint(-2, 2) + int(round(crest(x) * ca * h))
+            k3 = rnd.uniform(0, 6.3) if organic else 0.0
+            k5 = rnd.uniform(0, 6.3) if organic else 0.0
+            lobes.append((jy, jx, rr, k3, k5))
             x += step
         y += max(3, step - 2)
-    depth_tone = o.get("depthTone", True)
+    if organic:
+        # 바닥 줄은 크레스트를 받지 않는다. 윗변만 올리면 아래에 구멍이 남는다.
+        x = x0 - r1
+        while x < x0 + w + r1:
+            lobes.append((y0 + h - rnd.randint(0, max(1, r0 // 2)),
+                          x + rnd.randint(-2, 2), rnd.randint(r0, r1),
+                          rnd.uniform(0, 6.3), rnd.uniform(0, 6.3)))
+            x += max(3, int(step * 0.75))
+
     av = o.get("avoid")
-    for ly, lx, rr in sorted(lobes):
-        if av and av[0] - rr <= lx <= av[1] + rr and av[2] - rr <= ly <= av[3] + rr:
+    for ly, lx, rr, k3, k5 in sorted(lobes):
+        if av and av[0] - rr <= lx <= av[1] + rr:
             continue
         t = (ly - y0) / max(1, h)
-        d = int(round((t - 0.5) * o.get("depthRange", 1))) if depth_tone else 0
-        for dy in range(-rr, rr + 1):
-            for dx in range(-rr, rr + 1):
-                if dx * dx + dy * dy > rr * rr:
+        d = int(round((t - 0.5) * depth_range)) if depth_tone else 0
+
+        f = (math.sin(lx / lw + lp[0])
+             + math.sin(ly / max(8.0, h * 0.45) + lp[1])
+             + math.sin((lx + ly * 1.7) / (lw * 1.6) + lp[2])) / 3.0
+        g = 0.5 + 0.5 * f + (t - 0.5) * 0.35
+        lit_rim = g < lit_span
+        deep = lit_span < 1.0 and g > 0.82
+
+        prof = ([rr * (1.0 + 0.20 * math.sin(3 * a * math.tau / 48 + k3)
+                       + 0.11 * math.sin(5 * a * math.tau / 48 + k5))
+                 for a in range(48)] if organic else [float(rr)] * 48)
+
+        for dy in range(-rr - 3, rr + 4):
+            for dx in range(-rr - 3, rr + 4):
+                rad = prof[int((math.atan2(dy, dx) % math.tau) / math.tau * 48) % 48]
+                dist = math.hypot(dx, dy)
+                if dist > rad:
                     continue
                 px, py = lx + dx, ly + dy
-                if not (y0 - r1 <= py <= y0 + h + r1):
+                if not (y0 - r1 - 4 <= py <= y0 + h + r1):
                     continue
-                # 로브 안쪽까지 광원 방향으로 기울인다.
-                # 테두리에만 림라이트를 넣고 안쪽을 단색으로 두면, 로브가 아무리
-                # 많아도 국소 명암이 없어 '평평한 잎 벽'이 된다(bg_check의
-                # 광원 창 검사가 정확히 이걸 잡는다).
-                u = (dx + dy) / (2.0 * rr)          # -0.7(좌상) ~ +0.7(우하)
-                step = int(round(-u * o.get("spread", 2.2)))
-                edge = dx * dx + dy * dy > (rr - o.get("rimW", 2)) ** 2
-                if edge and dx + dy < -rr * 0.30:
+                u = (dx + dy) / (2.0 * max(1, rr))
+                st = int(round(-u * spread))
+                edge = dist > rad - rimw
+                if edge and dx + dy < -rad * 0.30 and lit_rim:
                     c.put(px, py, col(rim + d))
-                elif edge and dx + dy > rr * 0.30:
+                elif edge and dx + dy > rad * 0.30:
                     c.put(px, py, col(shad + d))
+                elif deep:
+                    c.put(px, py, col(base + d + st - 1))
                 else:
-                    c.put(px, py, col(base + d + step))
+                    c.put(px, py, col(base + d + st))
+
+        # 빛 받는 로브의 윗호에만 잎 끝을 세운다. 많으면 톱니가 된다.
+        if organic and lit_rim and rnd.random() < 0.5:
+            for _ in range(rnd.randint(1, 2)):
+                ang = rnd.uniform(math.pi * 1.15, math.pi * 1.85)
+                rad = prof[int((ang % math.tau) / math.tau * 48) % 48]
+                sx = lx + int(round(math.cos(ang) * rad))
+                sy = ly + int(round(math.sin(ang) * rad))
+                for k in range(rnd.randint(1, 2)):
+                    c.put(sx + int(round(math.cos(ang) * k)),
+                          sy + int(round(math.sin(ang) * k)), col(rim + d))
+
+    # 마른 잔가지 — 덩어리가 식물이라는 신호.
+    for _ in range(o.get("twigs", 0)):
+        tx = rnd.randrange(x0, x0 + max(1, w))
+        ty = y0 + int(round(crest(tx) * ca * h)) + rnd.randint(0, 6)
+        ln = rnd.randint(4, 9)
+        ang = rnd.uniform(-2.4, -0.8)
+        for k in range(ln):
+            c.put(tx + int(math.cos(ang) * k), ty + int(math.sin(ang) * k), col(shad))
+        if rnd.random() < 0.6:
+            bx = tx + int(math.cos(ang) * ln * 0.6)
+            by = ty + int(math.sin(ang) * ln * 0.6)
+            for k in range(rnd.randint(2, 4)):
+                c.put(bx + k, by - k, col(shad))
+
     if o.get("fillBelow"):
-        # 덩어리 아래를 베이스색으로 메워 배경이 비치지 않게
         fill = col(shad)
         for x in range(x0, x0 + w):
             for yy in range(y0 + h, o["fillBelow"]):
@@ -691,95 +825,471 @@ def op_panel(c, o, pre):
                 c.put(gx + k, gy, gcol)
 
 
-def op_tree_column(c, o, pre):
-    """화면을 세로로 관통하는 고목 줄기.
+# ---- 고목 -------------------------------------------------------------
+#
+# 굽이·원통 단면·세로 홈 셋만으로는 "전봇대가 아니다"까지밖에 못 간다. 화면에서
+# 가장 큰 오브젝트라 디테일이 부족하면 배경 전체가 덜 그려진 것으로 읽힌다.
+# 아래 다섯이 실제로 차이를 만든 것들이다.
+#
+#   1. 실루엣 요철 — 사인 곡선 그대로면 가장자리가 유리처럼 매끈해 압출 도형이 된다
+#   2. 수피 양식   — 가로 눈금은 사다리, 균등한 줄눈은 벽돌담이 된다
+#   3. 반사광      — 그림자 쪽에 반사광이 없으면 오른쪽이 단색 검은 띠가 된다
+#   4. 부착물      — 옹이 링·가지 그루터기·이끼 매트·담쟁이
+#   5. 갈래 뿌리   — 밑동 폭만 넓히면 나팔이다
 
-    직사각형으로 그리면 기둥·전봇대가 된다. 나무로 읽히려면 셋이 필요하다.
-      - 굽이: 중심선이 사인으로 흔들리고 아래로 갈수록 굵어진다
-      - 수피 결: 중심선과 같은 곡률의 세로 홈 2~3줄 (직선이면 나무결이 아니다)
-      - 밑동/가지 벌어짐: 위아래 끝에서 폭이 급히 넓어진다
-    좌상단 광원이라 왼쪽 가장자리가 밝고 오른쪽이 어둡다.
+_TC_BANDS = (0.07, 0.30, 0.48, 0.64, 0.80, 0.93, 1.01)
+
+
+def _tc_tones(base, lit, dark):
+    """원통 단면 7단. 마지막이 그림자 쪽 반사광이다."""
+    return (base,
+            lit,
+            max(base + 1, lit - 1),
+            base + 1,
+            base,
+            dark,
+            max(dark + 1, base - 1))
+
+
+def _tc_band(u, tones):
+    for edge, tone in zip(_TC_BANDS, tones):
+        if u < edge:
+            return tone
+    return tones[-1]
+
+
+def _tc_spine(o, x_off, w_scale):
+    """중심선과 좌우 실루엣.
+
+    좌우에 **서로 다른** 저주파 잡음을 얹는다. 같은 값을 쓰면 폭만 변하고
+    윤곽은 여전히 매끈하다.
+    """
+    y0, y1 = o.get("y0", 0), o.get("y1", 0)
+    w0, w1 = o.get("w", [14, 20])
+    w0, w1 = w0 * w_scale, w1 * w_scale
+    x0 = o["x"] + x_off
+    converge = o.get("converge", 0.0)
+    sway, per = o.get("sway", 4), o.get("period", 90)
+    phase = o.get("phase", 0.0)
+    wob = o.get("wobble", 1.0)
+    rnd = random.Random(int(o.get("seed", 3) * 977 + x_off * 13))
+    kn_l = [rnd.uniform(-1, 1) for _ in range(5)]
+    kn_r = [rnd.uniform(-1, 1) for _ in range(5)]
+
+    def noise(kn, t):
+        return sum(k * math.sin(2 * math.pi * (i + 1) * t + k * 3.1)
+                   for i, k in enumerate(kn)) / len(kn)
+
+    left, right, cent = {}, {}, {}
+    span = max(1, y1 - y0)
+    for y in range(y0, y1):
+        t = (y - y0) / span
+        cx = (x0 - x_off * converge * (t ** 2.0)
+              + sway * math.sin(2 * math.pi * (y - y0) / max(1e-6, per) + phase))
+        w = w0 + (w1 - w0) * t
+        if t > 0.86:
+            w += ((t - 0.86) / 0.14) ** 1.6 * o.get("flare", 6) * w_scale
+        if t < 0.08:
+            w += (0.08 - t) / 0.08 * o.get("flareTop", 4) * w_scale
+        amp = max(1.0, w * 0.06) * wob
+        left[y] = int(round(cx - w / 2 + noise(kn_l, t * 2.3) * amp))
+        right[y] = int(round(cx + w / 2 + noise(kn_r, t * 2.9) * amp))
+        cent[y] = cx
+    return left, right, cent
+
+
+def _tc_body(c, o, pre, left, right, col, tones, seed):
+    """몸통 + 윤곽. 밴드 경계를 행마다 흔들어 세로 줄무늬로 보이지 않게 한다."""
+    edge = resolve(o["edge"], pre) if o.get("edge") else None
+    rnd = random.Random(seed * 5)
+    jit = [rnd.uniform(-0.035, 0.035) for _ in range(64)]
+    for y in sorted(left):
+        l, r = left[y], right[y]
+        span = max(1, r - l)
+        j = jit[y % len(jit)]
+        for x in range(l, r):
+            c.put(x, y, col(_tc_band((x - l) / span + j, tones)))
+        if edge is not None:
+            c.put(l, y, edge)
+            c.put(r - 1, y, edge)
+
+
+def _tc_bark_fissure(c, o, pre, left, right, col, tones, seed):
+    """깊은 세로 균열 — 참나무 계열.
+
+    가로 눈금을 그으면 사다리가 된다. 세로로 흐르다 가끔 옆으로 이어지는
+    균열망이라야 껍질로 읽힌다. 균열은 어두운 단, 그 오른쪽(빛을 받는 판의
+    왼쪽 면)은 한 단 밝게 — 좌상단 광원 규칙 그대로.
+    """
+    ys = sorted(left)
+    if not ys:
+        return
+    y0, y1 = ys[0], ys[-1] + 1
+    rnd = random.Random(seed * 31 + 5)
+    lanes = o.get("barkLanes", max(5, o.get("grooves", 3) + 3))
+    for lane in range(lanes):
+        u = (lane + 0.5) / lanes + rnd.uniform(-0.045, 0.045)
+        y = y0 + rnd.randrange(0, max(1, min(26, y1 - y0)))
+        while y < y1 - 6:
+            run = rnd.randint(14, 46)
+            drift = rnd.uniform(-0.05, 0.05)
+            for k in range(run):
+                yy = y + k
+                if yy not in left:
+                    break
+                l, r = left[yy], right[yy]
+                span = max(1, r - l)
+                uu = u + drift * (k / max(1, run))
+                if not (0.05 < uu < 0.95):
+                    continue
+                x = int(l + span * uu)
+                c.put(x, yy, col(tones[5]))
+                if uu < 0.80:
+                    c.put(x + 1, yy, col(_tc_band(uu, tones) + 1))
+            if rnd.random() < 0.45 and (y + run) in left:
+                yy = y + run
+                l, r = left[yy], right[yy]
+                span = max(1, r - l)
+                wdt = int(span * rnd.uniform(0.06, 0.16))
+                x = int(l + span * u)
+                for dx in range(wdt):
+                    xx = x + (dx if rnd.random() < 0.5 else -dx)
+                    if l < xx < r:
+                        c.put(xx, yy, col(tones[5]))
+                        if yy + 1 in left and left[yy + 1] < xx < right[yy + 1]:
+                            c.put(xx, yy + 1, col(_tc_band((xx - l) / span, tones) + 1))
+            y += run + rnd.randint(3, 12)
+            u += rnd.uniform(-0.03, 0.03)
+
+
+def _tc_bark_plate(c, o, pre, left, right, col, tones, seed):
+    """판상 수피 — 소나무 계열. 비늘처럼 조각난 판.
+
+    줄 단위로 u 구간을 균등히 채우면 줄눈이 맞아 **벽돌담**이 된다. 판마다
+    높이를 따로 주고 위·아래 모서리를 열마다 흔들어야 비늘로 읽힌다.
+    """
+    ys = sorted(left)
+    if not ys:
+        return
+    y0, y1 = ys[0], ys[-1] + 1
+    rnd = random.Random(seed * 37 + 9)
+    lanes = o.get("plateLanes", 5)
+    plates = []
+    for lane in range(lanes):
+        u = lane / lanes + rnd.uniform(0.0, 0.06)
+        y = y0 + rnd.randrange(0, max(1, min(30, y1 - y0)))
+        while y < y1 - 6:
+            ph = rnd.randint(9, 20)
+            pw = (1.0 / lanes) * rnd.uniform(0.78, 1.15)
+            plates.append((u, min(0.97, u + pw), y, min(y + ph, y1), rnd.random()))
+            y += ph + rnd.randint(1, 5)
+    for u0, u1, ya, yb, pseed in plates:
+        wob = random.Random(int(pseed * 1e6))
+        kn = [wob.uniform(-1, 1) for _ in range(4)]
+
+        def shift(t):
+            return int(round(sum(k * math.sin(2 * math.pi * (i + 1) * t + k * 3)
+                                 for i, k in enumerate(kn)) / len(kn) * 2.4))
+
+        for yy in range(ya, yb):
+            if yy not in left:
+                continue
+            l, r = left[yy], right[yy]
+            span = max(1, r - l)
+            t = (yy - ya) / max(1, yb - ya - 1)
+            xa = int(l + span * u0) + shift(t * 1.7)
+            xb = int(l + span * u1) + shift(t * 2.3 + 0.7)
+            if xb <= xa:
+                continue
+            for x in (xa, xb):
+                if l < x < r:
+                    c.put(x, yy, col(tones[5]))
+            if yy == ya or yy == yb - 1:
+                for x in range(xa, xb + 1):
+                    if not (l < x < r):
+                        continue
+                    uu = (x - l) / span
+                    if yy == yb - 1:
+                        c.put(x, yy, col(tones[5]))
+                    elif uu < 0.80:
+                        c.put(x, yy, col(_tc_band(uu, tones) + 1))
+            elif yy == ya + 1:
+                for x in range(xa + 1, min(xb, xa + 1 + int(span * 0.10))):
+                    if l < x < r and (x - l) / span < 0.80:
+                        c.put(x, yy, col(_tc_band((x - l) / span, tones) + 1))
+
+
+def _tc_bark_lenticel(c, o, pre, left, right, col, tones, seed):
+    """자작나무 — 매끈한 껍질에 가로 숨구멍 줄과 검은 상처."""
+    ys = sorted(left)
+    if not ys:
+        return
+    y0, y1 = ys[0], ys[-1] + 1
+    rnd = random.Random(seed * 41 + 13)
+    for _ in range(o.get("lenticels", 46)):
+        y = rnd.randrange(y0 + 3, max(y0 + 4, y1 - 3))
+        if y not in left:
+            continue
+        l, r = left[y], right[y]
+        span = max(1, r - l)
+        ln = max(2, int(span * rnd.uniform(0.10, 0.34)))
+        x = int(l + span * rnd.uniform(0.06, 0.88))
+        for dx in range(ln):
+            if l < x + dx < r:
+                c.put(x + dx, y, col(tones[5]))
+        if rnd.random() < 0.5 and y + 1 in left:
+            for dx in range(max(1, ln // 2)):
+                if left[y + 1] < x + dx < right[y + 1]:
+                    c.put(x + dx, y + 1, col(tones[4]))
+    for _ in range(o.get("scars", 4)):
+        y = rnd.randrange(y0 + 20, max(y0 + 21, y1 - 40))
+        h = rnd.randint(9, 18)
+        for dy in range(h):
+            yy = y + dy
+            if yy not in left:
+                continue
+            l, r = left[yy], right[yy]
+            span = max(1, r - l)
+            t = dy / max(1, h - 1)
+            wdt = max(1, int(span * 0.09 * math.sin(math.pi * t) ** 0.9))
+            x = int(l + span * rnd.uniform(0.30, 0.34))
+            for dx in range(wdt):
+                c.put(x + dx, yy, col(tones[5] if dx else tones[4]))
+
+
+_TC_BARK = {"fissure": _tc_bark_fissure, "plate": _tc_bark_plate,
+            "lenticel": _tc_bark_lenticel}
+
+
+def _tc_knot(c, o, pre, left, right, cent, col, tones, ky, kw, kh):
+    """옹이 — 어두운 심 + 링 + 좌상단 밝은 테두리."""
+    if ky not in cent:
+        return
+    cx = int(cent[ky]) + o.get("knotOffset", -3)
+    for dy in range(-kh - 2, kh + 3):
+        for dx in range(-kw - 2, kw + 3):
+            y = ky + dy
+            if y not in left or not (left[y] < cx + dx < right[y]):
+                continue
+            e = (dx / max(1, kw)) ** 2 + (dy / max(1, kh)) ** 2
+            if e <= 0.40:
+                c.put(cx + dx, y, col(tones[5]))
+            elif e <= 0.85:
+                c.put(cx + dx, y, col(tones[4]))
+            elif e <= 1.25:
+                c.put(cx + dx, y, col(tones[5]))
+            elif e <= 1.7 and dx + dy < 0:
+                c.put(cx + dx, y, col(tones[1]))
+
+
+def _tc_stub(c, o, pre, left, right, col, tones, by, side, length, thick):
+    """가지 그루터기. 잘린 단면과 줄기에 지는 그림자가 있어야 붙어 보인다."""
+    if by not in left:
+        return
+    for i in range(length):
+        t = i / max(1, length - 1)
+        th = max(3, int(thick * (1 - t * 0.4)))
+        y = by - int(t * length * 0.40)
+        x = (left[by] - i) if side < 0 else (right[by] + i)
+        for k in range(th):
+            tone = (tones[1] if k == 0 else
+                    tones[5] if k >= th - 1 else
+                    tones[2] if k < th / 2 else tones[4])
+            c.put(x, y + k, col(tone))
+    tip = (left[by] - length) if side < 0 else (right[by] + length)
+    ty = by - int(length * 0.40)
+    th = max(3, int(thick * 0.6))
+    for k in range(th):
+        c.put(tip, ty + k, col(tones[4] if 0 < k < th - 1 else tones[5]))
+    for k in range(thick + 1):
+        yy = by + thick + k
+        if yy not in left:
+            continue
+        l, r = left[yy], right[yy]
+        wdt = int((r - l) * 0.30)
+        x0 = l + 1 if side < 0 else r - 1 - wdt
+        for dx in range(wdt):
+            if l < x0 + dx < r:
+                c.put(x0 + dx, yy,
+                      col(_tc_band((x0 + dx - l) / max(1, r - l), tones) - 2))
+
+
+def _tc_moss(c, o, pre, left, right, seed):
+    """이끼 — 가장자리가 너덜너덜한 매트.
+
+    매끈한 반원으로 그리면 나뭇잎을 붙여 놓은 것처럼 보인다. 행마다 폭을
+    1~2px 흔들고, 밝은 단은 윗면에 통으로 깔지 않고 점점이 얹는다.
+    """
+    if not o.get("moss"):
+        return
+    mr = pre["ramps"][o["moss"]]
+    ys = sorted(left)
+    y0, y1 = ys[0], ys[-1] + 1
+    rnd = random.Random(seed * 71 + 11)
+    for _ in range(o.get("mossCount", 5)):
+        lo, hi = y0 + 8, max(y0 + 9, y1 - 46)
+        if hi <= lo:
+            continue
+        my = rnd.randrange(lo, hi)
+        mh = rnd.randint(16, 40)
+        depth = rnd.uniform(0.14, 0.26)
+        side = -1 if rnd.random() < 0.78 else 1
+        ragged = [rnd.randint(-1, 1) for _ in range(mh)]
+        for dy in range(mh):
+            yy = my + dy
+            if yy not in left:
+                continue
+            lobe = math.sin(math.pi * (dy / max(1, mh - 1))) ** 0.42
+            span = max(1, right[yy] - left[yy])
+            ww = max(0, int(span * depth * lobe) + ragged[dy])
+            if ww <= 0:
+                continue
+            bx = left[yy] + 1 if side < 0 else right[yy] - 1 - ww
+            for k in range(ww):
+                x = bx + k
+                if not (left[yy] <= x <= right[yy]):
+                    continue
+                tone = 1
+                if dy < 3 and rnd.random() < 0.55:
+                    tone = 3
+                elif rnd.random() < 0.22:
+                    tone = 2
+                elif rnd.random() < 0.10:
+                    tone = 0
+                c.put(x, yy, resolve(mr[tone], pre))
+
+
+# 담쟁이 잎 — 3갈래. 좌상단이 밝고 우하단이 어둡다.
+_TC_IVY_LEAF = (("h.h.h", "hbbbh", ".bbd.", "..d.."),
+                (".h.h.h.", "hhbbbhh", "hbbbbdh", ".bbbbd.", "..bbd..", "...d..."))
+_TC_IVY_TONE = {"h": 3, "b": 2, "d": 0}
+
+
+def _tc_ivy(c, o, pre, left, right, cent, seed):
+    """담쟁이덩굴 — 줄기를 감아 오른다.
+
+    2D 측면도에서 '감았다'를 만드는 건 원근이 아니라 **가려짐**이다. 진폭을
+    줄기 폭보다 크게 잡아 실루엣 밖으로 나간 구간을 그리지 않으면, 뒤로
+    돌아갔다 다시 앞으로 나오는 것으로 읽힌다.
+    """
+    ir = pre["ramps"][o.get("ivy", "leaf")]
+    ys = sorted(cent)
+    if not ys:
+        return
+    y0, y1 = ys[0], ys[-1] + 1
+    rnd = random.Random(seed * 131 + 23)
+
+    def put(x, y, tone):
+        c.put(x, y, resolve(ir[max(0, min(4, tone))], pre))
+
+    for _ in range(o.get("ivyStrands", 0)):
+        top = y0 + rnd.randint(10, max(11, (y1 - y0) // 4))
+        per = rnd.uniform(58, 96)
+        phase = rnd.uniform(0, 6.28)
+        over = rnd.uniform(1.15, 1.55)
+        every = rnd.randint(5, 8)
+        shade = 0
+        n = 0
+        for y in range(y1 - 1, top, -1):
+            if y not in cent:
+                continue
+            l, r = left[y], right[y]
+            half = max(2, (r - l) / 2)
+            xi = int(round(cent[y] + math.sin(2 * math.pi * y / per + phase) * half * over))
+            behind = not (l + 1 <= xi <= r - 2)
+            if not behind:
+                put(xi, y, 1)
+                if rnd.random() < 0.35:
+                    put(xi + 1, y, 0)
+                if rnd.random() < 0.14:
+                    put(xi - 1, y, 0)
+            n += 1
+            if n % every == 0 and not behind and rnd.random() < 0.82:
+                every = rnd.randint(4, 10)
+                n = 0
+                shade = rnd.choice((0, 0, 0, -1, 1))
+                grid = _TC_IVY_LEAF[1 if rnd.random() < 0.55 else 0]
+                gw, gh = len(grid[0]), len(grid)
+                sx, sy = xi - gw // 2 + rnd.randint(-1, 1), y - gh // 2
+                for gy, row in enumerate(grid):
+                    for gx, ch in enumerate(row):
+                        if ch == ".":
+                            continue
+                        px, py = sx + gx, sy + gy
+                        if py in left and left[py] - 2 <= px <= right[py] + 1:
+                            put(px, py, _TC_IVY_TONE[ch] + shade)
+
+
+def _tc_roots(c, o, pre, left, right, col, tones, legs):
+    """밑동 뿌리. 폭만 넓히면 나팔이고, 부피를 가진 갈래여야 뿌리다."""
+    ys = sorted(left)
+    if not ys:
+        return
+    y1 = ys[-1] + 1
+    top = max(ys[0], y1 - o.get("rootH", 0))
+    if top >= y1:
+        return
+    w1 = o.get("w", [14, 20])[1]
+    for side, reach, fat in legs:
+        for y in range(top, y1):
+            if y not in left:
+                continue
+            t = (y - top) / max(1, y1 - top)
+            grow = (t ** 1.8) * reach * w1 * 0.9
+            th = max(3, int((1 - t * 0.25) * w1 * 0.20 * fat))
+            x0 = (left[y] - grow) if side < 0 else (right[y] + grow)
+            for k in range(th):
+                u = k / max(1, th - 1)
+                tone = (tones[1] if u < 0.18 else tones[2] if u < 0.42
+                        else tones[4] if u < 0.78 else tones[5])
+                c.put(int(x0) + (k if side < 0 else -k), y, col(tone))
+
+
+def op_tree_column(c, o, pre):
+    """화면을 세로로 관통하는 고목.
+
+    `bark`로 수종을 고른다 — `fissure`(참나무·깊은 균열), `plate`(소나무·비늘),
+    `lenticel`(자작나무·가로 숨구멍). `trunks`와 `converge`로 쌍둥이 줄기를,
+    `ivyStrands`로 담쟁이를 얹는다.
     """
     ramp = pre["ramps"][o["ramp"]]
 
     def col(i):
         return resolve(ramp[max(0, min(len(ramp) - 1, i))], pre)
 
-    x0 = o["x"]
-    w0, w1 = o.get("w", [14, 20])          # 위 폭 -> 아래 폭
-    y0, y1 = o.get("y0", 0), o.get("y1", c.h)
-    base, lit, dark = o.get("base", 2), o.get("lit", 4), o.get("dark", 0)
-    sway, per = o.get("sway", 4), o.get("period", 90)
-    edge = resolve(o["edge"], pre) if o.get("edge") else None
-    phase = o.get("phase", 0.0)
-    rnd = random.Random(o.get("seed", 3))
-    span = max(1, y1 - y0)
-    centers, widths = {}, {}
-    for y in range(y0, y1):
-        t = (y - y0) / span
-        cx = x0 + sway * math.sin(2 * math.pi * (y - y0) / max(1e-6, per) + phase)
-        w = w0 + (w1 - w0) * t
-        # 밑동과 가지 벌어짐
-        if t > 0.88:
-            w += (t - 0.88) / 0.12 * o.get("flare", 6)
-        if t < 0.08:
-            w += (0.08 - t) / 0.08 * o.get("flareTop", 4)
-        centers[y], widths[y] = cx, w
-        l, r = int(round(cx - w / 2)), int(round(cx + w / 2))
-        # 원통 단면 — 폭을 가로질러 밝기가 연속으로 떨어져야 기둥이 아니라
-        # 나무로 읽힌다. 2px 하이라이트 + 3px 그림자만으로는 납작한 리본이 된다.
-        span_w = max(1, r - l)
-        for x in range(l, r):
-            u = (x - l) / span_w
-            if u < 0.12:
-                idx = base
-            elif u < 0.34:
-                idx = lit
-            elif u < 0.60:
-                idx = base + 1
-            elif u < 0.80:
-                idx = base
-            else:
-                idx = dark
-            c.put(x, y, col(idx))
-        # 윤곽 — 안개 위에서 줄기가 떠 보이려면 양쪽에 어두운 테두리가 필요하다
-        if edge is not None:
-            c.put(l, y, edge)
-            c.put(r - 1, y, edge)
-    # 수피 결 — 줄기와 같은 곡률로 흐른다
-    for gi in range(o.get("grooves", 3)):
-        off = rnd.uniform(-0.28, 0.30)
-        tone = base - 1 if gi % 2 == 0 else base + 1
-        for y in range(y0, y1):
-            if (y + gi * 7) % 11 < 8:       # 끊어진 결
-                gx = int(round(centers[y] + off * widths[y]))
-                c.put(gx, y, col(tone))
-    # 줄기에 붙은 이끼 — 광원 쪽(왼쪽)에만
-    if o.get("moss"):
-        mr = pre["ramps"][o["moss"]]
-        for _ in range(o.get("mossCount", 5)):
-            my = rnd.randrange(y0 + 4, max(y0 + 5, y1 - 4))
-            h = rnd.randint(3, 7)
-            for dy in range(h):
-                yy = my + dy
-                if yy not in centers:
-                    continue
-                ww = int(widths[yy] * rnd.uniform(0.16, 0.30))
-                lx = int(round(centers[yy] - widths[yy] / 2))
-                for k in range(ww):
-                    c.put(lx + 1 + k, yy,
-                          resolve(mr[2 if dy % 2 else 3], pre))
-    # 나무 구멍 — 레퍼런스의 어두운 동공
-    for (hy, hw, hh) in o.get("hollows", []):
-        if hy not in centers:
-            continue
-        cx = centers[hy]
-        for dy in range(-hh, hh + 1):
-            for dx in range(-hw, hw + 1):
-                if (dx / hw) ** 2 + (dy / hh) ** 2 <= 1.0:
-                    c.put(int(cx) + dx, hy + dy, col(0))
-                elif (dx / hw) ** 2 + (dy / hh) ** 2 <= 1.35 and dx + dy < 0:
-                    c.put(int(cx) + dx, hy + dy, col(base + 1))
+    o = dict(o)
+    o.setdefault("y0", 0)
+    if not o.get("y1"):
+        o["y1"] = c.h
+    tones = _tc_tones(o.get("base", 2), o.get("lit", 4), o.get("dark", 0))
+    seed = o.get("seed", 3)
+    bark = _TC_BARK.get(o.get("bark", "fissure"), _tc_bark_fissure)
+
+    trunks = o.get("trunks") or [[0, 1.0]]
+    drawn = []
+    for i, (dx, ws) in enumerate(trunks):
+        left, right, cent = _tc_spine(o, dx, ws)
+        _tc_body(c, o, pre, left, right, col, tones, seed + i * 3)
+        bark(c, o, pre, left, right, col, tones, seed + i * 3)
+        drawn.append((left, right, cent))
+
+    # 부착물은 주 줄기에 건다.
+    left, right, cent = drawn[0]
+    knots = list(o.get("knots", ())) or list(o.get("hollows", ()))
+    for k in knots:
+        _tc_knot(c, o, pre, left, right, cent, col, tones, k[0], k[1], k[2])
+    for s in o.get("stubs", ()):
+        _tc_stub(c, o, pre, left, right, col, tones, s[0], s[1], s[2], s[3])
+    if o.get("rootH"):
+        legs = o.get("roots") or (((-1, .9, 1.0), (1, .8, .9)) if len(trunks) > 1
+                                  else ((-1, .95, 1.0), (-1, .5, .7),
+                                        (1, .8, .9), (1, .38, .6)))
+        for (l_, r_, _), _t in zip(drawn, trunks):
+            _tc_roots(c, o, pre, l_, r_, col, tones, legs)
+    _tc_moss(c, o, pre, left, right, seed)
+    if o.get("ivyStrands"):
+        for (l_, r_, cn_) in drawn:
+            _tc_ivy(c, o, pre, l_, r_, cn_, seed)
 
 
 def op_branch_platform(c, o, pre):

@@ -1,0 +1,63 @@
+<meta charset="utf-8" />
+<title>펫룸</title>
+<link rel="stylesheet" href="petroom.css" />
+
+<!--
+  `@pet/room`의 컴파일 결과가 `@pet/core`를 bare specifier로 참조한다. 번들러가 없으므로
+  브라우저 표준 import map으로 해석해 준다. Electron은 `file:` 스킴에서 ESM import를
+  허용하므로 이것으로 충분하다.
+-->
+<script type="importmap">
+  {
+    "imports": {
+      "@pet/core": "../../pet-core/dist/index.js"
+    }
+  }
+</script>
+
+<div id="room">
+  <!--
+    장면과 옆 패널을 겹치지 않게 나란히 둔다. 패널을 장면 위에 얹으면 그 아래를 배회하는
+    펫이 가려진다 — design.md §7이 "상세 패널은 펫 이동을 막지 않는 자리에" 라고 정한 것이
+    정확히 이 경우다.
+  -->
+  <div id="scene">
+    <!-- 배경 레이어. 개수와 순서는 배경 json이 정하므로 JS가 채운다. -->
+    <div id="layers"></div>
+
+    <!-- 펫은 전 레이어 위에 그린다. `petroom.css`의 주석 참조. -->
+    <canvas id="pets"></canvas>
+
+    <p id="error" class="pixel-panel" hidden></p>
+  </div>
+
+  <aside id="side">
+    <h1 id="title">🌲 펫룸</h1>
+    <p id="phase"></p>
+
+    <div id="detail" class="pixel-panel" hidden>
+      <div id="detail-head">
+        <h2 id="detail-name"></h2>
+        <button id="detail-close" type="button" aria-label="상세 닫기">✕</button>
+      </div>
+
+      <span id="detail-grade" class="grade-badge"></span>
+
+      <p id="detail-level"></p>
+
+      <div class="xp-row">
+        <div class="xp-bar"><div id="detail-xp" class="xp-bar__fill"></div></div>
+        <span id="detail-xp-label" class="xp-label"></span>
+      </div>
+
+      <div id="detail-actions">
+        <p id="detail-note"></p>
+        <button id="detail-activate" class="pixel-button" type="button"></button>
+      </div>
+    </div>
+
+    <p id="hint">펫을 누르면 상세가 열립니다.</p>
+  </aside>
+</div>
+
+<script type="module" src="petroom.js"></script>

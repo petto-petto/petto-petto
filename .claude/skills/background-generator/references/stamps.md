@@ -22,30 +22,48 @@ s = leaf.0
 | outdoor | 크기 | | interior | 크기 |
 | --- | --- | --- | --- | --- |
 | `bush` | 11x7 | | `antlers` | 38x20 |
-| `cactus` | 9x10 | | `armchair_back` | 34x46 |
-| `cloud_big` | 21x7 | | `blanket` | 16x15 |
-| `cloud_small` | 13x5 | | `crate` | 9x9 |
-| `dead_tree` | 10x10 | | `fireplace` | 36x36 |
-| `flower` | 3x3 | | `firewood` | 20x10 |
-| `grass_tuft` | 5x4 | | `floor_plank` | 12x5 (tile 전용) |
-| `log` | 13x6 | | `lamp` | 7x10 |
-| `mushroom` | 5x5 | | `picture` | 9x8 |
-| `platform` | 24x9 | | `picture_wide` | 16x12 |
-| `rock` | 9x6 | | `plant_pot` | 9x11 |
-| `spire` | 9x10 | | `rug` | 30x9 |
-| `tree_pine` | 13x20 | | `rug_cozy` | 42x13 |
-| `tree_round` | 17x22 | | `sconce` | 9x13 |
-| `vine` | 3x12 | | `shelf` | 17x13 |
-|  |  | | `sofa` | 52x26 |
-|  |  | | `window` | 15x13 |
-|  |  | | `window_lit` | 15x13 |
-|  |  | | `window_snow` | 46x28 |
+| `bush_leafy` | 24x15 | | `armchair_back` | 34x46 |
+| `cactus` | 9x10 | | `blanket` | 16x15 |
+| `cloud_big` | 21x7 | | `crate` | 9x9 |
+| `cloud_small` | 13x5 | | `fireplace` | 36x36 |
+| `dead_tree` | 10x10 | | `firewood` | 20x10 |
+| `flower` | 3x3 | | `floor_plank` | 12x5 (tile 전용) |
+| `grass_tuft` | 5x4 | | `lamp` | 7x10 |
+| `log` | 13x6 | | `picture` | 9x8 |
+| `log_mossy` | 24x13 | | `picture_wide` | 16x12 |
+| `mushroom` | 5x5 | | `plant_pot` | 9x11 |
+| `mushroom_cluster` | 16x14 | | `rug` | 30x9 |
+| `platform` | 24x9 | | `rug_cozy` | 42x13 |
+| `rock` | 9x6 | | `sconce` | 9x13 |
+| `rock_mossy` | 20x15 | | `shelf` | 17x13 |
+| `spire` | 9x10 | | `sofa` | 52x26 |
+| `tree_pine` | 13x20 | | `window` | 15x13 |
+| `tree_round` | 17x22 | | `window_lit` | 15x13 |
+| `vine` | 3x12 | | `window_snow` | 46x28 |
 |  |  | | `wood_wall` | 8x6 (tile 전용) |
 
 ```bash
 python3 -c "import sys;sys.path.insert(0,'scripts');import bgcore
 for n,(s,w,h) in bgcore.list_stamps().items(): print(f'{s}/{n:<13} {w}x{h}')"
 ```
+
+## 고해상도 변형 — 큰 캔버스에서 확대하지 않는다
+
+`rock_mossy` `mushroom_cluster` `log_mossy` `bush_leafy`는 같은 소재의 **원본 해상도가
+큰** 변형이다. 9x6짜리 `rock`을 `scale: 4`로 키우면 4px 블록 덩어리가 되지, 디테일이
+생기지 않는다 — 확대는 픽셀을 늘릴 뿐 형태를 늘리지 않는다.
+
+**소품이 화면에서 20px을 넘게 보일 캔버스(대략 높이 240px 이상)에서는 고해상도 변형을
+`scale: 1~2`로 쓴다.** 작은 원본은 원경·중경의 작은 소품 자리에 남긴다 — 크기 기울기
+(깊이 단서 4)는 두 종류를 같이 써야 성립한다.
+
+`bg_check.py`가 이걸 기계적으로 잡는다: **최대변 14px 이하인 원본을 `scale` 3 이상으로
+쓰는데 고해상도 변형이 이미 있으면** 실패한다. 변형은 이름으로 찾는다 — `<원본>_*`
+이면서 최대변이 원본의 1.5배 이상인 스탬프다.
+
+큰 원본을 크게 쓰는 것은 문제가 아니다. `window_snow`(46px)를 `scale: 4`로 써도
+그릴 것이 46px어치 들어 있다. 문제는 **9px짜리를 4배로 늘려 36px 자리를 채우는 것**
+이다 — 확대는 픽셀을 늘릴 뿐 형태를 늘리지 않는다.
 
 ## 새로 만들 때
 

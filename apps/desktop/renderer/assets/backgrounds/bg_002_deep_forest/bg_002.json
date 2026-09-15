@@ -1,0 +1,109 @@
+{
+  "id": "bg_002",
+  "name": "깊은 숲 (낮)",
+  "preset": "petroom_grove",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 162,
+  "groundTop": 282,
+  "petAnchor": {
+    "x": 432,
+    "y": 186,
+    "w": 96,
+    "h": 96
+  },
+  "composite": "bg_002_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_002_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_002_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_002_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_002_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0A150C",
+      "#102312",
+      "#153C17",
+      "#183018",
+      "#1E150B",
+      "#215A1E",
+      "#307826",
+      "#354A1C",
+      "#3B2B16",
+      "#3B9F25",
+      "#476024",
+      "#495F54",
+      "#4DD01A",
+      "#557362",
+      "#564324",
+      "#5A752E",
+      "#5C2065",
+      "#5F8970",
+      "#6A9D7D",
+      "#708F33",
+      "#755B2F",
+      "#7AA884",
+      "#7BAD89",
+      "#8B235E",
+      "#8EAF32",
+      "#8EB893",
+      "#95BB95",
+      "#9B7831",
+      "#A4C6A4",
+      "#B42231",
+      "#B9D4B3",
+      "#DB4F24",
+      "#DCE9D4",
+      "#E3A445",
+      "#FCFCF8"
+    ],
+    "rampOverride": []
+  },
+  "animation": {
+    "layer": "near",
+    "fps": 6,
+    "loop": true,
+    "frames": [
+      "frames/near_00.png",
+      "frames/near_01.png",
+      "frames/near_02.png",
+      "frames/near_03.png",
+      "frames/near_04.png",
+      "frames/near_05.png",
+      "frames/near_06.png",
+      "frames/near_07.png",
+      "frames/near_08.png",
+      "frames/near_09.png",
+      "frames/near_10.png",
+      "frames/near_11.png"
+    ]
+  }
+}

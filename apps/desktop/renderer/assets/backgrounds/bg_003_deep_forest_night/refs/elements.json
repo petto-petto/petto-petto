@@ -1,0 +1,19 @@
+{
+  "reference": "레퍼런스 이미지 없음 — 사용자 인터뷰 답변(오브젝트/배치/대비/시간대)을 요소로 옮겨 적었다.",
+  "structure": "horizontal",
+  "note": "펫룸 배경. 좌우 고목 기둥 + 중앙 하단 개방이 구도의 축이다.",
+  "elements": [
+    { "name": "좌우 거대 고목 기둥",       "op": "tree_column",     "min": 2 },
+    { "name": "늘어진 덩굴",             "op": "stamp:vine",      "min": 2 },
+    { "name": "잎 덩어리 군락(원경/중경)",   "op": "foliage",         "min": 3 },
+    { "name": "중경 실루엣 라인",          "op": "fringe",          "min": 1 },
+    { "name": "물러나는 지면",            "op": "ground_plane",    "min": 1 },
+    { "name": "돌 발판",                "op": "stamp:platform",  "min": 2 },
+    { "name": "이끼 바위·덤불·꽃·버섯·통나무·풀 깊이 배치", "op": "scatter_depth", "min": 6 },
+    { "name": "반딧불이 발광 모트",        "op": "specks",          "min": 2 },
+    { "name": "역광 안개 개방부와 반딧불이 헤일로", "op": "glow",       "min": 5 },
+    { "name": "캐노피 사이 빛내림",        "op": "rays",            "min": 1 },
+    { "name": "접지 그림자",             "op": "contact_shadow",  "min": 2 },
+    { "name": "원경 능선",               "op": "hills",           "min": 1 }
+  ]
+}

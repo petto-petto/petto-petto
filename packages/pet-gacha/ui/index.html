@@ -7,23 +7,13 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <button class="window-close" type="button" aria-label="창 닫기">×</button>
     <main class="gacha-shell">
-      <header class="topbar">
-        <div class="brand" aria-label="petto-petto">
-          <span class="brand-mark" aria-hidden="true">P</span>
-          <span>petto-petto</span>
-        </div>
-        <div class="title-block">
-          <p>FOREST SUMMON</p>
-          <h1>숲의 소환소</h1>
-        </div>
+      <section class="summon-stage" id="summon-stage" aria-live="polite" aria-label="숲의 소환소">
         <div class="token-box pixel-panel" aria-label="보유 Token">
           <span>보유 TOKEN</span>
           <strong id="token-balance">9,999,999,999</strong>
         </div>
-      </header>
-
-      <section class="summon-stage" id="summon-stage" aria-live="polite">
         <div class="stage-copy pixel-panel">
           <p id="stage-kicker">새로운 인연을 기다리는 숲</p>
           <h2 id="stage-heading">잠든 씨앗에 Token을 건네보세요</h2>
