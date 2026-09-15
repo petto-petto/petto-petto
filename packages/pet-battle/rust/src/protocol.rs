@@ -62,6 +62,7 @@ pub enum BattleCommand {
     SetDisplayOpacity {
         percent: u8,
     },
+    CyclePetAsset,
     CycleAttackEffect,
     ToggleReducedMotion,
 }
@@ -83,6 +84,7 @@ impl BattleCommand {
             | Self::CycleEnemyColor
             | Self::CycleEnemyHp
             | Self::SetDisplayOpacity { .. }
+            | Self::CyclePetAsset
             | Self::CycleAttackEffect
             | Self::ToggleReducedMotion => fallback,
         }
@@ -137,6 +139,7 @@ pub struct EnginePreviewState {
     pub enemy_size: Option<EnemyPreviewSize>,
     pub enemy_color: Option<EnemyColorStage>,
     pub enemy_hp_ratio: Option<f32>,
+    pub pet_asset_rarity: Option<PetRarity>,
     pub attack_effect_rarity: Option<PetRarity>,
     pub reduced_motion: bool,
 }
@@ -274,6 +277,13 @@ impl BattleEngine {
                 self.preview
                     .set_display_opacity(f32::from(percent.min(100)) / 100.0);
             }
+            BattleCommand::CyclePetAsset => {
+                let rarity = self
+                    .controller
+                    .active_pet()
+                    .map_or(PetRarity::Common, |pet| pet.rarity);
+                self.preview.cycle_pet_asset_rarity(rarity);
+            }
             BattleCommand::CycleAttackEffect => {
                 let rarity = self
                     .controller
@@ -373,6 +383,7 @@ impl BattleEngine {
                 enemy_size: preview.enemy_size,
                 enemy_color: preview.enemy_color_stage,
                 enemy_hp_ratio: preview.enemy_hp_ratio,
+                pet_asset_rarity: preview.pet_asset_rarity,
                 attack_effect_rarity: preview.attack_effect_rarity,
                 reduced_motion: self.reduced_motion,
             },

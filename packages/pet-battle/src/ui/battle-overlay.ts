@@ -14,6 +14,7 @@ type ButtonAction =
   | 'ATTACK'
   | 'GROWTH'
   | 'ATTACK_EFFECT'
+  | 'PET_ASSET'
   | 'HIT'
   | 'DEFEAT'
   | 'SPAWN'
@@ -143,10 +144,12 @@ function updateControlLabels(next: BattleState): void {
   const color = next.preview.enemyColor ?? '색상';
   const size = next.preview.enemySize ?? '크기';
   const effect = next.preview.attackEffectRarity ?? '효과';
+  const petAsset = next.preview.petAssetRarity ?? '펫';
   const hp = next.preview.enemyHpRatio;
   labelFor('COLOR', colorLabel(color));
   labelFor('SIZE', sizeLabel(size));
   labelFor('ATTACK_EFFECT', effect === '효과' ? effect : (effect[0] ?? effect));
+  labelFor('PET_ASSET', petAsset === '펫' ? petAsset : rarityLabel(petAsset));
   labelFor('HP', hp === null ? 'HP' : `${Math.round(hp * 100)}`);
   labelFor('START', next.activePet?.battleMode === 'FIGHTING' ? 'ON' : 'START');
   labelFor('STOP', next.activePet?.battleMode === 'PAUSED' ? 'OFF' : 'STOP');
@@ -175,6 +178,10 @@ function sizeLabel(size: string): string {
   return { SMALL: '소', MEDIUM: '중', LARGE: '대' }[size] ?? size;
 }
 
+function rarityLabel(rarity: string): string {
+  return { COMMON: '기본', RARE: '희귀', EPIC: '영웅' }[rarity] ?? rarity;
+}
+
 function showToast(message: string, error = false): void {
   toast.textContent = message;
   toast.classList.toggle('error', error);
@@ -200,6 +207,8 @@ function commandFor(action: ButtonAction): { command: BattleCommand; message: st
       };
     case 'ATTACK_EFFECT':
       return { command: { type: 'CYCLE_ATTACK_EFFECT' }, message: '등급별 타격 이펙트' };
+    case 'PET_ASSET':
+      return { command: { type: 'CYCLE_PET_ASSET' }, message: '펫 에셋 전환' };
     case 'HIT':
       return {
         command: { type: 'PREVIEW_ENEMY', action: 'HIT', nowMs: nowMs() },

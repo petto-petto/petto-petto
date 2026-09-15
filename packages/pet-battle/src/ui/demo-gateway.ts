@@ -54,6 +54,7 @@ const initialState = (): BattleState => ({
     enemySize: null,
     enemyColor: null,
     enemyHpRatio: null,
+    petAssetRarity: null,
     attackEffectRarity: null,
     reducedMotion: false,
   },
@@ -111,6 +112,11 @@ export class DemoBattleGateway implements BattleGateway {
       case 'SET_DISPLAY_OPACITY':
         this.#state.preview.displayOpacity = Math.max(0, Math.min(100, command.percent)) / 100;
         break;
+      case 'CYCLE_PET_ASSET': {
+        const current = this.#state.preview.petAssetRarity ?? this.#state.activePet?.rarity ?? 'COMMON';
+        this.#state.preview.petAssetRarity = cycle(RARITIES, current);
+        break;
+      }
       case 'CYCLE_ATTACK_EFFECT': {
         const current = this.#state.preview.attackEffectRarity;
         this.#state.preview.attackEffectRarity = current

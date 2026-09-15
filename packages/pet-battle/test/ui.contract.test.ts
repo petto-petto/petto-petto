@@ -25,6 +25,7 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
     'ATTACK',
     'GROWTH',
     'ATTACK_EFFECT',
+    'PET_ASSET',
     'HIT',
     'DEFEAT',
     'SPAWN',
@@ -38,6 +39,7 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
     assert.match(html, new RegExp(`data-action="${action}"`), `${action} 버튼이 필요하다`);
   }
   assert.match(html, /type="range"/);
+  assert.match(html, />펫</);
   assert.match(html, /data-action="OPACITY"/);
   assert.doesNotMatch(html, /data-action="ASSET_V[12]"/);
   assert.doesNotMatch(html, /\/v1\//);

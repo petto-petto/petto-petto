@@ -32,6 +32,7 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
     enemySize: null,
     enemyColor: null,
     enemyHpRatio: null,
+    petAssetRarity: null,
     attackEffectRarity: null,
     reducedMotion: false,
   },
@@ -83,6 +84,18 @@ test('v2와 등급별 타격 이펙트는 진행 상태와 독립적인 표현 �
   assert.equal(scene.attackEffect.slashCount, 3);
   assert.equal(scene.attackEffect.shockwaveCount, 3);
   assert.equal(scene.attackEffect.particleCount, 12);
+});
+
+test('펫 에셋 미리보기는 activePet 교체 없이 v2 펫 이미지만 순환한다', () => {
+  const scene = deriveBattleScene({
+    ...state(),
+    preview: {
+      ...state().preview,
+      petAssetRarity: 'EPIC',
+    },
+  });
+
+  assert.match(scene.petAsset, /assets\/pets\/v2\/epic-idle\.png$/);
 });
 
 test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를 사용한다', () => {

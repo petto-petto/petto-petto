@@ -124,7 +124,8 @@ export function deriveBattleScene(state: BattleState): BattleScene {
   const isAttackMotion = state.motion?.beat !== undefined && state.motion.beat !== 'IDLE';
   const isAttacking = state.preview.petAction === 'ATTACK' || isAttackMotion;
   const petAction = isAttacking ? 'attack' : 'idle';
-  const petAsset = `assets/pets/v2/${PET_SLUG[state.activePet?.rarity ?? 'COMMON']}-${petAction}.png`;
+  const petAssetRarity = state.preview.petAssetRarity ?? state.activePet?.rarity ?? 'COMMON';
+  const petAsset = `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
   const frameCount = isAttacking ? 6 : 4;
 
   return {

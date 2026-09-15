@@ -476,6 +476,11 @@ input {
   top: 52px;
 }
 
+.pet-menu [data-action='PET_ASSET'] {
+  left: 139px;
+  top: 91px;
+}
+
 .enemy-menu [data-action='HIT'] {
   left: 187px;
   top: 54px;

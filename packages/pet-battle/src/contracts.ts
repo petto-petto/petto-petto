@@ -55,6 +55,7 @@ export interface BattlePreviewState {
   enemySize: EnemyPreviewSize | null;
   enemyColor: EnemyColor | null;
   enemyHpRatio: number | null;
+  petAssetRarity: Rarity | null;
   attackEffectRarity: Rarity | null;
   reducedMotion: boolean;
 }
@@ -106,6 +107,7 @@ export type BattleCommand =
   | { type: 'CYCLE_ENEMY_COLOR' }
   | { type: 'CYCLE_ENEMY_HP' }
   | { type: 'SET_DISPLAY_OPACITY'; percent: number }
+  | { type: 'CYCLE_PET_ASSET' }
   | { type: 'CYCLE_ATTACK_EFFECT' }
   | { type: 'TOGGLE_REDUCED_MOTION' };
 

@@ -1,4 +1,6 @@
-use pet_battle::{BattleCommand, BattleEngine, BattleRequest, BattleResponse, CombatBeat};
+use pet_battle::{
+    BattleCommand, BattleEngine, BattleRequest, BattleResponse, CombatBeat, PetRarity,
+};
 
 #[test]
 fn json_protocol_round_trips_state_and_events() {
@@ -52,4 +54,25 @@ fn starting_battle_anchors_an_immediate_attack_and_pause_stays_idle() {
         command: BattleCommand::SetBattleRunning { running: true },
     });
     assert_eq!(started.state.motion.beat, CombatBeat::Anticipation);
+}
+
+#[test]
+fn pet_asset_preview_cycles_without_replacing_active_pet() {
+    let mut engine = BattleEngine::demo();
+
+    let first = engine.handle(BattleRequest {
+        request_id: "pet-asset-1".to_owned(),
+        command: BattleCommand::CyclePetAsset,
+    });
+    let second = engine.handle(BattleRequest {
+        request_id: "pet-asset-2".to_owned(),
+        command: BattleCommand::CyclePetAsset,
+    });
+
+    assert_eq!(first.state.preview.pet_asset_rarity, Some(PetRarity::Rare));
+    assert_eq!(second.state.preview.pet_asset_rarity, Some(PetRarity::Epic));
+    assert_eq!(
+        second.state.active_pet.expect("active pet").rarity,
+        PetRarity::Common
+    );
 }
