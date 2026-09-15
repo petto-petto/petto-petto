@@ -48,11 +48,17 @@ fn pet_sync_changes_identity_without_resetting_battle_progress() {
         pet_id: "mio".to_owned(),
         display_name: "미오 2세".to_owned(),
         rarity: PetRarity::Rare,
+        level: 12,
+        sprite: "midnight_zebra".to_owned(),
+        evolution_stage: 1,
     });
 
     let pet = controller.pet("mio").expect("pet remains available");
     assert_eq!(pet.display_name, "미오 2세");
     assert_eq!(pet.rarity, PetRarity::Rare);
+    assert_eq!(pet.level, 12);
+    assert_eq!(pet.sprite, "midnight_zebra");
+    assert_eq!(pet.evolution_stage, 1);
     assert_eq!(pet.stage, 7);
 }
 

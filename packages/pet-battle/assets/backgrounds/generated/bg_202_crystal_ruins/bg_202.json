@@ -77,15 +77,6 @@
       "#AAA2C8",
       "#E1E7EF"
     ],
-    "rampOverride": [
-      "accent",
-      "far",
-      "leaf",
-      "light",
-      "mid",
-      "near",
-      "sky",
-      "wood"
-    ]
+    "rampOverride": ["accent", "far", "leaf", "light", "mid", "near", "sky", "wood"]
   }
 }

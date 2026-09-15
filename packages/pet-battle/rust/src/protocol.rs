@@ -29,6 +29,9 @@ pub enum BattleCommand {
         pet_id: String,
         display_name: String,
         rarity: PetRarity,
+        level: u32,
+        sprite: String,
+        evolution_stage: u8,
     },
     SetActivePet {
         pet_id: String,
@@ -203,11 +206,17 @@ impl BattleEngine {
                 pet_id,
                 display_name,
                 rarity,
+                level,
+                sprite,
+                evolution_stage,
             } => {
                 if let Some(event) = self.controller.handle_input(BattleInput::UpsertPet {
                     pet_id,
                     display_name,
                     rarity,
+                    level,
+                    sprite,
+                    evolution_stage,
                 }) {
                     events.push(engine_event(event.pet_id, event.event));
                 }

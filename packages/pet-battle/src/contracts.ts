@@ -34,6 +34,9 @@ export interface BattlePet {
   petId: string;
   displayName: string;
   rarity: Rarity;
+  level: number;
+  sprite: string;
+  evolutionStage: 0 | 1 | 2;
   stage: number;
   intervalXp: number;
   battleMode: BattleMode;
@@ -94,7 +97,15 @@ export type BattleEvent =
 
 export type BattleCommand =
   | { type: 'GET_STATE'; nowMs: number }
-  | { type: 'UPSERT_PET'; petId: string; displayName: string; rarity: Rarity }
+  | {
+      type: 'UPSERT_PET';
+      petId: string;
+      displayName: string;
+      rarity: Rarity;
+      level: number;
+      sprite: string;
+      evolutionStage: 0 | 1 | 2;
+    }
   | { type: 'SET_ACTIVE_PET'; petId: string }
   | { type: 'GROWTH_XP_ADDED'; petId: string; amount: number; nowMs: number }
   | { type: 'TOGGLE_BATTLE' }

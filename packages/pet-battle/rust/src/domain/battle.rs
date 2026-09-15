@@ -78,9 +78,19 @@ pub struct PetBattleProgress {
     pub pet_id: String,
     pub display_name: String,
     pub rarity: PetRarity,
+    #[serde(default = "default_pet_level")]
+    pub level: u32,
+    #[serde(default)]
+    pub sprite: String,
+    #[serde(default)]
+    pub evolution_stage: u8,
     pub stage: u32,
     pub interval_xp: u64,
     pub battle_mode: BattleMode,
+}
+
+const fn default_pet_level() -> u32 {
+    1
 }
 
 impl PetBattleProgress {
@@ -94,6 +104,9 @@ impl PetBattleProgress {
             pet_id: pet_id.into(),
             display_name: display_name.into(),
             rarity,
+            level: 1,
+            sprite: String::new(),
+            evolution_stage: 0,
             stage: 1,
             interval_xp: 0,
             battle_mode: BattleMode::Fighting,

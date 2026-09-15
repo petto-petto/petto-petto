@@ -10,8 +10,8 @@ function capturePathFromArguments() {
 
 app.whenReady().then(() => {
   const window = new BrowserWindow({
-    width: 360,
-    height: 180,
+    width: 640,
+    height: 420,
     useContentSize: true,
     frame: false,
     transparent: true,

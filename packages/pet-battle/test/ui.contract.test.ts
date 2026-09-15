@@ -16,6 +16,8 @@ test('전투 오버레이는 640×420 픽셀 화면과 128px 전투 펫을 제�
   assert.match(css, /image-rendering:\s*pixelated/);
   assert.match(html, /data-character="pet"/);
   assert.match(html, /data-character="enemy"/);
+  assert.match(html, /id="pet-name"/);
+  assert.match(html, /id="pet-level"/);
 });
 
 test('넓어진 전투 무대 양옆에는 응원 관중과 움직이는 반딧불 레이어가 있다', async () => {

@@ -27,6 +27,9 @@ const initialState = (): BattleState => ({
     petId: 'mio',
     displayName: '미오',
     rarity: 'COMMON',
+    level: 1,
+    sprite: 'mole_digger',
+    evolutionStage: 0,
     stage: 1,
     intervalXp: 0,
     battleMode: 'FIGHTING',
@@ -36,6 +39,9 @@ const initialState = (): BattleState => ({
       petId: 'mio',
       displayName: '미오',
       rarity: 'COMMON',
+      level: 1,
+      sprite: 'mole_digger',
+      evolutionStage: 0,
       stage: 1,
       intervalXp: 0,
       battleMode: 'FIGHTING',
@@ -113,7 +119,8 @@ export class DemoBattleGateway implements BattleGateway {
         this.#state.preview.displayOpacity = Math.max(0, Math.min(100, command.percent)) / 100;
         break;
       case 'CYCLE_PET_ASSET': {
-        const current = this.#state.preview.petAssetRarity ?? this.#state.activePet?.rarity ?? 'COMMON';
+        const current =
+          this.#state.preview.petAssetRarity ?? this.#state.activePet?.rarity ?? 'COMMON';
         this.#state.preview.petAssetRarity = cycle(RARITIES, current);
         break;
       }
