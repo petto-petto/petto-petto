@@ -153,6 +153,7 @@ impl BattleController {
                 PetBattleProgress::new("mio", "미오", PetRarity::Common),
                 PetBattleProgress::new("lumi", "루미", PetRarity::Rare),
                 PetBattleProgress::new("nova", "노바", PetRarity::Epic),
+                PetBattleProgress::new("mori", "모리", PetRarity::Common),
             ],
         }
     }

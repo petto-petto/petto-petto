@@ -46,7 +46,41 @@ const initialState = (): BattleState => ({
       intervalXp: 0,
       battleMode: 'FIGHTING',
     },
+    {
+      petId: 'lumi',
+      displayName: '루미',
+      rarity: 'RARE',
+      level: 8,
+      sprite: 'cheek_hamster',
+      evolutionStage: 0,
+      stage: 1,
+      intervalXp: 0,
+      battleMode: 'FIGHTING',
+    },
+    {
+      petId: 'nova',
+      displayName: '노바',
+      rarity: 'EPIC',
+      level: 14,
+      sprite: 'star_wizard',
+      evolutionStage: 1,
+      stage: 1,
+      intervalXp: 0,
+      battleMode: 'FIGHTING',
+    },
+    {
+      petId: 'mori',
+      displayName: '모리',
+      rarity: 'COMMON',
+      level: 4,
+      sprite: 'sprout_treant',
+      evolutionStage: 0,
+      stage: 1,
+      intervalXp: 0,
+      battleMode: 'FIGHTING',
+    },
   ],
+  spectatorPetIds: ['lumi', 'nova', 'mori'],
   enemyHpRatio: 1,
   enemyColor: 'RED',
   background: 'MUSHROOM_FOREST',
@@ -77,6 +111,9 @@ export class DemoBattleGateway implements BattleGateway {
       case 'GROWTH_XP_ADDED':
         break;
       case 'SET_ACTIVE_PET':
+        break;
+      case 'SET_PET_SPECTATORS':
+        this.#state.spectatorPetIds = command.petIds.slice(0, 3);
         break;
       case 'TOGGLE_BATTLE':
         this.#setRunning(this.#state.activePet?.battleMode !== 'FIGHTING');

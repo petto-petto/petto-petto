@@ -71,6 +71,26 @@ export function enemyColorForStage(stage: number): EnemyColor {
   return COLOR_SEQUENCE[(normalized - 1) % COLOR_SEQUENCE.length] ?? 'RED';
 }
 
+export function selectRandomPetSpectators<T extends { petId: string }>(
+  roster: readonly T[],
+  activePetId: string | null,
+  random: () => number = Math.random,
+): T[] {
+  const candidates = roster.filter((pet) => pet.petId !== activePetId);
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex]!, candidates[index]!];
+  }
+  return candidates.slice(0, 3);
+}
+
+export function defeatedEnemyColors(currentStage: number): EnemyColor[] {
+  const defeatedCount = Math.max(0, Math.trunc(currentStage) - 1);
+  return Array.from({ length: Math.min(3, defeatedCount) }, (_, index) =>
+    enemyColorForStage(defeatedCount - index),
+  );
+}
+
 export function backgroundForEnemy(color: EnemyColor): BackgroundTheme {
   switch (color) {
     case 'RED':

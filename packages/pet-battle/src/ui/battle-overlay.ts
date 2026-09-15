@@ -1,5 +1,9 @@
 import type { BattleCommand, BattleGateway, BattleState } from '../contracts.ts';
-import { deriveBattleScene, shouldStartEnemyHitReaction } from '../view/scene.ts';
+import {
+  defeatedEnemyColors,
+  deriveBattleScene,
+  shouldStartEnemyHitReaction,
+} from '../view/scene.ts';
 import { DemoBattleGateway } from './demo-gateway.ts';
 
 declare global {
@@ -42,11 +46,14 @@ const toast = required<HTMLElement>('#battle-toast');
 const petMenu = required<HTMLElement>('#pet-menu');
 const enemyMenu = required<HTMLElement>('#enemy-menu');
 const opacity = required<HTMLInputElement>('#display-opacity');
+const petSpectators = required<HTMLElement>('#pet-spectators');
+const defeatedEnemySpectators = required<HTMLElement>('#defeated-enemy-spectators');
 
 const gateway: BattleGateway = window.petBattle ?? new DemoBattleGateway();
 let state: BattleState | undefined;
 let inFlight = 0;
 let enemyHitTimer: number | undefined;
+let spectatorKey = '';
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -109,6 +116,51 @@ function render(next: BattleState, previous?: BattleState): void {
   if (shouldStartEnemyHitReaction(previous, next)) triggerEnemyHitReaction();
   updateSprite(scene.petSprite);
   updateControlLabels(next);
+  updateSpectators(next);
+}
+
+function updateSpectators(next: BattleState): void {
+  const key = `${next.spectatorPetIds.join(',')}|${next.activePet?.stage ?? 1}`;
+  if (key === spectatorKey) return;
+  spectatorKey = key;
+
+  const pets = next.spectatorPetIds
+    .map((petId) => next.roster.find((pet) => pet.petId === petId))
+    .filter((pet): pet is NonNullable<typeof pet> => pet !== undefined)
+    .slice(0, 3);
+  petSpectators.replaceChildren(
+    ...pets.map((pet) =>
+      spectatorElement('pet-fan', petAssetForRarity(pet.rarity), pet.displayName),
+    ),
+  );
+  petSpectators.hidden = pets.length === 0;
+
+  const enemies = defeatedEnemyColors(next.activePet?.stage ?? 1);
+  defeatedEnemySpectators.replaceChildren(
+    ...enemies.map((color) =>
+      spectatorElement(
+        'enemy-fan defeated-fan',
+        `assets/enemies/v2/${color.toLowerCase()}-exhausted.png`,
+        `처치한 ${color.toLowerCase()} 적`,
+      ),
+    ),
+  );
+  defeatedEnemySpectators.hidden = enemies.length === 0;
+}
+
+function spectatorElement(className: string, asset: string, label: string): HTMLElement {
+  const viewport = document.createElement('span');
+  viewport.className = `spectator ${className}`;
+  const image = document.createElement('img');
+  image.src = assetUrl(asset);
+  image.alt = label;
+  image.draggable = false;
+  viewport.append(image);
+  return viewport;
+}
+
+function petAssetForRarity(rarity: BattleState['roster'][number]['rarity']): string {
+  return `assets/pets/v2/${rarity.toLowerCase()}-idle.png`;
 }
 
 function updateMotion(next: BattleState): void {

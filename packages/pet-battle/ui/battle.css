@@ -348,6 +348,10 @@ input {
   flex-direction: row-reverse;
 }
 
+.spectators[hidden] {
+  display: none;
+}
+
 .spectator {
   width: 70px;
   height: 76px;
@@ -376,6 +380,10 @@ input {
 .spectator.enemy-fan img {
   width: 70px;
   height: 70px;
+}
+
+.spectator.defeated-fan {
+  filter: grayscale(0.18);
 }
 
 @keyframes spectator-cheer {

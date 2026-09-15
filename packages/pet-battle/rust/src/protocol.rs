@@ -36,6 +36,9 @@ pub enum BattleCommand {
     SetActivePet {
         pet_id: String,
     },
+    SetPetSpectators {
+        pet_ids: Vec<String>,
+    },
     GrowthXpAdded {
         pet_id: String,
         amount: u64,
@@ -80,6 +83,7 @@ impl BattleCommand {
             | Self::PreviewEnemy { now_ms, .. } => *now_ms,
             Self::UpsertPet { .. }
             | Self::SetActivePet { .. }
+            | Self::SetPetSpectators { .. }
             | Self::ToggleBattle
             | Self::SetBattleRunning { .. }
             | Self::ToggleMenu { .. }
@@ -152,6 +156,7 @@ pub struct EnginePreviewState {
 pub struct EngineState {
     pub active_pet: Option<PetBattleProgress>,
     pub roster: Vec<PetBattleProgress>,
+    pub spectator_pet_ids: Vec<String>,
     pub enemy_hp_ratio: f32,
     pub enemy_color: EnemyColorStage,
     pub background: BackgroundTheme,
@@ -178,6 +183,7 @@ pub struct BattleEngine {
     reduced_motion: bool,
     now_ms: u64,
     attack_cycle_started_at_ms: Option<u64>,
+    spectator_pet_ids: Vec<String>,
 }
 
 impl BattleEngine {
@@ -190,6 +196,7 @@ impl BattleEngine {
             reduced_motion: false,
             now_ms: 0,
             attack_cycle_started_at_ms: None,
+            spectator_pet_ids: vec!["lumi".to_owned(), "nova".to_owned(), "mori".to_owned()],
         }
     }
 
@@ -230,6 +237,9 @@ impl BattleEngine {
                 {
                     events.push(engine_event(event.pet_id, event.event));
                 }
+            }
+            BattleCommand::SetPetSpectators { pet_ids } => {
+                self.spectator_pet_ids = pet_ids.into_iter().take(3).collect();
             }
             BattleCommand::GrowthXpAdded { pet_id, amount, .. } => {
                 if let Some(event) = self
@@ -379,6 +389,7 @@ impl BattleEngine {
         EngineState {
             active_pet: self.controller.active_pet().cloned(),
             roster: self.controller.snapshot().pets.clone(),
+            spectator_pet_ids: self.spectator_pet_ids.clone(),
             enemy_hp_ratio,
             enemy_color,
             background: enemy_color.background(),

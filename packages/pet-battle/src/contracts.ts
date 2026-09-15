@@ -66,6 +66,7 @@ export interface BattlePreviewState {
 export interface BattleState {
   activePet: BattlePet | null;
   roster: BattlePet[];
+  spectatorPetIds: string[];
   enemyHpRatio: number;
   enemyColor: EnemyColor;
   background: BackgroundTheme;
@@ -107,6 +108,7 @@ export type BattleCommand =
       evolutionStage: 0 | 1 | 2;
     }
   | { type: 'SET_ACTIVE_PET'; petId: string }
+  | { type: 'SET_PET_SPECTATORS'; petIds: string[] }
   | { type: 'GROWTH_XP_ADDED'; petId: string; amount: number; nowMs: number }
   | { type: 'TOGGLE_BATTLE' }
   | { type: 'SET_BATTLE_RUNNING'; running: boolean }

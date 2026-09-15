@@ -24,6 +24,7 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
     battleMode: 'FIGHTING',
   },
   roster: [],
+  spectatorPetIds: [],
   enemyHpRatio: 1,
   enemyColor: 'RED',
   background: 'MUSHROOM_FOREST',

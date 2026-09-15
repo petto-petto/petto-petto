@@ -28,6 +28,7 @@ const result: BattleResult = {
   state: {
     activePet: null,
     roster: [],
+    spectatorPetIds: [],
     enemyHpRatio: 1,
     enemyColor: 'RED',
     background: 'MUSHROOM_FOREST',
@@ -86,13 +87,13 @@ test('PetClient 활성 펫과 무작위 보유 펫 3마리를 전투에 순서�
   await integration.syncActivePet(1_000);
 
   assert.deepEqual(gateway.commands.at(-3), {
-      type: 'UPSERT_PET',
-      petId: 'owned-001',
-      displayName: '토리',
-      rarity: 'EPIC',
-      level: 12,
-      sprite: 'acorn_squirrel',
-      evolutionStage: 1,
+    type: 'UPSERT_PET',
+    petId: 'owned-001',
+    displayName: '토리',
+    rarity: 'EPIC',
+    level: 12,
+    sprite: 'acorn_squirrel',
+    evolutionStage: 1,
   });
   assert.deepEqual(gateway.commands.at(-2), {
     type: 'SET_PET_SPECTATORS',
