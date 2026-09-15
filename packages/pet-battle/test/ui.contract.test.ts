@@ -28,6 +28,9 @@ test('넓어진 전투 무대 양옆에는 응원 관중과 움직이는 반딧�
 
   assert.match(html, /class="spectators spectators-left"/);
   assert.match(html, /class="spectators spectators-right"/);
+  assert.match(html, /id="pet-spectators"/);
+  assert.match(html, /id="defeated-enemy-spectators"/);
+  assert.doesNotMatch(html, /spectators-right[\s\S]*purple-steady/);
   assert.match(html, /class="fireflies"/);
   assert.match(css, /@keyframes\s+spectator-cheer/);
   assert.match(css, /@keyframes\s+firefly-drift/);

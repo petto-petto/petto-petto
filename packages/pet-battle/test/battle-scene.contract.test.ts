@@ -4,7 +4,9 @@ import { test } from 'node:test';
 
 import {
   deriveBattleScene,
+  defeatedEnemyColors,
   enemyColorForStage,
+  selectRandomPetSpectators,
   shouldStartEnemyHitReaction,
   type BattleState,
 } from '../src/index.ts';
@@ -40,6 +42,30 @@ const state = (overrides: Partial<BattleState> = {}): BattleState => ({
     reducedMotion: false,
   },
   ...overrides,
+});
+
+test('현재 보유 펫에서 활성 펫을 제외하고 중복 없이 무작위 최대 3마리를 고른다', () => {
+  const pets = [
+    state().activePet!,
+    { ...state().activePet!, petId: 'pet-2' },
+    { ...state().activePet!, petId: 'pet-3' },
+    { ...state().activePet!, petId: 'pet-4' },
+    { ...state().activePet!, petId: 'pet-5' },
+  ];
+
+  const selected = selectRandomPetSpectators(pets, 'mio', () => 0);
+
+  assert.deepEqual(
+    selected.map((pet) => pet.petId),
+    ['pet-3', 'pet-4', 'pet-5'],
+  );
+  assert.equal(new Set(selected.map((pet) => pet.petId)).size, 3);
+});
+
+test('처치한 적이 없으면 비우고, 있으면 최근 처치 적 최대 3마리를 역순으로 보여준다', () => {
+  assert.deepEqual(defeatedEnemyColors(1), []);
+  assert.deepEqual(defeatedEnemyColors(3), ['ORANGE', 'RED']);
+  assert.deepEqual(defeatedEnemyColors(6), ['BLUE', 'GREEN', 'YELLOW']);
 });
 
 test('적 단계는 일곱 색을 순환하고 색상에 맞는 배경을 함께 선택한다', () => {

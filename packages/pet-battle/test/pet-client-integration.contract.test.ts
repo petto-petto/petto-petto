@@ -61,17 +61,31 @@ class RecordingGateway implements BattleGateway {
 function petClient(pet: OwnedPet | null): PetClient {
   return {
     getActivePet: () => pet,
+    listOwnedPets: () =>
+      pet
+        ? [
+            pet,
+            { ...pet, ownedPetId: 'owned-002', nickname: '둘' },
+            { ...pet, ownedPetId: 'owned-003', nickname: '셋' },
+            { ...pet, ownedPetId: 'owned-004', nickname: '넷' },
+            { ...pet, ownedPetId: 'owned-005', nickname: '다섯' },
+          ]
+        : [],
   } as PetClient;
 }
 
-test('PetClient 활성 펫을 전투 메타데이터와 active pet으로 순서대로 동기화한다', async () => {
+test('PetClient 활성 펫과 무작위 보유 펫 3마리를 전투에 순서대로 동기화한다', async () => {
   const gateway = new RecordingGateway();
-  const integration = new PetBattleIntegration(petClient(activePet), gateway);
+  const randomValues = [0, 0, 0];
+  const integration = new PetBattleIntegration(
+    petClient(activePet),
+    gateway,
+    () => randomValues.shift() ?? 0,
+  );
 
   await integration.syncActivePet(1_000);
 
-  assert.deepEqual(gateway.commands, [
-    {
+  assert.deepEqual(gateway.commands.at(-3), {
       type: 'UPSERT_PET',
       petId: 'owned-001',
       displayName: '토리',
@@ -79,9 +93,12 @@ test('PetClient 활성 펫을 전투 메타데이터와 active pet으로 순서�
       level: 12,
       sprite: 'acorn_squirrel',
       evolutionStage: 1,
-    },
-    { type: 'SET_ACTIVE_PET', petId: 'owned-001' },
-  ]);
+  });
+  assert.deepEqual(gateway.commands.at(-2), {
+    type: 'SET_PET_SPECTATORS',
+    petIds: ['owned-003', 'owned-004', 'owned-005'],
+  });
+  assert.deepEqual(gateway.commands.at(-1), { type: 'SET_ACTIVE_PET', petId: 'owned-001' });
 });
 
 test('성장 XP 알림은 저장된 활성 펫 ID 기준으로 전투 HP 입력에 전달한다', async () => {
