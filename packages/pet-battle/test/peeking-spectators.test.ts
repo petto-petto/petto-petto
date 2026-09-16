@@ -81,16 +81,39 @@ test('기본 데모와 큰 창에서 3마리와 이전 64·96·128px 크기를 �
   }
 });
 
-test('숲의 가지가 튀어나온 부분은 수직 가림선 대신 원본 계단형 윤곽을 따른다', () => {
+test('첫 배경의 왼쪽 관중은 안쪽 나무로 옮기고 크기·개수·나머지 위치를 유지한다', () => {
+  for (const [width, height, frameSize] of [
+    [640, 420, 64],
+    [1440, 900, 128],
+  ]) {
+    const slots = peekingSpectators('MUSHROOM_FOREST', width!, height!);
+    assert.equal(slots.length, 3);
+    assert.deepEqual(
+      slots.map((slot) => [slot.sourceX, slot.sourceY]),
+      [
+        [869, 365],
+        [1271, 350],
+        [1543, 270],
+      ],
+    );
+    assert.ok(slots.every((slot) => slot.frameSize === frameSize));
+    const left = slots[0]!;
+    const edge = left.x + left.frameSize;
+    assert.ok(edge > width! * 0.25 && edge < width! * 0.5);
+    assert.equal(left.direction, 'RIGHT');
+  }
+});
+
+test('나무 장식이 튀어나온 부분은 수직 가림선 대신 원본 계단형 윤곽을 따른다', () => {
   const width = 1440,
     height = 900;
-  const slot = peekingSpectators('MUSHROOM_FOREST', width, height).find(
-    (slot) => slot.sourceX === 334,
+  const slot = peekingSpectators('STARLIGHT_SHRINE', width, height).find(
+    (slot) => slot.sourceX === 429,
   )!;
   assert.ok(slot);
   const scale = Math.max(width / 1915, height / 821);
-  const x = Math.round((width - 1915 * scale) / 2 + 352 * scale) - slot.x;
-  const y = Math.round((height - 821 * scale) / 2 + 241 * scale) - slot.y;
+  const x = Math.round((width - 1915 * scale) / 2 + 441 * scale) - slot.x;
+  const y = Math.round((height - 821 * scale) / 2 + 222 * scale) - slot.y;
   assert.ok(
     slot.clipPath.includes(x + 'px ' + y + 'px'),
     'branch edge must project with the background',
