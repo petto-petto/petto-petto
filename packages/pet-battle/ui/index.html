@@ -105,6 +105,24 @@
         </label>
       </nav>
 
+      <aside class="ambient-log-panel" data-ambient-side="PET" aria-label="펫 분위기 로그" hidden>
+        <h2>펫의 기척 <span>연출</span></h2>
+        <ol
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="펫 분위기 로그 목록"
+        ></ol>
+      </aside>
+      <aside class="ambient-log-panel" data-ambient-side="ENEMY" aria-label="적 분위기 로그" hidden>
+        <h2>적의 기척 <span>연출</span></h2>
+        <ol
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="적 분위기 로그 목록"
+        ></ol>
+      </aside>
       <output id="battle-toast" class="battle-toast" aria-live="polite"></output>
     </main>
     <script type="module" src="../dist/ui/battle-overlay.js"></script>

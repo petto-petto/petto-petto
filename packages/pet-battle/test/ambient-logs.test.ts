@@ -13,7 +13,11 @@ test('펫·적 각각 20개 문구는 중복 없는 분위기 연출이다', () 
 });
 
 test('10~20초 무작위 간격으로 한 개씩 추가하며 조회만으로 추가되지 않는다', () => {
-  for (const [random, delay] of [[0, 10000], [0.5, 15000], [1, 20000]] as const) {
+  for (const [random, delay] of [
+    [0, 10000],
+    [0.5, 15000],
+    [1, 20000],
+  ] as const) {
     const feed = new AmbientLogFeed('PET', () => random);
     assert.equal(feed.tick(100, true), false);
     assert.equal(feed.tick(100 + delay - 1, true), false);
@@ -70,10 +74,20 @@ test('펫과 적의 로그와 주기는 독립적이다', () => {
 });
 
 test('양쪽 읽기 공간과 세로 높이가 충분한 창에서만 캐릭터 바깥에 로그를 배치한다', () => {
-  for (const [width, height] of [[360, 180], [640, 420], [900, 240], [360, 640]]) {
+  for (const [width, height] of [
+    [360, 180],
+    [640, 420],
+    [900, 240],
+    [360, 640],
+  ]) {
     assert.equal(ambientLogLayout(battleLayout(width!, height!)).visible, false);
   }
-  for (const [width, height] of [[700, 288], [800, 420], [1440, 900], [1920, 1080]]) {
+  for (const [width, height] of [
+    [700, 288],
+    [800, 420],
+    [1440, 900],
+    [1920, 1080],
+  ]) {
     const battle = battleLayout(width!, height!);
     const logs = ambientLogLayout(battle);
     assert.equal(logs.visible, true);

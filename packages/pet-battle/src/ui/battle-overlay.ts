@@ -8,6 +8,7 @@ import {
 import { DemoBattleGateway } from './demo-gateway.ts';
 import { battleLayout, menuPositions, projectPetOffset } from '../view/layout.ts';
 import { peekingSpectators } from '../view/peeking-spectators.ts';
+import { AmbientLogsView } from './ambient-logs.ts';
 
 declare global {
   interface Window {
@@ -49,6 +50,7 @@ const enemyMenu = required<HTMLElement>('#enemy-menu');
 const opacity = required<HTMLInputElement>('#display-opacity');
 const petSpectators = required<HTMLElement>('#pet-spectators');
 const defeatedEnemySpectators = required<HTMLElement>('#defeated-enemy-spectators');
+const ambientLogs = new AmbientLogsView(root);
 
 const gateway: BattleGateway = window.petBattle ?? new DemoBattleGateway();
 let state: BattleState | undefined;
@@ -93,6 +95,7 @@ function resizeBattle(): void {
     updateSprite(scene.petSprite);
     updateMotion(state);
     positionPeekingSpectators(state);
+    updateAmbientLogs(state);
   }
 }
 
@@ -156,6 +159,20 @@ function render(next: BattleState, previous?: BattleState): void {
   updateSprite(scene.petSprite);
   updateControlLabels(next);
   updateSpectators(next);
+  updateAmbientLogs(next);
+}
+
+function updateAmbientLogs(next: BattleState): void {
+  ambientLogs.update({
+    layout,
+    now: nowMs(),
+    petId: next.activePet?.petId ?? null,
+    enemyKey: `${next.activePet?.stage ?? 1}:${next.preview.enemyColor ?? next.enemyColor}`,
+    enemyVisible: next.preview.enemyPhase === 'VISIBLE' || next.preview.enemyPhase === 'HIT',
+    pageVisible: !document.hidden,
+    menuOpen: next.preview.menu !== 'CLOSED',
+    opacity: Math.max(0, Math.min(1, next.preview.displayOpacity)),
+  });
 }
 
 function updateSpectators(next: BattleState): void {
