@@ -43,6 +43,7 @@ app.whenReady().then(async () => {
           root: rect('#battle-overlay'), pet: rect('#pet'), enemy: rect('#enemy'),
           identity: rect('.pet-identity'), opacity: rect('.opacity-control'),
           close: rect('.window-close'), hud: rect('.battle-hud'),
+          petSize: parseFloat(getComputedStyle(document.querySelector('#pet')).width),
           controls: [...document.querySelectorAll('#enemy-menu button')].map(button => rect('[data-action="' + button.dataset.action + '"]')),
         };
         document.querySelector('#enemy-menu').hidden = true;
@@ -50,6 +51,7 @@ app.whenReady().then(async () => {
       })()`);
       assert.equal(result.root.width, width);
       assert.equal(result.root.height, height);
+      assert.equal(result.petSize, 128, 'resizing must not shrink the battle pet');
       for (const rect of [
         result.pet,
         result.enemy,

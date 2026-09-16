@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { battleLayout, menuPositions, projectPetOffset } from '../src/view/layout.ts';
 
-test('창 크기에 맞춰 캐릭터·전투 거리·관중을 재배치한다', () => {
+test('작은 창에서도 전투 펫은 기존 128px를 유지하고 위치만 재배치한다', () => {
   for (const [width, height] of [
     [356, 176],
     [636, 416],
@@ -11,17 +11,19 @@ test('창 크기에 맞춰 캐릭터·전투 거리·관중을 재배치한다',
     [356, 636],
   ]) {
     const layout = battleLayout(width!, height!);
+    assert.equal(layout.petSize, 128);
+    assert.equal(layout.scale, 1);
     assert.ok(layout.petLeft >= 8);
     assert.ok(layout.enemyLeft + layout.petSize + 12 < width!);
     assert.ok(layout.floor - layout.petSize >= 36);
-    assert.ok(layout.floor < height! - 20);
-    assert.ok(layout.enemyLeft > layout.petLeft + layout.petSize);
+    assert.ok(layout.floor <= height! - 8);
+    assert.ok(layout.enemyLeft - layout.petLeft >= 102);
     assert.ok(8 + layout.spectatorSize * 3 + 8 <= layout.petLeft);
     assert.ok(layout.petSize % 32 === 0, '도트 기준 크기 단위 유지');
   }
   const small = battleLayout(356, 176);
   const large = battleLayout(636, 416);
-  assert.ok(small.petSize < large.petSize);
+  assert.equal(small.petSize, large.petSize);
   assert.ok(small.enemyLeft - small.petLeft < large.enemyLeft - large.petLeft);
 });
 
