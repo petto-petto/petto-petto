@@ -4,6 +4,22 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
+test('상단에는 스테이지·HP만 남기고 모션 버튼과 전용 공간을 제거한다', async () => {
+  const [html, css] = await Promise.all([
+    readFile(new URL('index.html', UI_ROOT), 'utf8'),
+    readFile(new URL('battle.css', UI_ROOT), 'utf8'),
+  ]);
+  const header = html.match(/<header class="battle-hud">([\s\S]*?)<\/header>/)?.[1];
+  assert.ok(header);
+  assert.match(header, /id="stage-label"/);
+  assert.match(header, /id="enemy-hp-fill"/);
+  assert.doesNotMatch(header, /모션|<button/);
+  assert.doesNotMatch(html, /data-action="REDUCED_MOTION"/);
+  assert.doesNotMatch(css, /\.motion-toggle/);
+  assert.match(css, /\.battle-hud\s*\{[^}]*grid-template-columns:\s*62px 1fr;/s);
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
 test('분위기 로그에는 기척·연출 제목 없이 로그 목록만 표시한다', async () => {
   const html = await readFile(new URL('index.html', UI_ROOT), 'utf8');
   const panels = [
