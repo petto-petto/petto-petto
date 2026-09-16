@@ -1,6 +1,4 @@
 :root {
-  --battle-width: 640px;
-  --battle-height: 420px;
   --pet-size: 128px;
   --forest-deep: #10231a;
   --forest-mid: #1c4a34;
@@ -26,8 +24,8 @@
 
 html,
 body {
-  width: var(--battle-width);
-  height: var(--battle-height);
+  width: 100%;
+  height: 100%;
   margin: 0;
   overflow: hidden;
   background: transparent;
@@ -49,8 +47,8 @@ input {
 
 #battle-overlay {
   position: relative;
-  width: var(--battle-width);
-  height: var(--battle-height);
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border: 2px solid var(--outline);
   background: transparent;
@@ -185,9 +183,9 @@ input {
 .pet-identity {
   position: absolute;
   z-index: 6;
-  left: 207px;
-  bottom: 42px;
-  min-width: 96px;
+  left: max(8px, calc(var(--pet-left) + var(--pet-size) / 2 - 48px));
+  bottom: max(4px, calc(var(--floor-bottom) - 28px));
+  width: 96px;
   display: flex;
   justify-content: center;
   gap: 6px;
@@ -201,6 +199,13 @@ input {
 
 .pet-identity strong {
   color: var(--gold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pet-identity span {
+  flex-shrink: 0;
 }
 
 #stage-label {
@@ -246,7 +251,7 @@ input {
 .character {
   position: absolute;
   z-index: 2;
-  bottom: 58px;
+  bottom: var(--floor-bottom);
   transform-origin: 50% 100%;
   cursor: pointer;
   -webkit-app-region: no-drag;
@@ -259,16 +264,16 @@ input {
 
 .pet {
   z-index: 7;
-  left: 190px;
+  left: var(--pet-left);
   width: var(--pet-size);
   height: var(--pet-size);
 }
 
 .enemy {
   z-index: 2;
-  left: 326px;
-  width: 128px;
-  height: 128px;
+  left: var(--enemy-left);
+  width: var(--pet-size);
+  height: var(--pet-size);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -311,7 +316,7 @@ input {
 .enemy img {
   width: auto;
   height: var(--enemy-height);
-  max-width: 128px;
+  max-width: var(--pet-size);
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -325,7 +330,12 @@ input {
 .combat-effects {
   position: absolute;
   z-index: 3;
-  inset: 0;
+  left: var(--enemy-left);
+  top: var(--character-top);
+  width: 128px;
+  height: 128px;
+  transform: scale(var(--arena-scale));
+  transform-origin: 0 0;
   pointer-events: none;
   transition: opacity 80ms linear;
 }
@@ -333,7 +343,7 @@ input {
 .spectators {
   position: absolute;
   z-index: 1;
-  bottom: 48px;
+  bottom: var(--floor-bottom);
   display: flex;
   gap: 4px;
   align-items: flex-end;
@@ -341,10 +351,10 @@ input {
 }
 
 .spectators-left {
-  left: 18px;
+  left: 8px;
 }
 .spectators-right {
-  right: 18px;
+  right: 8px;
   flex-direction: row-reverse;
 }
 
@@ -353,8 +363,8 @@ input {
 }
 
 .spectator {
-  width: 70px;
-  height: 76px;
+  width: var(--spectator-size);
+  height: calc(var(--spectator-size) + 6px);
   overflow: hidden;
   transform-origin: 50% 100%;
   animation: spectator-cheer 920ms steps(4, end) infinite alternate;
@@ -371,15 +381,15 @@ input {
 }
 
 .spectator.pet-fan img {
-  width: 280px;
-  height: 70px;
+  width: calc(var(--spectator-size) * 4);
+  height: var(--spectator-size);
   object-fit: fill;
   object-position: left top;
 }
 
 .spectator.enemy-fan img {
-  width: 70px;
-  height: 70px;
+  width: var(--spectator-size);
+  height: var(--spectator-size);
 }
 
 .spectator.defeated-fan {
@@ -405,7 +415,7 @@ input {
 }
 
 .speed-line {
-  left: 292px;
+  left: -34px;
   width: 56px;
   height: 2px;
   background: var(--cyan);
@@ -413,17 +423,17 @@ input {
 }
 
 .line-1 {
-  top: 252px;
+  top: 76px;
 }
 
 .line-2 {
-  top: 276px;
+  top: 100px;
   width: 38px;
 }
 
 .slash {
-  left: 348px;
-  top: 238px;
+  left: 30px;
+  top: 60px;
   width: 4px;
   height: 55px;
   background: var(--cyan);
@@ -433,13 +443,13 @@ input {
 }
 
 .slash-2 {
-  left: 359px;
+  left: 41px;
   display: none;
   transform: rotate(50deg) scale(0.86);
 }
 
 .slash-3 {
-  left: 368px;
+  left: 50px;
   display: none;
   transform: rotate(29deg) scale(0.72);
 }
@@ -451,8 +461,8 @@ input {
 }
 
 .impact-wave {
-  left: 362px;
-  top: 249px;
+  left: 32px;
+  top: 68px;
   width: 42px;
   height: 42px;
   border: 3px solid var(--gold);
@@ -490,31 +500,31 @@ input {
 }
 
 .particle-1 {
-  left: 204px;
-  top: 222px;
+  left: calc(var(--growth-x) - 50px);
+  top: 20px;
 }
 
 .particle-2 {
-  left: 300px;
-  top: 216px;
+  left: calc(var(--growth-x) + 46px);
+  top: 14px;
   background: var(--gold);
 }
 
 .particle-3 {
-  left: 222px;
-  top: 316px;
+  left: calc(var(--growth-x) - 32px);
+  top: 114px;
   background: var(--gold);
 }
 
 .particle-4 {
-  left: 296px;
-  top: 306px;
+  left: calc(var(--growth-x) + 42px);
+  top: 104px;
 }
 
 @keyframes growth-gather {
   to {
-    left: 254px;
-    top: 266px;
+    left: var(--growth-x);
+    top: 64px;
     opacity: 0;
   }
 }
@@ -533,11 +543,11 @@ input {
 
 @keyframes enemy-hit {
   30% {
-    transform: translateX(7px) scale(1.13, 0.82);
+    transform: translateX(calc(7px * var(--arena-scale))) scale(1.13, 0.82);
     filter: brightness(1.8);
   }
   55% {
-    transform: translateX(-5px) scale(0.94, 1.08);
+    transform: translateX(calc(-5px * var(--arena-scale))) scale(0.94, 1.08);
   }
 }
 
@@ -547,14 +557,14 @@ input {
     filter: brightness(2);
   }
   100% {
-    transform: translateY(16px) scale(1.38, 0.08);
+    transform: translateY(calc(16px * var(--arena-scale))) scale(1.38, 0.08);
     opacity: 0;
   }
 }
 
 @keyframes enemy-spawn {
   from {
-    transform: translateY(22px) scale(0.4, 0.15);
+    transform: translateY(calc(22px * var(--arena-scale))) scale(0.4, 0.15);
     opacity: 0;
   }
 }
@@ -614,75 +624,10 @@ input {
   }
 }
 
-.pet-menu [data-action='START'] {
-  left: 156px;
-  top: 249px;
-}
-
-.pet-menu [data-action='STOP'] {
-  left: 169px;
-  top: 213px;
-}
-
-.pet-menu [data-action='ATTACK'] {
-  left: 206px;
-  top: 191px;
-}
-
-.pet-menu [data-action='GROWTH'] {
-  left: 248px;
-  top: 197px;
-}
-
-.pet-menu [data-action='ATTACK_EFFECT'] {
-  left: 283px;
-  top: 222px;
-}
-
-.pet-menu [data-action='PET_ASSET'] {
-  left: 279px;
-  top: 261px;
-}
-
-.enemy-menu [data-action='HIT'] {
-  left: 325px;
-  top: 224px;
-}
-
-.enemy-menu [data-action='DEFEAT'] {
-  left: 356px;
-  top: 196px;
-}
-
-.enemy-menu [data-action='SPAWN'] {
-  left: 401px;
-  top: 191px;
-}
-
-.enemy-menu [data-action='RESET'] {
-  left: 443px;
-  top: 215px;
-}
-
-.enemy-menu [data-action='SIZE'] {
-  left: 458px;
-  top: 252px;
-}
-
-.enemy-menu [data-action='COLOR'] {
-  left: 444px;
-  top: 289px;
-}
-
-.enemy-menu [data-action='HP'] {
-  left: 404px;
-  top: 307px;
-}
-
 .opacity-control {
   position: absolute;
-  left: 323px;
-  top: 344px;
+  right: 8px;
+  bottom: 8px;
   width: 158px;
   height: 18px;
   display: grid;
@@ -728,6 +673,15 @@ input {
 
 .battle-toast.error {
   background: #f08a8a;
+}
+
+[data-layout='compact'] .battle-toast {
+  bottom: auto;
+  top: 76px;
+}
+
+[data-layout='compact'] .fireflies {
+  inset: 36px 8px 28px;
 }
 
 .reduced-motion * {

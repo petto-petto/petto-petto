@@ -5,6 +5,7 @@ import {
   shouldStartEnemyHitReaction,
 } from '../view/scene.ts';
 import { DemoBattleGateway } from './demo-gateway.ts';
+import { battleLayout, menuPositions, projectPetOffset } from '../view/layout.ts';
 
 declare global {
   interface Window {
@@ -54,6 +55,44 @@ let state: BattleState | undefined;
 let inFlight = 0;
 let enemyHitTimer: number | undefined;
 let spectatorKey = '';
+let layout = battleLayout(root.clientWidth, root.clientHeight);
+
+function resizeBattle(): void {
+  if (root.clientWidth === 0 || root.clientHeight === 0) return;
+  layout = battleLayout(root.clientWidth, root.clientHeight);
+  const properties = {
+    '--pet-size': layout.petSize,
+    '--pet-left': layout.petLeft,
+    '--enemy-left': layout.enemyLeft,
+    '--floor-bottom': layout.height - layout.floor,
+    '--character-top': layout.floor - layout.petSize,
+    '--spectator-size': layout.spectatorSize,
+    '--growth-x': (layout.petLeft - layout.enemyLeft) / layout.scale + 64,
+  };
+  for (const [name, value] of Object.entries(properties)) {
+    root.style.setProperty(name, `${value}px`);
+  }
+  root.style.setProperty('--arena-scale', String(layout.scale));
+  root.dataset['layout'] = layout.compact ? 'compact' : 'radial';
+  for (const [menu, target] of [
+    [petMenu, 'PET'],
+    [enemyMenu, 'ENEMY'],
+  ] as const) {
+    const positions = menuPositions(layout, target);
+    menu.querySelectorAll<HTMLElement>('.radial-button').forEach((button, index) => {
+      const point = positions[index];
+      if (!point) return;
+      button.style.left = `${point.x}px`;
+      button.style.top = `${point.y}px`;
+    });
+  }
+  if (state) {
+    const scene = deriveBattleScene(state);
+    enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
+    updateSprite(scene.petSprite);
+    updateMotion(state);
+  }
+}
 
 function required<T extends Element>(selector: string): T {
   const element = document.querySelector<T>(selector);
@@ -90,7 +129,7 @@ function render(next: BattleState, previous?: BattleState): void {
   background.src = assetUrl(scene.backgroundAsset);
   petSheet.src = assetUrl(scene.petAsset);
   enemyImage.src = assetUrl(scene.enemyAsset);
-  enemy.style.setProperty('--enemy-height', `${scene.enemyHeight}px`);
+  enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
   environment.style.opacity = String(scene.displayOpacity);
   enemy.style.opacity = scene.enemyVisible ? String(scene.displayOpacity) : '0';
   hpBar.style.opacity = String(scene.displayOpacity);
@@ -170,8 +209,9 @@ function updateMotion(next: BattleState): void {
     enemy.style.removeProperty('transform');
     return;
   }
-  pet.style.transform = `translate(${motion.petOffset.x}px, ${motion.petOffset.y}px) scale(${motion.petScale.x}, ${motion.petScale.y})`;
-  enemy.style.transform = `translate(${motion.enemyOffset.x}px, ${motion.enemyOffset.y}px) scale(${motion.enemyScale.x}, ${motion.enemyScale.y})`;
+  const offset = projectPetOffset(layout, motion.petOffset);
+  pet.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${motion.petScale.x}, ${motion.petScale.y})`;
+  enemy.style.transform = `translate(${motion.enemyOffset.x * layout.scale}px, ${motion.enemyOffset.y * layout.scale}px) scale(${motion.enemyScale.x}, ${motion.enemyScale.y})`;
   root.style.setProperty('--slash-opacity', String(motion.slashOpacity));
   root.style.setProperty('--impact-opacity', String(motion.impactFlashOpacity));
   root.style.setProperty('--speed-opacity', String(motion.speedLineOpacity));
@@ -191,7 +231,7 @@ function triggerEnemyHitReaction(): void {
 function updateSprite(sprite: ReturnType<typeof deriveBattleScene>['petSprite']): void {
   petSheet.style.setProperty('--frame-count', String(sprite.frameCount));
   petSheet.style.setProperty('--frame-steps', String(sprite.frameSteps));
-  petSheet.style.setProperty('--sheet-shift', `${-(sprite.frameCount - 1) * 128}px`);
+  petSheet.style.setProperty('--sheet-shift', `${-(sprite.frameCount - 1) * layout.petSize}px`);
   petSheet.style.setProperty('--sheet-duration', `${sprite.durationMs}ms`);
   petSheet.classList.toggle('animated-sheet', sprite.animated);
 }
@@ -325,6 +365,9 @@ root.addEventListener('click', () => {
   }
 });
 
+resizeBattle();
+const resizeObserver = new ResizeObserver(resizeBattle);
+resizeObserver.observe(root);
 void execute({ type: 'GET_STATE', nowMs: nowMs() });
 window.setInterval(() => {
   void execute({ type: 'GET_STATE', nowMs: nowMs() });
