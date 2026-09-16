@@ -43,6 +43,9 @@ app.whenReady().then(async () => {
           root: rect('#battle-overlay'), pet: rect('#pet'), enemy: rect('#enemy'),
           identity: Boolean(document.querySelector('.pet-identity, #pet-name, #pet-level')), opacity: rect('.opacity-control'),
           close: rect('.window-close'), hud: rect('.battle-hud'),
+          dragRects: [...document.querySelectorAll('*')]
+            .filter(element => getComputedStyle(element).getPropertyValue('-webkit-app-region') === 'drag')
+            .map(element => { const r = element.getBoundingClientRect(); return {x:r.x, y:r.y, right:r.right, bottom:r.bottom}; }),
           petSize: parseFloat(getComputedStyle(document.querySelector('#pet')).width),
           controls: [...document.querySelectorAll('#enemy-menu button')].map(button => rect('[data-action="' + button.dataset.action + '"]')),
         };
@@ -62,6 +65,16 @@ app.whenReady().then(async () => {
         assert.ok(rect.x >= 0 && rect.y >= 0 && rect.right <= width && rect.bottom <= height);
       }
       assert.ok(result.hud.right < result.close.x, 'close button must not overlap HUD');
+      assert.ok(result.dragRects.length > 0, 'keep a window drag handle');
+      for (const drag of result.dragRects) {
+        assert.ok(
+          drag.right <= result.close.x ||
+            drag.x >= result.close.right ||
+            drag.bottom <= result.close.y ||
+            drag.y >= result.close.bottom,
+          'native drag regions must not overlap X, even behind its no-drag button',
+        );
+      }
       assert.equal(result.identity, false, 'pet name and level panel must be removed');
       console.log(`PASS responsive DOM: ${width}×${height}`);
     }
