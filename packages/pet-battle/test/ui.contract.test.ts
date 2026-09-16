@@ -11,7 +11,10 @@ test('EPIC 빼꼼은 같은 높이에 있는 꼬리를 제외하고 머리만 �
   ]);
   assert.match(script, /slot\.dataset\['rarity'\] = pet\.rarity/);
   assert.match(css, /\.peek-slot\[data-rarity='EPIC'\] \.peek-head\s*\{[^}]*width:\s*28px/s);
-  assert.match(css, /\.peek-slot\[data-rarity='EPIC'\] \.peek-head img\s*\{[^}]*left:\s*-8px;[^}]*top:\s*-2px/s);
+  assert.match(
+    css,
+    /\.peek-slot\[data-rarity='EPIC'\] \.peek-head img\s*\{[^}]*left:\s*-8px;[^}]*top:\s*-2px/s,
+  );
 });
 
 test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 유지한다', async () => {

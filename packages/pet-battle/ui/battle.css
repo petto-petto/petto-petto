@@ -464,6 +464,20 @@ input {
   filter: saturate(0.78) brightness(0.9);
 }
 
+/* EPIC's tail is beside its face, so its head needs a narrower crop. */
+.peek-slot[data-rarity='EPIC'] .peek-head {
+  width: 28px;
+}
+
+.peek-slot[data-rarity='EPIC'] .peek-head img {
+  left: -8px;
+  top: -2px;
+}
+
+.peek-slot[data-rarity='EPIC'][data-direction='RIGHT'] {
+  --peek-visible: -4px;
+}
+
 @keyframes spectator-peek {
   0%,
   20%,

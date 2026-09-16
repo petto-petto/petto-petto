@@ -181,6 +181,7 @@ function updateSpectators(next: BattleState): void {
         const slot = document.createElement('span');
         slot.className = 'peek-slot';
         slot.dataset['petId'] = pet.petId;
+        slot.dataset['rarity'] = pet.rarity;
         const head = document.createElement('span');
         head.className = 'peek-head';
         const image = document.createElement('img');
