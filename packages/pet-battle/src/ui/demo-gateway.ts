@@ -9,6 +9,7 @@ import type {
   Rarity,
 } from '../contracts.ts';
 import { backgroundForEnemy } from '../view/scene.ts';
+import { restingMotion, sampleCombatMotion } from '../view/motion.ts';
 
 const COLORS: readonly EnemyColor[] = [
   'RED',
@@ -102,8 +103,14 @@ const initialState = (): BattleState => ({
 
 export class DemoBattleGateway implements BattleGateway {
   readonly #state = initialState();
+  #nowMs = 0;
+  #attackStartedAt: number | undefined;
+  #petPreviewStartedAt = 0;
+  #enemyPreviewStartedAt = 0;
 
   async execute(command: BattleCommand): Promise<BattleResult> {
+    this.#nowMs = 'nowMs' in command ? command.nowMs : Date.now();
+    this.#expirePreviews();
     const events: BattleEvent[] = [];
     switch (command.type) {
       case 'GET_STATE':
@@ -129,8 +136,7 @@ export class DemoBattleGateway implements BattleGateway {
           this.#state.preview.menu === command.menu ? 'CLOSED' : command.menu;
         break;
       case 'PREVIEW_PET':
-        this.#state.preview.petAction = command.action;
-        this.#clearPetAction(command.action === 'ATTACK' ? 960 : 780);
+        this.#previewPet(command.action);
         break;
       case 'PREVIEW_ENEMY':
         this.#previewEnemy(command.action);
@@ -147,9 +153,7 @@ export class DemoBattleGateway implements BattleGateway {
       case 'CYCLE_ENEMY_HP': {
         const current = this.#state.preview.enemyHpRatio ?? this.#state.enemyHpRatio;
         this.#state.preview.enemyHpRatio = current > 0.7 ? 0.6 : current > 0.35 ? 0.25 : 1;
-        this.#state.preview.enemyAction = 'HIT';
-        this.#state.preview.enemyPhase = 'HIT';
-        this.#clearEnemyAction(420);
+        this.#previewEnemy('HIT');
         break;
       }
       case 'SET_DISPLAY_OPACITY':
@@ -166,14 +170,14 @@ export class DemoBattleGateway implements BattleGateway {
         this.#state.preview.attackEffectRarity = current
           ? cycle(RARITIES, current)
           : (this.#state.activePet?.rarity ?? 'COMMON');
-        this.#state.preview.petAction = 'ATTACK';
-        this.#clearPetAction(960);
+        this.#previewPet('ATTACK');
         break;
       }
       case 'TOGGLE_REDUCED_MOTION':
         this.#state.preview.reducedMotion = !this.#state.preview.reducedMotion;
         break;
     }
+    this.#updateMotion();
     return { state: structuredClone(this.#state), events };
   }
 
@@ -181,12 +185,13 @@ export class DemoBattleGateway implements BattleGateway {
     if (this.#state.activePet) {
       this.#state.activePet.battleMode = running ? 'FIGHTING' : 'PAUSED';
     }
+    this.#attackStartedAt = running ? this.#nowMs : undefined;
+    this.#state.preview.petAction = null;
   }
 
-  #clearPetAction(delay: number): void {
-    window.setTimeout(() => {
-      this.#state.preview.petAction = null;
-    }, delay);
+  #previewPet(action: 'ATTACK' | 'GROWTH'): void {
+    this.#state.preview.petAction = action;
+    this.#petPreviewStartedAt = this.#nowMs;
   }
 
   #previewEnemy(action: 'HIT' | 'DEFEAT' | 'SPAWN' | 'RESET'): void {
@@ -199,17 +204,49 @@ export class DemoBattleGateway implements BattleGateway {
       return;
     }
     this.#state.preview.enemyAction = action;
+    this.#enemyPreviewStartedAt = this.#nowMs;
     this.#state.preview.enemyPhase =
       action === 'HIT' ? 'HIT' : action === 'DEFEAT' ? 'DEFEATING' : 'SPAWNING';
-    this.#clearEnemyAction(action === 'HIT' ? 420 : action === 'DEFEAT' ? 1_100 : 720);
   }
 
-  #clearEnemyAction(delay: number): void {
-    window.setTimeout(() => {
+  #expirePreviews(): void {
+    const preview = this.#state.preview;
+    const petDuration = preview.petAction === 'ATTACK' ? 960 : 780;
+    if (preview.petAction && this.#nowMs - this.#petPreviewStartedAt >= petDuration) {
+      preview.petAction = null;
+    }
+    const enemyDuration =
+      preview.enemyAction === 'HIT' ? 420 : preview.enemyAction === 'DEFEAT' ? 1100 : 720;
+    if (preview.enemyAction && this.#nowMs - this.#enemyPreviewStartedAt >= enemyDuration) {
       this.#state.preview.enemyPhase =
         this.#state.preview.enemyAction === 'DEFEAT' ? 'HIDDEN' : 'VISIBLE';
       this.#state.preview.enemyAction = null;
-    }, delay);
+    }
+  }
+
+  #updateMotion(): void {
+    const preview = this.#state.preview;
+    const frame = Math.floor(this.#nowMs / 100);
+    if (preview.petAction === 'ATTACK') {
+      const elapsed = Math.max(0, this.#nowMs - this.#petPreviewStartedAt);
+      this.#state.motion = sampleCombatMotion(
+        0.43 + (elapsed / 960) * 0.47,
+        frame,
+        preview.reducedMotion,
+      );
+      return;
+    }
+    if (this.#state.activePet?.battleMode === 'FIGHTING') {
+      this.#attackStartedAt ??= this.#nowMs;
+      const elapsed = Math.max(0, this.#nowMs - this.#attackStartedAt);
+      this.#state.motion = sampleCombatMotion(
+        0.43 + (elapsed % 2400) / 2400,
+        frame,
+        preview.reducedMotion,
+      );
+      return;
+    }
+    this.#state.motion = restingMotion();
   }
 }
 

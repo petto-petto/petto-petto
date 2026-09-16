@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
 import { deriveBattleScene } from '../src/view/scene.ts';
+import { sampleCombatMotion } from '../src/view/motion.ts';
 
 test('오버레이 진입 직후 공격을 시작하고 반복 타격과 검 이펙트를 만든다', async () => {
   const gateway = new DemoBattleGateway();
@@ -66,4 +67,84 @@ test('효과 버튼과 모션 감소 상태에서도 타격 시점의 검 이펙
   assert.equal(state.motion?.beat, 'IMPACT');
   assert.ok(state.motion.slashOpacity > 0);
   assert.deepEqual(state.motion.petOffset, { x: 0, y: 0 });
+});
+
+test('공격 각 구간은 Rust 연출과 같은 순서와 이동 한계를 유지한다', () => {
+  for (const [phase, beat] of [
+    [0, 'IDLE'],
+    [0.43, 'ANTICIPATION'],
+    [0.52, 'DASH'],
+    [0.635, 'IMPACT'],
+    [0.7, 'RECOVERY'],
+    [0.81, 'IDLE'],
+  ] as const) {
+    assert.equal(sampleCombatMotion(phase, 0, false).beat, beat);
+  }
+  for (let frame = 0; frame < 240; frame += 1) {
+    const motion = sampleCombatMotion(frame / 120, frame, false);
+    assert.ok(motion.petOffset.x >= -8 && motion.petOffset.x <= 34);
+    assert.ok(motion.slashOpacity >= 0 && motion.slashOpacity <= 1);
+    const reduced = sampleCombatMotion(frame / 120, frame, true);
+    assert.deepEqual(reduced.petOffset, { x: 0, y: 0 });
+  }
+});
+
+test('시각화 타이머 교체 후에도 적 미리보기와 기존 조작을 유지한다', async (t) => {
+  let now = 1000;
+  t.mock.method(Date, 'now', () => now);
+  const gateway = new DemoBattleGateway();
+  await gateway.execute({ type: 'TOGGLE_BATTLE' });
+  await gateway.execute({ type: 'TOGGLE_MENU', menu: 'PET' });
+  assert.equal(
+    (await gateway.execute({ type: 'TOGGLE_MENU', menu: 'PET' })).state.preview.menu,
+    'CLOSED',
+  );
+  await gateway.execute({ type: 'CYCLE_PET_ASSET' });
+  await gateway.execute({ type: 'CYCLE_ENEMY_SIZE' });
+  await gateway.execute({ type: 'CYCLE_ENEMY_COLOR' });
+  await gateway.execute({ type: 'SET_DISPLAY_OPACITY', percent: 45 });
+  await gateway.execute({ type: 'CYCLE_ATTACK_EFFECT' });
+  const controls = (await gateway.execute({ type: 'CYCLE_ATTACK_EFFECT' })).state;
+  assert.equal(controls.preview.petAssetRarity, 'RARE');
+  assert.equal(controls.preview.enemySize, 'SMALL');
+  assert.equal(controls.preview.enemyColor, 'ORANGE');
+  assert.equal(controls.preview.attackEffectRarity, 'RARE');
+  assert.equal(controls.preview.displayOpacity, 0.45);
+  await gateway.execute({ type: 'SET_BATTLE_RUNNING', running: false });
+  assert.equal(
+    (await gateway.execute({ type: 'GET_STATE', nowMs: now })).state.preview.petAction,
+    null,
+  );
+  for (const hp of [0.6, 0.25, 1]) {
+    const state = (await gateway.execute({ type: 'CYCLE_ENEMY_HP' })).state;
+    assert.equal(state.preview.enemyHpRatio, hp);
+    assert.equal(state.preview.enemyPhase, 'HIT');
+    now += 420;
+    assert.equal(
+      (await gateway.execute({ type: 'GET_STATE', nowMs: now })).state.preview.enemyPhase,
+      'VISIBLE',
+    );
+  }
+  for (const [action, duration, phase] of [
+    ['DEFEAT', 1100, 'HIDDEN'],
+    ['SPAWN', 720, 'VISIBLE'],
+  ] as const) {
+    await gateway.execute({ type: 'PREVIEW_ENEMY', action, nowMs: now });
+    now += duration;
+    assert.equal(
+      (await gateway.execute({ type: 'GET_STATE', nowMs: now })).state.preview.enemyPhase,
+      phase,
+    );
+  }
+  await gateway.execute({ type: 'PREVIEW_ENEMY', action: 'RESET', nowMs: now });
+  assert.equal(
+    (await gateway.execute({ type: 'GET_STATE', nowMs: now })).state.preview.enemyHpRatio,
+    null,
+  );
+  await gateway.execute({ type: 'PREVIEW_PET', action: 'GROWTH', nowMs: now });
+  now += 780;
+  assert.equal(
+    (await gateway.execute({ type: 'GET_STATE', nowMs: now })).state.preview.petAction,
+    null,
+  );
 });
