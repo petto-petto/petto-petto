@@ -183,7 +183,7 @@ input {
 .pet-identity {
   position: absolute;
   z-index: 6;
-  left: max(8px, calc(var(--pet-left) + var(--pet-size) / 2 - 48px));
+  left: clamp(8px, calc(var(--pet-left) + var(--pet-size) / 2 - 48px), calc(100% - 278px));
   bottom: max(4px, calc(var(--floor-bottom) - 28px));
   width: 96px;
   display: flex;
