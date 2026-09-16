@@ -104,7 +104,10 @@ export class AmbientLogFeed {
   }
 }
 
-export function ambientLogLayout(battle: BattleLayout): {
+export function ambientLogLayout(
+  battle: BattleLayout,
+  hasDefeatedSpectators = false,
+): {
   visible: boolean;
   width: number;
   height: number;
@@ -120,11 +123,16 @@ export function ambientLogLayout(battle: BattleLayout): {
     Math.min(208, battle.petLeft - gap - margin, battle.width - rightEdge - gap - margin),
   );
   const height = 216;
+  const reserved = hasDefeatedSpectators ? battle.spectatorSize + 20 : 0;
+  const aboveSpectators = battle.floor - reserved - height;
   return {
-    visible: width >= 176 && battle.height >= battle.petSize * 2 + 32,
+    visible:
+      width >= 176 &&
+      battle.height >= battle.petSize * 2 + 32 &&
+      (!hasDefeatedSpectators || aboveSpectators >= 48),
     width,
     height,
-    top: Math.max(48, Math.min(battle.height - height - 12, battle.floor - height)),
+    top: Math.max(48, Math.min(battle.height - height - 12, aboveSpectators)),
     petX: battle.petLeft - gap - width,
     enemyX: rightEdge + gap,
   };

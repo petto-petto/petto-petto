@@ -27,11 +27,12 @@ export class AmbientLogsView {
     petId: string | null;
     enemyKey: string;
     enemyVisible: boolean;
+    hasDefeatedSpectators: boolean;
     pageVisible: boolean;
     menuOpen: boolean;
     opacity: number;
   }): void {
-    const geometry = ambientLogLayout(options.layout);
+    const geometry = ambientLogLayout(options.layout, options.hasDefeatedSpectators);
     for (const side of ['PET', 'ENEMY'] as const) {
       const view = this.#views[side];
       const context = side === 'PET' ? options.petId : `${options.petId}:${options.enemyKey}`;

@@ -169,6 +169,7 @@ function updateAmbientLogs(next: BattleState): void {
     petId: next.activePet?.petId ?? null,
     enemyKey: `${next.activePet?.stage ?? 1}:${next.preview.enemyColor ?? next.enemyColor}`,
     enemyVisible: next.preview.enemyPhase === 'VISIBLE' || next.preview.enemyPhase === 'HIT',
+    hasDefeatedSpectators: (next.activePet?.stage ?? 1) > 1,
     pageVisible: !document.hidden,
     menuOpen: next.preview.menu !== 'CLOSED',
     opacity: Math.max(0, Math.min(1, next.preview.displayOpacity)),
