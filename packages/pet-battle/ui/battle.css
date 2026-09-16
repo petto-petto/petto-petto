@@ -402,52 +402,55 @@ input {
 }
 
 .peek-slot {
-  --peek-hidden: -40px;
-  --peek-visible: -10px;
+  --peek-frame: 64px;
+  --peek-hidden: calc(-1 * var(--peek-frame));
+  --peek-angle: 32deg;
   position: absolute;
-  width: 30px;
-  height: 30px;
   overflow: hidden;
+  /* The obstacle half occludes the entire actor, not a cropped neck. */
+  clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
 }
 
 .peek-slot[data-direction='LEFT'] {
-  --peek-hidden: 30px;
-  --peek-visible: 0px;
+  --peek-hidden: var(--peek-frame);
+  --peek-angle: -32deg;
+  clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
 }
 
-.peek-head {
+.peek-actor {
   position: absolute;
-  width: 40px;
-  height: 30px;
-  overflow: hidden;
-  transform: translateX(var(--peek-hidden));
+  left: calc(var(--peek-frame) * 0.375);
+  top: calc(var(--peek-frame) * 0.375);
+  width: var(--peek-frame);
+  height: var(--peek-frame);
+  transform-origin: 50% 87.5%;
+  transform: translateX(var(--peek-hidden)) rotate(0deg);
   animation: spectator-peek var(--peek-duration) steps(8, end) var(--peek-delay) infinite;
 }
 
-/* First idle frame only; native 32px art at 2×, cropped above the body. */
-.peek-head img {
-  position: absolute;
-  left: -12px;
-  top: -4px;
-  width: 256px;
-  height: 64px;
+.peek-slot[data-direction='LEFT'] .peek-actor {
+  left: calc(var(--peek-frame) * 0.625);
+}
+
+/* Keep the whole first 32px idle frame; lean the head out while the body stays behind. */
+.peek-sprite {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.peek-slot[data-direction='RIGHT'] .peek-sprite {
+  transform: scaleX(-1);
+}
+
+.peek-sprite img {
+  display: block;
+  width: 400%;
+  height: 100%;
   max-width: none;
   image-rendering: pixelated;
   filter: saturate(0.78) brightness(0.9);
-}
-
-/* EPIC's tail is beside its face, so its head needs a narrower crop. */
-.peek-slot[data-rarity='EPIC'] .peek-head {
-  width: 28px;
-}
-
-.peek-slot[data-rarity='EPIC'] .peek-head img {
-  left: -8px;
-  top: -2px;
-}
-
-.peek-slot[data-rarity='EPIC'][data-direction='RIGHT'] {
-  --peek-visible: -4px;
 }
 
 @keyframes spectator-peek {
@@ -455,11 +458,11 @@ input {
   20%,
   72%,
   100% {
-    transform: translateX(var(--peek-hidden));
+    transform: translateX(var(--peek-hidden)) rotate(0deg);
   }
   32%,
   56% {
-    transform: translateX(var(--peek-visible));
+    transform: translateX(0) rotate(var(--peek-angle));
   }
 }
 
@@ -748,9 +751,9 @@ input {
   transition-duration: 1ms !important;
 }
 
-.reduced-motion .peek-head {
+.reduced-motion .peek-actor {
   animation: none !important;
-  transform: translateX(var(--peek-visible));
+  transform: translateX(0) rotate(var(--peek-angle));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -759,8 +762,8 @@ input {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
   }
-  .peek-head {
+  .peek-actor {
     animation: none !important;
-    transform: translateX(var(--peek-visible));
+    transform: translateX(0) rotate(var(--peek-angle));
   }
 }

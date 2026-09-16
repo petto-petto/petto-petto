@@ -178,14 +178,17 @@ function updateSpectators(next: BattleState): void {
         slot.className = 'peek-slot';
         slot.dataset['petId'] = pet.petId;
         slot.dataset['rarity'] = pet.rarity;
-        const head = document.createElement('span');
-        head.className = 'peek-head';
+        const actor = document.createElement('span');
+        actor.className = 'peek-actor';
+        const sprite = document.createElement('span');
+        sprite.className = 'peek-sprite';
         const image = document.createElement('img');
         image.src = assetUrl(petAssetForRarity(pet.rarity));
         image.alt = `${pet.displayName} · 빼꼼 응원`;
         image.draggable = false;
-        head.append(image);
-        slot.append(head);
+        sprite.append(image);
+        actor.append(sprite);
+        slot.append(actor);
         return slot;
       }),
     );
@@ -219,6 +222,9 @@ function positionPeekingSpectators(next: BattleState): void {
     element.dataset['direction'] = slot.direction;
     element.style.left = `${slot.x}px`;
     element.style.top = `${slot.y}px`;
+    element.style.width = `${slot.width}px`;
+    element.style.height = `${slot.height}px`;
+    element.style.setProperty('--peek-frame', `${slot.frameSize}px`);
     element.style.setProperty('--peek-duration', `${slot.durationMs}ms`);
     element.style.setProperty('--peek-delay', `${slot.delayMs}ms`);
   });

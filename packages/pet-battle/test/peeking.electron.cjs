@@ -42,15 +42,17 @@ app.whenReady().then(async () => {
         theme,
       );
       // Polls must preserve the DOM nodes and animation clocks.
-      await evaluate(`window.peekNode = document.querySelector('.peek-head')`);
+      await evaluate(`window.peekNode = document.querySelector('.peek-actor')`);
       await settle();
       assert.equal(
-        await evaluate(`window.peekNode === document.querySelector('.peek-head')`),
+        await evaluate(`window.peekNode === document.querySelector('.peek-actor')`),
         true,
       );
 
       for (const [width, height] of [
         [640, 420],
+        [1440, 900],
+        [1920, 1080],
         [360, 180],
         [360, 640],
       ]) {
@@ -60,7 +62,7 @@ app.whenReady().then(async () => {
           const root = document.querySelector('#battle-overlay');
           return [...document.querySelectorAll('.peek-slot:not([hidden])')].map(slot => {
             const r = slot.getBoundingClientRect();
-            const head = slot.querySelector('.peek-head');
+            const head = slot.querySelector('.peek-actor');
             const animation = head.getAnimations()[0];
             animation.pause();
             const timing = animation.effect.getTiming();
@@ -68,10 +70,19 @@ app.whenReady().then(async () => {
             const hidden = head.getBoundingClientRect();
             animation.currentTime = timing.delay + timing.duration * 1.44;
             const visible = head.getBoundingClientRect();
+            const edge = r.left + r.width / 2;
+            const right = slot.dataset.direction === 'RIGHT';
+            const sprite = slot.querySelector('.peek-sprite');
+            const frame = parseFloat(getComputedStyle(head).width);
             return {
               x: r.x, y: r.y, right: r.right, bottom: r.bottom,
-              concealed: hidden.right <= r.left + .1 || hidden.left >= r.right - .1,
-              revealed: visible.right > r.left && visible.left < r.right,
+              edge,
+              concealed: right ? hidden.right <= edge : hidden.left >= edge,
+              revealed: right ? visible.right > edge : visible.left < edge,
+              leaning: Math.abs(new DOMMatrix(getComputedStyle(head).transform).b) > .1,
+              wholeFrame: sprite.clientWidth === frame && sprite.clientHeight === frame,
+              frame,
+              mask: getComputedStyle(slot).clipPath,
               overflow: getComputedStyle(slot).overflow,
               pointerEvents: getComputedStyle(slot).pointerEvents,
               petSize: getComputedStyle(document.querySelector('#pet')).width,
@@ -82,7 +93,7 @@ app.whenReady().then(async () => {
         })()`);
         assert.ok(slots.length > 0 && slots.length <= 3);
         for (const slot of slots) {
-          assert.ok(slot.x >= 0 && slot.y >= 0 && slot.right <= width && slot.bottom <= height);
+          assert.ok(slot.edge > 0 && slot.edge < width && slot.bottom <= height);
           assert.equal(slot.concealed, true, 'head must be fully concealed behind obstacle');
           assert.equal(
             slot.revealed,
@@ -90,6 +101,12 @@ app.whenReady().then(async () => {
             `head must emerge on reveal beat: ${JSON.stringify(slot)}`,
           );
           assert.equal(slot.overflow, 'hidden');
+          assert.equal(slot.wholeFrame, true, 'never truncate a head or neck to a fixed rectangle');
+          assert.equal(slot.leaning, true, 'head must lean around the obstacle edge');
+          assert.match(slot.mask, /polygon/);
+          assert.equal(slot.frame % 32, 0);
+          if (width >= 1440)
+            assert.ok(slot.frame > 64, 'background spectators should scale in large windows');
           assert.equal(slot.pointerEvents, 'none');
           assert.equal(slot.petSize, '128px');
           assert.equal(slot.imageLoaded, true);
@@ -123,7 +140,7 @@ app.whenReady().then(async () => {
     await click('REDUCED_MOTION');
     await settle();
     assert.equal(
-      await evaluate(`getComputedStyle(document.querySelector('.peek-head')).animationName`),
+      await evaluate(`getComputedStyle(document.querySelector('.peek-actor')).animationName`),
       'none',
     );
     console.log(`PASS opacity / reduced motion; screenshots: ${artifacts}`);

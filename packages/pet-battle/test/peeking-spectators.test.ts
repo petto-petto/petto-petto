@@ -34,7 +34,10 @@ test('cover 중앙 크롭과 같은 좌표계로 이동하며 장애물에서 �
       for (const slot of slots) {
         const edge = (width! - 1915 * scale) / 2 + slot.sourceX * scale;
         assert.equal(slot.x + slot.frameSize, Math.round(edge));
-        assert.equal(slot.y + slot.height, Math.round((height! - 821 * scale) / 2 + slot.sourceY * scale));
+        assert.equal(
+          slot.y + slot.height,
+          Math.round((height! - 821 * scale) / 2 + slot.sourceY * scale),
+        );
         assert.ok(edge >= 4 && edge <= width! - 4);
         assert.ok(slot.y + slot.height > 36);
       }
