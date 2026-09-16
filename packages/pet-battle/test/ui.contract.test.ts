@@ -21,19 +21,23 @@ test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 
   assert.match(html, /id="pet-level"/);
 });
 
-test('넓어진 전투 무대 양옆에는 응원 관중과 움직이는 반딧불 레이어가 있다', async () => {
+test('보유 펫은 배경 뒤에서 빼꼼하고 처치 적과 반딧불 레이어는 유지한다', async () => {
   const [html, css] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
   ]);
 
-  assert.match(html, /class="spectators spectators-left"/);
+  assert.match(html, /class="peeking-spectators"/);
+  assert.doesNotMatch(html, /spectators-left/);
   assert.match(html, /class="spectators spectators-right"/);
   assert.match(html, /id="pet-spectators"/);
   assert.match(html, /id="defeated-enemy-spectators"/);
   assert.doesNotMatch(html, /spectators-right[\s\S]*purple-steady/);
   assert.match(html, /class="fireflies"/);
   assert.match(css, /@keyframes\s+spectator-cheer/);
+  assert.match(css, /@keyframes\s+spectator-peek/);
+  assert.match(css, /\.peek-slot\s*\{[^}]*overflow:\s*hidden/s);
+  assert.match(css, /\.reduced-motion \.peek-head\s*\{[^}]*animation:\s*none !important/s);
   assert.match(css, /@keyframes\s+firefly-drift/);
   assert.match(css, /@keyframes\s+firefly-blink/);
 });
