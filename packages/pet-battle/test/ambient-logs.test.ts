@@ -84,13 +84,14 @@ test('처치 적 관중이 있으면 로그를 위로 옮기고 세로 공간이
 test('양쪽 읽기 공간과 세로 높이가 충분한 창에서만 캐릭터 바깥에 로그를 배치한다', () => {
   for (const [width, height] of [
     [360, 180],
-    [640, 420],
     [900, 240],
     [360, 640],
   ]) {
     assert.equal(ambientLogLayout(battleLayout(width!, height!)).visible, false);
   }
   for (const [width, height] of [
+    [636, 416],
+    [640, 420],
     [700, 288],
     [800, 420],
     [1440, 900],
@@ -104,5 +105,18 @@ test('양쪽 읽기 공간과 세로 높이가 충분한 창에서만 캐릭터 
     assert.ok(logs.enemyX >= battle.enemyLeft + battle.petSize + 20);
     assert.ok(logs.enemyX + logs.width <= width! - 16);
     assert.ok(logs.top >= 48 && logs.top + logs.height <= height! - 12);
+  }
+});
+
+test('640×420 기본 데모창은 테두리 4px과 처치 적 관중을 포함해도 로그가 보인다', () => {
+  const battle = battleLayout(636, 416);
+  for (const hasSpectators of [false, true]) {
+    const logs = ambientLogLayout(battle, hasSpectators);
+    assert.equal(logs.visible, true);
+    assert.equal(logs.width, 150);
+    assert.ok(logs.top >= 48);
+    assert.ok(
+      logs.top + logs.height <= battle.floor - (hasSpectators ? battle.spectatorSize + 20 : 0),
+    );
   }
 });

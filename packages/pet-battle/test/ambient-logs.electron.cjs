@@ -7,7 +7,7 @@ const { app, BrowserWindow } = require('electron');
 
 app.whenReady().then(async () => {
   const window = new BrowserWindow({
-    width: 800,
+    width: 640,
     height: 420,
     useContentSize: true,
     frame: false,
@@ -63,6 +63,7 @@ app.whenReady().then(async () => {
     const artifacts = await fs.mkdtemp(path.join(os.tmpdir(), 'battle-ambient-'));
     // The overlay border consumes 4px; 292px leaves the required 288px content height.
     for (const [width, height] of [
+      [640, 420],
       [800, 420],
       [700, 292],
       [1440, 900],
