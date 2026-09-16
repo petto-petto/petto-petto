@@ -150,7 +150,11 @@ app.whenReady().then(async () => {
     assert.equal(opacity.environment, '0.35');
     assert.equal(opacity.pet, '1');
     assert.equal(opacity.insideEnvironment, true);
-    await click('REDUCED_MOTION');
+    assert.equal(await evaluate(`document.querySelector('.motion-toggle') === null`), true);
+    window.webContents.debugger.attach('1.3');
+    await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    });
     await settle();
     assert.equal(
       await evaluate(`getComputedStyle(document.querySelector('.peek-actor')).animationName`),

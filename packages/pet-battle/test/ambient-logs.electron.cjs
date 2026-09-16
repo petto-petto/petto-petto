@@ -144,7 +144,10 @@ app.whenReady().then(async () => {
       ),
       '0.4',
     );
-    await evaluate(`document.querySelector('[data-action="REDUCED_MOTION"]').click()`);
+    window.webContents.debugger.attach('1.3');
+    await window.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', {
+      features: [{ name: 'prefers-reduced-motion', value: 'reduce' }],
+    });
     await settle();
     assert.equal(
       await evaluate(

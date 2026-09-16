@@ -29,8 +29,7 @@ type ButtonAction =
   | 'RESET'
   | 'SIZE'
   | 'COLOR'
-  | 'HP'
-  | 'REDUCED_MOTION';
+  | 'HP';
 
 const root = required<HTMLElement>('#battle-overlay');
 const environment = required<HTMLElement>('#battle-environment');
@@ -393,8 +392,6 @@ function commandFor(action: ButtonAction): { command: BattleCommand; message: st
       return { command: { type: 'CYCLE_ENEMY_COLOR' }, message: '적·배경 전환' };
     case 'HP':
       return { command: { type: 'CYCLE_ENEMY_HP' }, message: 'HP·표정 전환' };
-    case 'REDUCED_MOTION':
-      return { command: { type: 'TOGGLE_REDUCED_MOTION' }, message: '모션 감소 전환' };
   }
 }
 
