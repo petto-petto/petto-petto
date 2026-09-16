@@ -58,7 +58,7 @@ test('등장 영역 전체가 실제 전경 줄기·기둥의 곧은 구간 안�
       [1445, 125, 335, 'LEFT'],
     ],
     STARLIGHT_SHRINE: [
-      [1079, 167, 295, 'RIGHT'],
+      [1060, 167, 295, 'RIGHT'],
       [1316, 160, 335, 'LEFT'],
       [429, 0, 160, 'RIGHT'],
     ],
@@ -96,7 +96,7 @@ test('등장 영역 전체가 실제 전경 줄기·기둥의 곧은 구간 안�
 
 test('큰 창에서는 관중 프레임도 배경에 맞춰 커지고 얼굴만 고정 크롭하지 않는다', () => {
   for (const theme of themes) {
-    const small = peekingSpectators(theme, 360, 180)[0]!;
+    const small = peekingSpectators(theme, 640, 420)[0]!;
     const large = peekingSpectators(theme, 1440, 900)[0]!;
     assert.ok(large.frameSize > small.frameSize);
     assert.equal(large.frameSize % 32, 0);

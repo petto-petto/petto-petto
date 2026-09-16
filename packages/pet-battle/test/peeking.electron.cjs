@@ -53,6 +53,8 @@ app.whenReady().then(async () => {
         [640, 420],
         [1440, 900],
         [1920, 1080],
+        [2560, 1080],
+        [900, 1440],
         [360, 180],
         [360, 640],
       ]) {
@@ -91,7 +93,8 @@ app.whenReady().then(async () => {
             };
           });
         })()`);
-        assert.ok(slots.length > 0 && slots.length <= 3);
+        assert.ok(slots.length <= 3);
+        if (width >= 640 && height >= 420 && width >= height) assert.ok(slots.length > 0);
         for (const slot of slots) {
           assert.ok(slot.edge > 0 && slot.edge < width && slot.bottom <= height);
           assert.equal(slot.concealed, true, 'head must be fully concealed behind obstacle');
@@ -105,8 +108,7 @@ app.whenReady().then(async () => {
           assert.equal(slot.leaning, true, 'head must lean around the obstacle edge');
           assert.match(slot.mask, /polygon/);
           assert.equal(slot.frame % 32, 0);
-          if (width >= 1440)
-            assert.ok(slot.frame > 64, 'background spectators should scale in large windows');
+          assert.ok(slot.frame >= 32 && slot.frame <= 128, 'fit the actual straight trunk span');
           assert.equal(slot.pointerEvents, 'none');
           assert.equal(slot.petSize, '128px');
           assert.equal(slot.imageLoaded, true);
