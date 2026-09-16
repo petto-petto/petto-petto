@@ -1,11 +1,13 @@
 import type { BattleCommand, BattleGateway, BattleState } from '../contracts.ts';
 import {
+  backgroundForEnemy,
   defeatedEnemyColors,
   deriveBattleScene,
   shouldStartEnemyHitReaction,
 } from '../view/scene.ts';
 import { DemoBattleGateway } from './demo-gateway.ts';
 import { battleLayout, menuPositions, projectPetOffset } from '../view/layout.ts';
+import { peekingSpectators } from '../view/peeking-spectators.ts';
 
 declare global {
   interface Window {
@@ -55,6 +57,7 @@ let state: BattleState | undefined;
 let inFlight = 0;
 let enemyHitTimer: number | undefined;
 let spectatorKey = '';
+let defeatedSpectatorKey = '';
 let layout = battleLayout(root.clientWidth, root.clientHeight);
 
 function resizeBattle(): void {
@@ -91,6 +94,7 @@ function resizeBattle(): void {
     enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
     updateSprite(scene.petSprite);
     updateMotion(state);
+    positionPeekingSpectators(state);
   }
 }
 
@@ -159,22 +163,43 @@ function render(next: BattleState, previous?: BattleState): void {
 }
 
 function updateSpectators(next: BattleState): void {
-  const key = `${next.spectatorPetIds.join(',')}|${next.activePet?.stage ?? 1}`;
-  if (key === spectatorKey) return;
-  spectatorKey = key;
-
   const pets = next.spectatorPetIds
     .map((petId) => next.roster.find((pet) => pet.petId === petId))
     .filter((pet): pet is NonNullable<typeof pet> => pet !== undefined)
     .slice(0, 3);
-  petSpectators.replaceChildren(
-    ...pets.map((pet) =>
-      spectatorElement('pet-fan', petAssetForRarity(pet.rarity), pet.displayName),
-    ),
-  );
-  petSpectators.hidden = pets.length === 0;
+  const theme = backgroundForEnemy(next.preview.enemyColor ?? next.enemyColor);
+  const key = JSON.stringify([
+    pets.map((pet) => [pet.petId, pet.rarity, pet.displayName]),
+    theme,
+    next.activePet?.stage,
+  ]);
+  if (key !== spectatorKey) {
+    spectatorKey = key;
+    petSpectators.dataset['theme'] = theme;
+    petSpectators.replaceChildren(
+      ...pets.map((pet) => {
+        const slot = document.createElement('span');
+        slot.className = 'peek-slot';
+        slot.dataset['petId'] = pet.petId;
+        const head = document.createElement('span');
+        head.className = 'peek-head';
+        const image = document.createElement('img');
+        image.src = assetUrl(petAssetForRarity(pet.rarity));
+        image.alt = `${pet.displayName} · 빼꼼 응원`;
+        image.draggable = false;
+        head.append(image);
+        slot.append(head);
+        return slot;
+      }),
+    );
+    petSpectators.hidden = pets.length === 0;
+    positionPeekingSpectators(next);
+  }
 
   const enemies = defeatedEnemyColors(next.activePet?.stage ?? 1);
+  const enemyKey = enemies.join(',');
+  if (enemyKey === defeatedSpectatorKey) return;
+  defeatedSpectatorKey = enemyKey;
   defeatedEnemySpectators.replaceChildren(
     ...enemies.map((color) =>
       spectatorElement(
@@ -185,6 +210,21 @@ function updateSpectators(next: BattleState): void {
     ),
   );
   defeatedEnemySpectators.hidden = enemies.length === 0;
+}
+
+function positionPeekingSpectators(next: BattleState): void {
+  const theme = backgroundForEnemy(next.preview.enemyColor ?? next.enemyColor);
+  const slots = peekingSpectators(theme, root.clientWidth, root.clientHeight);
+  petSpectators.querySelectorAll<HTMLElement>('.peek-slot').forEach((element, index) => {
+    const slot = slots[index];
+    element.hidden = !slot;
+    if (!slot) return;
+    element.dataset['direction'] = slot.direction;
+    element.style.left = `${slot.x}px`;
+    element.style.top = `${slot.y}px`;
+    element.style.setProperty('--peek-duration', `${slot.durationMs}ms`);
+    element.style.setProperty('--peek-delay', `${slot.delayMs}ms`);
+  });
 }
 
 function spectatorElement(className: string, asset: string, label: string): HTMLElement {

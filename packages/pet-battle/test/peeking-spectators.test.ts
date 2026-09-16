@@ -19,7 +19,13 @@ test('각 배경의 실제 나무·기둥 좌표에서 최대 세 마리가 서�
 
 test('cover 중앙 크롭과 같은 좌표계로 이동하며 장애물에서 임의로 떨어지지 않는다', () => {
   for (const theme of themes) {
-    for (const [width, height] of [[360, 180], [640, 420], [960, 540], [280, 180], [360, 640]]) {
+    for (const [width, height] of [
+      [360, 180],
+      [640, 420],
+      [960, 540],
+      [280, 180],
+      [360, 640],
+    ]) {
       const slots = peekingSpectators(theme, width!, height!);
       assert.ok(slots.length > 0 && slots.length <= 3);
       const scale = Math.max(width! / 1915, height! / 821);
