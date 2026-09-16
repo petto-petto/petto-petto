@@ -42,8 +42,6 @@ const hpBar = required<HTMLElement>('.enemy-hp');
 const hpFill = required<HTMLElement>('#enemy-hp-fill');
 const hpLabel = required<HTMLElement>('#enemy-hp-label');
 const stageLabel = required<HTMLElement>('#stage-label');
-const petName = required<HTMLElement>('#pet-name');
-const petLevel = required<HTMLElement>('#pet-level');
 const combatEffects = required<HTMLElement>('.combat-effects');
 const toast = required<HTMLElement>('#battle-toast');
 const petMenu = required<HTMLElement>('#pet-menu');
@@ -142,8 +140,6 @@ function render(next: BattleState, previous?: BattleState): void {
   hpFill.style.width = `${(scene.enemyHpRatio * 100).toFixed(1)}%`;
   hpLabel.textContent = `${Math.round(scene.enemyHpRatio * 100)}%`;
   stageLabel.textContent = `STAGE ${next.activePet?.stage ?? '—'}`;
-  petName.textContent = next.activePet?.displayName ?? '활성 펫 없음';
-  petLevel.textContent = next.activePet ? `LV.${next.activePet.level}` : 'LV.—';
   opacity.value = String(Math.round(scene.displayOpacity * 100));
   root.dataset['beat'] = next.motion?.beat ?? 'IDLE';
   root.dataset['enemyPhase'] = next.preview.enemyPhase;

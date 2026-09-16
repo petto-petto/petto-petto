@@ -207,34 +207,6 @@ input {
   -webkit-app-region: no-drag;
 }
 
-.pet-identity {
-  position: absolute;
-  z-index: 8;
-  left: clamp(8px, calc(var(--pet-left) + var(--pet-size) / 2 - 48px), calc(100% - 278px));
-  bottom: max(4px, calc(var(--floor-bottom) - 28px));
-  width: 96px;
-  display: flex;
-  justify-content: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border: 2px solid var(--wood-border);
-  background: rgb(32 36 57 / 86%);
-  color: var(--cream);
-  box-shadow: 2px 2px 0 rgb(0 0 0 / 40%);
-  pointer-events: none;
-}
-
-.pet-identity strong {
-  color: var(--gold);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pet-identity span {
-  flex-shrink: 0;
-}
-
 #stage-label {
   text-shadow: 1px 1px 0 var(--outline);
   transition: opacity 80ms linear;
