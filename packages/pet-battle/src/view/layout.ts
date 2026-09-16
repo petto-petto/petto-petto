@@ -18,13 +18,15 @@ export interface BattleLayout {
 
 /** Presentation only: the host owns window size, Rust owns combat timing/state. */
 export function battleLayout(width: number, height: number): BattleLayout {
-  const availableSize = Math.min(128, width * 0.21, height - 80);
-  const petSize = Math.max(32, Math.floor(availableSize / 32) * 32);
-  const scale = petSize / 128;
+  const petSize = 128;
+  const scale = 1;
   const gap = Math.round(Math.max(4, Math.min(16, width / 80)));
-  const petLeft = Math.round((width - petSize * 2 - gap) / 2);
-  const enemyLeft = petLeft + petSize + gap;
-  const floor = height - Math.round(Math.max(28, Math.min(58, height * 0.14)));
+  // Narrow windows share the transparent frame margins, never shrink the sprite.
+  const separation = Math.min(petSize + gap, Math.max(102, width - petSize - 32));
+  const petLeft = Math.round((width - petSize - separation) / 2);
+  const enemyLeft = petLeft + separation;
+  const preferredFloor = height - Math.round(Math.max(28, Math.min(58, height * 0.14)));
+  const floor = Math.min(height - 8, Math.max(petSize + 36, preferredFloor));
   const spectatorSize = Math.max(0, Math.min(64, Math.floor((petLeft - 24) / 3 / 8) * 8));
 
   return {
