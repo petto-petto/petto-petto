@@ -4,6 +4,16 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
+test('EPIC 빼꼼은 같은 높이에 있는 꼬리를 제외하고 머리만 자른다', async () => {
+  const [css, script] = await Promise.all([
+    readFile(new URL('battle.css', UI_ROOT), 'utf8'),
+    readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
+  ]);
+  assert.match(script, /slot\.dataset\['rarity'\] = pet\.rarity/);
+  assert.match(css, /\.peek-slot\[data-rarity='EPIC'\] \.peek-head\s*\{[^}]*width:\s*28px/s);
+  assert.match(css, /\.peek-slot\[data-rarity='EPIC'\] \.peek-head img\s*\{[^}]*left:\s*-8px;[^}]*top:\s*-2px/s);
+});
+
 test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 유지한다', async () => {
   const [html, css] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
