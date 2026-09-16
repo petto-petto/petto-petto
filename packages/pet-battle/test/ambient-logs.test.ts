@@ -73,6 +73,14 @@ test('펫과 적의 로그와 주기는 독립적이다', () => {
   assert.equal(pet.entries.length, 1);
 });
 
+test('처치 적 관중이 있으면 로그를 위로 옮기고 세로 공간이 부족하면 숨긴다', () => {
+  const battle = battleLayout(800, 420);
+  const logs = ambientLogLayout(battle, true);
+  assert.equal(logs.visible, true);
+  assert.ok(logs.top + logs.height <= battle.floor - battle.spectatorSize - 20);
+  assert.equal(ambientLogLayout(battleLayout(700, 288), true).visible, false);
+});
+
 test('양쪽 읽기 공간과 세로 높이가 충분한 창에서만 캐릭터 바깥에 로그를 배치한다', () => {
   for (const [width, height] of [
     [360, 180],
