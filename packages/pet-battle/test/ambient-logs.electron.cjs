@@ -81,6 +81,26 @@ app.whenReady().then(async () => {
       assert.ok(current.PET.top >= 48 && current.ENEMY.bottom <= height);
       assert.equal(fighters.petWidth, '128px');
       assert.equal(current.PET.unclipped && current.ENEMY.unclipped, true);
+      assert.deepEqual(
+        await evaluate(`(async () => {
+        await document.fonts.ready;
+        const { AMBIENT_MESSAGES } = await import('../dist/view/ambient-logs.js');
+        const clipped = [];
+        for (const side of ['PET', 'ENEMY']) {
+          const list = document.querySelector('[data-ambient-side="'+side+'"] ol');
+          const probe = document.createElement('li');
+          probe.className = 'ambient-log-entry';
+          list.append(probe);
+          for (const text of AMBIENT_MESSAGES[side]) {
+            probe.textContent = text;
+            if (probe.scrollHeight > probe.clientHeight || probe.scrollWidth > probe.clientWidth) clipped.push(text);
+          }
+          probe.remove();
+        }
+        return clipped;
+      })()`),
+        [],
+      );
       await evaluate(`document.querySelector('#battle-toast').classList.remove('visible')`);
       await settle();
       await fs.writeFile(

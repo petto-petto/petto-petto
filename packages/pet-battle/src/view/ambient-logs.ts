@@ -127,7 +127,8 @@ export function ambientLogLayout(
   const aboveSpectators = battle.floor - reserved - height;
   return {
     visible:
-      width >= 176 &&
+      // The 640×420 demo has 636px of content and 150px on each side.
+      width >= 150 &&
       battle.height >= battle.petSize * 2 + 32 &&
       (!hasDefeatedSpectators || aboveSpectators >= 48),
     width,
