@@ -4,17 +4,16 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
-test('EPIC 빼꼼은 같은 높이에 있는 꼬리를 제외하고 머리만 자른다', async () => {
+test('관중은 머리를 사각형으로 자르지 않고 온전한 프레임을 기울여 장애물 뒤에서 나온다', async () => {
   const [css, script] = await Promise.all([
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
     readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
   ]);
-  assert.match(script, /slot\.dataset\['rarity'\] = pet\.rarity/);
-  assert.match(css, /\.peek-slot\[data-rarity='EPIC'\] \.peek-head\s*\{[^}]*width:\s*28px/s);
-  assert.match(
-    css,
-    /\.peek-slot\[data-rarity='EPIC'\] \.peek-head img\s*\{[^}]*left:\s*-8px;[^}]*top:\s*-2px/s,
-  );
+  assert.match(script, /className = 'peek-actor'/);
+  assert.match(script, /className = 'peek-sprite'/);
+  assert.doesNotMatch(css, /\.peek-head/);
+  assert.match(css, /rotate\(var\(--peek-angle\)\)/);
+  assert.match(css, /clip-path:\s*polygon/);
 });
 
 test('전투 오버레이는 창을 채우며 이름·레벨 패널 없이 픽셀 캐릭터를 유지한다', async () => {
@@ -50,7 +49,7 @@ test('보유 펫은 배경 뒤에서 빼꼼하고 처치 적과 반딧불 레이
   assert.match(css, /@keyframes\s+spectator-cheer/);
   assert.match(css, /@keyframes\s+spectator-peek/);
   assert.match(css, /\.peek-slot\s*\{[^}]*overflow:\s*hidden/s);
-  assert.match(css, /\.reduced-motion \.peek-head\s*\{[^}]*animation:\s*none !important/s);
+  assert.match(css, /\.reduced-motion \.peek-actor\s*\{[^}]*animation:\s*none !important/s);
   assert.match(css, /@keyframes\s+firefly-drift/);
   assert.match(css, /@keyframes\s+firefly-blink/);
 });

@@ -23,6 +23,8 @@ test('cover 중앙 크롭과 같은 좌표계로 이동하며 장애물에서 �
       [360, 180],
       [640, 420],
       [960, 540],
+      [1440, 900],
+      [1920, 1080],
       [280, 180],
       [360, 640],
     ]) {
@@ -31,12 +33,24 @@ test('cover 중앙 크롭과 같은 좌표계로 이동하며 장애물에서 �
       const scale = Math.max(width! / 1915, height! / 821);
       for (const slot of slots) {
         const edge = (width! - 1915 * scale) / 2 + slot.sourceX * scale;
-        assert.equal(slot.x, Math.round(edge) - (slot.direction === 'LEFT' ? 30 : 0));
-        assert.equal(slot.y, Math.round((height! - 821 * scale) / 2 + slot.sourceY * scale));
-        assert.ok(slot.x >= 4 && slot.x + 30 <= width! - 4);
-        assert.ok(slot.y >= 36 && slot.y + 30 <= height! - 8);
+        assert.equal(slot.x + slot.frameSize, Math.round(edge));
+        assert.equal(slot.y + slot.height, Math.round((height! - 821 * scale) / 2 + slot.sourceY * scale));
+        assert.ok(edge >= 4 && edge <= width! - 4);
+        assert.ok(slot.y + slot.height > 36);
       }
     }
+  }
+});
+
+test('큰 창에서는 관중 프레임도 배경에 맞춰 커지고 얼굴만 고정 크롭하지 않는다', () => {
+  for (const theme of themes) {
+    const small = peekingSpectators(theme, 360, 180)[0]!;
+    const large = peekingSpectators(theme, 1440, 900)[0]!;
+    assert.ok(large.frameSize > small.frameSize);
+    assert.equal(large.frameSize % 32, 0);
+    assert.ok(large.frameSize <= 128);
+    assert.equal(large.width, large.frameSize * 2);
+    assert.equal(large.height, large.frameSize * 1.25);
   }
 });
 
