@@ -41,7 +41,7 @@ app.whenReady().then(async () => {
         document.querySelector('#enemy-menu').hidden = false;
         const result = {
           root: rect('#battle-overlay'), pet: rect('#pet'), enemy: rect('#enemy'),
-          identity: rect('.pet-identity'), opacity: rect('.opacity-control'),
+          identity: Boolean(document.querySelector('.pet-identity, #pet-name, #pet-level')), opacity: rect('.opacity-control'),
           close: rect('.window-close'), hud: rect('.battle-hud'),
           petSize: parseFloat(getComputedStyle(document.querySelector('#pet')).width),
           controls: [...document.querySelectorAll('#enemy-menu button')].map(button => rect('[data-action="' + button.dataset.action + '"]')),
@@ -62,11 +62,7 @@ app.whenReady().then(async () => {
         assert.ok(rect.x >= 0 && rect.y >= 0 && rect.right <= width && rect.bottom <= height);
       }
       assert.ok(result.hud.right < result.close.x, 'close button must not overlap HUD');
-      const { identity, opacity } = result;
-      assert.ok(
-        identity.right <= opacity.x || identity.bottom <= opacity.y || identity.y >= opacity.bottom,
-        'pet identity must not overlap opacity control',
-      );
+      assert.equal(result.identity, false, 'pet name and level panel must be removed');
       console.log(`PASS responsive DOM: ${width}×${height}`);
     }
     const otherWindow = new BrowserWindow({ show: false });

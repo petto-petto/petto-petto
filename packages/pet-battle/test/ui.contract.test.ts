@@ -17,7 +17,7 @@ test('EPIC 빼꼼은 같은 높이에 있는 꼬리를 제외하고 머리만 �
   );
 });
 
-test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 유지한다', async () => {
+test('전투 오버레이는 창을 채우며 이름·레벨 패널 없이 픽셀 캐릭터를 유지한다', async () => {
   const [html, css] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
@@ -30,8 +30,8 @@ test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 
   assert.match(css, /image-rendering:\s*pixelated/);
   assert.match(html, /data-character="pet"/);
   assert.match(html, /data-character="enemy"/);
-  assert.match(html, /id="pet-name"/);
-  assert.match(html, /id="pet-level"/);
+  assert.doesNotMatch(html, /pet-identity|id="pet-name"|id="pet-level"/);
+  assert.doesNotMatch(css, /\.pet-identity/);
 });
 
 test('보유 펫은 배경 뒤에서 빼꼼하고 처치 적과 반딧불 레이어는 유지한다', async () => {
