@@ -85,6 +85,7 @@ app.whenReady().then(async () => {
               wholeFrame: sprite.clientWidth === frame && sprite.clientHeight === frame,
               frame,
               mask: getComputedStyle(slot).clipPath,
+              alignedMask: slot.style.clipPath,
               overflow: getComputedStyle(slot).overflow,
               pointerEvents: getComputedStyle(slot).pointerEvents,
               petSize: getComputedStyle(document.querySelector('#pet')).width,
@@ -94,7 +95,8 @@ app.whenReady().then(async () => {
           });
         })()`);
         assert.ok(slots.length <= 3);
-        if (width >= 640 && height >= 420 && width >= height) assert.ok(slots.length > 0);
+        if (width >= height)
+          assert.equal(slots.length, 3, 'restore all three available spectators');
         for (const slot of slots) {
           assert.ok(slot.edge > 0 && slot.edge < width && slot.bottom <= height);
           assert.equal(slot.concealed, true, 'head must be fully concealed behind obstacle');
@@ -107,8 +109,17 @@ app.whenReady().then(async () => {
           assert.equal(slot.wholeFrame, true, 'never truncate a head or neck to a fixed rectangle');
           assert.equal(slot.leaning, true, 'head must lean around the obstacle edge');
           assert.match(slot.mask, /polygon/);
+          assert.match(
+            slot.alignedMask,
+            /^polygon\(/,
+            'use projected artwork contour, not generic half clipping',
+          );
           assert.equal(slot.frame % 32, 0);
-          assert.ok(slot.frame >= 32 && slot.frame <= 128, 'fit the actual straight trunk span');
+          assert.ok(
+            slot.frame >= 64 && slot.frame <= 128,
+            'never shrink the original spectator scale',
+          );
+          if (width >= 1440) assert.equal(slot.frame, 128);
           assert.equal(slot.pointerEvents, 'none');
           assert.equal(slot.petSize, '128px');
           assert.equal(slot.imageLoaded, true);

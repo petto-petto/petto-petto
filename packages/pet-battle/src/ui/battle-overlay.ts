@@ -242,6 +242,7 @@ function positionPeekingSpectators(next: BattleState): void {
     element.style.top = `${slot.y}px`;
     element.style.width = `${slot.width}px`;
     element.style.height = `${slot.height}px`;
+    element.style.clipPath = slot.clipPath;
     element.style.setProperty('--peek-frame', `${slot.frameSize}px`);
     element.style.setProperty('--peek-duration', `${slot.durationMs}ms`);
     element.style.setProperty('--peek-delay', `${slot.delayMs}ms`);
