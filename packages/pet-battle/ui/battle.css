@@ -721,25 +721,10 @@ input {
   --log-accent: var(--cyan);
 }
 
-.ambient-log-panel h2 {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 20px;
-  margin: 0 0 4px;
-  padding: 0 4px;
-  color: var(--log-accent);
-  font-size: 11px;
-  font-weight: normal;
-  text-shadow: 1px 1px 0 var(--outline);
-}
-
-.ambient-log-panel h2 span {
-  color: #c3bcae;
-  font-size: 10px;
-}
-
 .ambient-log-panel ol {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
