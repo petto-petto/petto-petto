@@ -83,6 +83,15 @@ input {
     inset 0 0 0 2px rgba(143, 214, 138, 0.22),
     2px 2px 0 rgba(0, 0, 0, 0.38);
   isolation: isolate;
+}
+
+/* Native drag hit testing is separate from DOM z-index. Never cover the X button. */
+.window-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 48px;
+  height: 40px;
   -webkit-app-region: drag;
 }
 

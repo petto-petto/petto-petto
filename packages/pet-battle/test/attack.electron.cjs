@@ -104,7 +104,17 @@ app.whenReady().then(async () => {
     });
     await standalone.loadFile(path.join(__dirname, '../ui/index.html'));
     await verifyAttack(standalone, 'Rust standalone');
-    standalone.destroy();
+    const standaloneClosed = new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Rust demo close button failed')), 3000);
+      standalone.once('closed', () => {
+        clearTimeout(timer);
+        resolve();
+      });
+    });
+    await click(standalone, '.window-close');
+    await standaloneClosed;
+    assert.equal(overlay.isDestroyed(), false);
+    console.log('PASS Rust standalone: X closes only battle window');
     overlay.destroy();
     app.quit();
   } catch (error) {
