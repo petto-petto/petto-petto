@@ -4,6 +4,18 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
+test('분위기 로그에는 기척·연출 제목 없이 로그 목록만 표시한다', async () => {
+  const html = await readFile(new URL('index.html', UI_ROOT), 'utf8');
+  const panels = [
+    ...html.matchAll(/<aside\b[^>]*data-ambient-side="(?:PET|ENEMY)"[^>]*>([\s\S]*?)<\/aside>/g),
+  ];
+  assert.equal(panels.length, 2);
+  for (const panel of panels) {
+    assert.doesNotMatch(panel[1]!, /<h2\b|기척|연출/);
+    assert.match(panel[1]!, /role="log"/);
+  }
+});
+
 test('관중은 머리를 사각형으로 자르지 않고 온전한 프레임을 기울여 장애물 뒤에서 나온다', async () => {
   const [css, script] = await Promise.all([
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
