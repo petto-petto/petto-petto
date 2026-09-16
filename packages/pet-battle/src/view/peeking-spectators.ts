@@ -20,24 +20,10 @@ export interface PeekSlot extends Omit<PeekAnchor, 'edge'> {
 }
 
 // Existing 1915×821 artwork: foreground edges, including their branches/caps.
-// Last forest anchor is a central tree for portrait crops, not free-space fallback.
+// The left forest spectator uses the inner tree, also visible in portrait crops.
 const ANCHORS: Record<BackgroundTheme, readonly PeekAnchor[]> = {
   MUSHROOM_FOREST: [
-    {
-      sourceX: 334,
-      sourceY: 330,
-      direction: 'RIGHT',
-      edge: [
-        [0, 408],
-        [64, 383],
-        [95, 350],
-        [113, 334],
-        [185, 397],
-        [207, 376],
-        [218, 352],
-        [241, 334],
-      ],
-    },
+    { sourceX: 869, sourceY: 365, direction: 'RIGHT', edge: [[0, 869]] },
     {
       sourceX: 1271,
       sourceY: 350,
@@ -62,7 +48,6 @@ const ANCHORS: Record<BackgroundTheme, readonly PeekAnchor[]> = {
         [160, 1543],
       ],
     },
-    { sourceX: 869, sourceY: 365, direction: 'RIGHT', edge: [[0, 869]] },
   ],
   CRYSTAL_RUINS: [
     {
