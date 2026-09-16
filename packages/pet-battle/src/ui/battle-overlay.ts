@@ -336,6 +336,11 @@ function commandFor(action: ButtonAction): { command: BattleCommand; message: st
   }
 }
 
+required<HTMLButtonElement>('.window-close').addEventListener('click', (event) => {
+  event.stopPropagation();
+  window.close();
+});
+
 document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
   const rawAction = button.dataset['action'];
   if (rawAction === 'OPACITY') return;

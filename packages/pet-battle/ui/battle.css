@@ -45,6 +45,33 @@ input {
   font: inherit;
 }
 
+.window-close {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--wood-border);
+  background: var(--wood);
+  color: var(--cream);
+  font:
+    20px/1 ui-monospace,
+    monospace;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.window-close:hover {
+  background: var(--danger);
+}
+
+.window-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 #battle-overlay {
   position: relative;
   width: 100%;
@@ -169,7 +196,7 @@ input {
   z-index: 6;
   top: 12px;
   left: 16px;
-  right: 16px;
+  right: 52px;
   display: grid;
   grid-template-columns: 62px 1fr 44px;
   align-items: center;
