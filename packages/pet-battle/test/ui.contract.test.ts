@@ -4,14 +4,15 @@ import { test } from 'node:test';
 
 const UI_ROOT = new URL('../ui/', import.meta.url);
 
-test('전투 오버레이는 640×420 픽셀 화면과 128px 전투 펫을 제공한다', async () => {
+test('전투 오버레이는 창을 채우며 픽셀 렌더링과 펫 정보를 유지한다', async () => {
   const [html, css] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
     readFile(new URL('battle.css', UI_ROOT), 'utf8'),
   ]);
 
-  assert.match(css, /--battle-width:\s*640px/);
-  assert.match(css, /--battle-height:\s*420px/);
+  assert.match(css, /width:\s*100%/);
+  assert.match(css, /height:\s*100%/);
+  assert.doesNotMatch(css, /--battle-(width|height)/);
   assert.match(css, /--pet-size:\s*128px/);
   assert.match(css, /image-rendering:\s*pixelated/);
   assert.match(html, /data-character="pet"/);
