@@ -4,26 +4,49 @@ import { localDateOf, type LocalDate } from '@pet/core';
 
 import type {
   BattlePort,
-  CollectionPort,
   CurrencyPort,
   GachaPort,
-  GrowthPort,
-  PetExperience,
+  GrowthRules,
+  OwnedPet,
+  PetClient,
 } from '../ports/index.ts';
 import { completionRatio, unlockedCount } from '../domain/achievement/engine.ts';
+import { DEX_SLOT_COUNT } from '../domain/achievement/facts.ts';
 import type { AchievementCatalog } from '../domain/achievement/catalog.ts';
 import { observedOn, observedTotal, type MetaState } from '../domain/state.ts';
 import { failedField, fieldOf, okField, type Field } from './field.ts';
 
+/** 레벨 옆 EXP 진행. */
+export interface PetExperience {
+  level: number;
+  /** 현재 레벨에서 쌓은 경험치. */
+  current: number;
+  /** 다음 레벨까지 필요한 경험치. 최고 레벨이면 0 — 화면이 0 으로 나누지 않고 `MAX` 로 쓴다. */
+  required: number;
+}
+
+/** 프로필에 그리는 활성 펫. */
+export interface ActivePetCard {
+  ownedPetId: string;
+  /** 별명이 있으면 별명, 없으면 종 이름. */
+  name: string;
+  level: number;
+  rarity: OwnedPet['rarity'];
+  sprite: string;
+  experience: PetExperience;
+}
+
 /** 프로필 카드(기획서 5.1). */
 export interface ProfileCard {
   equippedTitle: string | undefined;
-  /** 현재 오버레이 펫. 별도 대표 펫 상태를 만들지 않는다(INFO-003). */
-  petName: Field<string>;
-  petLevel: Field<number>;
-  petSprite: Field<string>;
-  /** 레벨 옆에 보여줄 경험치 진행. 성장 도메인이 계산한 값을 그대로 받는다. */
-  experience: Field<PetExperience>;
+  /**
+   * 활성 펫. 별도 대표 펫 상태를 만들지 않는다(INFO-003).
+   *
+   * 세 상태를 구분한다 — 값이 있으면 펫, `null` 이면 **아직 고른 펫이 없음**, `error` 면 읽지
+   * 못함. 새 DB 에는 보유 펫이 없으니 `null` 은 흔한 정상 상태다. 기획서 INFO-001 이 “기록이
+   * 없는 설치는 오류가 아니라 빈 상태”라고 정한 것과 같은 이유로 오류와 섞지 않는다.
+   */
+  activePet: Field<ActivePetCard | null>;
   /** 기획서 5.1: `이 기기` 표기. 계정도 동기화도 없다는 사실을 알린다. */
   deviceLabel: string;
 }
@@ -77,38 +100,50 @@ function todayEarnedCoins(currency: CurrencyPort, today: LocalDate): Field<numbe
   );
 }
 
+/** `PetClient` 의 개체를 프로필 카드로 바꾼다. */
+function activePetCard(pet: OwnedPet, rules: GrowthRules): ActivePetCard {
+  const atMax = pet.level >= rules.maxLevel;
+  return {
+    ownedPetId: pet.ownedPetId,
+    // 인계 문서의 표시 이름 규칙 그대로다.
+    name: pet.nickname ?? pet.name,
+    level: pet.level,
+    rarity: pet.rarity,
+    sprite: pet.sprite,
+    experience: {
+      level: pet.level,
+      current: pet.xpIntoLevel,
+      required: atMax ? 0 : rules.requiredXp(pet.level),
+    },
+  };
+}
+
 /** 요약 화면 모델을 만든다. */
 export function summaryScreen(
   state: MetaState,
   catalog: AchievementCatalog,
   today: LocalDate,
-  collection: CollectionPort,
+  pets: PetClient,
   currency: CurrencyPort,
-  growth: GrowthPort,
+  rules: GrowthRules,
 ): SummaryScreen {
-  const pet = fieldOf(() => collection.overlayPet());
-  // 클로저 안에서는 `pet.value` 의 좁힘이 유지되지 않으므로 지역 상수로 고정한다.
-  const overlayPet = pet.value;
-  const dex = fieldOf(() => collection.dexProgress());
+  const active = fieldOf(() => pets.getActivePet());
   const togetherMinutes = state.activityMinutes.size;
 
   return {
     profile: {
       equippedTitle: state.profile.equippedTitle,
-      petName: pet.value ? okField(pet.value.name) : failedField(pet.error ?? '조회 실패'),
-      petLevel: pet.value ? okField(pet.value.level) : failedField(pet.error ?? '조회 실패'),
-      petSprite: pet.value ? okField(pet.value.sprite) : failedField(pet.error ?? '조회 실패'),
-      // 펫을 못 읽으면 경험치도 물어볼 대상이 없다.
-      experience: overlayPet
-        ? fieldOf(() => growth.petExperience(overlayPet.petId))
-        : failedField<PetExperience>(pet.error ?? '조회 실패'),
+      activePet: active.error
+        ? failedField<ActivePetCard | null>(active.error)
+        : okField(active.value ? activePetCard(active.value, rules) : null),
       deviceLabel: '이 기기',
     },
     availableTokens: fieldOf(() => currency.balance()),
     totalObservedTokens: observedTotal(state),
-    ownedPets: fieldOf(() => collection.ownedPetCount()),
-    dexOwned: dex.value ? okField(dex.value.owned) : failedField(dex.error ?? '조회 실패'),
-    dexTotal: dex.value ? okField(dex.value.total) : failedField(dex.error ?? '조회 실패'),
+    ownedPets: fieldOf(() => pets.countOwnedPets()),
+    // 현재 보유한 종 수다. 업적 판정은 따로 최고치를 기억하지만, 화면은 지금 상태를 보여준다.
+    dexOwned: fieldOf(() => pets.countOwnedSpecies()),
+    dexTotal: okField(DEX_SLOT_COUNT),
     todayObservedTokens: observedOn(state, today),
     todayEarnedCoins: todayEarnedCoins(currency, today),
     togetherMinutes,
@@ -157,7 +192,7 @@ const monthDayTime = (iso: string): string => {
 export function performanceScreen(
   gacha: GachaPort,
   battle: BattlePort,
-  growth: GrowthPort,
+  pets: PetClient,
   currency: CurrencyPort,
 ): PerformanceScreen {
   const totals = fieldOf(() => currency.totals());
@@ -169,8 +204,8 @@ export function performanceScreen(
     {
       key: 'best_level',
       label: '최고',
-      value: fieldOf(() => growth.highestLevel()),
-      owner: 'overlay-growth',
+      value: fieldOf(() => pets.getHighestLevel()),
+      owner: '펫',
     },
     {
       key: 'earned',

@@ -28,8 +28,8 @@ import {
   type SponsorLinks,
 } from '../index.ts';
 import { createMetaState, type CurrencyPort } from '../index.ts';
-import { RecordingEventBus, StubBattle, StubGacha, StubGrowth } from '../testing/fakes.ts';
-import type { CollectionPort } from '../ports/index.ts';
+import { RecordingEventBus, StubBattle, StubGacha } from '../testing/fakes.ts';
+import type { CollectionPort, GrowthRules, PetClient } from '../ports/index.ts';
 
 /** 데모 사용량 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
 const DEMO_SEED = 20_260_824;
@@ -56,11 +56,21 @@ export class MetaAppState {
    * 예전에는 여기서 `new InMemoryCollection()`을 직접 만들었다. 테스트 대역이 프로덕션
    * 화면에 그대로 실려서, 보유 펫 수와 도감 진행도가 상수로 고정돼 있었다. 소유자가
    * 아닌 것을 소유하지 않도록 밖에서 받는다.
+   *
+   * 지금은 트로피 배치와 room 의 `pet:overlay` 채널만 이걸 쓴다. 펫 데이터는 `pets` 다.
    */
   readonly collection: CollectionPort;
+  /**
+   * 공통 펫 데이터. 펫 담당이 공표한 `PetClient` 를 그대로 받는다.
+   *
+   * 프로필 · 보유 수 · 도감 · 최고 레벨 · 펫 업적 판정이 전부 여기서 읽는다. 예전에는 room 의
+   * JSON 명부와 성장 스텁에서 나눠 읽었고, 둘이 같은 펫의 레벨을 다르게 들고 있었다.
+   */
+  readonly pets: PetClient;
+  /** 레벨 곡선. 성장 도메인 것이라 앱이 넣어준다. */
+  readonly growthRules: GrowthRules;
   readonly gacha = new StubGacha(12, 4);
   readonly battle = new StubBattle(31);
-  readonly growth = new StubGrowth(18);
   readonly bus = new RecordingEventBus();
   readonly clock: Clock = systemClock;
   /**
@@ -92,12 +102,16 @@ export class MetaAppState {
     version: string,
     collection: CollectionPort,
     currency: CurrencyPort,
+    pets: PetClient,
+    growthRules: GrowthRules,
   ) {
     this.store = store;
     this.dataLocation = dataLocation;
     this.version = version;
     this.collection = collection;
     this.currency = currency;
+    this.pets = pets;
+    this.growthRules = growthRules;
 
     let restored: MetaState | undefined;
     try {
@@ -129,7 +143,15 @@ export class MetaAppState {
   aggregate(): { run: AggregationRun; outcome: EvaluationOutcome } {
     const run = runAggregation(this.meta, this.collector, this.currency, this.clock);
     for (const event of run.events) this.bus.publish(event);
-    const outcome = evaluate(this.meta, this.catalog, this.currency, this.collection, this.clock);
+    const outcome = evaluate(
+      this.meta,
+      this.catalog,
+      this.currency,
+      this.collection,
+      this.pets,
+      this.growthRules,
+      this.clock,
+    );
     return { run, outcome };
   }
 
@@ -137,7 +159,15 @@ export class MetaAppState {
   rescan(provider: Provider): { run: AggregationRun; outcome: EvaluationOutcome } {
     const run = rescanSource(this.meta, this.collector, this.currency, this.clock, provider);
     for (const event of run.events) this.bus.publish(event);
-    const outcome = evaluate(this.meta, this.catalog, this.currency, this.collection, this.clock);
+    const outcome = evaluate(
+      this.meta,
+      this.catalog,
+      this.currency,
+      this.collection,
+      this.pets,
+      this.growthRules,
+      this.clock,
+    );
     return { run, outcome };
   }
 
@@ -145,7 +175,15 @@ export class MetaAppState {
   ingestEvent(event: DomainEvent): EvaluationOutcome {
     this.bus.publish(event);
     recordEvent(this.meta, event);
-    return evaluate(this.meta, this.catalog, this.currency, this.collection, this.clock);
+    return evaluate(
+      this.meta,
+      this.catalog,
+      this.currency,
+      this.collection,
+      this.pets,
+      this.growthRules,
+      this.clock,
+    );
   }
 
   /**

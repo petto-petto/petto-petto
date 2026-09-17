@@ -173,3 +173,75 @@ Remaining gaps, blocked on the owners rather than on this change:
 - `collection` keeps pets in `room-state.json`, not a table.
 - `overlay-growth` and `collection` disagree about pet identity and level, so a
   `GrowthPort` cannot be pointed at `pet_profiles` yet.
+
+
+---
+
+# 2026-09-17 — Port 인터페이스를 가진 쪽에 둔다
+
+## Evidence
+
+- Request, verbatim: “하네스에서 ‘Port 인터페이스는 쓰는 쪽 패키지에 둔다’라는게 가진 쪽에서 Port인
+  Interface를 두는 걸로 하겠습니다.”
+- The rule said “Port interface — the consumer's package, `src/ports/`” and “The consumer builds the
+  whole chain.”
+- The repository's only real precedent contradicts it: the pet owner published `PetClient` in
+  `packages/pet-client`, shipped `SqlitePetClient` and `PetRepository`, and `meta` adopted it by
+  importing the type (commit `afb4b99`).
+- Baseline: `bash .harness/tests/verify-contract.sh` exited 0 — the check pinned the stale sentence
+  instead of catching it.
+
+## Root cause
+
+Stale guidance. The team followed the owner-published shape in practice; the rule kept the earlier
+consumer-owned wording.
+
+## Pruning
+
+- Canonical owner unchanged: `.harness/rules/feature-contracts.md`.
+- Replaced the consumer-built chain with the owner-published chain and a “written by” column.
+- Two sentences contradicted the new worked example and were reconciled rather than left as
+  sediment: “one Port per table” → “one Port per owning domain”, and “does not return `null` or a
+  zero” → “a read failure throws; `null`, `[]` and `0` are real empty results”.
+- Replaced the currency worked example with the pet one. Currency has no owner, so its chain was
+  consumer-built and can no longer illustrate the rule.
+- Assumption recorded for the requester: the decision named where the **interface** lives. That the
+  owner also writes the implementation and repository is taken from the `PetClient` precedent.
+
+## Approval
+
+Given by the requester on 2026-09-17 in the request above.
+
+## RED
+
+```text
+FAIL: feature-contracts.md must state that the feature owning the data declares the Port interface
+FAIL: feature-contracts.md must not keep the retired consumer-owned Port rule
+```
+
+Exit code 1.
+
+## GREEN
+
+The same command after the rewrite: no `FAIL` lines, exit code 0.
+
+## Contract verification
+
+`bash .harness/tests/verify-contract.sh` ends with `Contract verification passed.`
+
+## CHANGELOG.md
+
+Recorded under `## Unreleased` / `### Changed`. Changed canonical files:
+`.harness/rules/feature-contracts.md`, `.harness/guides/feature-contracts-kr.html`,
+`.harness/README.md`, `.harness/tests/verify-contract.sh`.
+
+## Completion
+
+The check now fails if the consumer-owned rule returns.
+
+Remaining gaps:
+
+- `meta` still declares `CurrencyPort` in `packages/pet-meta/src/ports/`. Currency has no owner, so
+  under this rule it waits for one.
+- `meta` still declares `CollectionPort` (trophy placement and room's `pet:overlay` channel). Trophy
+  has no owner domain either.

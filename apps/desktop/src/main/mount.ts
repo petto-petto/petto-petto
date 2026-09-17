@@ -10,11 +10,11 @@
  */
 
 import { ipcMain, shell } from 'electron';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type { MetaAppState, MetaHost, PetSummary } from '@pet/meta';
+import type { MetaAppState, MetaHost, PortraitSource } from '@pet/meta';
 import { metaHandlers } from '@pet/meta';
 
 import {
@@ -26,33 +26,28 @@ import {
   showPanel,
 } from './windows.ts';
 
-/** 레벨 → 진화 단계. 에셋 가이드 §3. `renderer/pet.js`와 같은 규칙이다. */
-function stageOfLevel(level: number): number {
-  if (level < 10) return 1;
-  if (level < 20) return 2;
-  return 3;
-}
-
 /**
- * 펫 요약을 초상화 파일 주소로 바꾼다.
+ * 활성 펫을 초상화 파일 주소로 바꾼다.
  *
- * 슬러그만으로는 파일명을 알 수 없다 — 파일명에 들어가는 `petId`는 종 메타(`pet.json`)에
- * 있다(에셋 가이드 §6). 등급 폴더는 소문자, `pet.json`의 `grade`는 대문자다(§1).
+ * 파일명에 들어가는 id 는 `speciesId` 그대로다(`pet_006_s3_card.png`). 예전에는 슬러그만 받아서
+ * `pet.json` 을 열어 id 를 찾았는데, `PetClient` 가 종 id 를 함께 주므로 파일을 읽지 않는다.
  *
- * 에셋이 하나라도 없으면 던지지 않고 `undefined`를 준다. 초상화가 없는 것은 오류가
- * 아니고, 화면은 자리표시 글리프로 넘어간다.
+ * 에셋 stage 는 저장된 `evolutionStage + 1` 이다(인계 문서: 진화 단계 0/1/2 → stage 1/2/3).
+ * 예전에는 레벨 10 · 20 경계로 단계를 추측했는데 오버레이 성장 규칙의 경계는 15 · 35 라서
+ * 원래부터 어긋나 있었다.
+ *
+ * 에셋이 없으면 던지지 않고 `undefined`. 화면은 자리표시 글리프로 넘어간다.
  */
-function petPortrait(pet: PetSummary): string | undefined {
+function petPortrait(pet: PortraitSource): string | undefined {
   try {
-    const speciesDir = join(petAssetsDir, pet.rarity.toLowerCase(), pet.sprite);
-    const manifest = join(speciesDir, 'pet.json');
-    if (!existsSync(manifest)) return undefined;
-
-    const species = JSON.parse(readFileSync(manifest, 'utf8')) as { petId?: string };
-    if (species.petId === undefined) return undefined;
-
-    const stage = stageOfLevel(pet.level);
-    const file = join(speciesDir, `stage${stage}`, `pet_${species.petId}_s${stage}_card.png`);
+    const stage = pet.evolutionStage + 1;
+    const file = join(
+      petAssetsDir,
+      pet.rarity.toLowerCase(),
+      pet.sprite,
+      `stage${stage}`,
+      `pet_${pet.speciesId}_s${stage}_card.png`,
+    );
     return existsSync(file) ? pathToFileURL(file).href : undefined;
   } catch {
     return undefined;
