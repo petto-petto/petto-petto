@@ -16,7 +16,7 @@
  * 포트를 필요로 하는 쪽이 소유하는 것과 같은 규칙이다.
  */
 
-import type { AcquireSource, BattleResult, Coin, PetId, Provider, Rarity } from '@pet/core';
+import type { BattleResult, Coin, PetId, Provider, Rarity } from '@pet/core';
 
 /** 현재 이벤트 스키마 버전. 페이로드 모양이 바뀌면 올린다. */
 export const EVENT_SCHEMA_VERSION = 1;
@@ -31,13 +31,6 @@ type Brand<T, B extends string> = T & { readonly [brand]: B };
 export type EventId = Brand<string, 'EventId'>;
 export const eventId = (value: string): EventId => value as EventId;
 
-export interface PetAcquired {
-  eventType: 'pet.acquired';
-  petId: PetId;
-  rarity: Rarity;
-  source: AcquireSource;
-}
-
 export interface FusionCompleted {
   eventType: 'fusion.completed';
   fusionId: string;
@@ -46,33 +39,12 @@ export interface FusionCompleted {
   resultRarity: Rarity;
 }
 
-export interface PetLevelup {
-  eventType: 'pet.levelup';
-  petId: PetId;
-  previousLevel: number;
-  level: number;
-  maxLevel: number;
-}
-
-export interface PetEvolved {
-  eventType: 'pet.evolved';
-  petId: PetId;
-  previousStage: number;
-  stage: number;
-}
-
 export interface BattleFinished {
   eventType: 'battle.finished';
   battleId: string;
   result: BattleResult;
   enemyTier: number;
   streak: number;
-}
-
-export interface DexUpdated {
-  eventType: 'dex.updated';
-  ownedSpecies: number;
-  totalSpecies: number;
 }
 
 export interface UsageAggregated {
@@ -96,21 +68,20 @@ export interface CurrencyBalanceChanged {
 }
 
 /**
- * 기획서 9.2의 이벤트 8종.
+ * 아직 이벤트로 받는 사실들.
  *
  * **판별 유니온**이다. Java 17의 `sealed interface` + `record`에 해당한다.
  * `eventType`으로 갈래가 구분되고, [`assertNever`]와 함께 쓰면 새 이벤트를 추가했을 때
  * 그것을 처리하지 않은 `switch`가 **타입 오류**로 드러난다. 조용히 빠뜨릴 수 없다.
+ *
+ * 펫 획득 · 레벨업 · 진화 · 도감 갱신은 뺐다. 팀이 Event 를 버렸고, 그 네 가지는 이제
+ * `PetClient` 에서 직접 읽는다. 한 사실에 쓰는 곳이 둘이면 둘이 어긋난다.
+ *
+ * 합성과 전투가 남은 이유는 그 둘을 읽을 테이블이 아직 없어서다. 테이블이 생기면 같은 이유로
+ * 걷어낸다.
  */
 export type EventPayload =
-  | PetAcquired
-  | FusionCompleted
-  | PetLevelup
-  | PetEvolved
-  | BattleFinished
-  | DexUpdated
-  | UsageAggregated
-  | CurrencyBalanceChanged;
+  FusionCompleted | BattleFinished | UsageAggregated | CurrencyBalanceChanged;
 
 /** 공통 이벤트 봉투(기획서 9.1). */
 export interface DomainEvent {

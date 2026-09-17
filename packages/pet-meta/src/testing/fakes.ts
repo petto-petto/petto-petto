@@ -17,18 +17,17 @@ import { PortError, type DomainEvent, type EventBus } from '../index.ts';
  */
 
 import { petId, type Coin } from '@pet/core';
+import type { OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
 import type {
   BattlePort,
   CollectionPort,
   CurrencyPort,
   CurrencyTotals,
-  DexProgress,
   GachaPort,
   GrantOutcome,
-  GrowthPort,
+  GrowthRules,
   LedgerEntry,
   MetaSnapshot,
-  PetExperience,
   MetaStore,
   PetSummary,
   TrophyPlacement,
@@ -147,8 +146,6 @@ export class InMemoryCollection implements CollectionPort {
     rarity: 'EPIC',
     sprite: 'star_wizard',
   };
-  #ownedPets = 3;
-  #dex: DexProgress = { owned: 3, total: 24 };
   /** 룸의 남은 빈자리 수. 0이면 트로피가 보관함으로 간다. */
   #roomSlots = 1;
   #trophies: { achievementId: string; placement: TrophyPlacement }[] = [];
@@ -157,14 +154,6 @@ export class InMemoryCollection implements CollectionPort {
 
   setOverlayPet(pet: PetSummary): void {
     this.#overlayPet = pet;
-  }
-
-  setDex(owned: number, total: number): void {
-    this.#dex = { owned, total };
-  }
-
-  setOwnedPets(count: number): void {
-    this.#ownedPets = count;
   }
 
   setRoomSlots(slots: number): void {
@@ -186,16 +175,6 @@ export class InMemoryCollection implements CollectionPort {
   overlayPet(): PetSummary {
     if (this.#failQueries) throw new PortError('펫 정보를 불러오지 못했어요');
     return this.#overlayPet;
-  }
-
-  ownedPetCount(): number {
-    if (this.#failQueries) throw new PortError('보유 펫 수를 불러오지 못했어요');
-    return this.#ownedPets;
-  }
-
-  dexProgress(): DexProgress {
-    if (this.#failQueries) throw new PortError('도감을 불러오지 못했어요');
-    return this.#dex;
   }
 
   grantTrophy(achievementId: string, autoPlace: boolean): TrophyPlacement {
@@ -257,33 +236,160 @@ export class StubBattle implements BattlePort {
   }
 }
 
-/** overlay-growth 도메인 대역. */
-export class StubGrowth implements GrowthPort {
-  #failQueries = false;
-  readonly #level: number;
-  #experience: PetExperience;
+/**
+ * 성장 규칙 대역. `@pet/main-overlay` 의 `growth.ts` 와 같은 값이다.
+ *
+ * 테스트가 실제 곡선을 쓰게 한다. 앱의 `apps/desktop/src/main/growth-rules.ts` 도 같은 값을
+ * 들고 있다 — 원본을 import 할 수 없어서 생긴 복사본이고, 성장 패키지가 TS 진입점을 내보내면
+ * 둘 다 지운다.
+ */
+export const STUB_GROWTH_RULES: GrowthRules = {
+  maxLevel: 50,
+  requiredXp: (level) => 10 + Math.floor(level / 2),
+};
 
-  constructor(level: number, experience?: PetExperience) {
-    this.#level = level;
-    this.#experience = experience ?? { level: 21, current: 340, required: 500 };
+/** 마이그레이션 `pet / 1` 이 등록하는 여섯 종. 대역이 실제 시드와 어긋나지 않게 같은 값을 쓴다. */
+const SEEDED_SPECIES: readonly PetSpecies[] = [
+  { speciesId: '001', name: '도토리다람쥐', rarity: 'EPIC', sprite: 'acorn_squirrel' },
+  { speciesId: '002', name: '미드나잇얼룩말', rarity: 'RARE', sprite: 'midnight_zebra' },
+  { speciesId: '003', name: '두더지', rarity: 'COMMON', sprite: 'mole_digger' },
+  { speciesId: '004', name: '새싹나무', rarity: 'COMMON', sprite: 'sprout_treant' },
+  { speciesId: '005', name: '볼주머니햄', rarity: 'RARE', sprite: 'cheek_hamster' },
+  { speciesId: '006', name: '별빛마법사', rarity: 'EPIC', sprite: 'star_wizard' },
+];
+
+/**
+ * 공통 `PetClient` 의 인메모리 대역.
+ *
+ * 인계 문서의 계약을 따른다 — 목록이 비면 `[]`, 집계가 없으면 `0`, 활성 선택이 없으면
+ * `null`, 없는 개체와 저장소 오류는 예외.
+ */
+export class InMemoryPetClient implements PetClient {
+  #pets: OwnedPet[] = [];
+  #sequence = 0;
+  #failQueries = false;
+
+  /** 테스트용: 한 마리를 바로 만든다. 성장 값을 덮어쓸 수 있다. */
+  give(speciesId: string, growth: Partial<PetGrowth> = {}): OwnedPet {
+    const [created] = this.createOwnedPets([speciesId]);
+    if (created === undefined) throw new Error('생성 실패');
+    const updated: OwnedPet = { ...created, ...growth };
+    this.#replace(updated);
+    return updated;
   }
 
-  setExperience(experience: PetExperience): void {
-    this.#experience = experience;
+  /** 테스트용: 합성 재료로 쓰여 사라진 것처럼 지운다. */
+  remove(ownedPetId: string): void {
+    this.#pets = this.#pets.filter((pet) => pet.ownedPetId !== ownedPetId);
   }
 
   setQueryFailure(failing: boolean): void {
     this.#failQueries = failing;
   }
 
-  highestLevel(): number {
-    if (this.#failQueries) throw new PortError('성장 기록을 불러오지 못했어요');
-    return this.#level;
+  #guard(): void {
+    if (this.#failQueries) throw new PortError('펫 정보를 불러오지 못했어요');
   }
 
-  petExperience(): PetExperience {
-    if (this.#failQueries) throw new PortError('경험치를 불러오지 못했어요');
-    return this.#experience;
+  #species(speciesId: string): PetSpecies {
+    const species = SEEDED_SPECIES.find((candidate) => candidate.speciesId === speciesId);
+    if (species === undefined) throw new PortError(`없는 펫 종류: ${speciesId}`);
+    return species;
+  }
+
+  #replace(pet: OwnedPet): void {
+    this.#pets = this.#pets.map((candidate) =>
+      candidate.ownedPetId === pet.ownedPetId ? pet : candidate,
+    );
+  }
+
+  listSpecies(rarity?: Rarity): PetSpecies[] {
+    this.#guard();
+    return SEEDED_SPECIES.filter((species) => rarity === undefined || species.rarity === rarity);
+  }
+
+  countSpecies(rarity?: Rarity): number {
+    return this.listSpecies(rarity).length;
+  }
+
+  listOwnedPets(speciesId?: string): OwnedPet[] {
+    this.#guard();
+    return this.#pets.filter((pet) => speciesId === undefined || pet.speciesId === speciesId);
+  }
+
+  getOwnedPet(ownedPetId: string): OwnedPet {
+    this.#guard();
+    const pet = this.#pets.find((candidate) => candidate.ownedPetId === ownedPetId);
+    if (pet === undefined) throw new PortError(`없는 펫: ${ownedPetId}`);
+    return pet;
+  }
+
+  countOwnedPets(): number {
+    return this.listOwnedPets().length;
+  }
+
+  countOwnedSpecies(): number {
+    return new Set(this.listOwnedPets().map((pet) => pet.speciesId)).size;
+  }
+
+  getHighestLevel(): number {
+    return this.listOwnedPets().reduce((best, pet) => Math.max(best, pet.level), 0);
+  }
+
+  getActivePet(): OwnedPet | null {
+    this.#guard();
+    return this.#pets.find((pet) => pet.isActive) ?? null;
+  }
+
+  createOwnedPets(speciesIds: readonly string[]): OwnedPet[] {
+    this.#guard();
+    const created = speciesIds.map((speciesId) => {
+      this.#sequence += 1;
+      return {
+        ...this.#species(speciesId),
+        ownedPetId: `owned-${this.#sequence}`,
+        nickname: null,
+        level: 1,
+        totalXp: 0,
+        xpIntoLevel: 0,
+        evolutionStage: 0 as const,
+        isActive: false,
+      };
+    });
+    this.#pets = [...this.#pets, ...created];
+    return created;
+  }
+
+  updateNickname(ownedPetId: string, nickname: string | null): OwnedPet {
+    const trimmed = nickname?.trim() ?? '';
+    const updated = { ...this.getOwnedPet(ownedPetId), nickname: trimmed === '' ? null : trimmed };
+    this.#replace(updated);
+    return updated;
+  }
+
+  updateGrowth(ownedPetId: string, growth: PetGrowth): OwnedPet {
+    const updated = { ...this.getOwnedPet(ownedPetId), ...growth };
+    this.#replace(updated);
+    return updated;
+  }
+
+  setActivePet(ownedPetId: string): OwnedPet {
+    const target = this.getOwnedPet(ownedPetId);
+    this.#pets = this.#pets.map((pet) => ({
+      ...pet,
+      isActive: pet.ownedPetId === target.ownedPetId,
+    }));
+    return this.getOwnedPet(ownedPetId);
+  }
+
+  replaceOwnedPets(materialOwnedPetIds: readonly string[], resultSpeciesId: string): OwnedPet {
+    for (const id of materialOwnedPetIds) {
+      if (this.getOwnedPet(id).isActive) throw new PortError('활성 펫은 재료로 쓸 수 없어요');
+    }
+    for (const id of materialOwnedPetIds) this.remove(id);
+    const [result] = this.createOwnedPets([resultSpeciesId]);
+    if (result === undefined) throw new Error('생성 실패');
+    return result;
   }
 }
 

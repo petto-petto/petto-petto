@@ -20,6 +20,16 @@
  */
 
 import { assertNever, type EventPayload } from '../../events/index.ts';
+import type { GrowthRules, OwnedPet, PetClient } from '../../ports/index.ts';
+
+/**
+ * 도감 칸 수.
+ *
+ * 기획서 MVP 목표 종 수다. `PetClient.countSpecies()` 는 **DB 에 등록된** 종 수(지금 6)라서
+ * 도감 칸과 다르다 — 인계 문서도 둘이 별개라고 적었다. 등록 종 수로 나누면 여섯 종을 모으는
+ * 순간 “도감 완성”이 되어 진행도가 의미를 잃는다.
+ */
+export const DEX_SLOT_COUNT = 20;
 
 /**
  * 판정에 쓸 수 있는 모든 사실 키.
@@ -49,7 +59,13 @@ export type FactKey = (typeof FACT_KEYS)[number];
 export const isFactKey = (value: string): value is FactKey =>
   (FACT_KEYS as readonly string[]).includes(value);
 
-/** 다른 도메인의 이벤트에서 투영한 사실. 기획서 10장의 `achievement_fact`. */
+/**
+ * 다른 도메인에서 투영한 사실. 기획서 10장의 `achievement_fact`.
+ *
+ * 이름은 `EventFacts` 로 남았지만 출처가 둘이다. 펫 사실(`firstPet` ~ `evolutionCount`)은
+ * `PetClient` 를 관측해 채우고, 합성·전투 사실은 아직 이벤트로 받는다. 저장 형식을 바꾸지
+ * 않으려고 이름을 유지했다.
+ */
 export interface EventFacts {
   firstPet: number;
   firstEpic: number;
@@ -83,6 +99,54 @@ export function createEventFacts(): EventFacts {
 }
 
 /**
+ * `PetClient` 의 **현재 보유**를 관측해 펫 사실을 올린다.
+ *
+ * `PetClient` 가 주는 수는 현재 보유 기준이다 — 합성 재료로 펫을 잃으면 종 수도 최고 레벨도
+ * 줄어든다. 인계 문서가 “과거 발견 수나 역대 최고로 쓰면 안 된다”고 경고한 이유다. 그런데
+ * 기획서 9.4 는 업적 판정에 **최고 보유 수**를 쓰라고 정한다. 그래서 여기서 최댓값만 취한다.
+ * 현재 값을 그대로 쓰면 펫을 합성한 사용자의 업적 진행률이 뒤로 간다.
+ *
+ * 펫 데이터를 저장하는 게 아니다. “meta 가 지금까지 관측한 최고치”라는 meta 자신의 사실이다.
+ */
+export function observePets(
+  facts: EventFacts,
+  pets: readonly OwnedPet[],
+  rules: GrowthRules,
+): void {
+  const speciesOwned = new Set(pets.map((pet) => pet.speciesId)).size;
+  const highestLevel = pets.reduce((best, pet) => Math.max(best, pet.level), 0);
+  // 진화 단계는 한 번 진화하면 1, 두 번이면 2 다. 합이 곧 관측한 진화 횟수다.
+  const evolutions = pets.reduce((sum, pet) => sum + pet.evolutionStage, 0);
+
+  facts.firstPet = Math.max(facts.firstPet, pets.length > 0 ? 1 : 0);
+  facts.firstEpic = Math.max(facts.firstEpic, pets.some((pet) => pet.rarity === 'EPIC') ? 1 : 0);
+  facts.dexOwned = Math.max(facts.dexOwned, speciesOwned);
+  facts.dexTotal = Math.max(facts.dexTotal, DEX_SLOT_COUNT);
+  facts.dexComplete = Math.max(facts.dexComplete, speciesOwned >= DEX_SLOT_COUNT ? 1 : 0);
+  facts.maxPetLevel = Math.max(facts.maxPetLevel, highestLevel);
+  facts.maxLevelReached = Math.max(facts.maxLevelReached, highestLevel >= rules.maxLevel ? 1 : 0);
+  facts.evolutionCount = Math.max(facts.evolutionCount, evolutions);
+}
+
+/**
+ * 펫을 읽어 사실에 반영한다. 읽지 못하면 사실을 건드리지 않고 `false`.
+ *
+ * 실패를 던지지 않는 이유: 판정은 사용량 업적과 한 흐름이다. 펫 조회 하나가 실패했다고 토큰
+ * 마일스톤이 막히면 기획서 INFO-007 을 어긴다. 그렇다고 0 으로 채우지도 않는다 — 최댓값만
+ * 쓰니 해는 없겠지만, 읽지 못한 것을 관측했다고 기록하는 셈이다.
+ */
+export function tryObservePets(facts: EventFacts, client: PetClient, rules: GrowthRules): boolean {
+  let pets: OwnedPet[];
+  try {
+    pets = client.listOwnedPets();
+  } catch {
+    return false;
+  }
+  observePets(facts, pets, rules);
+  return true;
+}
+
+/**
  * 이벤트 하나를 사실에 반영한다.
  *
  * 호출자는 같은 `eventId`를 두 번 넘기지 않아야 한다(기획서 9.3). 중복 방지는
@@ -90,11 +154,6 @@ export function createEventFacts(): EventFacts {
  */
 export function applyEvent(facts: EventFacts, payload: EventPayload): void {
   switch (payload.eventType) {
-    case 'pet.acquired': {
-      facts.firstPet = 1;
-      if (payload.rarity === 'EPIC') facts.firstEpic = 1;
-      return;
-    }
     case 'fusion.completed': {
       facts.fusionCount += 1;
       const bothParentsCommon = payload.parentRarities.every((rarity) => rarity === 'COMMON');
@@ -103,30 +162,9 @@ export function applyEvent(facts: EventFacts, payload: EventPayload): void {
       }
       return;
     }
-    case 'pet.levelup': {
-      facts.maxPetLevel = Math.max(facts.maxPetLevel, payload.level);
-      if (payload.maxLevel > 0 && payload.level >= payload.maxLevel) {
-        facts.maxLevelReached = 1;
-      }
-      return;
-    }
-    case 'pet.evolved': {
-      facts.evolutionCount += 1;
-      return;
-    }
     case 'battle.finished': {
       if (payload.result === 'win') facts.battleWins += 1;
       facts.maxStreak = Math.max(facts.maxStreak, payload.streak);
-      return;
-    }
-    case 'dex.updated': {
-      // 기획서 9.4: "현재 도감 보유·전체 수와 **최고 보유 수**".
-      // 최고값으로 갱신해 진행률이 감소하지 않게 한다.
-      facts.dexOwned = Math.max(facts.dexOwned, payload.ownedSpecies);
-      facts.dexTotal = Math.max(facts.dexTotal, payload.totalSpecies);
-      if (payload.totalSpecies > 0 && payload.ownedSpecies >= payload.totalSpecies) {
-        facts.dexComplete = 1;
-      }
       return;
     }
     // 사용량 사실은 이벤트가 아니라 meta 자신의 사용량 테이블에서 파생한다.

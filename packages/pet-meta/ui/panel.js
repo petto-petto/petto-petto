@@ -225,7 +225,7 @@ async function renderSummary() {
     portrait
       ? el('img', { attrs: { src: portrait, alt: '' } })
       : el('span', {
-          text: data.profile.petName.error ? '❓' : '🐾',
+          text: data.profile.activePet.error ? '❓' : '🐾',
           attrs: { style: 'font-size:16px' },
         }),
   ]);
@@ -236,23 +236,32 @@ async function renderSummary() {
    * 계정도 동기화도 없는 앱에서 사용자를 부를 이름은 아무것도 식별하지 않았다.
    * 정체성은 화면에 떠 있는 펫이 이미 맡고 있다.
    */
+  /*
+   * 활성 펫은 세 상태다 — 펫이 있음 · 아직 고른 펫이 없음 · 읽지 못함.
+   *
+   * `null` 과 오류를 섞지 않는다. 새 설치에는 보유 펫이 없어 “없음”이 흔한 정상 상태인데,
+   * 그걸 “불러오지 못했어요”로 보여주면 사용자는 무언가 고장 났다고 읽는다(기획서 INFO-001).
+   */
+  const activePet = data.profile.activePet;
+  const headline = activePet.error
+    ? '펫 정보를 불러오지 못했어요'
+    : activePet.value === null
+      ? '아직 함께하는 펫이 없어요'
+      : `${activePet.value.name} · Lv.${activePet.value.level}`;
+
   const profile = el('div', { class: 'card' }, [
     el('div', { class: 'profile' }, [
       petThumb,
       el('div', { class: 'profile-body' }, [
-        el('div', {
-          class: 'pet-headline',
-          text: data.profile.petName.error
-            ? '펫 정보를 불러오지 못했어요'
-            : `${data.profile.petName.value} · Lv.${data.profile.petLevel.value}`,
-        }),
+        el('div', { class: 'pet-headline', text: headline }),
         el('div', { class: 'profile-meta' }, [
           data.profile.equippedTitle
             ? el('span', { class: 'chip', text: data.profile.equippedTitle })
             : el('span', { class: 'chip plain', text: '칭호 없음' }),
           el('span', { class: 'chip plain', text: data.profile.deviceLabel }),
         ]),
-        expRow(data.profile.experience),
+        // 펫이 없으면 경험치를 물어볼 대상도 없다. 빈 막대를 그리지 않는다.
+        ...(activePet.value ? [expRow({ value: activePet.value.experience })] : []),
       ]),
     ]),
   ]);
@@ -836,15 +845,13 @@ function renderDemo() {
       el('h2', { class: 'section-title' }, [el('span', { text: '다른 도메인 이벤트' })]),
       el('div', {
         class: 'mono-small',
-        text: 'collection · gacha · battle · overlay-growth가 아직 없어 손으로 발행합니다',
+        // 펫 업적은 이제 공통 펫 DB 를 직접 읽어 열린다. 손으로 발행할 수 있는 건 아직 테이블이
+        // 없는 합성과 전투뿐이다.
+        text: '합성 · 전투는 아직 테이블이 없어 손으로 발행합니다. 펫 업적은 펫 DB 로 열립니다',
       }),
       el('div', { class: 'link-list', attrs: { style: 'margin-top:6px' } }, [
-        demoButton('커먼 펫 획득', () => api.demoEvent('pet_common')),
-        demoButton('에픽 펫 획득', () => api.demoEvent('pet_epic')),
         demoButton('커먼2→에픽 합성', () => api.demoEvent('fusion_miracle')),
         demoButton('전투 승리', () => api.demoEvent('battle_win')),
-        demoButton('레벨업', () => api.demoEvent('levelup')),
-        demoButton('도감 완성', () => api.demoEvent('dex_complete')),
       ]),
     ]),
     el('div', { class: 'card' }, [
@@ -1015,10 +1022,16 @@ async function runSelftest() {
       thumb.onerror = done;
     });
   }
+  // 고른 펫이 없는 설치에서는 초상화가 없는 게 맞다. 그걸 실패로 세면 새 DB 에서 매번 붉다.
+  const summaryData = await api.infoSummary();
+  const noActivePet =
+    !summaryData.profile.activePet.error && summaryData.profile.activePet.value === null;
   await api.debugLog(
     thumb && thumb.naturalWidth > 0
       ? `[SELFTEST] 프로필 초상화     ${thumb.naturalWidth}×${thumb.naturalHeight} 실제 에셋`
-      : `[SELFTEST] 프로필 초상화 실패 — ${thumb ? '주소는 왔는데 못 읽었다' : '자리표시 글리프로 떨어졌다'}`,
+      : noActivePet
+        ? '[SELFTEST] 프로필 초상화     활성 펫 없음 — 빈 상태'
+        : `[SELFTEST] 프로필 초상화 실패 — ${thumb ? '주소는 왔는데 못 읽었다' : '자리표시 글리프로 떨어졌다'}`,
   );
 
   /*

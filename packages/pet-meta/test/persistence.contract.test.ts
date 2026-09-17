@@ -19,6 +19,7 @@ import {
   InMemoryCollection,
   InMemoryCurrency,
   InMemoryMetaStore,
+  InMemoryPetClient,
   isUnlocked,
   loadState,
   type MetaState,
@@ -32,6 +33,7 @@ import {
   type SourceRunResult,
   stateOf,
   tokenCounts,
+  STUB_GROWTH_RULES,
 } from '@pet/meta';
 
 const NOW = '2026-08-26T14:37:12+09:00';
@@ -159,9 +161,20 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
   const session = new Session();
   const catalog = AchievementCatalog.embedded();
   const collection = new InMemoryCollection();
+  const pets = new InMemoryPetClient();
+  const judge = () =>
+    evaluate(
+      session.state,
+      catalog,
+      session.currency,
+      collection,
+      pets,
+      STUB_GROWTH_RULES,
+      session.clock,
+    );
 
   session.state.eventFacts.battleWins = 37;
-  const outcome = evaluate(session.state, catalog, session.currency, collection, session.clock);
+  const outcome = judge();
   assert.ok(outcome.newlyUnlocked.includes('battle.first_win'));
 
   session.restart(store);
@@ -176,7 +189,7 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
   );
 
   const grants = session.currency.grantedKeyCount;
-  evaluate(session.state, catalog, session.currency, collection, session.clock);
+  judge();
   assert.equal(session.currency.grantedKeyCount, grants, '보상이 두 번 지급되지 않는다');
 });
 

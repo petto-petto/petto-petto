@@ -13,11 +13,11 @@
 
 import type { Clock } from '@pet/core';
 
-import type { CollectionPort, CurrencyPort } from '../../ports/index.ts';
+import type { CollectionPort, CurrencyPort, GrowthRules, PetClient } from '../../ports/index.ts';
 import { factSnapshot, type MetaState } from '../state.ts';
 import { grantTitle } from '../profile/index.ts';
 import { autoPlacesTrophy, coinRewardKey, type AchievementCatalog } from './catalog.ts';
-import { factValue } from './facts.ts';
+import { factValue, tryObservePets } from './facts.ts';
 import {
   createProgress,
   createRewardRecord,
@@ -71,9 +71,14 @@ export function evaluate(
   catalog: AchievementCatalog,
   currency: CurrencyPort,
   collection: CollectionPort,
+  pets: PetClient,
+  rules: GrowthRules,
   clock: Clock,
 ): EvaluationOutcome {
   const now = clock.now().toISOString();
+  // 판정마다 현재 보유를 한 번 관측한다. 이벤트가 없어졌으니 펫 사실을 올릴 곳이 여기뿐이다.
+  // 읽지 못하면 사실을 그대로 두고 나머지 판정을 계속한다(INFO-007).
+  tryObservePets(state.eventFacts, pets, rules);
   const facts = factSnapshot(state);
   const newlyUnlocked: string[] = [];
 

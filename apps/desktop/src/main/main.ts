@@ -11,7 +11,12 @@ import type { RoomSnapshot } from '@pet/room';
 import type { MetaSnapshot } from '@pet/meta';
 
 import { RoomCollectionPort } from './collection.ts';
+import type { PetClient } from '@pet/client';
+
+import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { SqliteCurrencyPort } from './currency.ts';
+import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
+import { PetRepository } from './persistence/repositories/pet-repository.ts';
 import { CurrencyRepository } from './persistence/repositories/currency-repository.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
@@ -203,14 +208,24 @@ app.whenReady().then(() => {
   registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${store.path}`);
 
-  // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
-  // 자리에 테스트 대역이 들어가 상수를 돌려주고 있었다.
+  // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
+  // 아래 `pets` 에서 온다.
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
+  // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
+  const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
   const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
-  state = new MetaAppState(store, store.path, app.getVersion(), collection, currency);
+  state = new MetaAppState(
+    store,
+    store.path,
+    app.getVersion(),
+    collection,
+    currency,
+    pets,
+    OVERLAY_GROWTH_RULES,
+  );
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);

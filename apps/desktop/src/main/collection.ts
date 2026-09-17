@@ -1,6 +1,9 @@
 /**
  * `@pet/room` → `@pet/meta`의 `CollectionPort` 어댑터.
  *
+ * 보유 수·도감은 공통 `PetClient` 로 옮겨 여기서 뺐다. 남은 것은 트로피 배치와, room 의
+ * `pet:overlay` 채널이 쓰는 `overlayPet` 둘이다.
+ *
  * ## 왜 앱에 있는가
  *
  * `CollectionPort`는 **meta가 요구하는 인터페이스**이고(`@pet/meta`의 `ports/index.ts`
@@ -16,16 +19,8 @@
  * 규칙은 한 줄도 여기 없다 — 전부 `@pet/room`의 도메인 함수를 부르고 모양만 바꾼다.
  */
 
-import type { CollectionPort, DexProgress, PetSummary, TrophyPlacement } from '@pet/meta';
-import { activePet, discoveredSpeciesCount, speciesOf, type RoomCollection } from '@pet/room';
-
-/**
- * 도감 슬롯 수.
- *
- * 기획서 MVP 목표 종 수다. 지금 수록된 종(6)보다 크고, 미확보 칸은 도감 화면이 실루엣으로
- * 채운다. 수록 종 수로 계산하면 "다 모았다"가 항상 참이 되어 진행도가 의미를 잃는다.
- */
-export const PET_DEX_SLOT_COUNT = 20;
+import type { CollectionPort, PetSummary, TrophyPlacement } from '@pet/meta';
+import { activePet, speciesOf, type RoomCollection } from '@pet/room';
 
 /**
  * 명부를 들고 meta의 조회에 답한다.
@@ -60,15 +55,6 @@ export class RoomCollectionPort implements CollectionPort {
       // 스프라이트 식별자는 slug다. 실제 경로는 그리는 쪽이 조립한다.
       sprite: species.slug,
     };
-  }
-
-  ownedPetCount(): number {
-    return this.#collection.pets.length;
-  }
-
-  dexProgress(): DexProgress {
-    // 마리 수가 아니라 **종** 수다. 같은 종을 여러 마리 가져도 도감은 한 칸이다.
-    return { owned: discoveredSpeciesCount(this.#collection), total: PET_DEX_SLOT_COUNT };
   }
 
   /**
