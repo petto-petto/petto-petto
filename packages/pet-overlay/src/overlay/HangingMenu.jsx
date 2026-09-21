@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import { openBattle, openPanel, openPetRoom } from '../platform/bridge.js';
 
-const ACCENTS = {
-  info: '#f5ecd8',
-  petmgmt: '#8fd68a',
-  battle: '#f5ecd8',
-};
-
 // 커스텀 SVG 아이콘
 function Icon({ name }) {
   const c = {
@@ -54,17 +48,16 @@ function Icon({ name }) {
   }
 }
 
-// 전투 · 정보 · 펫 관리만 상단 호에 둔다. 링과 각 메뉴의 기존 동작은 유지한다.
+// 팻말은 왼쪽부터 전투 · 펫 관리 · 정보 순으로 매단다. 각 메뉴의 기존 동작은 유지한다.
 const ITEMS = [
-  { key: 'battle', label: '전투', opensBattle: true, angle: 198 },
-  { key: 'info', label: '정보', panelScreen: 'info', angle: -90 },
-  { key: 'petmgmt', label: '펫 관리', opensRoom: true, angle: -18 },
+  { key: 'battle', label: '전투', opensBattle: true },
+  { key: 'petmgmt', label: '펫 관리', opensRoom: true },
+  { key: 'info', label: '정보', panelScreen: 'info' },
 ];
 
-export default function RadialMenu({ g, onClose }) {
+export default function HangingMenu({ g, onClose }) {
   const { pet } = g;
   const [panel, setPanel] = useState(null);
-  const R = 116;
 
   const selectItem = (item) => {
     if (item.panelScreen) {
@@ -86,33 +79,23 @@ export default function RadialMenu({ g, onClose }) {
   };
 
   return (
-    <div className="radial">
-      <div className="radial-bg" onClick={onClose} />
-      <div className="radial-orbit" aria-hidden="true" />
-      <div className="radial-controls" aria-label="펫 제어 메뉴">
-        {ITEMS.map((it) => {
-          const angle = it.angle * (Math.PI / 180);
-          const x = Math.cos(angle) * R;
-          const y = Math.sin(angle) * R;
-          return (
-            <button
-              key={it.key}
-              className="radial-item pixel-button"
-              style={{
-                '--item-accent': ACCENTS[it.key],
-                '--item-x': `${x}px`,
-                '--item-y': `${y}px`,
-              }}
-              onClick={() => selectItem(it)}
-            >
-              <span className="ri-icon">
+    <div className="hmenu">
+      <div className="hmenu-bg" onClick={onClose} />
+      <div className="hmenu-board" aria-label="펫 제어 메뉴">
+        <div className="hmenu-rail" aria-hidden="true" />
+        <div className="hmenu-items">
+          {ITEMS.map((it) => (
+            <button key={it.key} className="hmenu-item pixel-button" onClick={() => selectItem(it)}>
+              <span className="hmenu-icon">
                 <Icon name={it.key} />
               </span>
-              <span className="ri-label">{it.label}</span>
-              {it.key === 'petmgmt' && pet.evolutionAvailable && <span className="ri-dot">✨</span>}
+              <span className="hmenu-label">{it.label}</span>
+              {it.key === 'petmgmt' && pet.evolutionAvailable && (
+                <span className="hmenu-dot">✨</span>
+              )}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       {panel && (
