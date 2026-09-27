@@ -18,7 +18,8 @@
     "@pet/meta": "*",
     "@pet/room": "*",
     "better-sqlite3": "^12.11.1",
-    "@pet/client": "*"
+    "@pet/client": "*",
+    "ccusage": "20.0.24"
   },
   "devDependencies": {
     "@electron/rebuild": "^4.2.0",

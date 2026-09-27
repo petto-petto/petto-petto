@@ -355,7 +355,7 @@ test('SET-002: 각 수집 카드가 상태·위치·마지막 정상 시각·토
   const claude = screen.collect[0];
   assert.equal(claude?.providerLabel, 'Claude Code');
   assert.equal(claude?.statusLabel, '수집 중');
-  assert.equal(claude?.defaultLocation, '~/.claude/projects');
+  assert.equal(claude?.defaultLocation, '~/.claude/projects · ~/.config/claude/projects');
   assert.notEqual(claude?.lastSuccessLabel, '없음');
   assert.equal(claude?.enabled, true);
   assert.equal(claude?.lastError, undefined);
@@ -497,4 +497,43 @@ test('META-002: 선호한 쪽이 실패하면 반대쪽도 반드시 실패한�
       }
     }
   }
+});
+
+test('갱신: 사용량 화면이 마지막 정상 집계 시각을 보여준다', () => {
+  const harness = new Harness();
+  assert.equal(usageScreen(harness.state, today(), 'all').lastRefreshedLabel, '없음');
+
+  harness.run();
+
+  // 시각은 시스템 로컬 시간으로 표시한다. 테스트 머신의 시간대에 기대지 않도록 같은 방식으로 만든다.
+  const at = new Date(NOW);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  assert.equal(
+    usageScreen(harness.state, today(), 'all').lastRefreshedLabel,
+    `${pad(at.getHours())}:${pad(at.getMinutes())}`,
+  );
+});
+
+test('갱신: 꺼진 소스의 오래된 성공 시각은 마지막 갱신으로 치지 않는다', () => {
+  const harness = new Harness();
+  harness.run();
+  for (const provider of ['claude_code', 'codex', 'gemini_cli'] as const) {
+    setSourceEnabled(harness.state, harness.clock, provider, false);
+  }
+
+  assert.equal(usageScreen(harness.state, today(), 'all').lastRefreshedLabel, '없음');
+});
+
+test('갱신: 마지막 갱신이 오늘이 아니면 날짜를 함께 보여준다', () => {
+  const harness = new Harness();
+  harness.run();
+
+  const tomorrow = parseLocalDate('2026-08-25');
+  assert.ok(tomorrow);
+  const at = new Date(NOW);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  assert.equal(
+    usageScreen(harness.state, tomorrow, 'all').lastRefreshedLabel,
+    `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`,
+  );
 });

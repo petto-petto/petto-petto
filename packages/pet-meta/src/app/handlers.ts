@@ -13,10 +13,11 @@
  * 이 파일에는 규칙이 없다. 전부 도메인 함수를 부르고 결과를 그대로 돌려준다.
  */
 
-import { PROVIDERS, isProvider, petId, type Provider } from '@pet/core';
+import { PROVIDERS, isProvider, petId, providerName, type Provider } from '@pet/core';
 import { domainEvent, eventId, type EventPayload } from '../events/index.ts';
 import {
   CollectError,
+  FixtureCollector,
   achievementScreen,
   bubbleMessage,
   equipTitle,
@@ -48,6 +49,15 @@ import type { MetaAppState } from './state.ts';
 /** 대역만 가진 데모 기능을 안전하게 확인한다. */
 function hasFailNextGrant(value: unknown): value is { failNextGrant(): void } {
   return typeof (value as { failNextGrant?: unknown }).failNextGrant === 'function';
+}
+
+/**
+ * 데모 채널이 기록을 꾸며 넣을 수 있는 수집기. 실제 `ccusage` 수집기에는 가짜 기록을 넣을
+ * 방법이 없으므로, 데모 모드(`META_DEMO_USAGE=1`)가 아니면 거절한다.
+ */
+function demoCollector(state: MetaAppState): FixtureCollector {
+  if (state.collector instanceof FixtureCollector) return state.collector;
+  throw new Error('데모 수집기에서만 쓸 수 있습니다 (META_DEMO_USAGE=1)');
 }
 
 /**
@@ -85,6 +95,11 @@ export interface TickReport {
   activityMinuteAdded: boolean;
   /** 소스별 결과를 사람이 읽을 수 있는 짧은 문장으로. */
   sourceNotes: string[];
+  /**
+   * 수집에 실패한 소스와 사용자 문구(`Codex: 집계 오류`). `갱신` 버튼이 실패를 성공처럼 보이지
+   * 않게 쓴다. 기록 없음(`not_found`)은 그 도구를 쓰지 않는 정상 상태라 넣지 않는다.
+   */
+  failures: string[];
   /** 기획서 6.3·ACH-007의 말풍선 문구. 표시할 것이 없으면 `undefined`. */
   bubble: string | undefined;
   newlyUnlocked: string[];
@@ -126,6 +141,14 @@ function describe(run: AggregationRun): string[] {
   });
 }
 
+function failuresOf(run: AggregationRun): string[] {
+  return run.outcomes.flatMap((outcome) =>
+    outcome.result.kind === 'failed' && outcome.result.error.kind !== 'not_found'
+      ? [`${providerName(outcome.provider)}: ${outcome.result.error.userMessage()}`]
+      : [],
+  );
+}
+
 function report(
   state: MetaAppState,
   host: MetaHost,
@@ -140,6 +163,7 @@ function report(
   const tick: TickReport = {
     activityMinuteAdded: run.activityMinuteAdded,
     sourceNotes: describe(run),
+    failures: failuresOf(run),
     bubble,
     newlyUnlocked: outcome.newlyUnlocked,
   };
@@ -219,21 +243,25 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
 
   /* ---------- 수집 ---------- */
 
-  handle('collect:toggle', (provider, enabled) => {
-    setSourceEnabled(state.meta, state.clock, providerFromKey(provider), enabled === true);
-    const { run, outcome } = state.aggregate();
+  // 켜고 끈 소스 하나만 다시 본다. 끌 때는 수집기를 실행하지 않고, 켤 때는 그 소스만 새로 읽어
+  // 기준점을 잡는다(8.2·8.4). 다른 소스의 수집을 기다리게 하지 않는다.
+  handle('collect:toggle', async (provider, enabled) => {
+    const target = providerFromKey(provider);
+    setSourceEnabled(state.meta, state.clock, target, enabled === true);
+    const { run, outcome } = await state.rescan(target);
     state.persist();
     return report(state, host, run, outcome);
   });
 
-  handle('collect:rescan', (provider) => {
-    const { run, outcome } = state.rescan(providerFromKey(provider));
+  handle('collect:rescan', async (provider) => {
+    const { run, outcome } = await state.rescan(providerFromKey(provider));
     state.persist();
     return report(state, host, run, outcome);
   });
 
-  handle('collect:now', () => {
-    const { run, outcome } = state.aggregate();
+  // 사용량 화면의 `갱신` 버튼. 1분 주기와 같은 경로다(COLLECT-003).
+  handle('collect:now', async () => {
+    const { run, outcome } = await state.aggregate();
     state.persist();
     return report(state, host, run, outcome);
   });
@@ -364,12 +392,14 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     return {
       activityMinuteAdded: false,
       sourceNotes: [],
+      failures: [],
       bubble,
       newlyUnlocked: outcome.newlyUnlocked,
     };
   });
 
-  handle('demo:usage', (provider) => {
+  handle('demo:usage', async (provider) => {
+    const collector = demoCollector(state);
     const target = providerFromKey(provider);
     const model =
       target === 'claude_code'
@@ -377,13 +407,13 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
         : target === 'codex'
           ? 'gpt-5.4-codex'
           : 'gemini-3-pro';
-    state.collector.accumulate(
+    collector.accumulate(
       target,
       state.today(),
       model,
       tokenCounts(120_000, 60_000, 90_000, 230_000),
     );
-    const { run, outcome } = state.aggregate();
+    const { run, outcome } = await state.aggregate();
     state.persist();
     return report(state, host, run, outcome);
   });
@@ -397,9 +427,9 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     if (hasFailNextGrant(currency)) currency.failNextGrant();
   });
 
-  handle('demo:break-source', (provider) => {
-    state.collector.setError(providerFromKey(provider), new CollectError('execution_failed'));
-    const { run, outcome } = state.aggregate();
+  handle('demo:break-source', async (provider) => {
+    demoCollector(state).setError(providerFromKey(provider), new CollectError('execution_failed'));
+    const { run, outcome } = await state.aggregate();
     state.persist();
     return report(state, host, run, outcome);
   });

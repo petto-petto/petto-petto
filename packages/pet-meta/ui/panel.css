@@ -829,6 +829,22 @@ main.no-scroll {
   margin-bottom: var(--space-2);
 }
 
+/* 사용량 화면: 왼쪽 기간 필터, 오른쪽 마지막 갱신 시각과 `갱신` 버튼. */
+.usage-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.usage-refresh {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
 .ach {
   display: flex;
   gap: var(--space-2);

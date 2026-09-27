@@ -103,6 +103,22 @@ export function rescanSource(
   return runProviders(state, collector, currency, clock, [provider]);
 }
 
+/**
+ * 지정한 소스만 집계한다. 앱이 수집기를 새로 읽은 소스만 골라 넘길 때 쓴다.
+ *
+ * 수집기를 기다리는 사이에 켜진 소스는 새로 읽지 않았으므로 이번 묶음에서 빼야 한다. 그렇지
+ * 않으면 꺼지기 전의 오래된 스냅샷이 새 기준점이 되어 비활성 기간이 적립된다(8.4).
+ */
+export function runAggregationFor(
+  state: MetaState,
+  collector: UsageCollector,
+  currency: CurrencyPort,
+  clock: Clock,
+  providers: readonly Provider[],
+): AggregationRun {
+  return runProviders(state, collector, currency, clock, providers);
+}
+
 function runProviders(
   state: MetaState,
   collector: UsageCollector,
@@ -314,7 +330,20 @@ function runSingleSource(
   };
 }
 
-/** 행별 증가분. 감소한 행은 0으로 잘라 저장 통계가 줄어들지 않게 한다(COLLECT-009). */
+/**
+ * 행별 증가분. 감소한 행은 0으로 잘라 저장 통계가 줄어들지 않게 한다(COLLECT-009).
+ *
+ * ## 왜 총합으로 상한을 거는가
+ *
+ * 감소를 0으로 자르면, 같은 기록이 **다른 행으로 다시 나뉠 때** 늘어난 행만 세고 줄어든 행은
+ * 무시한다. 그러면 이미 센 토큰을 또 센다. 실제로 두 경우에 일어난다.
+ *
+ * - 시간대가 바뀐 채 앱을 다시 켜면 수집기가 같은 기록을 다른 날짜 행으로 나눈다.
+ * - Gemini 추론 토큰은 그날 모델들에 비율로 배분되므로, 새 모델을 쓰면 기존 모델 몫이 준다.
+ *
+ * 토큰 종류별 총합의 증가는 행을 어떻게 나누든 정확하다. 그래서 행별 증가분의 합이 그 증가를
+ * 넘으면 넘는 만큼 깎는다. 관측 토큰과 보상 대상 토큰이 둘 다 종류별 합이라 함께 정확해진다.
+ */
 function computeDelta(current: SnapshotRows, baseline: SnapshotRows): SnapshotRows {
   const delta: SnapshotRows = new Map();
   for (const [key, counts] of current) {
@@ -322,7 +351,49 @@ function computeDelta(current: SnapshotRows, baseline: SnapshotRows): SnapshotRo
     const difference = previous ? subtractTokens(counts, previous) : counts;
     if (!isZero(difference)) delta.set(key, difference);
   }
+
+  for (const kind of TOKEN_KINDS) {
+    const allowed = Math.max(0, sumOf(current, kind) - sumOf(baseline, kind));
+    capKind(delta, kind, allowed);
+  }
+  for (const [key, counts] of delta) if (isZero(counts)) delta.delete(key);
   return delta;
+}
+
+const TOKEN_KINDS = ['input', 'output', 'cacheCreate', 'cacheRead'] as const;
+type TokenKind = (typeof TOKEN_KINDS)[number];
+
+function sumOf(rows: SnapshotRows, kind: TokenKind): number {
+  let total = 0;
+  for (const counts of rows.values()) total += counts[kind];
+  return total;
+}
+
+/**
+ * 한 종류의 행별 증가분 합을 `allowed`로 줄인다. 행 비율대로 내림하고, 반올림 나머지는 가장
+ * 큰 행에 준다 — 합이 정확히 `allowed`가 되고, 같은 입력이면 결과도 같다.
+ */
+function capKind(delta: SnapshotRows, kind: TokenKind, allowed: number): void {
+  const total = sumOf(delta, kind);
+  if (total <= allowed) return;
+
+  let largestKey: string | undefined;
+  let largest = -1;
+  let assigned = 0;
+  for (const [key, counts] of delta) {
+    const scaled = Math.floor((counts[kind] * allowed) / total);
+    if (counts[kind] > largest) {
+      largest = counts[kind];
+      largestKey = key;
+    }
+    assigned += scaled;
+    delta.set(key, { ...counts, [kind]: scaled });
+  }
+
+  const target = largestKey === undefined ? undefined : delta.get(largestKey);
+  if (largestKey !== undefined && target) {
+    delta.set(largestKey, { ...target, [kind]: target[kind] + (allowed - assigned) });
+  }
 }
 
 /** 지난 집계에서 실패한 재화 지급을 재시도한다. */
