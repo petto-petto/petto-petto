@@ -35,6 +35,10 @@
 
 ### Added
 
+- friction 기록 3건(2026-09-28, ccusage 수집기 작업): Node 26·npm 12에서 Electron 바이너리 누락,
+  optional dependency 네이티브 바이너리의 실행 비트 누락, 개발 DB에 남은 데모 수집기 기준점.
+  모두 첫 관찰이라 규칙·Skill은 바꾸지 않고 기록만 남긴다.
+
 - `.harness/rules/feature-contracts.md`는 feature 패키지끼리 맞닿는 면을 다스린다.
   창구는 셋(Port · Event · 주입)이고, Port는 생산자가 공표하며, **한 쌍 사이에 Port는
   한 방향만** 둔다. 2026-09-03 팀 결정을 정본으로 옮긴 것이다.
