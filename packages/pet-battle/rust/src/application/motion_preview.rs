@@ -164,8 +164,13 @@ impl Default for MotionPreview {
 
 impl MotionPreview {
     pub fn reset_actions(&mut self) {
-        self.menu = PreviewMenu::Closed;
         self.display_opacity = DisplayOpacity::FULL;
+        self.reset_actions_preserving_display_opacity();
+    }
+
+    /// Conquest clears temporary previews, not the user's display setting.
+    pub(crate) fn reset_actions_preserving_display_opacity(&mut self) {
+        self.menu = PreviewMenu::Closed;
         self.pet = PetPreviewState::Idle;
         self.pet_asset_rarity = None;
         self.attack_effect_rarity = None;

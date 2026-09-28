@@ -268,7 +268,7 @@ impl BattleEngine {
                                 .visual(now)
                                 .map_or(previous.stage, |v| v.defeated_stage);
                             self.overlay.begin_conquest(now, defeated, stage);
-                            self.preview.reset_actions();
+                            self.preview.reset_actions_preserving_display_opacity();
                             events.push(EngineEvent::EnemyDefeated {
                                 pet_id: input.pet_id.clone(),
                                 defeated_stage: previous.stage,
