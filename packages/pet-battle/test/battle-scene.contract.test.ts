@@ -101,6 +101,22 @@ test('HP 미리보기는 표정과 HP 바를 함께 바꾸고 실제 진행도�
   assert.equal(canonical.enemyHpRatio, 0.92);
 });
 
+test('실제 정복도 처치·대기·등장 표현을 사용하며 전환 중에는 미리보기를 무시한다', () => {
+  const phases = [['DEFEAT_MOTION', 'DEFEATING'], ['AWAITING_ADVANCE', 'HIDDEN'], ['SPAWNING', 'SPAWNING']] as const;
+  for (const [phase, expected] of phases) {
+    const scene = deriveBattleScene(state({
+      overlay: {phase, elapsed:0, defeatedStage:1, nextStage:2},
+      enemyHpRatio: phase === 'SPAWNING' ? 1 : 0,
+      preview: {...state().preview, enemyColor:'RAINBOW', enemyHpRatio:0.5},
+    }));
+    assert.equal(scene.enemyPhase, expected);
+    assert.equal(scene.enemyVisible, phase !== 'AWAITING_ADVANCE');
+    assert.equal(scene.enemyHpRatio, phase === 'SPAWNING' ? 1 : 0);
+    assert.match(scene.enemyAsset, /red-/);
+  }
+  assert.equal(deriveBattleScene(state({activePet:null})).enemyVisible, false);
+});
+
 test('v2와 등급별 타격 이펙트는 진행 상태와 독립적인 표현 모델이다', () => {
   const scene = deriveBattleScene({
     ...state(),
