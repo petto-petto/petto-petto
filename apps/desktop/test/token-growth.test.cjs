@@ -126,3 +126,52 @@ test('성장 저장 실패 시 토큰 내역도 rollback되어 재시도가 가�
   new TokenGrowthLink(db, tokens, pets).record(usage('a'), 5000);
   assert.equal(pets.getActivePet().totalXp, 1);
 });
+
+test('SQLite 토큰 → 성장 → 실제 Rust 적·배경 전환과 재연결 복원을 검증한다', {timeout: 15000}, async (t) => {
+  const { pets, link } = await setup(t);
+  const { spawnBattleSidecar, OwnedPetBattleGateway } = await import('@pet/battle');
+  const { LEVEL_MAX, requiredXp } = await import('@pet/main-overlay/growth');
+  const { readFileSync } = require('node:fs');
+  const { dirname } = require('node:path');
+  const root = dirname(require.resolve('@pet/battle/package.json'));
+  const { intervalLevels } = JSON.parse(readFileSync(join(root, 'battle-rules.json'), 'utf8'));
+  const connect = () => {
+    const engine = spawnBattleSidecar(join(root, 'rust/target/debug', process.platform === 'win32' ? 'pet-battle-engine.exe' : 'pet-battle-engine'));
+    t.after(() => { engine.client.dispose(); engine.sidecar.close(); });
+    return new OwnedPetBattleGateway(pets, engine.client, {
+      levelXpCosts: Array.from({length: LEVEL_MAX}, (_, i) => requiredXp(i + 1)), intervalLevels,
+    });
+  };
+  const gateway = connect();
+  const get = () => gateway.execute({type:'GET_STATE', nowMs:0});
+  assert.equal((await get()).state.activePet, null, '미보유 때 데모 펫을 만들지 않는다');
+  const species = pets.listSpecies().find((pet) => pet.rarity === 'COMMON');
+  const [pet, other] = pets.createOwnedPets([species.speciesId, species.speciesId]);
+  pets.setActivePet(pet.ownedPetId);
+  assert.equal((await get()).state.activePet.stage, 1);
+  link.record(usage('progress-1', 156 * 5000), 156 * 5000);
+  const defeated = await get();
+  assert.equal(defeated.state.activePet.level, 13);
+  assert.equal(defeated.state.activePet.stage, 2);
+  assert.equal(defeated.state.enemyColor, 'RED', '클릭 전에는 정복한 적을 표시');
+  assert.equal(defeated.state.enemyHpRatio, 0, '정복 연출의 HP는 0이어야 한다');
+  assert.equal(defeated.events[0].type, 'ENEMY_DEFEATED');
+  await gateway.execute({type:'OVERLAY_CLICK', nowMs:0});
+  const next = await gateway.execute({type:'OVERLAY_CLICK', nowMs:0});
+  assert.equal(next.state.enemyColor, 'ORANGE');
+  assert.equal(next.state.background, 'MUSHROOM_FOREST');
+  link.record(usage('progress-2', (228 + 300) * 5000), (228 + 300) * 5000);
+  assert.equal((await get()).state.activePet.stage, 4);
+  await gateway.execute({type:'OVERLAY_CLICK', nowMs:0});
+  const green = await gateway.execute({type:'OVERLAY_CLICK', nowMs:0});
+  assert.equal(green.state.enemyColor, 'GREEN');
+  assert.equal(green.state.background, 'CRYSTAL_RUINS');
+  link.record(usage('progress-2', (228 + 300) * 5000), (228 + 300) * 5000);
+  assert.deepEqual((await get()).events, []);
+  pets.setActivePet(other.ownedPetId);
+  assert.equal((await get()).state.activePet.stage, 1);
+  pets.setActivePet(pet.ownedPetId);
+  const restored = await connect().execute({type:'GET_STATE', nowMs:0});
+  assert.equal(restored.state.activePet.stage, 4);
+  assert.equal(restored.state.overlay, null);
+});

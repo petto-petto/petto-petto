@@ -45,3 +45,13 @@ fn first_sync_restores_high_level_stage_without_replaying_old_conquests() {
     assert_eq!(restored["state"]["background"], "CRYSTAL_RUINS");
     assert_eq!(restored["state"]["overlay"], Value::Null);
 }
+
+#[test]
+fn malformed_command_preserves_request_id_so_ipc_can_reject_it() {
+    let mut engine = BattleEngine::demo();
+    let response: Value = serde_json::from_str(&handle_json_line(
+        &mut engine, r#"{"requestId":"bad-command","command":{"type":"PREVIEW_PET","action":"INVALID","nowMs":0}}"#,
+    )).unwrap();
+    assert_eq!(response["ok"], false);
+    assert_eq!(response["requestId"], "bad-command");
+}

@@ -75,3 +75,14 @@ test('feature 패키지가 자기 Electron IPC 채널과 핸들러를 모두 소
   assert.deepEqual(commands, [{ type: 'TOGGLE_BATTLE' }]);
   assert.deepEqual(broadcasts, [BATTLE_CHANNELS.stateChanged]);
 });
+
+test('엔진 무응답은 시간 제한 후 실패하고 다음 요청을 막지 않는다', async () => {
+  const transport = new FakeTransport();
+  const client = new RustBattleClient(transport, () => 'request', 20);
+  await assert.rejects(client.execute({type:'GET_STATE', nowMs:0}), /timeout/);
+  const pending = client.execute({type:'GET_STATE', nowMs:0});
+  transport.reply(JSON.stringify({requestId:'request',ok:true,state:{},events:[]}));
+  await pending;
+  client.dispose();
+  await assert.rejects(client.execute({type:'GET_STATE',nowMs:0}), /disposed/);
+});
