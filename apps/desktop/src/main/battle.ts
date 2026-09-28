@@ -21,11 +21,12 @@ export function createBattleRuntime(
     rules: BattleGrowthRules;
   },
 ) {
+  // Fail before starting a child process if the shared catalog cannot be read.
+  const species = pets.listSpecies();
   const { client, sidecar } = spawnBattleSidecar(options.binaryPath);
   const integration = new PetBattleIntegration(pets, client, options.rules);
   const assets = new Map<string, NonNullable<BattleState['petSprites']>[string]>();
   // Species identities come from the public client, never from renderer path input.
-  const species = pets.listSpecies();
   return {
     close: () => sidecar.close(),
     async execute(command: BattleCommand) {
