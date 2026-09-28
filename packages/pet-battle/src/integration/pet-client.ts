@@ -1,71 +1,40 @@
 import type { PetClient } from '@pet/client';
-
-import type { BattleGateway, BattleResult } from '../contracts.ts';
-import { selectRandomPetSpectators } from '../view/scene.ts';
+import type { BattleCommand, BattleGateway, BattleResult } from '../contracts.ts';
+import { OwnedPetBattleGateway, type BattleGrowthRules } from './owned-pet-gateway.ts';
 
 export interface GrowthXpNotification {
   ownedPetId: string;
+  /** Compatibility only: never add this delta. Read committed totalXp from PetClient. */
   amount: number;
   nowMs: number;
 }
 
 /**
- * PetClient의 저장 모델을 전투 입력 계약으로 번역한다.
- * SQLite 생명주기와 성장 계산은 소유하지 않으며, 전투 진행도는 BattleGateway가 보존한다.
+ * Read-only consumer of the owner's PetClient contract.
+ * Host injects the client, Rust engine, and the growth owner's level XP curve.
+ * No database access, token conversion, pet creation, or growth writes happen here.
  */
-export class PetBattleIntegration {
+export class PetBattleIntegration implements BattleGateway {
   readonly #pets: PetClient;
-  readonly #battle: BattleGateway;
-  readonly #random: () => number;
+  readonly #gateway: OwnedPetBattleGateway;
 
-  constructor(pets: PetClient, battle: BattleGateway, random: () => number = Math.random) {
+  constructor(pets: PetClient, engine: BattleGateway, rules: BattleGrowthRules) {
     this.#pets = pets;
-    this.#battle = battle;
-    this.#random = random;
+    this.#gateway = new OwnedPetBattleGateway(pets, engine, rules);
   }
 
-  async syncActivePet(nowMs = Date.now()): Promise<BattleResult> {
-    const active = this.#pets.getActivePet();
-    if (!active) return this.#battle.execute({ type: 'GET_STATE', nowMs });
-
-    const spectators = selectRandomPetSpectators(
-      this.#pets.listOwnedPets().map(toBattlePet),
-      active.ownedPetId,
-      this.#random,
-    );
-    for (const spectator of spectators) {
-      await this.#battle.execute({ type: 'UPSERT_PET', ...spectator });
-    }
-
-    await this.#battle.execute({ type: 'UPSERT_PET', ...toBattlePet(active) });
-    await this.#battle.execute({
-      type: 'SET_PET_SPECTATORS',
-      petIds: spectators.map((pet) => pet.petId),
-    });
-    return this.#battle.execute({ type: 'SET_ACTIVE_PET', petId: active.ownedPetId });
+  execute(command: BattleCommand): Promise<BattleResult> {
+    return this.#gateway.execute(command);
   }
 
+  syncActivePet(nowMs = Date.now()): Promise<BattleResult> {
+    return this.execute({ type: 'GET_STATE', nowMs });
+  }
+
+  /** Call after the growth owner successfully saves. Duplicate notifications are harmless. */
   async applyGrowthXp(notification: GrowthXpNotification): Promise<BattleResult | null> {
     const active = this.#pets.getActivePet();
     if (!active || active.ownedPetId !== notification.ownedPetId) return null;
-
-    await this.syncActivePet(notification.nowMs);
-    return this.#battle.execute({
-      type: 'GROWTH_XP_ADDED',
-      petId: notification.ownedPetId,
-      amount: notification.amount,
-      nowMs: notification.nowMs,
-    });
+    return this.syncActivePet(notification.nowMs);
   }
-}
-
-function toBattlePet(pet: ReturnType<PetClient['getOwnedPet']>) {
-  return {
-    petId: pet.ownedPetId,
-    displayName: pet.nickname ?? pet.name,
-    rarity: pet.rarity,
-    level: pet.level,
-    sprite: pet.sprite,
-    evolutionStage: pet.evolutionStage,
-  };
 }
