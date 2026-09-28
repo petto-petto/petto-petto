@@ -1,4 +1,18 @@
+use crate::BattleSnapshot;
+use crate::domain::growth::{IntervalLevels, progression};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OwnedGrowthPet {
+    pub pet_id: String,
+    pub display_name: String,
+    pub rarity: PetRarity,
+    pub level: u32,
+    pub sprite: String,
+    pub evolution_stage: u8,
+    pub total_xp: u64,
+}
 
 use crate::{
     BackgroundTheme, BattleConfig, BattleController, BattleEvent, BattleInput, BattleMode,
@@ -22,6 +36,14 @@ const DEFAULT_CONFIG: BattleConfig = BattleConfig {
     rename_all_fields = "camelCase"
 )]
 pub enum BattleCommand {
+    SyncOwnedPets {
+        pets: Vec<OwnedGrowthPet>,
+        active_pet_id: Option<String>,
+        spectator_pet_ids: Vec<String>,
+        level_xp_costs: Vec<u64>,
+        interval_levels: IntervalLevels,
+        now_ms: u64,
+    },
     GetState {
         now_ms: u64,
     },
@@ -77,6 +99,7 @@ impl BattleCommand {
     const fn now_ms(&self, fallback: u64) -> u64 {
         match self {
             Self::GetState { now_ms }
+            | Self::SyncOwnedPets { now_ms, .. }
             | Self::GrowthXpAdded { now_ms, .. }
             | Self::OverlayClick { now_ms }
             | Self::PreviewPet { now_ms, .. }
@@ -208,6 +231,87 @@ impl BattleEngine {
 
         let mut events = Vec::new();
         match request.command {
+            BattleCommand::SyncOwnedPets {
+                pets,
+                active_pet_id,
+                spectator_pet_ids,
+                level_xp_costs,
+                interval_levels,
+                ..
+            } => {
+                if let Err(error) = interval_levels.validate(&level_xp_costs) {
+                    return self.error_response(request.request_id, error.to_owned());
+                }
+                let previous_active = self.controller.snapshot().active_pet_id.clone();
+                let active = active_pet_id.filter(|id| pets.iter().any(|p| &p.pet_id == id));
+                if previous_active != active {
+                    self.overlay.reset();
+                    self.preview.reset_actions();
+                    self.attack_cycle_started_at_ms = None;
+                }
+                let mut roster = Vec::new();
+                for input in pets {
+                    let old = self.controller.pet(&input.pet_id);
+                    let (stage, interval_xp, target) = progression(
+                        input.total_xp,
+                        interval_levels.for_rarity(input.rarity),
+                        &level_xp_costs,
+                    );
+                    if let Some(previous) = old.filter(|p| p.synced_total_xp.is_some()) {
+                        if active.as_deref() == Some(input.pet_id.as_str())
+                            && previous_active == active
+                            && input.total_xp > previous.synced_total_xp.unwrap_or(0)
+                        {
+                            if stage > previous.stage {
+                                let defeated = self
+                                    .overlay
+                                    .visual(now)
+                                    .map_or(previous.stage, |v| v.defeated_stage);
+                                self.overlay.begin_conquest(now, defeated, stage);
+                                self.preview.reset_actions();
+                                events.push(EngineEvent::EnemyDefeated {
+                                    pet_id: input.pet_id.clone(),
+                                    defeated_stage: previous.stage,
+                                    next_stage: stage,
+                                    skipped_stages: u64::from(stage - previous.stage - 1),
+                                });
+                            } else {
+                                events.push(EngineEvent::XpApplied {
+                                    pet_id: input.pet_id.clone(),
+                                    amount: input.total_xp - previous.synced_total_xp.unwrap_or(0),
+                                    enemy_hp_ratio: 1.0 - interval_xp as f32 / target as f32,
+                                });
+                            }
+                        }
+                    }
+                    let mut pet =
+                        PetBattleProgress::new(input.pet_id, input.display_name, input.rarity);
+                    pet.battle_mode = old.map_or(BattleMode::Fighting, |p| p.battle_mode);
+                    pet.level = input.level;
+                    pet.sprite = input.sprite;
+                    pet.evolution_stage = input.evolution_stage;
+                    pet.stage = stage;
+                    pet.interval_xp = interval_xp;
+                    pet.growth_target_xp = Some(target);
+                    pet.synced_total_xp = Some(input.total_xp);
+                    roster.push(pet);
+                }
+                self.spectator_pet_ids = spectator_pet_ids
+                    .into_iter()
+                    .filter(|id| {
+                        Some(id) != active.as_ref() && roster.iter().any(|p| &p.pet_id == id)
+                    })
+                    .take(3)
+                    .collect();
+                self.controller = BattleController::new(
+                    self.controller.config(),
+                    BattleSnapshot {
+                        active_pet_id: active,
+                        pets: roster,
+                    },
+                );
+                self.anchor_attack_cycle_if_needed();
+            }
             BattleCommand::GetState { .. } => self.anchor_attack_cycle_if_needed(),
             BattleCommand::UpsertPet {
                 pet_id,

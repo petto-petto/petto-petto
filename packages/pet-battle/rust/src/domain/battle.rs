@@ -86,6 +86,10 @@ pub struct PetBattleProgress {
     pub evolution_stage: u8,
     pub stage: u32,
     pub interval_xp: u64,
+    #[serde(default)]
+    pub growth_target_xp: Option<u64>,
+    #[serde(default)]
+    pub synced_total_xp: Option<u64>,
     pub battle_mode: BattleMode,
 }
 
@@ -109,6 +113,8 @@ impl PetBattleProgress {
             evolution_stage: 0,
             stage: 1,
             interval_xp: 0,
+            growth_target_xp: None,
+            synced_total_xp: None,
             battle_mode: BattleMode::Fighting,
         }
     }
@@ -125,7 +131,9 @@ impl PetBattleProgress {
 
     #[must_use]
     pub fn enemy_hp_ratio(&self, config: BattleConfig) -> f32 {
-        let target = config.target_xp(self.rarity);
+        let target = self
+            .growth_target_xp
+            .unwrap_or(config.target_xp(self.rarity));
         1.0 - (self.interval_xp.min(target) as f32 / target as f32)
     }
 

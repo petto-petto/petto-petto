@@ -3,15 +3,20 @@ use serde_json::{Value, json};
 
 fn sync(engine: &mut BattleEngine, rarity: &str, xp: u64) -> Value {
     let costs: Vec<u64> = (1..=50).map(|level| 10 + level / 2).collect();
-    serde_json::from_str(&handle_json_line(engine, &json!({
-        "requestId": "sync", "command": {
-            "type": "SYNC_OWNED_PETS", "nowMs": 1000,
-            "activePetId": "owned-1", "spectatorPetIds": [],
-            "levelXpCosts": costs, "intervalLevels": {"COMMON":12,"RARE":10,"EPIC":8},
-            "pets": [{"petId":"owned-1","displayName":"토리","rarity":rarity,
-                "level":13,"sprite":"acorn_squirrel","evolutionStage":0,"totalXp":xp}]
-        }
-    }).to_string())).expect("json response")
+    serde_json::from_str(&handle_json_line(
+        engine,
+        &json!({
+            "requestId": "sync", "command": {
+                "type": "SYNC_OWNED_PETS", "nowMs": 1000,
+                "activePetId": "owned-1", "spectatorPetIds": [],
+                "levelXpCosts": costs, "intervalLevels": {"COMMON":12,"RARE":10,"EPIC":8},
+                "pets": [{"petId":"owned-1","displayName":"토리","rarity":rarity,
+                    "level":13,"sprite":"acorn_squirrel","evolutionStage":0,"totalXp":xp}]
+            }
+        })
+        .to_string(),
+    ))
+    .expect("json response")
 }
 
 #[test]

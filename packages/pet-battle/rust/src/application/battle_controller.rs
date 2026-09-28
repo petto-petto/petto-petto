@@ -118,11 +118,7 @@ impl BattleController {
                     return None;
                 }
 
-                let mut pet = PetBattleProgress::new(
-                    pet_id.clone(),
-                    display_name,
-                    rarity,
-                );
+                let mut pet = PetBattleProgress::new(pet_id.clone(), display_name, rarity);
                 pet.level = level.max(1);
                 pet.sprite = sprite;
                 pet.evolution_stage = evolution_stage.min(2);
