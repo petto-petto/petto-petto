@@ -13,5 +13,8 @@
     },
     "./package.json": "./package.json",
     "./ui/*": "./ui/*"
+  },
+  "dependencies": {
+    "@pet/client": "*"
   }
 }

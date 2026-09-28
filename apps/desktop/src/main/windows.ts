@@ -5,7 +5,7 @@
  * 창에 적용한다. 규칙이 이 파일에 섞이면 창을 띄우지 않고는 테스트할 수 없어진다.
  */
 
-import { BrowserWindow, app, screen } from 'electron';
+import { BrowserWindow, app, screen, type WebContents } from 'electron';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -279,6 +279,12 @@ export function createPanelWindow(): BrowserWindow {
   return panelWindow;
 }
 
+export function isGachaWebContents(contents: WebContents): boolean {
+  return (
+    gachaWindow !== undefined && !gachaWindow.isDestroyed() && gachaWindow.webContents === contents
+  );
+}
+
 /** 가챠 프로토타입은 오버레이와 수명·창 옵션을 공유하지 않는 독립 창이다. */
 export function createGachaWindow(): BrowserWindow {
   if (gachaWindow && !gachaWindow.isDestroyed()) {
@@ -296,6 +302,7 @@ export function createGachaWindow(): BrowserWindow {
     backgroundColor: '#10231a',
     title: 'Petto Petto — 소환의 숲',
     webPreferences: {
+      preload: join(appRoot, 'src', 'preload', 'gacha.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -323,7 +330,12 @@ export function createCombineWindow(): BrowserWindow {
     resizable: false,
     backgroundColor: '#161828',
     title: 'Petto Petto — 비전 합성소',
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: {
+      preload: join(appRoot, 'src', 'preload', 'combine.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
   });
   injectFonts(combineWindow);
   void combineWindow.loadFile(join(combineUiDir, 'index.html'), { query: assetsQuery() });
@@ -331,6 +343,14 @@ export function createCombineWindow(): BrowserWindow {
     combineWindow = undefined;
   });
   return combineWindow;
+}
+
+export function isCombineWebContents(contents: WebContents): boolean {
+  return (
+    combineWindow !== undefined &&
+    !combineWindow.isDestroyed() &&
+    combineWindow.webContents === contents
+  );
 }
 
 /**

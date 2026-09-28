@@ -1,24 +1,31 @@
 import {
   awakeningCopy,
   cardInterval,
-  createGachaEngine,
+  GachaActionError,
   highestGrade,
   individualOdds,
   introDuration,
   revealCopy,
   secureRandomInt,
+  unwrapGachaResponse,
+  type GachaBridge,
+  type GachaPet,
+  type GachaState,
+  type SavedGachaDraw,
   type DrawCount,
   type DrawResult,
   type GachaGrade,
   type PetsByGrade,
 } from '../index.ts';
 
-interface DemoPet {
-  readonly id: string;
-  readonly slug: string;
-  readonly name: string;
-  readonly grade: GachaGrade;
+interface DisplayPet extends GachaPet {
   readonly asset: string;
+}
+
+declare global {
+  interface Window {
+    gacha?: GachaBridge;
+  }
 }
 
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
@@ -28,63 +35,17 @@ if (pityBox) document.querySelector('.summon-stage')?.append(pityBox);
 const assetRoot = assetRootUrl();
 const asset = (path: string): string => new URL(path, assetRoot).href;
 
-const PETS = {
-  common: [
-    {
-      id: '003',
-      slug: 'mole_digger',
-      name: '두더지',
-      grade: 'common',
-      asset: asset('pets/common/mole_digger/stage1/pet_003_s1_card.png'),
-    },
-    {
-      id: '004',
-      slug: 'sprout_treant',
-      name: '새싹나무',
-      grade: 'common',
-      asset: asset('pets/common/sprout_treant/stage1/pet_004_s1_card.png'),
-    },
-  ],
-  rare: [
-    {
-      id: '002',
-      slug: 'midnight_zebra',
-      name: '미드나잇얼룩말',
-      grade: 'rare',
-      asset: asset('pets/rare/midnight_zebra/stage1/pet_002_s1_card.png'),
-    },
-    {
-      id: '005',
-      slug: 'cheek_hamster',
-      name: '볼주머니햄',
-      grade: 'rare',
-      asset: asset('pets/rare/cheek_hamster/stage1/pet_005_s1_card.png'),
-    },
-  ],
-  epic: [
-    {
-      id: '001',
-      slug: 'acorn_squirrel',
-      name: '도토리다람쥐',
-      grade: 'epic',
-      asset: asset('pets/epic/acorn_squirrel/stage1/pet_001_s1_card.png'),
-    },
-    {
-      id: '006',
-      slug: 'star_wizard',
-      name: '별빛마법사',
-      grade: 'epic',
-      asset: asset('pets/epic/star_wizard/stage1/pet_006_s1_card.png'),
-    },
-  ],
-} as const satisfies PetsByGrade<DemoPet>;
-
-const engine = createGachaEngine<DemoPet>(PETS, secureRandomInt);
+let petsByGrade: PetsByGrade<DisplayPet> = { common: [], rare: [], epic: [] };
+let gachaState: GachaState = { pityCounter: 0, totalDrawCount: 0 };
+let catalogReady = false;
+let requesting = false;
+let ownedCount: number | undefined;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const numberFormat = new Intl.NumberFormat('ko-KR');
 
-let tokenBalance = 9_999_999_999;
-let pendingDraw: DrawResult<DemoPet> | undefined;
+let tokenBalance = 0;
+let pendingRequestId: string | undefined;
+let pendingDraw: DrawResult<DisplayPet> | undefined;
 let revealTimers: number[] = [];
 
 const stage = element<HTMLElement>('summon-stage');
@@ -98,12 +59,15 @@ stage.style.setProperty(
   `url("${asset('backgrounds/bg_002_moonlit_gacha_grove/bg_002_composite.png')}")`,
 );
 
-element<HTMLButtonElement>('draw-one').addEventListener('click', () => startDraw(1));
-element<HTMLButtonElement>('draw-ten').addEventListener('click', () => startDraw(10));
+element<HTMLButtonElement>('draw-one').addEventListener('click', () => void startDraw(1));
+element<HTMLButtonElement>('draw-ten').addEventListener('click', () => void startDraw(10));
 element<HTMLButtonElement>('skip-button').addEventListener('click', finishReveal);
 element<HTMLButtonElement>('close-results').addEventListener('click', closeResults);
 element<HTMLButtonElement>('odds-button').addEventListener('click', openOdds);
 element<HTMLButtonElement>('odds-close').addEventListener('click', closeOdds);
+window.addEventListener('focus', () => {
+  if (!requesting && !pendingDraw) void loadCatalog().catch(showError);
+});
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
@@ -111,20 +75,96 @@ document.addEventListener('keydown', (event) => {
   else if (reveal.classList.contains('showing')) closeResults();
 });
 
-function startDraw(count: DrawCount): void {
-  if (pendingDraw) return;
+async function startDraw(count: DrawCount): Promise<void> {
+  if (pendingDraw || requesting) return;
+  requesting = true;
+  setControlsDisabled(true);
+  element<HTMLElement>('stage-kicker').textContent = '새로운 친구를 만나고 있어요';
+  let saved: SavedGachaDraw;
+  try {
+    if (!catalogReady) await loadCatalog();
+    pendingRequestId ??= window.crypto.randomUUID();
+    saved = unwrapGachaResponse(await bridge().draw(count, pendingRequestId));
+  } catch (error) {
+    if (error instanceof GachaActionError && error.code === 'duplicate') {
+      pendingRequestId = undefined;
+      try {
+        await loadCatalog();
+      } catch {
+        // 원래 요청 오류를 표시하고 다음 시도에서 다시 조회한다.
+      }
+    }
+    showError(error);
+    requesting = false;
+    setControlsDisabled(false);
+    return;
+  }
 
-  const cost = count * 100_000;
-  if (tokenBalance < cost) return;
-
-  pendingDraw = engine.draw(count);
-  tokenBalance -= cost;
+  // 서버가 펫 생성과 재화 차감을 함께 확정한 뒤에만 결과를 연출한다.
+  pendingDraw = {
+    ...saved,
+    results: saved.results.map((result) => ({ ...result, pet: displayPet(result.pet) })),
+  };
+  gachaState = saved;
+  ownedCount = saved.ownedCount;
+  tokenBalance = saved.balance;
+  pendingRequestId = undefined;
+  requesting = false;
   updateHud();
 
   const grade = highestGrade(pendingDraw.results);
   const delay = reducedMotion ? 0 : introDuration(grade);
   prepareReveal(grade, delay);
   revealTimers.push(window.setTimeout(() => revealCards(false), delay));
+}
+
+function bridge(): GachaBridge {
+  if (!window.gacha) throw new Error('앱에서 뽑기 창을 열어 주세요.');
+  return window.gacha;
+}
+
+function displayPet(pet: GachaPet): DisplayPet {
+  return {
+    ...pet,
+    asset: asset(`pets/${pet.grade}/${pet.slug}/stage1/pet_${pet.id}_s1_card.png`),
+  };
+}
+
+async function loadCatalog(): Promise<void> {
+  const snapshot = unwrapGachaResponse(await bridge().load());
+  petsByGrade = {
+    common: snapshot.pets.common.map(displayPet),
+    rare: snapshot.pets.rare.map(displayPet),
+    epic: snapshot.pets.epic.map(displayPet),
+  };
+  gachaState = snapshot;
+  ownedCount = snapshot.ownedCount;
+  tokenBalance = snapshot.balance;
+  renderOdds();
+  catalogReady = true;
+  updateHud();
+}
+
+function showError(error: unknown): void {
+  element<HTMLElement>('stage-kicker').textContent = '소환하지 못했어요';
+  element<HTMLElement>('stage-heading').textContent =
+    error instanceof Error ? error.message : '다시 시도해 주세요.';
+  element<HTMLElement>('pod-status').textContent = '소환 버튼을 눌러 다시 시도';
+}
+
+async function initialize(): Promise<void> {
+  requesting = true;
+  setControlsDisabled(true);
+  element<HTMLElement>('stage-kicker').textContent = '친구들을 불러오는 중';
+  try {
+    await loadCatalog();
+    element<HTMLElement>('stage-kicker').textContent = '새로운 인연을 기다리는 숲';
+  } catch (error) {
+    showError(error);
+  } finally {
+    requesting = false;
+    setControlsDisabled(false);
+  }
 }
 
 function prepareReveal(grade: GachaGrade, duration: number): void {
@@ -196,7 +236,7 @@ function closeResults(): void {
   element<HTMLButtonElement>('draw-one').focus();
 }
 
-function createResultCard(grade: GachaGrade, pet: DemoPet): HTMLElement {
+function createResultCard(grade: GachaGrade, pet: DisplayPet): HTMLElement {
   const card = document.createElement('article');
   card.className = `result-card ${grade}`;
 
@@ -230,7 +270,9 @@ function makeParticles(_grade: GachaGrade): void {
 }
 
 function updateHud(): void {
-  const { pityCounter } = engine.getState();
+  const { pityCounter } = gachaState;
+  element<HTMLElement>('owned-count').textContent =
+    ownedCount === undefined ? '—' : numberFormat.format(ownedCount);
   element<HTMLElement>('token-balance').textContent = numberFormat.format(tokenBalance);
   element<HTMLElement>('pity-counter').textContent = `${pityCounter} / 100`;
   element<HTMLElement>('pity-fill').style.width = `${pityCounter}%`;
@@ -242,7 +284,7 @@ function updateHud(): void {
 function setControlsDisabled(disabled: boolean): void {
   element<HTMLButtonElement>('draw-one').disabled = disabled;
   element<HTMLButtonElement>('draw-ten').disabled = disabled;
-  element<HTMLButtonElement>('odds-button').disabled = disabled;
+  element<HTMLButtonElement>('odds-button').disabled = disabled || !catalogReady;
 }
 
 function openOdds(): void {
@@ -258,7 +300,7 @@ function closeOdds(): void {
 }
 
 function renderOdds(): void {
-  const odds = individualOdds<DemoPet>(PETS);
+  const odds = individualOdds<DisplayPet>(petsByGrade);
   const gradeOdds: Readonly<Record<GachaGrade, string>> = {
     common: '80%',
     rare: '17%',
@@ -279,7 +321,7 @@ function renderOdds(): void {
 
     const entries = document.createElement('div');
     entries.className = 'odds-pet-list';
-    for (const pet of PETS[grade]) {
+    for (const pet of petsByGrade[grade]) {
       const entry = document.createElement('div');
       entry.className = 'odds-pet';
 
@@ -318,4 +360,4 @@ function element<ElementType extends HTMLElement>(id: string): ElementType {
 }
 
 updateHud();
-renderOdds();
+void initialize();

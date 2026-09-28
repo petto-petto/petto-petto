@@ -53,6 +53,44 @@ export class CurrencyRepository {
       .run(-Math.abs(amount), reason, occurredAt);
   }
 
+  /** 잔액 검사와 원장 기록을 한 트랜잭션에서 수행한다. 상위 거래 안에서는 savepoint다. */
+  trySpend(amount: number, reason: string, occurredAt: string): boolean {
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new Error('소비 금액은 양의 안전 정수여야 합니다.');
+    }
+    if (reason.trim().length === 0) throw new Error('소비 사유가 비어 있습니다.');
+    return this.#database.transaction(() => {
+      if (this.balance() < amount) return false;
+      this.recordSpend(amount, reason, occurredAt);
+      return true;
+    });
+  }
+
+  trySpendOnce(
+    requestKey: string,
+    amount: number,
+    reason: string,
+    occurredAt: string,
+  ): 'spent' | 'already_spent' | 'insufficient' {
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new Error('소비 금액은 양의 안전 정수여야 합니다.');
+    }
+    if (requestKey.trim().length === 0 || reason.trim().length === 0) {
+      throw new Error('소비 요청 키와 사유가 필요합니다.');
+    }
+    return this.#database.transaction(() => {
+      if (this.grantedAmount(requestKey) !== undefined) return 'already_spent';
+      if (this.balance() < amount) return 'insufficient';
+      const result = this.#database
+        .prepare<[string, number, string, string]>(
+          `INSERT OR IGNORE INTO currency_ledger (dedupe_key, delta, reason, occurred_at)
+           VALUES (?, ?, ?, ?)`,
+        )
+        .run(requestKey, -amount, reason, occurredAt);
+      return result.changes === 1 ? 'spent' : 'already_spent';
+    });
+  }
+
   /** 이미 지급한 키의 금액. 없으면 `undefined`. */
   grantedAmount(dedupeKey: string): number | undefined {
     const row = this.#database

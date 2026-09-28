@@ -6,25 +6,31 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { systemClock } from '@pet/core';
+import { createPersistentGacha } from '@pet/gacha';
+import { createPersistentCombine } from '@pet/combine';
 
 import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
 import type { RoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
-import type { PetClient } from '@pet/client';
+import type { PetClient, TokenClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
+import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
 import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
 import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
 import { MetaRepository } from './persistence/repositories/meta-repository.ts';
 import { PetRepository } from './persistence/repositories/pet-repository.ts';
 import { CurrencyRepository } from './persistence/repositories/currency-repository.ts';
+import { TokenRepository } from './persistence/repositories/token-repository.ts';
 import { mountMeta } from './mount.ts';
 import { CcusageCollector, resolveCcusageBinary } from './usage/ccusage-collector.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
 import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { registerGachaIpc } from './ipc/gacha.ts';
+import { registerCombineIpc } from './ipc/combine.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
@@ -36,6 +42,8 @@ import {
   createOverlayWindow,
   createCombineWindow,
   createGachaWindow,
+  isGachaWebContents,
+  isCombineWebContents,
   createPanelWindow,
   endOverlayDrag,
   focusOverlayWindow,
@@ -248,8 +256,9 @@ app.whenReady().then(async () => {
   const directory = app.getPath('userData');
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
   const databasePath = join(directory, 'petto.sqlite');
-  appDatabase = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
-  appDatabase.open();
+  const database = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
+  appDatabase = database;
+  database.open();
 
   // meta 상태는 공통 SQLite 의 meta_* 표에 산다. 시작할 때 한 번 읽고, 연산마다 바뀐 행만 즉시 쓴다.
   const store = new SqliteMetaStore(new MetaRepository(appDatabase));
@@ -271,10 +280,26 @@ app.whenReady().then(async () => {
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
-  const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
+  const pets: PetClient = new SqlitePetClient(new PetRepository(database));
+  const currencyRepository = new CurrencyRepository(database);
+  const tokens: TokenClient = new SqliteTokenClient(
+    new TokenRepository(database),
+    currencyRepository,
+  );
+  const featureTransaction = <T>(work: () => T): T => database.transaction(work);
+  registerGachaIpc(
+    ipcMain,
+    createPersistentGacha(pets, tokens, featureTransaction),
+    (event) => isGachaWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+  );
+  registerCombineIpc(
+    ipcMain,
+    createPersistentCombine(pets, tokens, featureTransaction),
+    (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+  );
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
-  const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
+  const currency = new SqliteCurrencyPort(currencyRepository, systemClock);
   state = new MetaAppState(
     store,
     databasePath,
