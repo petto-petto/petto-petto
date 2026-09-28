@@ -32,6 +32,25 @@ export function requiredXp(level: number): number {
   return 10 + Math.floor(level / 2);
 }
 
+/** Input/output only. Callers retain cache counts for usage reporting, not growth. */
+export function applyTokenGrowth(pet: GrowthPet, tokens: number, remainder: number) {
+  if (
+    !Number.isSafeInteger(tokens) ||
+    tokens < 0 ||
+    !Number.isSafeInteger(remainder) ||
+    remainder < 0 ||
+    remainder >= TOKENS_PER_XP
+  ) {
+    throw new Error('성장 토큰 증가분이 올바르지 않습니다.');
+  }
+  const total = tokens + remainder;
+  const gained = Math.floor(total / TOKENS_PER_XP);
+  if (!Number.isSafeInteger(total) || !Number.isSafeInteger(pet.totalXp + gained)) {
+    throw new Error('누적 XP 범위를 초과했습니다.');
+  }
+  return { ...applyXp(pet, gained), remainder: total % TOKENS_PER_XP };
+}
+
 export function nextEvolutionLevel(stage: number): number | undefined {
   return EVOLUTION_LEVELS[stage];
 }
