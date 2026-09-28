@@ -60,6 +60,8 @@ export default forwardRef(function PetSprite({ pet, stage, onError }, ref) {
           if (m === 'idle') continue;
           loadImage(spritePng(pet, stage, m))
             .then((im) => {
+              // 이전 펫·진화 단계의 늦은 응답이 현재 모션 캐시를 덮어쓰지 않게 한다.
+              if (!alive) return;
               imagesRef.current[m] = im;
             })
             .catch(() => {});
