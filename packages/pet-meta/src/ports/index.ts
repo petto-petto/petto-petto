@@ -73,9 +73,21 @@ export interface CurrencyPort {
 }
 
 /**
- * `meta`가 화면에 그리는 펫 정보.
+ * 펫 데이터는 공통 `PetClient` 에서 읽는다.
  *
- * `collection`의 내부 펫 모델이 아니라 **meta가 보여줄 만큼만** 추린 것이다.
+ * 펫 담당이 공표한 인터페이스를 그대로 쓴다. meta 가 펫용 포트를 따로 선언하면 같은 테이블을
+ * 두 모양으로 설명하게 되고, 한쪽만 바뀌는 순간 어긋난다.
+ */
+export type { OwnedPet, PetClient } from '@pet/client';
+
+/**
+ * `pet:overlay` 채널이 돌려주는 펫 모양.
+ *
+ * meta 는 이제 이 타입을 쓰지 않는다 — 프로필은 `PetClient` 의 `OwnedPet` 을 그린다. 남아 있는
+ * 이유는 room 의 `pet.js` 가 이 채널과 모양에 기대고 있기 때문이다. 그 창은 지금 열리지
+ * 않지만 남의 코드 경로라 여기서 끊지 않는다.
+ *
+ * `petId` 는 실제로 **종** id 를 담는다. 개체 id 가 필요하면 `OwnedPet.ownedPetId` 를 쓴다.
  */
 export interface PetSummary {
   petId: PetId;
@@ -86,20 +98,17 @@ export interface PetSummary {
   sprite: string;
 }
 
-export interface DexProgress {
-  owned: number;
-  total: number;
-}
-
 /** 트로피가 어디에 놓였는지. 기획서 7.4: 자동 배치 실패가 지급 실패가 되어선 안 된다. */
 export type TrophyPlacement = 'room' | 'storage';
 
-/** collection에 대해 `meta`가 필요로 하는 것. */
+/**
+ * 펫 데이터가 아닌 두 가지. 트로피 도메인이 생기기 전까지 room 어댑터가 맡는다.
+ *
+ * 보유 수·도감은 `PetClient` 로 옮겨 여기서 뺐다.
+ */
 export interface CollectionPort {
-  /** 기획서 5.1: 프로필 펫은 별도 설정값이 아니라 현재 오버레이에 떠 있는 펫이다. */
+  /** room 의 `pet:overlay` 채널 전용. meta 화면은 쓰지 않는다. */
   overlayPet(): PetSummary;
-  ownedPetCount(): number;
-  dexProgress(): DexProgress;
   /** `autoPlace`가 참이면 룸의 첫 빈자리를 시도하고, 실패하면 보관함으로 보낸다. */
   grantTrophy(achievementId: string, autoPlace: boolean): TrophyPlacement;
 }
@@ -116,22 +125,16 @@ export interface BattlePort {
 }
 
 /**
- * 펫의 경험치.
+ * 성장 규칙.
  *
- * 기획서에 없던 요구다. 레벨 옆에 EXP 진행을 보여주려면 현재 경험치와 다음 레벨까지
- * 필요한 양을 알아야 한다. `meta` 는 성장 규칙을 소유하지 않으므로 계산하지 않고 받는다.
+ * 레벨 곡선은 성장 도메인 것이다. `PetClient` 는 저장된 현재 XP 만 주고 “다음 레벨까지 필요한
+ * 양”은 주지 않는다 — 인계 문서도 “기존 성장 함수에서 계산한다”고 적었다. 그런데 그 함수가 있는
+ * `@pet/main-overlay` 가 TS 진입점을 내보내지 않아 meta 가 import 할 수 없다. 그래서 필요한
+ * 두 가지만 선언하고 앱이 채운다.
  */
-export interface PetExperience {
-  level: number;
-  /** 현재 레벨에서 쌓은 경험치. */
-  current: number;
-  /** 다음 레벨까지 필요한 경험치. */
-  required: number;
-}
-
-/** overlay-growth 조회. */
-export interface GrowthPort {
-  highestLevel(): number;
-  /** 오버레이 펫의 경험치. 최고 레벨이면 `required` 가 0 이다. */
-  petExperience(petId: PetId): PetExperience;
+export interface GrowthRules {
+  /** 이 레벨에 닿으면 더 오르지 않는다. 업적 `오랜 친구 Ⅲ` 의 조건이다. */
+  readonly maxLevel: number;
+  /** 한 레벨을 올리는 데 필요한 XP. */
+  requiredXp(level: number): number;
 }

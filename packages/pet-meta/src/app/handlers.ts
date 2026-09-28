@@ -32,6 +32,7 @@ import {
   usageScreen,
   type AggregationRun,
   type EvaluationOutcome,
+  type OwnedPet,
   type PetSummary,
 } from '../index.ts';
 
@@ -49,6 +50,15 @@ function hasFailNextGrant(value: unknown): value is { failNextGrant(): void } {
   return typeof (value as { failNextGrant?: unknown }).failNextGrant === 'function';
 }
 
+/**
+ * 초상화를 찾는 데 필요한 값.
+ *
+ * `evolutionStage` 를 받는 이유: 예전에는 레벨에서 진화 단계를 추측했는데(10 · 20 경계), 오버레이
+ * 성장 규칙의 경계는 15 · 35 라서 원래부터 어긋나 있었다. 이제 `PetClient` 가 저장된 진화 단계를
+ * 주므로 추측하지 않는다.
+ */
+export type PortraitSource = Pick<OwnedPet, 'speciesId' | 'rarity' | 'sprite' | 'evolutionStage'>;
+
 export interface MetaHost {
   showPanel(): void;
   hidePanel(): void;
@@ -59,13 +69,12 @@ export interface MetaHost {
   openExternal(url: string): Promise<void>;
   revealPath(path: string): void;
   /**
-   * 오버레이 펫의 초상화 주소.
+   * 활성 펫의 초상화 주소.
    *
-   * 에셋이 어디에 어떤 이름으로 놓이는지는 앱만 안다 — `PetSummary.sprite`는 슬러그일
-   * 뿐이고, 파일명에 필요한 `petId`는 종 메타에, 진화 단계는 레벨 규칙에 있다. 그래서
-   * `meta`는 펫 요약만 넘기고 주소를 받는다. 에셋이 없으면 `undefined`.
+   * 에셋이 어디에 어떤 이름으로 놓이는지는 앱만 안다. meta 는 에셋 경로에 필요한 네 값만
+   * 넘기고 주소를 받는다. 에셋이 없으면 `undefined`.
    */
-  petPortrait(pet: PetSummary): string | undefined;
+  petPortrait(pet: PortraitSource): string | undefined;
 }
 
 /** 채널 이름 → 처리 함수. 앱이 이것을 자기 IPC에 붙인다. */
@@ -159,9 +168,9 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       state.meta,
       state.catalog,
       state.today(),
-      state.collection,
+      state.pets,
       state.currency,
-      state.growth,
+      state.growthRules,
     ),
   );
 
@@ -171,7 +180,9 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
    */
   handle('info:pet-portrait', () => {
     try {
-      return host.petPortrait(state.collection.overlayPet());
+      const active = state.pets.getActivePet();
+      // 고른 펫이 없으면 그릴 초상화도 없다. 오류가 아니다.
+      return active === null ? undefined : host.petPortrait(active);
     } catch {
       // 펫 조회가 실패하면 초상화도 없다. 요약의 나머지는 이 실패와 무관하다.
       return undefined;
@@ -187,7 +198,7 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
   );
 
   handle('info:performance', () =>
-    performanceScreen(state.gacha, state.battle, state.growth, state.currency),
+    performanceScreen(state.gacha, state.battle, state.pets, state.currency),
   );
 
   handle('settings:view', () =>
@@ -322,22 +333,6 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
 
     let payload: EventPayload;
     switch (kind) {
-      case 'pet_common':
-        payload = {
-          eventType: 'pet.acquired',
-          petId: petId(`pet-${unique}`),
-          rarity: 'COMMON',
-          source: 'gacha',
-        };
-        break;
-      case 'pet_epic':
-        payload = {
-          eventType: 'pet.acquired',
-          petId: petId(`pet-${unique}`),
-          rarity: 'EPIC',
-          source: 'gacha',
-        };
-        break;
       case 'fusion_miracle':
         payload = {
           eventType: 'fusion.completed',
@@ -355,20 +350,6 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
           enemyTier: 1,
           streak: facts.battle_wins + 1,
         };
-        break;
-      case 'levelup': {
-        const level = Math.max(facts.max_pet_level, 1);
-        payload = {
-          eventType: 'pet.levelup',
-          petId: petId('pet-001'),
-          previousLevel: level,
-          level: level + 1,
-          maxLevel: 50,
-        };
-        break;
-      }
-      case 'dex_complete':
-        payload = { eventType: 'dex.updated', ownedSpecies: 24, totalSpecies: 24 };
         break;
       default:
         throw new Error(`알 수 없는 시연 이벤트: ${String(kind)}`);

@@ -8,14 +8,20 @@ import { systemClock } from '@pet/core';
 
 import { MetaAppState } from '@pet/meta';
 import type { RoomSnapshot } from '@pet/room';
-import type { MetaSnapshot } from '@pet/meta';
 
 import { RoomCollectionPort } from './collection.ts';
+import type { PetClient } from '@pet/client';
+
+import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { SqliteCurrencyPort } from './currency.ts';
+import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
+import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
+import { MetaRepository } from './persistence/repositories/meta-repository.ts';
+import { PetRepository } from './persistence/repositories/pet-repository.ts';
 import { CurrencyRepository } from './persistence/repositories/currency-repository.ts';
 import { mountMeta } from './mount.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
-import { JsonFileStore, META_FILE_NAME, ROOM_FILE_NAME } from './store.ts';
+import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
 import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
@@ -186,13 +192,16 @@ app.setName('tamagotchi-pet');
 app.whenReady().then(() => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
-  const store = new JsonFileStore<MetaSnapshot>(directory, META_FILE_NAME);
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
-  appDatabase = new SqliteFileDatabase({
-    filePath: join(directory, 'petto.sqlite'),
-    migrations: APP_MIGRATIONS,
-  });
+  const databasePath = join(directory, 'petto.sqlite');
+  appDatabase = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
   appDatabase.open();
+
+  // meta 상태는 공통 SQLite 의 meta_* 표에 산다. 시작할 때 한 번 읽고, 연산마다 바뀐 행만 즉시 쓴다.
+  const store = new SqliteMetaStore(new MetaRepository(appDatabase));
+  // 표로 옮기기 전의 meta-state.json 이 있으면 한 번만 가져오고 `.migrated` 로 이름을 바꾼다.
+  const legacy = importLegacyMetaSnapshot(directory, store);
+  if (legacy !== 'none') console.log(`[STORE] 옛 meta-state.json → meta 표 (${legacy})`);
   const growthRepository = new PetGrowthRepository(appDatabase, {
     legacyDatabasePaths: [
       join(directory, 'pet-overlay.sqlite'),
@@ -201,16 +210,26 @@ app.whenReady().then(() => {
   });
   growthRepository.migrateLegacyData();
   registerOverlayGrowthIpc(growthRepository);
-  console.log(`[STORE] 저장 위치 ${store.path}`);
+  console.log(`[STORE] 저장 위치 ${databasePath}`);
 
-  // 보유 펫이 meta 의 조회(오버레이 펫 · 보유 수 · 도감 진행도)에 답한다. 예전에는 이
-  // 자리에 테스트 대역이 들어가 상수를 돌려주고 있었다.
+  // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
+  // 아래 `pets` 에서 온다.
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
+  // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
+  const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
   const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
-  state = new MetaAppState(store, store.path, app.getVersion(), collection, currency);
+  state = new MetaAppState(
+    store,
+    databasePath,
+    app.getVersion(),
+    collection,
+    currency,
+    pets,
+    OVERLAY_GROWTH_RULES,
+  );
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "공통 펫 CRUD 호출 인터페이스",
+  "description": "공통 데이터 클라이언트 인터페이스 — 펫, 토큰",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

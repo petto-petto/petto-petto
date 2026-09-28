@@ -364,11 +364,16 @@ for instruction in \
   assert_contains AGENTS.md "$instruction" "AGENTS.md is missing required guidance: $instruction"
 done
 
-# 팀이 2026-09-09 에 Event 창구를 버리고 테이블 단위 Port 하나로 좁혔다. 규칙이 옛 모델로
-# 돌아가면 팀원이 쓰지 않기로 한 구조를 만들게 된다.
+# 2026-09-09 팀이 Event 창구를 버리고 테이블 단위 Port 하나로 좁혔고, 2026-09-17 Port 인터페이스를
+# 가진 쪽에 두기로 했다(선례: packages/pet-client). 규칙이 옛 모델로 돌아가면 팀원이 쓰지 않기로
+# 한 구조를 만들게 된다.
 assert_contains .harness/rules/feature-contracts.md \
+  'The owning feature declares the Port.' \
+  'feature-contracts.md must state that the feature owning the data declares the Port interface'
+
+assert_not_contains .harness/rules/feature-contracts.md \
   'The consumer builds the whole chain.' \
-  'feature-contracts.md must state that the consumer builds call site, Port, implementation, and persistence call'
+  'feature-contracts.md must not keep the retired consumer-owned Port rule'
 
 assert_not_contains .harness/rules/feature-contracts.md \
   'a fact, announced' \

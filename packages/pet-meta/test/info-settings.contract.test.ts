@@ -3,14 +3,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FixedClock, parseLocalDate, petId, type LocalDate } from '@pet/core';
+import { FixedClock, parseLocalDate, type LocalDate } from '@pet/core';
 import {
   AchievementCatalog,
   createMetaState,
   FixtureCollector,
+  DEX_SLOT_COUNT,
   GRASS_WEEKS,
   InMemoryCollection,
   InMemoryCurrency,
+  InMemoryPetClient,
   type MetaState,
   MODEL_PREVIEW_COUNT,
   needsFirstRunCollectTab,
@@ -25,7 +27,7 @@ import {
   settingsScreen,
   StubBattle,
   StubGacha,
-  StubGrowth,
+  STUB_GROWTH_RULES,
   summaryScreen,
   tokenCounts,
   usageScreen,
@@ -46,7 +48,8 @@ class Harness {
   collection = new InMemoryCollection();
   gacha = new StubGacha(12, 4);
   battle = new StubBattle(31);
-  growth = new StubGrowth(18);
+  pets = new InMemoryPetClient();
+  rules = STUB_GROWTH_RULES;
   clock = new FixedClock(NOW);
 
   constructor() {
@@ -67,14 +70,7 @@ class Harness {
   }
 
   summary() {
-    return summaryScreen(
-      this.state,
-      this.catalog,
-      today(),
-      this.collection,
-      this.currency,
-      this.growth,
-    );
+    return summaryScreen(this.state, this.catalog, today(), this.pets, this.currency, this.rules);
   }
 
   settings() {
@@ -85,16 +81,20 @@ class Harness {
 test('INFO-001: 요약이 프로필과 여섯 핵심 수치를 제공한다', () => {
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 40_000]]);
+  const wizard = harness.pets.give('006', { level: 21 });
+  harness.pets.give('003');
+  harness.pets.give('004');
+  harness.pets.setActivePet(wizard.ownedPetId);
 
   const summary = harness.summary();
 
   assert.equal(summary.profile.deviceLabel, '이 기기');
-  assert.equal(summary.profile.petName.value, '별빛마법사');
+  assert.equal(summary.profile.activePet.value?.name, '별빛마법사');
 
   assert.equal(summary.totalObservedTokens, 40_000);
   assert.equal(summary.ownedPets.value, 3);
   assert.equal(summary.dexOwned.value, 3);
-  assert.equal(summary.dexTotal.value, 24);
+  assert.equal(summary.dexTotal.value, DEX_SLOT_COUNT);
 
   assert.equal(summary.todayObservedTokens, 40_000);
   assert.equal(summary.todayEarnedCoins.value, 4);
@@ -116,49 +116,15 @@ test('INFO-001: 사용 가능 토큰이 재화 잔액을 그대로 보여준다'
 test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', () => {
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 7_000]]);
+  const wizard = harness.pets.give('006');
+  harness.pets.setActivePet(wizard.ownedPetId);
   harness.currency.setQueryFailure(true);
 
   const summary = harness.summary();
 
   assert.ok(summary.availableTokens.error);
   assert.equal(summary.totalObservedTokens, 7_000);
-  assert.equal(summary.profile.petName.value, '별빛마법사');
-});
-
-test('INFO-003: 경험치는 성장 도메인 값을 계산 없이 옮긴다', () => {
-  const harness = new Harness();
-  harness.run();
-  harness.growth.setExperience({ level: 21, current: 340, required: 500 });
-
-  const summary = harness.summary();
-
-  assert.deepEqual(summary.profile.experience.value, {
-    level: 21,
-    current: 340,
-    required: 500,
-  });
-});
-
-test('INFO-003: 최고 레벨은 남은 경험치가 없다고 알린다', () => {
-  const harness = new Harness();
-  harness.run();
-  // 화면이 0으로 나누지 않도록, 성장 도메인은 최고 레벨에서 `required: 0`을 준다.
-  harness.growth.setExperience({ level: 60, current: 0, required: 0 });
-
-  const summary = harness.summary();
-
-  assert.equal(summary.profile.experience.value?.required, 0);
-});
-
-test('INFO-007: 펫을 못 읽으면 경험치도 실패로 표시된다', () => {
-  const harness = new Harness();
-  harness.run();
-  harness.collection.setQueryFailure(true);
-
-  const summary = harness.summary();
-
-  // 어느 펫의 경험치인지 물어볼 대상 자체가 없다. 0으로 꾸미지 않는다.
-  assert.ok(summary.profile.experience.error);
+  assert.equal(summary.profile.activePet.value?.name, '별빛마법사');
 });
 
 test('INFO-001: 기록이 없는 설치는 오류가 아니라 빈 상태다', () => {
@@ -282,7 +248,7 @@ test('INFO-007: 타일 하나가 실패해도 나머지는 산다', () => {
   const harness = new Harness();
   harness.battle.setQueryFailure(true);
 
-  const screen = performanceScreen(harness.gacha, harness.battle, harness.growth, harness.currency);
+  const screen = performanceScreen(harness.gacha, harness.battle, harness.pets, harness.currency);
 
   assert.equal(screen.tiles.length, 6);
   const battle = screen.tiles.find((tile) => tile.key === 'battle');
@@ -300,7 +266,7 @@ test('INFO-007: 원장 실패가 다른 타일을 막지 않는다', () => {
   const harness = new Harness();
   harness.currency.setQueryFailure(true);
 
-  const screen = performanceScreen(harness.gacha, harness.battle, harness.growth, harness.currency);
+  const screen = performanceScreen(harness.gacha, harness.battle, harness.pets, harness.currency);
   assert.ok(screen.ledger.error);
   assert.equal(screen.tiles.find((tile) => tile.key === 'draw')?.value.value, 12);
 });
@@ -308,40 +274,25 @@ test('INFO-007: 원장 실패가 다른 타일을 막지 않는다', () => {
 test('INFO-007: 펫 조회가 실패해도 meta가 소유한 수치는 보인다', () => {
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 7_000]]);
-  harness.collection.setQueryFailure(true);
+  harness.pets.setQueryFailure(true);
 
   const summary = harness.summary();
-  assert.ok(summary.profile.petName.error);
+  assert.ok(summary.profile.activePet.error);
   assert.ok(summary.ownedPets.error);
   assert.equal(summary.totalObservedTokens, 7_000);
   assert.equal(summary.profile.deviceLabel, '이 기기');
 });
 
-test('INFO-003: 프로필 펫이 현재 오버레이 펫을 따라간다', () => {
-  const harness = new Harness();
-  harness.run();
-
-  harness.collection.setOverlayPet({
-    petId: petId('pet-777'),
-    name: '레몬',
-    level: 21,
-    rarity: 'EPIC',
-    sprite: 'bird',
-  });
-
-  const summary = harness.summary();
-  assert.equal(summary.profile.petName.value, '레몬');
-  assert.equal(summary.profile.petLevel.value, 21);
-});
-
 test('INFO-007: 실적 타일은 값을 준 도메인을 그대로 표시한다', () => {
   const harness = new Harness();
-  const screen = performanceScreen(harness.gacha, harness.battle, harness.growth, harness.currency);
+  const screen = performanceScreen(harness.gacha, harness.battle, harness.pets, harness.currency);
 
   /*
    * 소유 표시는 화면이 "이 숫자는 남의 도메인 것"이라고 말하는 유일한 자리다. 값의 출처와
    * 어긋나면 사용자에게도 팀에게도 경계를 잘못 가르친다. 실제로 `획득`·`소비`가
    * `currency.totals()`에서 오면서 `overlay-growth`로 표시되고 있었다.
+   *
+   * 최고 레벨은 `PetClient` 로 옮기면서 소유가 `펫` 으로 바뀌었다.
    */
   assert.deepEqual(
     screen.tiles.map((tile) => [tile.key, tile.owner]),
@@ -349,7 +300,7 @@ test('INFO-007: 실적 타일은 값을 준 도메인을 그대로 표시한다'
       ['draw', 'gacha'],
       ['fusion', 'gacha'],
       ['battle', 'battle'],
-      ['best_level', 'overlay-growth'],
+      ['best_level', '펫'],
       ['earned', '재화'],
       ['spent', '재화'],
     ],
@@ -363,7 +314,7 @@ test('INFO-008: 어느 화면에도 USD 비용이 존재하지 않는다', () =>
   const payloads: readonly (readonly [string, unknown])[] = [
     ['요약', harness.summary()],
     ['사용량', usageScreen(harness.state, today(), 'all')],
-    ['실적', performanceScreen(harness.gacha, harness.battle, harness.growth, harness.currency)],
+    ['실적', performanceScreen(harness.gacha, harness.battle, harness.pets, harness.currency)],
   ];
 
   for (const [name, payload] of payloads) {

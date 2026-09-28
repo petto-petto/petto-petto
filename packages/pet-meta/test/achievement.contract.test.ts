@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FixedClock, petId, type Rarity } from '@pet/core';
+import { FixedClock, petId } from '@pet/core';
 import {
   AchievementCatalog,
   type AchievementDefinition,
@@ -19,6 +19,7 @@ import {
   FixtureCollector,
   InMemoryCollection,
   InMemoryCurrency,
+  InMemoryPetClient,
   isUnlocked,
   MASK,
   type MetaState,
@@ -26,6 +27,7 @@ import {
   recordEvent,
   runAggregation,
   settleRewards,
+  STUB_GROWTH_RULES,
   tokenCounts,
 } from '@pet/meta';
 
@@ -36,6 +38,9 @@ class Harness {
   catalog = AchievementCatalog.embedded();
   currency = new InMemoryCurrency();
   collection = new InMemoryCollection();
+  /** 펫 업적의 출처. 이벤트가 아니라 `PetClient` 의 현재 보유를 관측한다. */
+  pets = new InMemoryPetClient();
+  rules = STUB_GROWTH_RULES;
   clock = new FixedClock(NOW);
 
   constructor() {
@@ -47,7 +52,15 @@ class Harness {
   }
 
   evaluate(): EvaluationOutcome {
-    return evaluate(this.state, this.catalog, this.currency, this.collection, this.clock);
+    return evaluate(
+      this.state,
+      this.catalog,
+      this.currency,
+      this.collection,
+      this.pets,
+      this.rules,
+      this.clock,
+    );
   }
 
   isUnlocked(id: string): boolean {
@@ -55,13 +68,6 @@ class Harness {
     return entry !== undefined && isUnlocked(entry);
   }
 }
-
-const acquired = (pet: string, rarity: Rarity): EventPayload => ({
-  eventType: 'pet.acquired',
-  petId: petId(pet),
-  rarity,
-  source: 'gacha',
-});
 
 const wonBattle = (streak: number): EventPayload => ({
   eventType: 'battle.finished',
@@ -182,13 +188,19 @@ test('ACH-002: 달성한 히든 업적은 실제 값을 공개한다', () => {
 });
 
 test('ACH-003: 같은 이벤트와 같은 업적을 반복해도 해제와 보상이 한 번뿐이다', () => {
-  const harness = new Harness();
-
+  // 같은 이벤트: 전투 이벤트로 확인한다. 판정은 하지 않는다 — 판정하면 `첫 승리` 가 함께
+  // 열려 아래의 “업적 하나 → 지급 한 번” 확인과 섞인다.
+  const replay = new Harness();
   for (let index = 0; index < 5; index += 1) {
-    harness.send('pet-acquired-1', acquired('pet-001', 'COMMON'));
+    replay.send('battle-1', wonBattle(1));
   }
-  assert.equal(harness.state.processedEvents.size, 1, '같은 eventId는 한 번만 반영된다');
+  assert.equal(replay.state.processedEvents.size, 1, '같은 eventId는 한 번만 반영된다');
+  assert.equal(replay.state.eventFacts.battleWins, 1, '같은 전투는 한 번만 센다');
 
+  // 같은 업적: 펫 업적은 이벤트가 아니라 보유 관측으로 열린다. 같은 보유를 여러 번 관측해도
+  // 해제와 보상은 한 번이다.
+  const harness = new Harness();
+  harness.pets.give('003');
   const first = harness.evaluate();
   assert.ok(first.newlyUnlocked.includes('collection.first_pet'));
 
@@ -248,11 +260,11 @@ test('ACH-004: 새로 추가한 정의가 기존 사실로 소급 판정된다',
 test('ACH-005: 첫 칭호만 자동 장착된다', () => {
   const harness = new Harness();
 
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
+  harness.pets.give('003');
   harness.evaluate();
   assert.equal(harness.state.profile.equippedTitle, '초보 조련사');
 
-  harness.send('pet-2', acquired('pet-002', 'EPIC'));
+  harness.pets.give('006');
   harness.evaluate();
   assert.ok(harness.isUnlocked('collection.first_epic'));
   assert.equal(
@@ -267,8 +279,9 @@ test('ACH-006: 첫 만남 트로피만 자동 배치된다', () => {
   const harness = new Harness();
   harness.collection.setRoomSlots(5);
 
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
-  harness.send('dex-1', { eventType: 'dex.updated', ownedSpecies: 24, totalSpecies: 24 });
+  harness.pets.give('003');
+  // 트로피가 있는 다른 업적. 도감 완성은 등록된 종이 여섯뿐이라 이 테스트에서 닿을 수 없다.
+  harness.pets.give('004', { level: STUB_GROWTH_RULES.maxLevel });
   harness.evaluate();
 
   const trophies = harness.collection.trophies;
@@ -281,8 +294,7 @@ test('ACH-006: 첫 만남 트로피만 자동 배치된다', () => {
   );
   assert.equal(
     trophies.find(
-      (t: { achievementId: string; placement: string }) =>
-        t.achievementId === 'collection.dex_complete',
+      (t: { achievementId: string; placement: string }) => t.achievementId === 'growth.max_level',
     )?.placement,
     'storage',
     '나머지 트로피는 보관함으로 간다',
@@ -293,7 +305,7 @@ test('ACH-006: 자동 배치 실패가 트로피 지급 실패로 이어지지 �
   const harness = new Harness();
   harness.collection.setRoomSlots(0);
 
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
+  harness.pets.give('003');
   harness.evaluate();
 
   assert.equal(harness.collection.trophies.length, 1);
@@ -304,7 +316,7 @@ test('ACH-006: 자동 배치 실패가 트로피 지급 실패로 이어지지 �
 test('ACH-007: 한 개는 상세 말풍선, 여러 개는 집계 말풍선', () => {
   const harness = new Harness();
 
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
+  harness.pets.give('003');
   const single = harness.evaluate();
   const message = bubbleMessage(single, harness.catalog);
   assert.ok(message?.includes('첫 만남'));
@@ -325,7 +337,7 @@ test('ACH-009: 보상 실패가 미완료로 남고 같은 멱등 키로 재시�
   const harness = new Harness();
   harness.currency.failNextGrant();
 
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
+  harness.pets.give('003');
   const outcome = harness.evaluate();
 
   assert.ok(harness.isUnlocked('collection.first_pet'), '해제는 됐다');
@@ -408,7 +420,7 @@ test('카테고리 필터는 그 카테고리만 고르고 완료율 분모는 �
 
 test('완료율 분모에 히든 업적이 포함된다', () => {
   const harness = new Harness();
-  harness.send('pet-1', acquired('pet-001', 'COMMON'));
+  harness.pets.give('003');
   harness.evaluate();
 
   const screen = achievementScreen(harness.state, harness.catalog, undefined);
@@ -419,24 +431,18 @@ test('완료율 분모에 히든 업적이 포함된다', () => {
 
 test('사실이 감소하지 않는다', () => {
   const harness = new Harness();
-  harness.send('level-1', {
-    eventType: 'pet.levelup',
-    petId: petId('pet-1'),
-    previousLevel: 19,
-    level: 20,
-    maxLevel: 50,
-  });
-  harness.send('level-2', {
-    eventType: 'pet.levelup',
-    petId: petId('pet-2'),
-    previousLevel: 2,
-    level: 3,
-    maxLevel: 50,
-  });
+  const veteran = harness.pets.give('003', { level: 20 });
+  harness.pets.give('004', { level: 3 });
+  harness.evaluate();
   assert.equal(
     factSnapshot(harness.state).max_pet_level,
     20,
     '다른 펫의 낮은 레벨이 최고값을 낮추면 안 된다',
   );
+
+  // 최고 레벨 펫을 잃어도 관측한 최고치는 남는다(기획서 9.4).
+  harness.pets.remove(veteran.ownedPetId);
+  harness.evaluate();
+  assert.equal(factSnapshot(harness.state).max_pet_level, 20);
   assert.equal(factSnapshot(harness.state).max_level_reached, 0);
 });

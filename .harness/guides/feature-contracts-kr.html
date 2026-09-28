@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="다른 기능의 데이터를 쓸 때 따르는 팀 규약 — 테이블 단위 Port와 사용하는 사람이 만드는 사슬">
+  <meta name="description" content="다른 기능의 데이터를 쓸 때 따르는 팀 규약 — 데이터를 가진 기능이 Port를 공표하고 쓰는 쪽은 가져다 쓴다">
   <title>기능 간 계약 규약 | tamagochi-pet</title>
   <style>
     :root {
@@ -171,83 +171,99 @@
     <p class="eyebrow">팀 규약</p>
     <h1>기능 간 계약 규약</h1>
     <p class="lede">
-      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능의 데이터를 쓸 때만 이 규약을
-      따릅니다.
+      각자 자기 feature 패키지 안은 자유롭게 짭니다. 다른 기능의 데이터를 쓸 때, 그리고 내
+      데이터를 남에게 내줄 때만 이 규약을 따릅니다.
     </p>
   </header>
 
   <section>
     <h2>사슬 하나</h2>
-    <div class="chain">사용 로직  →  Port(테이블 단위)  →  Port 구현체  →  DB 영속성 레이어</div>
+    <div class="chain">사용 로직  →  Port  →  Port 구현체  →  Repository  →  DB 영속성 레이어</div>
     <p>
-      <strong>사용하는 사람이 이 사슬을 전부 만듭니다.</strong> 내 화면에 남의 테이블 값이
-      필요하면, 내가 Port를 쓰고 내가 구현체를 쓰고 내가 DB를 부릅니다.
+      <strong>데이터를 가진 기능이 Port 를 공표합니다.</strong> 테이블을 소유한 기능이 그 테이블을
+      읽고 쓰는 인터페이스를 내놓고, 구현체와 Repository 까지 만듭니다. 쓰는 쪽은 인터페이스 타입을
+      import 하고, 앱이 넣어 주는 인스턴스를 받아 호출합니다.
     </p>
     <p>
-      그래서 <strong>아무도 서로를 기다리지 않습니다.</strong> 소유자는 아직 보이지도 않는
-      호출자를 위해 API를 설계하지 않아도 되고, 호출자는 그 API가 나오길 기다리지 않아도
-      됩니다.
+      소유자는 자기 테이블과 불변 조건, 무엇을 바꿔도 되는지를 압니다. 쓰는 쪽이 남의 데이터에
+      대한 인터페이스를 따로 선언하면 그 셋을 짐작하게 되고, 두 소비자가 다르게 짐작하는 순간
+      <strong>테이블 하나에 계약이 둘</strong>이 됩니다.
     </p>
 
     <h3>각 고리가 사는 곳</h3>
     <table>
       <thead>
-        <tr><th>고리</th><th>위치</th><th>왜 거기인가</th></tr>
+        <tr><th>고리</th><th>위치</th><th>누가</th></tr>
       </thead>
       <tbody>
         <tr>
-          <td>Port 인터페이스</td>
-          <td><code>packages/&lt;내 기능&gt;/src/ports/</code></td>
-          <td>테이블이 할 수 있는 전부가 아니라 <b>내가 필요한 것</b>을 적기 때문</td>
+          <td>Port 인터페이스 · 데이터 타입</td>
+          <td><code>packages/pet-client/</code> 같은 소유자의 계약 패키지</td>
+          <td>소유자</td>
         </tr>
         <tr>
           <td>구현체</td>
-          <td><code>apps/desktop/src/main/</code></td>
-          <td>DB에 닿는 곳은 앱뿐</td>
+          <td><code>apps/desktop/src/main/clients/</code> — DB 에 닿는 곳은 앱뿐</td>
+          <td>소유자</td>
         </tr>
         <tr>
           <td>Repository</td>
           <td><code>apps/desktop/src/main/persistence/repositories/</code></td>
-          <td>SQL을 기능마다 한 곳에</td>
+          <td>소유자</td>
+        </tr>
+        <tr>
+          <td>조립</td>
+          <td><code>apps/desktop/src/main/main.ts</code> 에서 한 번 만들어 나눠 줌</td>
+          <td>소유자</td>
+        </tr>
+        <tr>
+          <td>호출</td>
+          <td>쓰는 쪽 패키지 — 계약 패키지를 타입으로만 의존</td>
+          <td>쓰는 쪽</td>
         </tr>
       </tbody>
     </table>
 
     <div class="callout ok">
       <p>
-        내 패키지는 <strong>다른 feature 패키지도, DB 드라이버도 import 하지 않습니다.</strong>
-        인터페이스만 선언하고, 그걸 만족하는 구현체는 앱이 넣어 줍니다. 덕분에 내 규칙은
-        데이터베이스 없이 테스트됩니다.
+        쓰는 쪽 패키지는 <strong>남의 구현체도, DB 드라이버도 import 하지 않습니다.</strong> 계약
+        패키지에는 타입만 있어서 import 해도 DB 연결이 생기지 않습니다.
       </p>
     </div>
   </section>
 
   <section>
-    <h2>규칙 여섯</h2>
+    <h2>규칙 일곱</h2>
     <div class="rulebox">
       <ol>
         <li>
-          <strong>테이블 하나에 Port 하나.</strong> 메서드는 내가 실제로 읽고 쓰는 것만 둡니다.
-          “온 김에” 넣은 메서드는 아무도 확인하지 않는 약속입니다.
+          <strong>소유 도메인 하나에 Port 하나.</strong> 그 도메인이 테이블 여러 개에 걸쳐 있어도
+          쓰는 쪽에게는 하나의 Port 로 내놓습니다. 펫이 <code>pet_species</code> 와
+          <code>owned_pets</code> 를 <code>PetClient</code> 하나로 내놓은 것처럼요.
         </li>
         <li>
-          <strong>구현체에는 규칙이 없습니다.</strong> 행을 내 호출부가 원하는 모양으로 바꾸는
-          일만 합니다. 데이터베이스가 없어도 성립하는 계산이라면 도메인 패키지 몫입니다.
+          <strong>쓰는 쪽은 요구사항을, 소유자는 모양을.</strong> 무엇을 읽는지, 어디에 보여주는지,
+          얼마나 자주인지를 소유자에게 가져갑니다. 메서드로 만드는 건 소유자입니다.
+        </li>
+        <li>
+          <strong>구현체에는 규칙이 없습니다.</strong> 행을 공표된 타입으로 바꾸는 일만 합니다.
+          데이터베이스가 없어도 성립하는 계산이라면 도메인 패키지 몫입니다.
         </li>
         <li>
           <strong>테이블을 만들고 고치는 것은 소유한 기능만.</strong> 없는 컬럼이 필요하면
-          소유자에게 요청합니다. 남의 migration scope 에 끼워 넣으면 소유자의 다음
-          migration 과 부딪힙니다.
+          소유자에게 요청합니다. 남의 migration scope 에 끼워 넣으면 소유자의 다음 migration 과
+          부딪힙니다.
         </li>
         <li>
-          <strong>Port 없이 남의 테이블을 조회하지 않습니다.</strong> 호출부에 날 쿼리를 쓰면 그
-          테이블의 스키마가 코드 전체에 퍼지고, 소유자는 자기가 찾을 수도 없는 코드를 깨뜨리지
-          않고는 스키마를 못 바꿉니다.
+          <strong>소유자의 Port 없이 남의 테이블을 조회하지 않습니다.</strong> 호출부에 날 쿼리를
+          쓰면 그 스키마가 코드 전체에 퍼지고, 소유자는 찾을 수도 없는 코드를 깨뜨리지 않고는
+          스키마를 못 바꿉니다.
         </li>
         <li>
-          <strong>Port 는 실패하면 던집니다.</strong> <code>null</code> 이나 <code>0</code> 을
-          돌려주지 않습니다. <code>0</code> 을 받은 쪽은 “행이 없음”과 “읽지 못함”을 구분할 수
-          없습니다.
+          <strong>읽기 실패는 던집니다.</strong> <code>null</code> · <code>[]</code> ·
+          <code>0</code> 은 <b>진짜 빈 결과</b>입니다 — 고른 펫이 없음, 펫이 없음, 셀 게 없음.
+          “읽지 못함” 대신 쓰지 않습니다. 실패에 <code>0</code> 을 받은 쪽은 틀린 값을 그리면서
+          알아챌 방법도 없습니다.
         </li>
         <li>
           <strong>그 순간에만 존재하는 사실은 소유자가 저장해야 합니다.</strong> 현재 상태만 담은
@@ -259,9 +275,9 @@
 
     <div class="callout warn">
       <p>
-        <strong>여섯 번째가 가장 자주 걸립니다.</strong> 예를 들어 업적 <code>무패</code>(10연승)와
+        <strong>일곱 번째가 가장 자주 걸립니다.</strong> 예를 들어 업적 <code>무패</code>(10연승)와
         <code>연금술의 기적</code>(부모 둘 다 COMMON → EPIC)은 <b>현재 상태 조회로 판정할 수
-        없습니다.</b> 이건 소비자가 계산으로 해결할 수 있는 문제가 아니라, 소유자에게
+        없습니다.</b> 쓰는 쪽이 계산으로 해결할 수 있는 문제가 아니라, 소유자에게
         <b>컬럼을 요청</b>해야 하는 문제입니다.
       </p>
     </div>
@@ -278,52 +294,41 @@
   </section>
 
   <section>
-    <h2>예시 — meta 가 코인 잔액을 보여준다</h2>
+    <h2>예시 — 펫</h2>
     <p>
-      잔액은 meta 것이 아닙니다. 사슬 전체를 소비자인 meta 가 만들었습니다.
+      펫 도메인이 기준입니다. 소유자가 전부 공표했고, meta 는 호출만 합니다.
     </p>
 
-    <h3>1. Port — 드라이버도 SQL도 없다</h3>
-<pre><code><span class="cmt">// packages/pet-meta/src/ports/</span>
-export interface CurrencyPort {
-  balance(): Coin;
-  grantOnce(rewardKey: string, amount: Coin, reason: string): GrantOutcome;
+    <h3>1. Port — 소유자. 타입만, 드라이버 없음</h3>
+<pre><code><span class="cmt">// packages/pet-client/src/index.ts</span>
+export interface PetClient {
+  getActivePet(): OwnedPet | null;   <span class="cmt">// null = 아직 고른 펫 없음. 실패가 아니다</span>
+  countOwnedSpecies(): number;
+  <span class="cmt">// …</span>
 }</code></pre>
 
-    <h3>2. Repository — SQL 만, 규칙 없음</h3>
-<pre><code><span class="cmt">// apps/desktop/src/main/persistence/repositories/</span>
-recordGrant(dedupeKey, amount, reason, at): boolean {
-  const result = this.#database
-    .prepare('INSERT OR IGNORE INTO currency_ledger (dedupe_key, delta, reason, occurred_at) VALUES (?, ?, ?, ?)')
-    .run(dedupeKey, amount, reason, at);
-  return result.changes &gt; 0;
-}</code></pre>
-
-    <h3>3. 구현체 — 행을 모양으로, 실패를 오류로</h3>
-<pre><code><span class="cmt">// apps/desktop/src/main/</span>
-export class SqliteCurrencyPort implements CurrencyPort {
-  balance(): Coin {
-    try {
-      return this.#repository.balance();
-    } catch (error) {
-      throw new PortError(`잔액을 불러오지 못했어요 (${String(error)})`);
-    }
+    <h3>2. 구현체 — 소유자. 규칙 없이 위임만</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/clients/sqlite-pet-client.ts</span>
+export class SqlitePetClient implements PetClient {
+  getActivePet(): OwnedPet | null {
+    return this.#repository.getActivePet();
   }
 }</code></pre>
 
-    <div class="callout">
-      <p>
-        이 예시에서 <strong>장식이 아니라 계약인 것 둘</strong>이 있습니다.
-      </p>
-      <p>
-        <strong>잔액을 컬럼으로 저장하지 않고 <code>SUM(delta)</code> 로 구합니다.</strong> 반드시
-        일치해야 하는 두 숫자는 언젠가 어긋나고, 그 순간 어느 쪽도 믿을 수 없게 됩니다.
-      </p>
-      <p>
-        <strong>멱등성은 <code>UNIQUE</code> 키와 <code>INSERT OR IGNORE</code> 에 맡깁니다.</strong>
-        조회한 뒤 삽입하면 두 문장 사이에 끼어든 두 번째 삽입을 막지 못합니다.
-      </p>
-    </div>
+    <h3>3. 조립 — 공유 DB 위에 한 번</h3>
+<pre><code><span class="cmt">// apps/desktop/src/main/main.ts</span>
+const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));</code></pre>
+
+    <h3>4. 호출 — 쓰는 쪽. 타입만 import</h3>
+<pre><code><span class="cmt">// packages/pet-meta</span>
+import type { PetClient } from '@pet/client';
+
+const active = pets.getActivePet();</code></pre>
+
+    <p>
+      연결 절차와 메서드별 보장은 소유자의 인계 문서
+      <code>docs/pet-client-handoff.md</code> 에 있습니다.
+    </p>
   </section>
 
   <footer class="page">

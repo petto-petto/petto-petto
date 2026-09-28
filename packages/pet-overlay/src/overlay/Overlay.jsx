@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import RadialMenu from './RadialMenu.jsx';
+import HangingMenu from './HangingMenu.jsx';
 import Toasts from './Toasts.jsx';
 import DevPanel from './DevPanel.jsx';
 import Pet from './Pet.jsx';
@@ -111,7 +111,7 @@ export default function Overlay({ g, activePet, petKey, setPetKey }) {
   return (
     <div className="overlay-root">
       <div className="pet-anchor io">
-        {menuOpen && <RadialMenu g={g} onClose={() => setMenuOpen(false)} />}
+        {menuOpen && <HangingMenu g={g} onClose={() => setMenuOpen(false)} />}
 
         {levelUpFx && <LevelUpFx key={levelUpFx.key} level={levelUpFx.level} />}
         {evolveFx && <EvolutionFx key={evolveFx.key} />}
