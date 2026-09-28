@@ -11,10 +11,6 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('petBattle', {
-  execute: (command) => ipcRenderer.invoke('battle:command', command),
-});
-
 /**
  * 메인이 렌더러로 보내는 이벤트 채널. 이 목록 밖은 구독할 수 없다.
  *

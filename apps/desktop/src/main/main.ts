@@ -10,15 +10,9 @@ import { MetaAppState } from '@pet/meta';
 import type { RoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
-import { RoomPetBridge } from './room-pet-bridge.ts';
 import type { PetClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
-import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
-import { TokenRepository } from './persistence/repositories/token-repository.ts';
-import { TokenGrowthLink } from './token-growth.ts';
-import { TokenLinkedMetaState } from './token-linked-meta.ts';
-import { mountBattle } from './battle.ts';
 import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
 import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
@@ -60,7 +54,6 @@ let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
 let appDatabase: SqliteFileDatabase | undefined;
-let closeBattle: (() => void) | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -219,16 +212,16 @@ app.whenReady().then(() => {
   registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${databasePath}`);
 
-  // 기존 room JSON은 한 번만 연결한다. 이후 room·meta·battle은 같은 공통 개체를 읽는다.
+  // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
+  // 아래 `pets` 에서 온다.
+  const ownedPets = loadRoomCollection(roomStore);
+  const collection = new RoomCollectionPort(ownedPets);
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
   const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
-  const roomPets = new RoomPetBridge(appDatabase, pets);
-  const ownedPets = roomPets.initialize(loadRoomCollection(roomStore));
-  const collection = new RoomCollectionPort(ownedPets, () => roomPets.collection());
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
   const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
-  const linkedState = new TokenLinkedMetaState(
+  state = new MetaAppState(
     store,
     databasePath,
     app.getVersion(),
@@ -237,13 +230,7 @@ app.whenReady().then(() => {
     pets,
     OVERLAY_GROWTH_RULES,
   );
-  linkedState.connectGrowth(
-    appDatabase,
-    new TokenGrowthLink(appDatabase, new SqliteTokenClient(new TokenRepository(appDatabase)), pets),
-  );
-  state = linkedState;
-  closeBattle = mountBattle(pets);
-  room = new RoomState(roomStore, systemClock, collection, ownedPets, roomPets);
+  room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);
   mountOverlayWindowIpc();
@@ -306,7 +293,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  closeBattle?.();
   state?.persist();
   room?.persist();
   appDatabase?.close();
