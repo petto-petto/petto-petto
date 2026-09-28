@@ -58,11 +58,8 @@ export interface TokenHistoryEntry {
 }
 
 /**
- * AI 도구 토큰 사용량의 공통 API. SQLite/Electron에 의존하지 않는다.
- *
- * 사용량은 **누적만 한다.** 차감이 없는 것이 의도다 — 어제 쓴 토큰은 일어난 사실이고,
- * 무언가를 소비했다고 줄어들지 않는다. 소비할 수 있는 잔액은 재화 도메인이 소유하며,
- * 그쪽은 여기의 `reward`를 환산해서 쓴다.
+ * 토큰 사용량과 소비 가능한 재화의 공통 API. SQLite/Electron에 의존하지 않는다.
+ * 사용량 통계는 누적 사실로 남고, 소비는 별도 재화 원장의 잔액만 줄인다.
  *
  * 현재 구현은 동기식이다. 저장·조회 실패와 잘못된 입력은 예외를 던진다.
  */
@@ -83,4 +80,17 @@ export interface TokenClient {
 
   /** 최근 적재 내역. `entryId` 내림차순이라 같은 시각의 항목도 순서가 정해진다. */
   recentHistory(limit: number): TokenHistoryEntry[];
+
+  /** 현재 사용할 수 있는 재화 잔액. 조회 실패는 예외다. */
+  balance(): number;
+  /** 같은 키의 지급은 한 번만 기록한다. 새로 지급했으면 true. */
+  grantOnce(key: string, amount: number, reason: string): boolean;
+  /** 잔액이 부족하면 기록하지 않고 false. 성공하면 true. */
+  spend(amount: number, reason: string): boolean;
+  /** 같은 요청 키를 재전송해도 추가 차감하지 않는다. */
+  spendOnce(
+    requestKey: string,
+    amount: number,
+    reason: string,
+  ): 'spent' | 'already_spent' | 'insufficient';
 }

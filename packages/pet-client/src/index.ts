@@ -58,5 +58,5 @@ export interface PetClient {
   replaceOwnedPets(materialOwnedPetIds: readonly string[], resultSpeciesId: string): OwnedPet;
 }
 
-/** AI 도구 토큰 사용량 인터페이스. 구현은 apps/desktop 이 주입한다. */
+/** 토큰 사용량과 소비 가능한 재화의 공통 인터페이스. 구현은 apps/desktop 이 주입한다. */
 export * from './token.ts';

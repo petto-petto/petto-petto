@@ -1,64 +1,16 @@
 const assets = new URLSearchParams(window.location.search).get('assets');
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-import { createCombineAnimationLock, createCombineEngine } from '../dist/index.js';
 
 if (!assets) throw new Error('Combine UI requires the assets query parameter.');
 
 const assetBase = assets.endsWith('/') ? assets : `${assets}/`;
 const asset = (path) => new URL(path, assetBase).href;
 const stage = document.querySelector('.combine-stage');
-
 stage.style.setProperty(
   '--combine-background',
   `url("${asset('backgrounds/bg_003_arcane_combine_cavern/bg_003_composite.png')}")`,
 );
 
-const pets = {
-  common: [
-    {
-      id: 'mole',
-      name: '두더지',
-      grade: 'common',
-      asset: asset('pets/common/mole_digger/stage1/pet_003_s1_card.png'),
-    },
-    {
-      id: 'treant',
-      name: '새싹나무',
-      grade: 'common',
-      asset: asset('pets/common/sprout_treant/stage1/pet_004_s1_card.png'),
-    },
-  ],
-  rare: [
-    {
-      id: 'zebra',
-      name: '미드나잇얼룩말',
-      grade: 'rare',
-      asset: asset('pets/rare/midnight_zebra/stage1/pet_002_s1_card.png'),
-    },
-    {
-      id: 'hamster',
-      name: '볼주머니햄',
-      grade: 'rare',
-      asset: asset('pets/rare/cheek_hamster/stage1/pet_005_s1_card.png'),
-    },
-  ],
-  epic: [
-    {
-      id: 'squirrel',
-      name: '도토리다람쥐',
-      grade: 'epic',
-      asset: asset('pets/epic/acorn_squirrel/stage1/pet_001_s1_card.png'),
-    },
-    {
-      id: 'wizard',
-      name: '별빛마법사',
-      grade: 'epic',
-      asset: asset('pets/epic/star_wizard/stage1/pet_006_s1_card.png'),
-    },
-  ],
-};
-const engine = createCombineEngine(pets, (max) => Math.floor(Math.random() * max));
-const animationLock = createCombineAnimationLock();
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const panel = document.querySelector('.combine-panel');
 const message = panel.querySelector('.combine-message');
@@ -67,51 +19,115 @@ const selection = panel.querySelector('.selection-slots');
 const grid = panel.querySelector('.pet-grid');
 const tokens = panel.querySelector('.token-readout');
 const resultCard = stage.querySelector('.forge-result-card');
-const labels = {
-  selection: '재료는 정확히 10장 필요합니다.',
-  tokens: 'Token이 부족합니다.',
-  candidates: '결과 펫 풀이 비어 있습니다.',
-};
+let snapshot = { species: [], ownedPets: [], balance: 0 };
+let activeGrade = 'common';
+let selectedIds = [];
+let busy = false;
+let pendingRequestId;
+
+function bridge() {
+  if (!window.combine) throw new Error('앱에서 합성 창을 열어 주세요.');
+  return window.combine;
+}
+
+function unwrap(response) {
+  if (!response.ok) {
+    const error = new Error(response.message);
+    error.code = response.code;
+    throw error;
+  }
+  return response.value;
+}
+
+function eligible() {
+  const rarity = activeGrade.toUpperCase();
+  return snapshot.ownedPets.filter((pet) => pet.rarity === rarity && !pet.isActive);
+}
+
+function autoSelect() {
+  pendingRequestId = undefined;
+  selectedIds = eligible()
+    .slice(0, 10)
+    .map((pet) => pet.ownedPetId);
+}
+
+function applySnapshot(next, selectAutomatically) {
+  snapshot = next;
+  if (selectAutomatically) autoSelect();
+  else {
+    const available = new Set(eligible().map((pet) => pet.ownedPetId));
+    if (selectedIds.some((id) => !available.has(id))) pendingRequestId = undefined;
+    selectedIds = selectedIds.filter((id) => available.has(id));
+  }
+  render();
+}
+
+async function refresh(selectAutomatically = false) {
+  try {
+    applySnapshot(unwrap(await bridge().load()), selectAutomatically);
+    message.textContent = '';
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : '정보를 불러오지 못했어요.';
+  }
+}
+
 function render() {
-  const state = engine.getState();
-  tokens.textContent = `TOKEN ${state.tokenBalance.toLocaleString()}`;
-  for (const tab of panel.querySelectorAll('[data-grade]'))
-    tab.classList.toggle('active', tab.dataset.grade === state.activeGrade);
-  panel.querySelector('.combine-button').disabled = stage.classList.contains('combining');
+  tokens.textContent = `TOKEN ${snapshot.balance.toLocaleString()}`;
+  for (const tab of panel.querySelectorAll('[data-grade]')) {
+    tab.classList.toggle('active', tab.dataset.grade === activeGrade);
+  }
+  panel.querySelector('.combine-button').disabled = busy || stage.classList.contains('combining');
   selection.replaceChildren(
-    ...state.selection.map((id, index) => {
-      const pet = pets[state.activeGrade].find((candidate) => candidate.id === id);
-      const b = document.createElement('button');
-      b.className = `selection-card ${pet.grade}`;
-      b.title = `${pet.name} 제거`;
-      b.setAttribute('aria-label', `${pet.name} 재료 제거`);
-      b.append(petImage(pet), cardMark('×'));
-      b.onclick = () => {
-        if (stage.classList.contains('combining')) return;
-        engine.removePet(index);
+    ...selectedIds.map((id, index) => {
+      const pet = snapshot.ownedPets.find((candidate) => candidate.ownedPetId === id);
+      const button = document.createElement('button');
+      button.className = `selection-card ${activeGrade}`;
+      button.title = `${pet.name} 제거`;
+      button.setAttribute('aria-label', `${pet.name} 재료 제거`);
+      button.append(petImage(pet), cardMark('×'));
+      button.onclick = () => {
+        if (busy || stage.classList.contains('combining')) return;
+        selectedIds.splice(index, 1);
+        pendingRequestId = undefined;
         render();
       };
-      return b;
+      return button;
     }),
   );
   grid.replaceChildren(
-    ...pets[state.activeGrade].map((pet) => {
-      const b = document.createElement('button');
-      b.className = `pet-card ${pet.grade}`;
-      b.append(petImage(pet), cardText(`${state.inventory[pet.id]}장`, pet.name), cardMark('+'));
-      b.onclick = () => {
-        if (stage.classList.contains('combining')) return;
-        engine.addPet(pet.id);
-        render();
-      };
-      return b;
-    }),
+    ...snapshot.species
+      .filter((species) => species.rarity === activeGrade.toUpperCase())
+      .map((species) => {
+        const available = eligible().filter((pet) => pet.speciesId === species.speciesId);
+        const button = document.createElement('button');
+        button.className = `pet-card ${activeGrade}`;
+        button.append(
+          petImage(species),
+          cardText(`${available.length}장`, species.name),
+          cardMark('+'),
+        );
+        button.onclick = () => {
+          if (busy || stage.classList.contains('combining')) return;
+          const pet = available.find((candidate) => !selectedIds.includes(candidate.ownedPetId));
+          if (!pet) {
+            message.textContent = '선택할 수 있는 카드가 부족합니다.';
+            return;
+          }
+          if (selectedIds.length >= 10) return;
+          selectedIds.push(pet.ownedPetId);
+          pendingRequestId = undefined;
+          message.textContent = '';
+          render();
+        };
+        return button;
+      }),
   );
 }
 
 function petImage(pet) {
   const image = document.createElement('img');
-  image.src = pet.asset;
+  const grade = pet.rarity.toLowerCase();
+  image.src = asset(`pets/${grade}/${pet.sprite}/stage1/pet_${pet.speciesId}_s1_card.png`);
   image.alt = pet.name;
   return image;
 }
@@ -134,30 +150,55 @@ function cardMark(symbol) {
   mark.textContent = symbol;
   return mark;
 }
+
 panel.querySelectorAll('[data-grade]').forEach((tab) =>
   tab.addEventListener('click', () => {
-    if (stage.classList.contains('combining')) return;
-    engine.selectGrade(tab.dataset.grade);
+    if (busy || stage.classList.contains('combining')) return;
+    activeGrade = tab.dataset.grade;
+    autoSelect();
     message.textContent = '';
     render();
   }),
 );
-panel.querySelector('.combine-button').addEventListener('click', () => {
-  if (!animationLock.tryStart()) return;
-  const outcome = engine.combine();
-  if (outcome.kind === 'error') {
-    message.textContent = labels[outcome.code];
-    animationLock.finish();
-  } else {
-    playCombineSuccess(outcome);
-  }
-  render();
+
+panel.querySelector('.combine-button').addEventListener('click', () => void submit());
+window.addEventListener('focus', () => {
+  if (!busy && !stage.classList.contains('combining')) void refresh();
 });
 
-function playCombineSuccess(outcome) {
+async function submit() {
+  if (busy || stage.classList.contains('combining')) return;
+  busy = true;
+  render();
+  try {
+    pendingRequestId ??= window.crypto.randomUUID();
+    const saved = unwrap(await bridge().combine(activeGrade, [...selectedIds], pendingRequestId));
+    pendingRequestId = undefined;
+    applySnapshot(saved, true);
+    playCombineSuccess(saved);
+  } catch (error) {
+    if (error && error.code === 'duplicate') pendingRequestId = undefined;
+    message.textContent = error instanceof Error ? error.message : '합성하지 못했어요.';
+    await refreshAfterError();
+  } finally {
+    busy = false;
+    render();
+  }
+}
+
+async function refreshAfterError() {
+  try {
+    applySnapshot(unwrap(await bridge().load()), false);
+  } catch {
+    // 첫 오류 메시지를 유지한다. 다음 버튼 누름 또는 창 포커스로 다시 조회할 수 있다.
+  }
+}
+
+function playCombineSuccess(saved) {
   message.textContent = '';
   result.textContent = '';
-  resultCard.className = `forge-result-card ${outcome.grade}`;
+  const grade = saved.result.rarity.toLowerCase();
+  resultCard.className = `forge-result-card ${grade}`;
   const close = document.createElement('button');
   close.className = 'forge-result-close';
   close.type = 'button';
@@ -165,18 +206,16 @@ function playCombineSuccess(outcome) {
   close.textContent = '×';
   close.addEventListener('click', dismissForgeResult);
   resultCard.replaceChildren(
-    petImage(outcome.pet),
-    cardText(outcome.grade.toUpperCase(), outcome.pet.name),
+    petImage(saved.result),
+    cardText(saved.result.rarity, saved.result.name),
     close,
   );
   stage.classList.add('combining');
-
   window.setTimeout(
     () => {
       stage.classList.remove('combining');
       resultCard.classList.add('revealed');
-      result.textContent = `${outcome.grade.toUpperCase()} ${outcome.pet.name} 획득!`;
-      animationLock.finish();
+      result.textContent = `${saved.result.rarity} ${saved.result.name} 획득!`;
       render();
     },
     reducedMotion ? 0 : 1_500,
@@ -189,4 +228,5 @@ function dismissForgeResult() {
   resultCard.replaceChildren();
   result.textContent = '';
 }
-render();
+
+void refresh(true);
