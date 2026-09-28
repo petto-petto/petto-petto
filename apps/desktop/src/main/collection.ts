@@ -31,12 +31,14 @@ import { activePet, speciesOf, type RoomCollection } from '@pet/room';
  */
 export class RoomCollectionPort implements CollectionPort {
   #collection: RoomCollection;
+  readonly #readCollection: (() => RoomCollection) | undefined;
   /** 룸의 남은 빈자리 수. 트로피 배치는 아직 도메인이 없어 여기서 센다. */
   #roomSlots = 1;
   #trophies: { achievementId: string; placement: TrophyPlacement }[] = [];
 
-  constructor(collection: RoomCollection) {
+  constructor(collection: RoomCollection, readCollection?: () => RoomCollection) {
     this.#collection = collection;
+    this.#readCollection = readCollection;
   }
 
   update(collection: RoomCollection): void {
@@ -45,7 +47,7 @@ export class RoomCollectionPort implements CollectionPort {
 
   /** 기획서 5.1: 프로필 펫은 별도 설정값이 아니라 지금 오버레이에 떠 있는 펫이다. */
   overlayPet(): PetSummary {
-    const pet = activePet(this.#collection);
+    const pet = activePet(this.#readCollection?.() ?? this.#collection);
     const species = speciesOf(pet.speciesPetId);
     return {
       petId: species.petId,

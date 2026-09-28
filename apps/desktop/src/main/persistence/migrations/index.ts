@@ -5,6 +5,7 @@ import { OVERLAY_GROWTH_MIGRATIONS } from './overlay-growth.ts';
 import { PET_MIGRATIONS } from './pet.ts';
 import { TOKEN_MIGRATIONS } from './token.ts';
 import { GROWTH_TOKEN_CREDIT_MIGRATIONS } from './growth-token-credit.ts';
+import { ROOM_PET_CLIENT_MIGRATIONS } from './room-pet-client.ts';
 
 /** 공통 SQLite 파일에 적용할 모든 기능 migration의 단일 등록 지점. */
 export const APP_MIGRATIONS: readonly SqliteMigration[] = [
@@ -14,4 +15,5 @@ export const APP_MIGRATIONS: readonly SqliteMigration[] = [
   ...PET_MIGRATIONS,
   ...TOKEN_MIGRATIONS,
   ...GROWTH_TOKEN_CREDIT_MIGRATIONS,
+  ...ROOM_PET_CLIENT_MIGRATIONS,
 ];

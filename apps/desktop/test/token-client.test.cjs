@@ -237,6 +237,7 @@ test('기존 기능의 테이블과 같은 파일에 공존한다', async () => 
       'meta',
       'overlay-growth',
       'pet',
+      'room-pet-client',
       'token',
     ]);
   } finally {
