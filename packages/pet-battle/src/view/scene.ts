@@ -24,6 +24,7 @@ export interface PetSpriteProfile {
 
 export interface BattleScene {
   petAsset: string;
+  petIdleAsset: string;
   enemyAsset: string;
   backgroundAsset: string;
   enemyHpRatio: number;
@@ -163,16 +164,20 @@ export function deriveBattleScene(state: BattleState): BattleScene {
           : state.preview.enemyPhase;
   const petAction = isAttacking ? 'attack' : 'idle';
   const petAssetRarity = state.preview.petAssetRarity ?? state.activePet?.rarity ?? 'COMMON';
-  const sharedSprite =
+  const sharedSprites =
     state.preview.petAssetRarity === null && state.activePet
-      ? state.petSprites?.[state.activePet.petId]?.[petAction]
+      ? state.petSprites?.[state.activePet.petId]
       : undefined;
+  const sharedSprite = sharedSprites?.[petAction];
   const petAsset =
     sharedSprite?.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
+  const petIdleAsset =
+    sharedSprites?.idle.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-idle.png`;
   const frameCount = sharedSprite?.frameCount ?? (isAttacking ? 6 : 4);
 
   return {
     petAsset,
+    petIdleAsset,
     enemyAsset: `assets/enemies/v2/${enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
     backgroundAsset: `assets/backgrounds/v2/${BACKGROUND_SLUG[background]}.png`,
     enemyHpRatio: hpRatio,

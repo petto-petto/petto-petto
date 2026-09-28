@@ -293,6 +293,7 @@ input {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  transform: translateY(var(--pet-ground-offset, 0px));
 }
 
 .pet-sheet {

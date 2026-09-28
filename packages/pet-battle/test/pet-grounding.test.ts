@@ -76,3 +76,82 @@ test('선택 해제·이미지 읽기 실패에서 이전 펫 보정값이 남�
   await f.complete('pending.png', 10 / 32);
   assert.equal(f.offset(), 0);
 });
+
+test('이미지 로더는 실제 알파 하단을 읽고 로드·캔버스 실패는 중립 처리한다', async (t) => {
+  const originalImage = Object.getOwnPropertyDescriptor(globalThis, 'Image');
+  const originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  t.after(() => {
+    for (const [name, descriptor] of [
+      ['Image', originalImage],
+      ['document', originalDocument],
+    ] as const) {
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else Reflect.deleteProperty(globalThis, name);
+    }
+  });
+
+  let image: ImageStub;
+  class ImageStub {
+    src = '';
+    naturalWidth = 128;
+    naturalHeight = 32;
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor() {
+      image = this;
+    }
+  }
+  let contextAvailable = true;
+  let readable = true;
+  let drawn = 0;
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext(type: string) {
+      assert.equal(type, '2d');
+      return contextAvailable
+        ? {
+            drawImage(source: ImageStub, x: number, y: number) {
+              assert.equal(source, image);
+              assert.deepEqual([x, y], [0, 0]);
+              drawn += 1;
+            },
+            getImageData(x: number, y: number, width: number, height: number) {
+              assert.deepEqual([x, y, width, height], [0, 0, 128, 32]);
+              if (!readable) throw new Error('unreadable image');
+              const data = new Uint8ClampedArray(width * height * 4);
+              data[(21 * width + 2) * 4 + 3] = 255;
+              return { width, height, data };
+            },
+          }
+        : null;
+    },
+  };
+  Object.defineProperty(globalThis, 'Image', { configurable: true, value: ImageStub });
+  Object.defineProperty(globalThis, 'document', {
+    configurable: true,
+    value: {
+      createElement(tag: string) {
+        assert.equal(tag, 'canvas');
+        return canvas;
+      },
+    },
+  });
+  let offset = -1;
+  const grounding = new PetGrounding((value) => {
+    offset = value;
+  });
+  grounding.resize(128);
+  for (const mode of ['loaded', 'no-context', 'unreadable', 'missing'] as const) {
+    contextAvailable = mode !== 'no-context';
+    readable = mode !== 'unreadable';
+    grounding.setSource(`${mode}.png`);
+    assert.equal(image!.src, `${mode}.png`);
+    if (mode === 'missing') image!.onerror!();
+    else image!.onload!();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(offset, mode === 'loaded' ? 40 : 0);
+  }
+  assert.equal(drawn, 2);
+});

@@ -9,6 +9,7 @@ import { DemoBattleGateway } from './demo-gateway.ts';
 import { battleLayout, menuPositions, projectPetOffset } from '../view/layout.ts';
 import { peekingSpectators } from '../view/peeking-spectators.ts';
 import { AmbientLogsView } from './ambient-logs.ts';
+import { PetGrounding } from './pet-grounding.ts';
 
 declare global {
   interface Window {
@@ -51,6 +52,9 @@ const opacity = required<HTMLInputElement>('#display-opacity');
 const petSpectators = required<HTMLElement>('#pet-spectators');
 const defeatedEnemySpectators = required<HTMLElement>('#defeated-enemy-spectators');
 const ambientLogs = new AmbientLogsView(root);
+const petGrounding = new PetGrounding((offset) => {
+  pet.style.setProperty('--pet-ground-offset', `${offset}px`);
+});
 
 const gateway: BattleGateway = window.petBattle ?? new DemoBattleGateway();
 let state: BattleState | undefined;
@@ -63,6 +67,7 @@ let layout = battleLayout(root.clientWidth, root.clientHeight);
 function resizeBattle(): void {
   if (root.clientWidth === 0 || root.clientHeight === 0) return;
   layout = battleLayout(root.clientWidth, root.clientHeight);
+  petGrounding.resize(layout.petSize);
   const properties = {
     '--pet-size': layout.petSize,
     '--pet-left': layout.petLeft,
@@ -147,6 +152,7 @@ function render(next: BattleState, previous?: BattleState): void {
   notice.style.opacity = String(scene.displayOpacity);
   background.src = assetUrl(scene.backgroundAsset);
   petSheet.src = assetUrl(scene.petAsset);
+  petGrounding.setSource(hasPet ? assetUrl(scene.petIdleAsset) : null);
   enemyImage.src = assetUrl(scene.enemyAsset);
   enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
   environment.style.opacity = String(scene.displayOpacity);
