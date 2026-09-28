@@ -19,6 +19,132 @@ fn sync(engine: &mut BattleEngine, rarity: &str, xp: u64) -> Value {
     .expect("json response")
 }
 
+fn command(engine: &mut BattleEngine, command: Value) -> Value {
+    let response: Value = serde_json::from_str(&handle_json_line(
+        engine,
+        &json!({ "requestId": "opacity", "command": command }).to_string(),
+    ))
+    .expect("json response");
+    assert_eq!(response["ok"], true, "{response}");
+    response
+}
+
+fn assert_opacity(response: &Value, percent: u8) {
+    let actual = response["state"]["preview"]["displayOpacity"]
+        .as_f64()
+        .expect("numeric opacity");
+    let expected = f64::from(percent) / 100.0;
+    assert!(
+        (actual - expected).abs() < 0.000_001,
+        "expected {percent}% opacity, got {actual}: {response}"
+    );
+}
+
+#[test]
+fn conquest_preserves_opacity_through_waiting_and_next_enemy() {
+    for (rarity, threshold) in [("COMMON", 156), ("RARE", 125), ("EPIC", 96)] {
+        for percent in [35, 0, 100] {
+            let mut engine = BattleEngine::demo();
+            sync(&mut engine, rarity, threshold - 1);
+            let configured = command(
+                &mut engine,
+                json!({ "type": "SET_DISPLAY_OPACITY", "percent": percent }),
+            );
+            assert_opacity(&configured, percent);
+            for kind in [
+                "CYCLE_ENEMY_SIZE",
+                "CYCLE_ENEMY_COLOR",
+                "CYCLE_ENEMY_HP",
+                "CYCLE_PET_ASSET",
+                "CYCLE_ATTACK_EFFECT",
+            ] {
+                command(&mut engine, json!({ "type": kind }));
+            }
+            command(
+                &mut engine,
+                json!({ "type": "TOGGLE_MENU", "menu": "ENEMY" }),
+            );
+            command(
+                &mut engine,
+                json!({ "type": "PREVIEW_ENEMY", "action": "HIT", "nowMs": 1000 }),
+            );
+
+            let conquered = sync(&mut engine, rarity, threshold);
+            assert_eq!(conquered["state"]["overlay"]["phase"], "DEFEAT_MOTION");
+            assert_eq!(conquered["state"]["enemyHpRatio"], 0.0);
+            assert_opacity(&conquered, percent);
+            let preview = &conquered["state"]["preview"];
+            assert_eq!(preview["menu"], "CLOSED");
+            assert_eq!(preview["enemyPhase"], "VISIBLE");
+            for key in [
+                "petAction",
+                "enemyAction",
+                "enemySize",
+                "enemyColor",
+                "enemyHpRatio",
+                "petAssetRarity",
+                "attackEffectRarity",
+            ] {
+                assert!(preview[key].is_null(), "{key} must reset: {preview}");
+            }
+            let repeated = sync(&mut engine, rarity, threshold);
+            assert_eq!(repeated["events"], json!([]));
+            assert_opacity(&repeated, percent);
+
+            for (kind, now, phase) in [
+                ("GET_STATE", 3000, json!("AWAITING_ADVANCE")),
+                ("OVERLAY_CLICK", 3100, json!("SPAWNING")),
+                ("GET_STATE", 4000, Value::Null),
+            ] {
+                let response = command(&mut engine, json!({ "type": kind, "nowMs": now }));
+                assert_eq!(response["state"]["overlay"]["phase"], phase);
+                assert_opacity(&response, percent);
+                if kind == "OVERLAY_CLICK" {
+                    assert_eq!(response["state"]["enemyColor"], "ORANGE");
+                    assert_eq!(response["state"]["enemyHpRatio"], 1.0);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn skipped_stages_and_defeat_skip_click_preserve_opacity() {
+    let mut engine = BattleEngine::demo();
+    sync(&mut engine, "COMMON", 155);
+    command(
+        &mut engine,
+        json!({ "type": "SET_DISPLAY_OPACITY", "percent": 35 }),
+    );
+    let conquered = sync(&mut engine, "COMMON", 684);
+    assert_eq!(conquered["state"]["activePet"]["stage"], 4);
+    assert_eq!(conquered["events"][0]["skippedStages"], 2);
+    assert_opacity(&conquered, 35);
+    for (now, phase) in [(1100, "AWAITING_ADVANCE"), (1200, "SPAWNING")] {
+        let response = command(
+            &mut engine,
+            json!({ "type": "OVERLAY_CLICK", "nowMs": now }),
+        );
+        assert_eq!(response["state"]["overlay"]["phase"], phase);
+        assert_opacity(&response, 35);
+    }
+}
+
+#[test]
+fn explicit_pet_selection_still_resets_opacity() {
+    let mut engine = BattleEngine::demo();
+    sync(&mut engine, "COMMON", 155);
+    command(
+        &mut engine,
+        json!({ "type": "SET_DISPLAY_OPACITY", "percent": 35 }),
+    );
+    let selected = command(
+        &mut engine,
+        json!({ "type": "SET_ACTIVE_PET", "petId": "owned-1" }),
+    );
+    assert_opacity(&selected, 100);
+}
+
 #[test]
 fn persisted_growth_uses_real_level_intervals_and_not_fixed_demo_xp() {
     for (rarity, threshold) in [("COMMON", 156), ("RARE", 125), ("EPIC", 96)] {
