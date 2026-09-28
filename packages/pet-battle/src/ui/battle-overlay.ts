@@ -44,6 +44,7 @@ const hpLabel = required<HTMLElement>('#enemy-hp-label');
 const stageLabel = required<HTMLElement>('#stage-label');
 const combatEffects = required<HTMLElement>('.combat-effects');
 const toast = required<HTMLElement>('#battle-toast');
+const notice = required<HTMLElement>('#battle-notice');
 const petMenu = required<HTMLElement>('#pet-menu');
 const enemyMenu = required<HTMLElement>('#enemy-menu');
 const opacity = required<HTMLInputElement>('#display-opacity');
@@ -130,6 +131,19 @@ async function execute(command: BattleCommand, message?: string): Promise<void> 
 
 function render(next: BattleState, previous?: BattleState): void {
   const scene = deriveBattleScene(next);
+  const hasPet = next.activePet !== null;
+  pet.hidden = !hasPet;
+  enemy.hidden = !hasPet;
+  hpBar.hidden = !hasPet;
+  stageLabel.hidden = !hasPet;
+  combatEffects.hidden = !hasPet;
+  notice.textContent = !hasPet
+    ? '공통 펫 목록에서 활성 펫을 선택해 주세요.'
+    : next.overlay?.phase === 'AWAITING_ADVANCE'
+      ? '클릭하면 다음 적이 등장해요.'
+      : '';
+  notice.hidden = notice.textContent === '';
+  notice.style.opacity = String(scene.displayOpacity);
   background.src = assetUrl(scene.backgroundAsset);
   petSheet.src = assetUrl(scene.petAsset);
   enemyImage.src = assetUrl(scene.enemyAsset);
@@ -144,15 +158,15 @@ function render(next: BattleState, previous?: BattleState): void {
   stageLabel.textContent = `STAGE ${next.activePet?.stage ?? '—'}`;
   opacity.value = String(Math.round(scene.displayOpacity * 100));
   root.dataset['beat'] = next.motion?.beat ?? 'IDLE';
-  root.dataset['enemyPhase'] = next.preview.enemyPhase;
+  root.dataset['enemyPhase'] = scene.enemyPhase;
   root.dataset['petAction'] = next.preview.petAction ?? 'IDLE';
   root.dataset['effectRarity'] =
     next.preview.attackEffectRarity ?? next.activePet?.rarity ?? 'COMMON';
   root.classList.toggle('reduced-motion', next.preview.reducedMotion);
   root.style.setProperty('--slash-count', String(scene.attackEffect.slashCount));
   root.style.setProperty('--particle-count', String(scene.attackEffect.particleCount));
-  petMenu.hidden = next.preview.menu !== 'PET';
-  enemyMenu.hidden = next.preview.menu !== 'ENEMY';
+  petMenu.hidden = !hasPet || next.preview.menu !== 'PET';
+  enemyMenu.hidden = !hasPet || next.preview.menu !== 'ENEMY';
   updateMotion(next);
   if (shouldStartEnemyHitReaction(previous, next)) triggerEnemyHitReaction();
   updateSprite(scene.petSprite);
@@ -162,12 +176,13 @@ function render(next: BattleState, previous?: BattleState): void {
 }
 
 function updateAmbientLogs(next: BattleState): void {
+  const phase = deriveBattleScene(next).enemyPhase;
   ambientLogs.update({
     layout,
     now: nowMs(),
     petId: next.activePet?.petId ?? null,
     enemyKey: `${next.activePet?.stage ?? 1}:${next.preview.enemyColor ?? next.enemyColor}`,
-    enemyVisible: next.preview.enemyPhase === 'VISIBLE' || next.preview.enemyPhase === 'HIT',
+    enemyVisible: next.activePet !== null && (phase === 'VISIBLE' || phase === 'HIT'),
     hasDefeatedSpectators: (next.activePet?.stage ?? 1) > 1,
     pageVisible: !document.hidden,
     menuOpen: next.preview.menu !== 'CLOSED',

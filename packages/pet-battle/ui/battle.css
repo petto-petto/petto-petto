@@ -353,8 +353,27 @@ input {
   flex-direction: row-reverse;
 }
 
-.spectators[hidden] {
+.spectators[hidden],
+.character[hidden],
+.enemy-hp[hidden],
+#stage-label[hidden],
+.combat-effects[hidden],
+.battle-notice[hidden] {
   display: none;
+}
+
+.battle-notice {
+  position: absolute;
+  z-index: 8;
+  inset: auto 12px 8px;
+  margin: 0;
+  padding: 7px 10px;
+  text-align: center;
+  color: #f2e9db;
+  background: #211b35dc;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
 }
 
 .spectator {

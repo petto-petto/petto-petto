@@ -33,7 +33,7 @@ export function mountBattle(pets: PetClient): () => void {
   };
   let engine: ReturnType<typeof spawnBattleSidecar> | undefined;
   let gateway: OwnedPetBattleGateway | undefined;
-  ipcMain.handle(BATTLE_CHANNELS.command, (event, command: BattleCommand) => {
+  ipcMain.handle(BATTLE_CHANNELS.command, async (event, command: BattleCommand) => {
     if (event.sender !== getBattleWindow()?.webContents)
       throw new Error('전투 창에서만 접근할 수 있습니다.');
     if (!gateway) {
@@ -49,7 +49,17 @@ export function mountBattle(pets: PetClient): () => void {
       engine = spawnBattleSidecar(binary);
       gateway = new OwnedPetBattleGateway(pets, engine.client, rules);
     }
-    return gateway.execute(command);
+    try {
+      return await gateway.execute(command);
+    } catch (error) {
+      if (engine?.client.closed) {
+        engine.client.dispose();
+        engine.sidecar.close();
+        engine = undefined;
+        gateway = undefined;
+      }
+      throw error;
+    }
   });
   return () => {
     ipcMain.removeHandler(BATTLE_CHANNELS.command);

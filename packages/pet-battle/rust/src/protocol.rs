@@ -257,31 +257,30 @@ impl BattleEngine {
                         interval_levels.for_rarity(input.rarity),
                         &level_xp_costs,
                     );
-                    if let Some(previous) = old.filter(|p| p.synced_total_xp.is_some()) {
-                        if active.as_deref() == Some(input.pet_id.as_str())
-                            && previous_active == active
-                            && input.total_xp > previous.synced_total_xp.unwrap_or(0)
-                        {
-                            if stage > previous.stage {
-                                let defeated = self
-                                    .overlay
-                                    .visual(now)
-                                    .map_or(previous.stage, |v| v.defeated_stage);
-                                self.overlay.begin_conquest(now, defeated, stage);
-                                self.preview.reset_actions();
-                                events.push(EngineEvent::EnemyDefeated {
-                                    pet_id: input.pet_id.clone(),
-                                    defeated_stage: previous.stage,
-                                    next_stage: stage,
-                                    skipped_stages: u64::from(stage - previous.stage - 1),
-                                });
-                            } else {
-                                events.push(EngineEvent::XpApplied {
-                                    pet_id: input.pet_id.clone(),
-                                    amount: input.total_xp - previous.synced_total_xp.unwrap_or(0),
-                                    enemy_hp_ratio: 1.0 - interval_xp as f32 / target as f32,
-                                });
-                            }
+                    if let Some(previous) = old.filter(|p| p.synced_total_xp.is_some())
+                        && active.as_deref() == Some(input.pet_id.as_str())
+                        && previous_active == active
+                        && input.total_xp > previous.synced_total_xp.unwrap_or(0)
+                    {
+                        if stage > previous.stage {
+                            let defeated = self
+                                .overlay
+                                .visual(now)
+                                .map_or(previous.stage, |v| v.defeated_stage);
+                            self.overlay.begin_conquest(now, defeated, stage);
+                            self.preview.reset_actions();
+                            events.push(EngineEvent::EnemyDefeated {
+                                pet_id: input.pet_id.clone(),
+                                defeated_stage: previous.stage,
+                                next_stage: stage,
+                                skipped_stages: u64::from(stage - previous.stage - 1),
+                            });
+                        } else {
+                            events.push(EngineEvent::XpApplied {
+                                pet_id: input.pet_id.clone(),
+                                amount: input.total_xp - previous.synced_total_xp.unwrap_or(0),
+                                enemy_hp_ratio: 1.0 - interval_xp as f32 / target as f32,
+                            });
                         }
                     }
                     let mut pet =
@@ -470,13 +469,13 @@ impl BattleEngine {
         } else {
             canonical_color
         };
-        let enemy_hp_ratio = if overlay.is_none() {
-            preview.enemy_hp_ratio.unwrap_or(live_hp)
-        } else {
-            live_hp
+        let enemy_hp_ratio = match overlay.map(|visual| visual.phase) {
+            Some(OverlayPhase::DefeatMotion | OverlayPhase::AwaitingAdvance) => 0.0,
+            Some(_) => live_hp,
+            None => preview.enemy_hp_ratio.unwrap_or(live_hp),
         };
         let phase = preview.pet_attack_phase.unwrap_or_else(|| {
-            if self.controller.is_fighting() {
+            if self.controller.is_fighting() && overlay.is_none() {
                 let elapsed = self
                     .now_ms
                     .saturating_sub(self.attack_cycle_started_at_ms.unwrap_or(self.now_ms));
@@ -558,7 +557,13 @@ fn engine_event(pet_id: String, event: BattleEvent) -> EngineEvent {
 pub fn handle_json_line(engine: &mut BattleEngine, line: &str) -> String {
     let response = match serde_json::from_str::<BattleRequest>(line) {
         Ok(request) => engine.handle(request),
-        Err(error) => engine.error_response("invalid".to_owned(), error.to_string()),
+        Err(error) => {
+            let request_id = serde_json::from_str::<serde_json::Value>(line)
+                .ok()
+                .and_then(|value| value.get("requestId")?.as_str().map(str::to_owned))
+                .unwrap_or_else(|| "invalid".to_owned());
+            engine.error_response(request_id, error.to_string())
+        }
     };
     serde_json::to_string(&response).unwrap_or_else(|error| {
         format!(

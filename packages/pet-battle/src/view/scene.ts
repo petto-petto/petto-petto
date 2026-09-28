@@ -3,6 +3,7 @@ import type {
   BattleState,
   EnemyColor,
   EnemyPreviewSize,
+  EnemyPreviewPhase,
   Rarity,
 } from '../contracts.ts';
 
@@ -29,6 +30,7 @@ export interface BattleScene {
   enemyFace: EnemyFace;
   enemyHeight: number;
   enemyVisible: boolean;
+  enemyPhase: EnemyPreviewPhase;
   displayOpacity: number;
   attackEffect: AttackEffectProfile;
   petSprite: PetSpriteProfile;
@@ -135,13 +137,30 @@ export function shouldStartEnemyHitReaction(
 }
 
 export function deriveBattleScene(state: BattleState): BattleScene {
-  const hpRatio = Math.max(0, Math.min(1, state.preview.enemyHpRatio ?? state.enemyHpRatio));
+  const transitioning = state.overlay !== null;
+  const hpRatio = Math.max(
+    0,
+    Math.min(
+      1,
+      transitioning ? state.enemyHpRatio : (state.preview.enemyHpRatio ?? state.enemyHpRatio),
+    ),
+  );
   const face = enemyFaceForHp(hpRatio);
-  const enemyColor = state.preview.enemyColor ?? state.enemyColor;
+  const enemyColor = transitioning
+    ? state.enemyColor
+    : (state.preview.enemyColor ?? state.enemyColor);
   const background = backgroundForEnemy(enemyColor);
   const rarity = state.preview.attackEffectRarity ?? state.activePet?.rarity ?? 'COMMON';
   const isAttackMotion = state.motion?.beat !== undefined && state.motion.beat !== 'IDLE';
-  const isAttacking = state.preview.petAction === 'ATTACK' || isAttackMotion;
+  const isAttacking = !transitioning && (state.preview.petAction === 'ATTACK' || isAttackMotion);
+  const enemyPhase: EnemyPreviewPhase =
+    state.overlay?.phase === 'DEFEAT_MOTION'
+      ? 'DEFEATING'
+      : state.overlay?.phase === 'AWAITING_ADVANCE'
+        ? 'HIDDEN'
+        : state.overlay?.phase === 'SPAWNING'
+          ? 'SPAWNING'
+          : state.preview.enemyPhase;
   const petAction = isAttacking ? 'attack' : 'idle';
   const petAssetRarity = state.preview.petAssetRarity ?? state.activePet?.rarity ?? 'COMMON';
   const petAsset = `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
@@ -154,7 +173,8 @@ export function deriveBattleScene(state: BattleState): BattleScene {
     enemyHpRatio: hpRatio,
     enemyFace: face,
     enemyHeight: state.preview.enemySize ? ENEMY_HEIGHT[state.preview.enemySize] : 80,
-    enemyVisible: state.preview.enemyPhase !== 'HIDDEN',
+    enemyVisible: state.activePet !== null && enemyPhase !== 'HIDDEN',
+    enemyPhase,
     displayOpacity: Math.max(0, Math.min(1, state.preview.displayOpacity)),
     attackEffect: attackEffectForRarity(rarity),
     petSprite: {
