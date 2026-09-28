@@ -29,7 +29,6 @@ contextBridge.exposeInMainWorld('petApi', {
   infoSummary: () => ipcRenderer.invoke('info:summary'),
   petPortrait: () => ipcRenderer.invoke('info:pet-portrait'),
   infoUsage: (period) => ipcRenderer.invoke('info:usage', period),
-  infoPerformance: () => ipcRenderer.invoke('info:performance'),
   settingsView: () => ipcRenderer.invoke('settings:view'),
   achievementsView: (category) => ipcRenderer.invoke('achievements:view', category),
   overlayPet: () => ipcRenderer.invoke('pet:overlay'),

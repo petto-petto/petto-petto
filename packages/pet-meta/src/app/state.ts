@@ -36,7 +36,7 @@ import {
   type UsageCollector,
 } from '../index.ts';
 import { createMetaState, type CurrencyPort } from '../index.ts';
-import { RecordingEventBus, StubBattle, StubGacha } from '../testing/fakes.ts';
+import { RecordingEventBus, StubGacha } from '../testing/fakes.ts';
 import type { CollectionPort, GrowthRules, PetClient } from '../ports/index.ts';
 
 /** 데모 사용량 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
@@ -82,8 +82,11 @@ export class MetaAppState {
   readonly pets: PetClient;
   /** 레벨 곡선. 성장 도메인 것이라 앱이 넣어준다. */
   readonly growthRules: GrowthRules;
+  /**
+   * 뽑기 조회. 아직 gacha 도메인이 실제 횟수를 주지 않아 대역이다 — 요약의 `뽑은 횟수`가
+   * 항상 12 로 보인다. gacha 연결 때 앱이 주입하도록 바꾼다.
+   */
   readonly gacha = new StubGacha(12, 4);
-  readonly battle = new StubBattle(31);
   readonly bus = new RecordingEventBus();
   readonly clock: Clock = systemClock;
   /**

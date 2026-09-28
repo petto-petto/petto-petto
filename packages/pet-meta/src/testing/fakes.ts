@@ -69,7 +69,7 @@ export class InMemoryCurrency implements CurrencyPort {
     return this.#grantedKeys.get(rewardKey);
   }
 
-  /** 소비를 기록한다. 실적 화면의 `소비` 타일 확인용이다. */
+  /** 소비를 기록한다. 원장에 음수 항목을 넣는 테스트용이다. */
   spend(amount: number, reason: string): void {
     this.#balance -= amount;
     this.#spent += amount;
