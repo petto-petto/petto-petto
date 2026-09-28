@@ -160,6 +160,27 @@ test('공격 스프라이트는 한 번만 재생하고 마지막 프레임을 �
   assert.match(css, /steps\(var\(--frame-steps\)\)/);
 });
 
+test('펫 발밑 보정은 대기 이미지를 사용하고 프레임·공격 이동과 분리된다', async () => {
+  const [script, css] = await Promise.all([
+    readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
+    readFile(new URL('battle.css', UI_ROOT), 'utf8'),
+  ]);
+  assert.match(
+    script,
+    /petGrounding\.setSource\(hasPet \? assetUrl\(scene\.petIdleAsset\) : null\)/,
+  );
+  assert.match(script, /petGrounding\.resize\(layout\.petSize\)/);
+  assert.match(
+    css,
+    /\.pet-viewport\s*\{[^}]*transform:\s*translateY\(var\(--pet-ground-offset, 0px\)\)/s,
+  );
+  assert.match(css, /transform:\s*translateX\(var\(--sheet-shift\)\)/);
+  assert.match(
+    script,
+    /pet\.style\.transform = `translate\(\$\{offset\.x\}px, \$\{offset\.y\}px\) scale/,
+  );
+});
+
 test('v2 펫은 전투 캐릭터와 이펙트보다 위 레이어에 유지된다', async () => {
   const css = await readFile(new URL('battle.css', UI_ROOT), 'utf8');
 

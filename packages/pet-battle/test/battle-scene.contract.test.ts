@@ -156,11 +156,13 @@ test('호스트가 준 실제 종·단계 에셋을 등급별 대표 이미지 �
     },
   };
   assert.equal(deriveBattleScene(shared).petAsset, shared.petSprites.mio.idle.asset);
+  assert.equal(deriveBattleScene(shared).petIdleAsset, shared.petSprites.mio.idle.asset);
   const attack = deriveBattleScene({
     ...shared,
     preview: { ...shared.preview, petAction: 'ATTACK' },
   });
   assert.equal(attack.petAsset, shared.petSprites.mio.attack.asset);
+  assert.equal(attack.petIdleAsset, shared.petSprites.mio.idle.asset);
   assert.equal(attack.petSprite.frameCount, 7);
   assert.equal(attack.petSprite.frameSteps, 6);
 });
@@ -175,6 +177,7 @@ test('펫 에셋 미리보기는 activePet 교체 없이 v2 펫 이미지만 순
   });
 
   assert.match(scene.petAsset, /assets\/pets\/v2\/epic-idle\.png$/);
+  assert.equal(scene.petIdleAsset, scene.petAsset);
 });
 
 test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를 사용한다', () => {
@@ -195,6 +198,7 @@ test('자동 전투의 실제 공격 구간에는 걷기 대신 공격 시트를
   });
 
   assert.match(scene.petAsset, /common-attack\.png$/);
+  assert.equal(scene.petIdleAsset, 'assets/pets/v2/common-idle.png');
   assert.equal(scene.petSprite.frameCount, 6);
   assert.equal(scene.petSprite.frameSteps, 5);
   assert.equal(scene.petSprite.animated, true);
