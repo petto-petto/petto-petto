@@ -138,6 +138,33 @@ test('v2와 등급별 타격 이펙트는 진행 상태와 독립적인 표현 �
   assert.equal(scene.attackEffect.particleCount, 12);
 });
 
+test('호스트가 준 실제 종·단계 에셋을 등급별 대표 이미지 대신 사용한다', () => {
+  const current = state();
+  const shared = {
+    ...current,
+    activePet: {
+      ...current.activePet!,
+      sprite: 'star_wizard',
+      rarity: 'EPIC' as const,
+      evolutionStage: 1 as const,
+    },
+    petSprites: {
+      mio: {
+        idle: { asset: 'file:///pets/star_wizard/stage2/idle.png', frameCount: 4 },
+        attack: { asset: 'file:///pets/star_wizard/stage2/attack.png', frameCount: 7 },
+      },
+    },
+  };
+  assert.equal(deriveBattleScene(shared).petAsset, shared.petSprites.mio.idle.asset);
+  const attack = deriveBattleScene({
+    ...shared,
+    preview: { ...shared.preview, petAction: 'ATTACK' },
+  });
+  assert.equal(attack.petAsset, shared.petSprites.mio.attack.asset);
+  assert.equal(attack.petSprite.frameCount, 7);
+  assert.equal(attack.petSprite.frameSteps, 6);
+});
+
 test('펫 에셋 미리보기는 activePet 교체 없이 v2 펫 이미지만 순환한다', () => {
   const scene = deriveBattleScene({
     ...state(),
