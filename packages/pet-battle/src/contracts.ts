@@ -97,6 +97,20 @@ export type BattleEvent =
     };
 
 export type BattleCommand =
+  | {
+      type: 'SYNC_OWNED_PETS';
+      pets: Array<
+        Pick<
+          BattlePet,
+          'petId' | 'displayName' | 'rarity' | 'level' | 'sprite' | 'evolutionStage'
+        > & { totalXp: number }
+      >;
+      activePetId: string | null;
+      spectatorPetIds: string[];
+      levelXpCosts: number[];
+      intervalLevels: Record<Rarity, number>;
+      nowMs: number;
+    }
   | { type: 'GET_STATE'; nowMs: number }
   | {
       type: 'UPSERT_PET';

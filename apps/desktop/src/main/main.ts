@@ -13,6 +13,11 @@ import { RoomCollectionPort } from './collection.ts';
 import type { PetClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
+import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
+import { TokenRepository } from './persistence/repositories/token-repository.ts';
+import { TokenGrowthLink } from './token-growth.ts';
+import { TokenLinkedMetaState } from './token-linked-meta.ts';
+import { mountBattle } from './battle.ts';
 import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
 import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
@@ -54,6 +59,7 @@ let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
 let appDatabase: SqliteFileDatabase | undefined;
+let closeBattle: (() => void) | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -221,7 +227,7 @@ app.whenReady().then(() => {
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
   const currency = new SqliteCurrencyPort(new CurrencyRepository(appDatabase), systemClock);
-  state = new MetaAppState(
+  const linkedState = new TokenLinkedMetaState(
     store,
     databasePath,
     app.getVersion(),
@@ -230,6 +236,12 @@ app.whenReady().then(() => {
     pets,
     OVERLAY_GROWTH_RULES,
   );
+  linkedState.connectGrowth(
+    appDatabase,
+    new TokenGrowthLink(appDatabase, new SqliteTokenClient(new TokenRepository(appDatabase)), pets),
+  );
+  state = linkedState;
+  closeBattle = mountBattle(pets);
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
   mountRoom(room, roomHost);
@@ -293,6 +305,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  closeBattle?.();
   state?.persist();
   room?.persist();
   appDatabase?.close();

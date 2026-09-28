@@ -336,9 +336,8 @@ export function createCombineWindow(): BrowserWindow {
 /**
  * 전투 UI와 에셋은 `@pet/battle`이 소유하고, 데스크톱 앱은 창 수명만 맡는다.
  *
- * 공통 preload에는 `window.petBattle`을 노출하지 않는다. 전투 UI가 제공하는 브라우저
- * fallback gateway를 사용하므로 Rust sidecar·개별 Electron 실행 없이도 같은 앱에서
- * 전투 화면을 확인할 수 있다.
+ * 공통 preload의 `window.petBattle`로 main 소유 Rust 엔진에 연결한다.
+ * 창을 닫아도 엔진과 공통 PetClient 성장 상태는 유지된다.
  */
 export function createBattleWindow(): BrowserWindow | undefined {
   if (battleWindow && !battleWindow.isDestroyed()) {

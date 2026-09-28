@@ -12,3 +12,4 @@ export * from './ipc/client.ts';
 export * from './ipc/sidecar.ts';
 export * from './app/handlers.ts';
 export * from './integration/pet-client.ts';
+export * from './integration/owned-pet-gateway.ts';

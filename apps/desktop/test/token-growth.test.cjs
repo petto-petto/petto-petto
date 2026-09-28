@@ -34,18 +34,37 @@ const usage = (dedupeKey, growthTokens = 5000) => ({
 test('자동·수동 집계가 같은 토큰 성장 연결을 사용하고 초기 스캔은 소급 지급하지 않는다', async (t) => {
   const { pets, tokens, link, db } = await setup(t);
   const { TokenLinkedMetaState } = await import('../dist/main/token-linked-meta.js');
-  const { InMemoryMetaStore, InMemoryCollection, InMemoryCurrency, STUB_GROWTH_RULES, tokenCounts } = await import('@pet/meta');
+  const {
+    InMemoryMetaStore,
+    InMemoryCollection,
+    InMemoryCurrency,
+    STUB_GROWTH_RULES,
+    tokenCounts,
+  } = await import('@pet/meta');
   const [pet] = pets.createOwnedPets(['003']);
   pets.setActivePet(pet.ownedPetId);
-  const state = new TokenLinkedMetaState(new InMemoryMetaStore(), '', 'test', new InMemoryCollection(), new InMemoryCurrency(), pets, STUB_GROWTH_RULES);
+  const state = new TokenLinkedMetaState(
+    new InMemoryMetaStore(),
+    '',
+    'test',
+    new InMemoryCollection(),
+    new InMemoryCurrency(),
+    pets,
+    STUB_GROWTH_RULES,
+  );
   state.connectGrowth(db, link);
   state.collector.accumulate('claude_code', state.today(), 'model', tokenCounts(100000));
   state.aggregate();
   assert.equal(tokens.totals().observed, 0);
-  state.collector.accumulate('claude_code', state.today(), 'model', tokenCounts(4999, 1, 7000, 9000));
+  state.collector.accumulate(
+    'claude_code',
+    state.today(),
+    'model',
+    tokenCounts(4999, 1, 7000, 9000),
+  );
   state.rescan('claude_code');
   assert.equal(pets.getActivePet().totalXp, 1);
-  assert.deepEqual(tokens.totals(), {observed:21000, reward:12000});
+  assert.deepEqual(tokens.totals(), { observed: 21000, reward: 12000 });
   state.aggregate();
   assert.equal(pets.getActivePet().totalXp, 1);
 });
