@@ -134,6 +134,8 @@ const ui = {
   period: 'all',
   modelsExpanded: false,
   achievementFilter: 'all',
+  /** `갱신` 실행 중. 다시 그려도 버튼이 비활성으로 남도록 화면 밖에 둔다. */
+  refreshing: false,
 };
 
 const content = document.getElementById('content');
@@ -338,6 +340,47 @@ async function renderSummary() {
 
 /* ---------- 정보 · 사용량 ---------- */
 
+/**
+ * 기간 필터와 `갱신` 버튼 한 줄.
+ *
+ * 1분 주기를 기다리지 않고 바로 반영하고 싶을 때 쓴다. 주기 집계와 같은 채널(`collect:now`)을
+ * 부르므로 규칙이 따로 없다. 실행 중에는 비활성이고, 연타해도 수집기가 합류시켜 한 번만 돈다.
+ */
+function usageToolbar(filters, data) {
+  const button = el('button', {
+    class: 'tiny-button',
+    text: ui.refreshing ? '갱신 중…' : '갱신',
+    attrs: { 'aria-label': '사용량 지금 갱신' },
+    on: {
+      click: async () => {
+        if (ui.refreshing) return;
+        ui.refreshing = true;
+        render();
+        try {
+          const report = await api.aggregateNow();
+          // 실패를 성공처럼 보이지 않게 한다. 기록 없음은 실패가 아니다(보고서가 거른다).
+          if (report?.failures?.length) flash(report.failures.join(' · '), true);
+          else flash(report?.bubble ?? '갱신했습니다');
+        } catch (error) {
+          flash(String(error), true);
+        } finally {
+          ui.refreshing = false;
+          render();
+        }
+      },
+    },
+  });
+  button.disabled = ui.refreshing;
+
+  return el('div', { class: 'usage-toolbar' }, [
+    filters,
+    el('div', { class: 'usage-refresh' }, [
+      el('span', { class: 'mono-small', text: `마지막 갱신 ${data.lastRefreshedLabel}` }),
+      button,
+    ]),
+  ]);
+}
+
 async function renderUsage() {
   const data = await api.infoUsage(ui.period);
 
@@ -447,7 +490,7 @@ async function renderUsage() {
       : null,
   ]);
 
-  content.replaceChildren(filters, grassCard, toolsCard, modelsCard);
+  content.replaceChildren(usageToolbar(filters, data), grassCard, toolsCard, modelsCard);
 }
 
 /* ---------- 정보 · 실적 ---------- */
@@ -930,6 +973,45 @@ window.addEventListener('load', () => {
 });
 
 /**
+ * 사용량 화면의 `갱신` 버튼을 사용자가 누르는 것과 같은 경로(`click`)로 눌러 본다.
+ *
+ * 누른 직후 비활성 `갱신 중…`이 되고, 집계가 끝나면 다시 `갱신`으로 돌아오며, 켜진 소스가 한
+ * 번이라도 성공했다면 마지막 갱신 시각이 채워져야 한다.
+ */
+async function selftestRefreshButton() {
+  const find = () => content.querySelector('button[aria-label="사용량 지금 갱신"]');
+  const waitFor = async (check) => {
+    // `갱신 중…`은 집계 시간(수십 ms)만 보이므로 짧은 간격으로 본다. 최대 10초.
+    for (let tries = 0; tries < 1000; tries += 1) {
+      if (check()) return true;
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    return false;
+  };
+
+  ui.screen = 'info';
+  ui.subtab = 'usage';
+  await render();
+  const button = find();
+  if (!button) {
+    await api.debugLog('[SELFTEST] 갱신 버튼 실패 — 사용량 화면에 버튼이 없다');
+    return;
+  }
+
+  button.click();
+  const busy = await waitFor(() => find()?.disabled === true && find()?.textContent === '갱신 중…');
+  const done = await waitFor(() => !ui.refreshing && find()?.disabled === false);
+  const label = content.querySelector('.usage-refresh .mono-small')?.textContent ?? '';
+  const { lastRefreshedLabel } = await api.infoUsage(ui.period);
+
+  await api.debugLog(
+    busy && done && find()?.textContent === '갱신' && label === `마지막 갱신 ${lastRefreshedLabel}`
+      ? `[SELFTEST] 갱신 버튼            눌림 중 비활성 → 복귀, ${label}`
+      : `[SELFTEST] 갱신 버튼 실패 — 비활성 ${busy}, 복귀 ${done}, 표시 '${label}'`,
+  );
+}
+
+/**
  * 모든 화면과 서브탭을 순회하며 렌더 결과를 보고한다.
  *
  * 클릭 핸들러와 같은 경로(`selectScreen` → `render`)를 지나므로, 어느 화면이든 그리다
@@ -981,11 +1063,17 @@ async function runSelftest() {
   ui.modelsExpanded = true;
   await render();
   const expanded = content.querySelectorAll('.model-row').length;
+  // 모델이 5개 이하면 `전체 보기` 자체가 없다. 실제 수집기로 막 설치한 상태가 그렇다.
+  const { modelCount } = await api.infoUsage(ui.period);
   await api.debugLog(
-    expanded > collapsed
-      ? `[SELFTEST] info/usage 모델 접힘 ${collapsed}행 → 펼침 ${expanded}행`
-      : `[SELFTEST] info/usage 실패 — 전체 보기가 행을 늘리지 못했다`,
+    modelCount <= 5
+      ? `[SELFTEST] info/usage 모델 ${modelCount}개 — 전체 보기 없음, 토글 확인 생략`
+      : expanded > collapsed
+        ? `[SELFTEST] info/usage 모델 접힘 ${collapsed}행 → 펼침 ${expanded}행`
+        : `[SELFTEST] info/usage 실패 — 전체 보기가 행을 늘리지 못했다`,
   );
+
+  await selftestRefreshButton();
 
   /*
    * 화면 버튼이 실제로 화면을 바꾸는지 확인한다.

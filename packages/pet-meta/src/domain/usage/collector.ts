@@ -87,23 +87,47 @@ export class CollectError extends Error {
   }
 }
 
-/** 수집기 경계. 실제 제품에서는 고정 버전 `ccusage`의 JSON 어댑터가 이 자리를 채운다. */
+/**
+ * 수집기 경계. 실제 제품에서는 고정 버전 `ccusage`의 JSON 어댑터가 이 자리를 채운다.
+ *
+ * ## 왜 읽기가 두 단계인가
+ *
+ * `ccusage`는 외부 프로세스라 결과가 비동기로 온다. 그렇다고 파이프라인을 비동기로 바꾸면
+ * 기준점·멱등성 규칙 사이에 `await`가 끼어 집계 도중 상태가 바뀔 틈이 생긴다. 그래서
+ * **느린 일(`refresh`)을 먼저 끝내고**, 파이프라인은 그 결과를 동기로 읽는다(`collect`).
+ */
 export interface UsageCollector {
-  /** 실패하면 `CollectError`를 던진다. */
+  /**
+   * 주어진 소스의 스냅샷을 새로 읽어 둔다. 실패는 던지지 않고 기억했다가 `collect`에서
+   * 던진다 — 한 소스의 실패가 다른 소스의 집계를 막지 않아야 한다(COLLECT-005).
+   */
+  refresh(providers: readonly Provider[]): Promise<void>;
+  /** 마지막 `refresh` 결과. 실패하면 `CollectError`를 던진다. */
   collect(provider: Provider): SourceSnapshot;
 }
 
 /**
- * 세 CLI의 기본 로그 위치. 기획서 2.2는 사용자 지정 경로를 제공하지 않으므로
- * 이 값은 표시 전용 상수다.
+ * 세 CLI의 기본 로그 위치(홈 기준 경로 조각). 기획서 2.2는 사용자 지정 경로를 제공하지 않으므로
+ * 고정 상수다. 실제 수집기의 감지와 설정 카드의 표시 문구가 **모두 이 표에서** 나온다 — 한쪽만
+ * 고치면 "화면에는 있는데 감지는 안 됨"이 생긴다.
+ *
+ * Claude Code는 버전에 따라 `~/.claude`와 `~/.config/claude` 중 한쪽 또는 양쪽에 남긴다.
  */
-const LOG_LOCATIONS: Record<Provider, string> = {
-  claude_code: '~/.claude/projects',
-  codex: '~/.codex/sessions',
-  gemini_cli: '~/.gemini/tmp',
+const LOG_DIRECTORIES: Record<Provider, readonly (readonly string[])[]> = {
+  claude_code: [
+    ['.claude', 'projects'],
+    ['.config', 'claude', 'projects'],
+  ],
+  codex: [['.codex', 'sessions']],
+  gemini_cli: [['.gemini', 'tmp']],
 };
 
-export const defaultLogLocation = (provider: Provider): string => LOG_LOCATIONS[provider];
+export const defaultLogDirectories = (provider: Provider): readonly (readonly string[])[] =>
+  LOG_DIRECTORIES[provider];
+
+/** 설정 카드에 보이는 기본 로그 위치. */
+export const defaultLogLocation = (provider: Provider): string =>
+  LOG_DIRECTORIES[provider].map((segments) => `~/${segments.join('/')}`).join(' · ');
 
 /** 테스트와 데모가 쓰는 수집기. */
 export class FixtureCollector implements UsageCollector {
@@ -147,6 +171,11 @@ export class FixtureCollector implements UsageCollector {
     const key = rowKey(parsed, rawModel);
     snapshot.rows.set(key, addTokens(snapshot.rows.get(key) ?? tokenCounts(0), counts));
     this.#responses.set(provider, snapshot);
+  }
+
+  /** 픽스처는 이미 메모리에 있으므로 새로 읽을 것이 없다. */
+  refresh(_providers: readonly Provider[]): Promise<void> {
+    return Promise.resolve();
   }
 
   collect(provider: Provider): SourceSnapshot {

@@ -41,6 +41,7 @@ export * from './domain/profile/index.ts';
 export * from './domain/panel/index.ts';
 export * from './domain/usage/tokens.ts';
 export * from './domain/usage/collector.ts';
+export * from './domain/usage/ccusage.ts';
 export * from './domain/usage/pipeline.ts';
 export * from './domain/usage/stats.ts';
 export * from './domain/achievement/catalog.ts';

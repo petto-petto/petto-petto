@@ -2,11 +2,12 @@
 
 import { BrowserWindow, Menu, Tray, app, ipcMain } from 'electron';
 import { fileURLToPath } from 'node:url';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { systemClock } from '@pet/core';
 
-import { MetaAppState } from '@pet/meta';
+import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
 import type { RoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
@@ -20,6 +21,7 @@ import { MetaRepository } from './persistence/repositories/meta-repository.ts';
 import { PetRepository } from './persistence/repositories/pet-repository.ts';
 import { CurrencyRepository } from './persistence/repositories/currency-repository.ts';
 import { mountMeta } from './mount.ts';
+import { CcusageCollector, resolveCcusageBinary } from './usage/ccusage-collector.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
 import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
@@ -54,6 +56,58 @@ let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
 let appDatabase: SqliteFileDatabase | undefined;
+/** 종료 정리를 시작했는가. 주기 집계를 멈추고, 두 번째 `before-quit`은 그대로 종료시킨다. */
+let quitting = false;
+
+/**
+ * 사용량 수집기. 기본은 번들된 `ccusage`다.
+ *
+ * `META_DEMO_USAGE=1`이면 12주치 가짜 기록을 심는 픽스처를 쓴다. 화면을 눈으로 확인하거나
+ * 스크린샷을 찍을 때만 쓰는 뒷문이다 — 실제 기록과 섞이면 안 되므로 둘 중 하나만 고른다.
+ */
+function createUsageCollector(): UsageCollector {
+  if (process.env['META_DEMO_USAGE'] === '1') {
+    console.log('[USAGE] 데모 수집기로 시작합니다 (META_DEMO_USAGE=1)');
+    return FixtureCollector.withEmptySnapshots();
+  }
+  return new CcusageCollector({
+    home: homedir(),
+    binaryPath: resolveCcusageBinary(),
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+}
+
+/**
+ * 1분 주기 집계. 앞선 집계가 **끝난 뒤** 다음 집계를 예약한다.
+ *
+ * `setInterval`은 앞선 집계가 ccusage를 기다리는 중에도 다음 틱을 쏜다. 합류 덕분에 실행이
+ * 두 번 되지는 않지만, 느린 환경에서 요청이 쌓이는 모양 자체를 만들지 않는다(기획서 8.3).
+ */
+function scheduleAggregation(roomHost: RoomHost): void {
+  setTimeout(() => {
+    void aggregateTick(roomHost).finally(() => {
+      if (!quitting) scheduleAggregation(roomHost);
+    });
+  }, AGGREGATION_INTERVAL_MS);
+}
+
+async function aggregateTick(roomHost: RoomHost): Promise<void> {
+  // 낮↔밤이 넘어갔으면 열려 있는 펫룸의 배경을 바꾼다. 창을 다시 열 필요가 없다.
+  room?.refreshBackground(roomHost);
+  if (!state || quitting) return;
+  try {
+    const { run, outcome } = await state.aggregate();
+    state.persist();
+    broadcast('usage:aggregated', {
+      activityMinuteAdded: run.activityMinuteAdded,
+      bubble: undefined,
+      newlyUnlocked: outcome.newlyUnlocked,
+    });
+  } catch (error) {
+    // 한 번의 실패로 주기가 끊기면 안 된다. 다음 예약은 `finally`가 한다.
+    console.log(`[USAGE] 주기 집계 실패 — ${String(error)}`);
+  }
+}
 
 interface OverlayPointer {
   screenX: number;
@@ -189,7 +243,7 @@ function buildAppMenu(current: MetaAppState): void {
 
 app.setName('tamagotchi-pet');
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
   const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
@@ -229,6 +283,7 @@ app.whenReady().then(() => {
     currency,
     pets,
     OVERLAY_GROWTH_RULES,
+    createUsageCollector(),
   );
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
   mountMeta(state);
@@ -244,11 +299,16 @@ app.whenReady().then(() => {
   if (shouldOpenCombinePrototype()) createCombineWindow();
 
   // 앱 시작 집계. 기획서 8.2에 따라 이 스캔은 기준점만 만들고 아무것도 적립하지 않는다.
-  // 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
-  state.aggregate();
-  state.seedDemoUsage();
-  state.aggregate();
-  state.persist();
+  // 데모 모드에서는 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
+  // 실제 수집기로 두 번 돌리면 ccusage 를 한 번 더 실행할 뿐이라 데모일 때만 다시 돈다.
+  try {
+    await state.aggregate();
+    if (state.seedDemoUsage()) await state.aggregate();
+    state.persist();
+  } catch (error) {
+    // 시작 집계가 실패해도 앱과 1분 주기는 살아 있어야 한다. 다음 주기가 다시 시도한다.
+    console.log(`[USAGE] 시작 집계 실패 — ${String(error)}`);
+  }
 
   // 개발용: 패널을 띄운 채로 시작한다. 기획서상 패널은 펫 우클릭이나 트레이로 여는 것이
   // 정상 경로이므로, 스크린샷과 화면 확인에만 쓰는 뒷문이다.
@@ -262,20 +322,8 @@ app.whenReady().then(() => {
     }, 400);
   }
 
-  // 1분 주기 집계.
-  setInterval(() => {
-    // 낮↔밤이 넘어갔으면 열려 있는 펫룸의 배경을 바꾼다. 창을 다시 열 필요가 없다.
-    room?.refreshBackground(roomHost);
-    if (!state) return;
-    const { run, outcome } = state.aggregate();
-    state.persist();
-    const allowed = state.meta.settings.notifyAchievement && state.meta.settings.overlayVisible;
-    broadcast('usage:aggregated', {
-      activityMinuteAdded: run.activityMinuteAdded,
-      bubble: allowed ? undefined : undefined,
-      newlyUnlocked: outcome.newlyUnlocked,
-    });
-  }, AGGREGATION_INTERVAL_MS);
+  // 1분 주기 집계. 앞선 집계가 끝난 뒤 다음 집계를 예약한다.
+  scheduleAggregation(roomHost);
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
@@ -292,8 +340,26 @@ app.on('window-all-closed', () => {
   // macOS가 아니어도 종료하지 않는다. 기획서 6.2: 오버레이를 숨겨도 수집기는 계속 돈다.
 });
 
-app.on('before-quit', () => {
-  state?.persist();
-  room?.persist();
-  appDatabase?.close();
+/**
+ * 진행 중인 집계가 끝난 뒤에 저장하고 DB 를 닫는다.
+ *
+ * 집계는 ccusage 를 기다리는 동안 멈춰 있다가 이어서 재화를 지급하고 저장한다. 그 사이에 DB 를
+ * 닫으면 닫힌 DB 에 쓰다 실패한다. 그래서 첫 종료 요청은 미루고, 집계가 끝나면 정리한 뒤
+ * 종료한다. 기다림은 ccusage 타임아웃(10초)을 넘지 않는다.
+ */
+app.on('before-quit', (event) => {
+  if (quitting) return;
+  quitting = true;
+  event.preventDefault();
+  void (state?.idle() ?? Promise.resolve()).finally(() => {
+    try {
+      state?.persist();
+      room?.persist();
+      appDatabase?.close();
+    } finally {
+      // 정리는 끝났다. `app.quit()`을 다시 부르면 미뤄 둔 종료 요청이 되살아나지 않는 경우가
+      // 있어서(SIGTERM 으로 확인) 종료 절차를 다시 밟지 않는 `exit`로 끝낸다.
+      app.exit(0);
+    }
+  });
 });

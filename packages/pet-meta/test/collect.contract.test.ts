@@ -7,11 +7,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { FixedClock, PROVIDERS, type Provider } from '@pet/core';
+import { FixedClock, PROVIDERS, parseLocalDate, type Provider } from '@pet/core';
 import {
   type AggregationRun,
   CollectError,
   createMetaState,
+  defaultLogDirectories,
   defaultLogLocation,
   factSnapshot,
   FixtureCollector,
@@ -19,6 +20,7 @@ import {
   type MetaState,
   observedTotal,
   rescanSource,
+  rowKey,
   runAggregation,
   setSourceEnabled,
   sourceOf,
@@ -322,22 +324,24 @@ test('COLLECT-009: 누적 원천값 감소가 저장된 통계를 줄이지 않�
   assert.equal(observedTotal(harness.state), before + 2_000);
 });
 
-test('COLLECT-009: 행 하나가 줄어도 그 행의 저장값이 깎이지 않는다', () => {
+test('COLLECT-009: 행 하나가 줄어도 저장값은 깎이지 않고, 적립은 총합 증가까지만이다', () => {
   const harness = new Harness();
   harness.collector.accumulate('claude_code', '2026-08-20', 'claude-opus-5', tokens(10_000));
   harness.run();
+  harness.collector.accumulate('claude_code', '2026-08-20', 'claude-opus-5', tokens(1_000));
+  harness.run();
+  assert.equal(observedTotal(harness.state), 1_000);
 
-  // 어제 행은 줄고 오늘 행이 크게 늘었다.
+  // 어제 행은 줄고(로그 일부 삭제 6000) 오늘 행이 크게 늘었다(50000).
   harness.collector.setSnapshot({ provider: 'claude_code', rows: new Map() });
-  harness.collector.accumulate('claude_code', '2026-08-20', 'claude-opus-5', tokens(4_000));
+  harness.collector.accumulate('claude_code', '2026-08-20', 'claude-opus-5', tokens(5_000));
   harness.collector.accumulate('claude_code', '2026-08-24', 'claude-opus-5', tokens(50_000));
   harness.run();
 
-  assert.equal(
-    observedTotal(harness.state),
-    50_000,
-    '줄어든 행은 0으로 잘리고 늘어난 행만 반영된다',
-  );
+  // 줄어든 행의 저장값(1000)은 그대로다. 새 적립은 총합 증가(55000 - 11000 = 44000)까지만이다.
+  // 스냅샷만으로는 로그 삭제와 행 재분할(시간대 변경 등)을 구별할 수 없어서, 이미 센 토큰을
+  // 다시 세는 쪽보다 삭제분만큼 덜 세는 쪽을 택한다(기획서 8.8의 기준점 재설정과 같은 방향).
+  assert.equal(observedTotal(harness.state), 1_000 + 44_000);
 });
 
 test('실패한 재화 지급은 같은 멱등 키로 재시도된다', () => {
@@ -396,7 +400,81 @@ test('증가분마다 자기 멱등 키로 지급받는다', () => {
 test('기록을 못 찾은 소스가 내부 정보 대신 기본 위치와 분류된 오류를 보여준다', () => {
   // 기획서 11.1: 사용자에게 원본 로그 내용과 내부 명령 출력 대신 도구 이름, 오류 종류,
   // 마지막 정상 집계 시각, 재시도 행동만 보여준다.
-  assert.equal(defaultLogLocation('claude_code'), '~/.claude/projects');
+  assert.equal(defaultLogLocation('claude_code'), '~/.claude/projects · ~/.config/claude/projects');
   assert.equal(new CollectError('not_found').userMessage(), '기록을 찾을 수 없음');
   assert.equal(new CollectError('unsupported_schema').userMessage(), '앱 업데이트가 필요합니다');
+});
+
+/** 행 전체를 지정한 스냅샷. 수집기가 같은 기록을 다른 행으로 다시 나눠 내놓는 상황을 만든다. */
+function setRows(
+  harness: Harness,
+  provider: Provider,
+  rows: readonly (readonly [string, string, ReturnType<typeof tokens>])[],
+): void {
+  const map = new Map();
+  for (const [date, model, counts] of rows) {
+    const parsed = parseLocalDate(date);
+    assert.ok(parsed);
+    map.set(rowKey(parsed, model), counts);
+  }
+  harness.collector.setSnapshot({ provider, rows: map });
+}
+
+test('COLLECT-009: 같은 기록이 다른 날짜 행으로 다시 나뉘어도(시간대 변경) 새 사용만 적립한다', () => {
+  const harness = new Harness();
+  setRows(harness, 'claude_code', [['2026-08-23', 'claude-opus-5', tokens(1_000)]]);
+  harness.run(); // 기준점
+
+  // 시간대가 바뀌어 같은 1000 토큰이 두 날짜로 나뉜다. 총합은 같다.
+  setRows(harness, 'claude_code', [
+    ['2026-08-23', 'claude-opus-5', tokens(400)],
+    ['2026-08-24', 'claude-opus-5', tokens(600)],
+  ]);
+  assert.deepEqual(Harness.resultFor(harness.run(), 'claude_code'), { kind: 'no_change' });
+
+  // 진짜 새 사용 100.
+  setRows(harness, 'claude_code', [
+    ['2026-08-23', 'claude-opus-5', tokens(400)],
+    ['2026-08-24', 'claude-opus-5', tokens(700)],
+  ]);
+  const result = Harness.resultFor(harness.run(), 'claude_code');
+
+  assert.equal(result.kind, 'applied');
+  assert.equal(result.kind === 'applied' ? result.observedDelta : -1, 100);
+  assert.equal(observedTotal(harness.state), 100);
+});
+
+test('COLLECT-009: 모델 사이 배분이 바뀌어도(Gemini 추론) 적립은 총합 증가를 넘지 않는다', () => {
+  const harness = new Harness();
+  setRows(harness, 'gemini_cli', [['2026-08-24', 'gemini-3-pro', tokens(1_000, 100)]]);
+  harness.run(); // 기준점
+
+  // flash 를 1000 더 썼고, 그날 추론 100 이 두 모델에 반씩 다시 배분된다.
+  setRows(harness, 'gemini_cli', [
+    ['2026-08-24', 'gemini-3-pro', tokens(1_000, 50)],
+    ['2026-08-24', 'gemini-3-flash', tokens(1_000, 50)],
+  ]);
+  const result = Harness.resultFor(harness.run(), 'gemini_cli');
+
+  assert.equal(result.kind === 'applied' ? result.observedDelta : -1, 1_000);
+  assert.equal(observedTotal(harness.state), 1_000);
+  // 보상 대상도 같은 상한을 따른다(입력 1000, 출력 0).
+  assert.equal(result.kind === 'applied' ? result.rewardTokens : -1, 1_000);
+});
+
+test('기본 로그 위치는 경로 목록 하나에서 나온다 — 표시 문구와 감지가 어긋나지 않는다', () => {
+  assert.deepEqual(defaultLogDirectories('claude_code'), [
+    ['.claude', 'projects'],
+    ['.config', 'claude', 'projects'],
+  ]);
+  assert.deepEqual(defaultLogDirectories('codex'), [['.codex', 'sessions']]);
+  assert.deepEqual(defaultLogDirectories('gemini_cli'), [['.gemini', 'tmp']]);
+  for (const provider of PROVIDERS) {
+    assert.equal(
+      defaultLogLocation(provider),
+      defaultLogDirectories(provider)
+        .map((segments) => `~/${segments.join('/')}`)
+        .join(' · '),
+    );
+  }
 });

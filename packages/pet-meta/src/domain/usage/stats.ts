@@ -2,6 +2,7 @@
 
 import {
   PROVIDERS,
+  localDateOf,
   providerName,
   shiftDays,
   weekdayFromMonday,
@@ -96,6 +97,11 @@ export interface UsageScreen {
   grass: GrassWeek[];
   /** 잔디 기간의 관측 토큰 합계. 기간 필터와 무관하다. */
   grassObserved: number;
+  /**
+   * `갱신` 버튼 옆 마지막 갱신 시각. 오늘이면 `HH:MM`, 아니면 `MM-DD HH:MM`. 켜진 소스가 한 번도
+   * 성공하지 않았으면 `없음`.
+   */
+  lastRefreshedLabel: string;
 }
 
 /** 기획서 5.2: 모델 목록의 기본 표시 개수. */
@@ -240,6 +246,31 @@ function modelRows(state: MetaState, today: LocalDate, period: Period, total: nu
   return rows;
 }
 
+/**
+ * 켜진 소스 중 가장 최근의 정상 집계 시각.
+ *
+ * 꺼진 소스는 뺀다. 꺼 둔 소스의 예전 성공 시각을 "마지막 갱신"으로 보여주면 방금 새로 읽은
+ * 것처럼 보인다.
+ */
+function lastRefreshedLabel(state: MetaState, today: LocalDate): string {
+  let latest: string | undefined;
+  for (const provider of PROVIDERS) {
+    const source = state.sources.get(provider);
+    if (!source?.enabled || source.lastSuccessAt === undefined) continue;
+    if (latest === undefined || Date.parse(source.lastSuccessAt) > Date.parse(latest)) {
+      latest = source.lastSuccessAt;
+    }
+  }
+  if (latest === undefined) return '없음';
+  const at = new Date(latest);
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  const time = `${pad(at.getHours())}:${pad(at.getMinutes())}`;
+  // 어제 성공한 뒤 계속 실패하고 있다면, 시각만으로는 방금 갱신한 것처럼 보인다.
+  return localDateOf(at) === today
+    ? time
+    : `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${time}`;
+}
+
 /** 사용량 화면 모델을 만든다. */
 export function usageScreen(state: MetaState, today: LocalDate, period: Period): UsageScreen {
   let periodObserved = 0;
@@ -258,5 +289,6 @@ export function usageScreen(state: MetaState, today: LocalDate, period: Period):
     modelCount: models.length,
     grass: grass(state, today),
     grassObserved: grassTotal(state, today),
+    lastRefreshedLabel: lastRefreshedLabel(state, today),
   };
 }

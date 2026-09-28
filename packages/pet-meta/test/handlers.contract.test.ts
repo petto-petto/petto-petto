@@ -9,7 +9,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
+import { PROVIDERS, type Provider } from '@pet/core';
 import {
+  CollectError,
+  emptySnapshot,
+  FixtureCollector,
   InMemoryCollection,
   InMemoryCurrency,
   InMemoryMetaStore,
@@ -18,7 +22,19 @@ import {
   metaHandlers,
   type MetaHost,
   STUB_GROWTH_RULES,
+  tokenCounts,
+  type TickReport,
 } from '@pet/meta';
+
+/** 어떤 소스에 `refresh` 를 요청했는지 기록한다. 실제 수집기가 ccusage 를 돌리는 자리다. */
+class RecordingCollector extends FixtureCollector {
+  readonly refreshed: Provider[][] = [];
+
+  override refresh(providers: readonly Provider[]): Promise<void> {
+    this.refreshed.push([...providers]);
+    return Promise.resolve();
+  }
+}
 
 const noopHost: MetaHost = {
   showPanel: () => {},
@@ -40,6 +56,7 @@ function handlers() {
     new InMemoryCurrency(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
+    FixtureCollector.withEmptySnapshots(),
   );
   return { state, map: metaHandlers(state, noopHost) };
 }
@@ -83,6 +100,7 @@ test('INFO: 활성 펫이 있으면 초상화 채널이 진화 단계를 넘긴�
     new InMemoryCurrency(),
     pets,
     STUB_GROWTH_RULES,
+    FixtureCollector.withEmptySnapshots(),
   );
   const map = metaHandlers(state, {
     ...noopHost,
@@ -96,4 +114,231 @@ test('INFO: 활성 펫이 있으면 초상화 채널이 진화 단계를 넘긴�
   // 레벨(21)로 단계를 추측하지 않고 저장된 진화 단계(1)를 그대로 넘긴다.
   assert.equal((received as { evolutionStage: number }).evolutionStage, 1);
   assert.equal((received as { speciesId: string }).speciesId, '006');
+});
+
+function collectHandlers() {
+  const collector = new RecordingCollector();
+  for (const provider of PROVIDERS) collector.setSnapshot(emptySnapshot(provider));
+  const state = new MetaAppState(
+    new InMemoryMetaStore(),
+    '~/Library/…',
+    '0.1.0',
+    new InMemoryCollection(),
+    new InMemoryCurrency(),
+    new InMemoryPetClient(),
+    STUB_GROWTH_RULES,
+    collector,
+  );
+  return { state, collector, map: metaHandlers(state, noopHost) };
+}
+
+test('COLLECT-003: 갱신(collect:now)은 켜진 소스만 새로 읽은 뒤 집계한다', async () => {
+  const { collector, map } = collectHandlers();
+  const toggle = map['collect:toggle'];
+  const now = map['collect:now'];
+  assert.ok(toggle && now);
+
+  await toggle('codex', false);
+  collector.refreshed.length = 0;
+
+  const report = (await now()) as TickReport;
+
+  assert.deepEqual(collector.refreshed, [['claude_code', 'gemini_cli']]);
+  assert.ok(report.sourceNotes.some((note) => note.startsWith('codex:')));
+});
+
+test('COLLECT-003: 갱신은 refresh 가 끝난 뒤의 스냅샷으로 증가분을 반영한다', async () => {
+  const { state, collector, map } = collectHandlers();
+  const now = map['collect:now'];
+  assert.ok(now);
+
+  await now(); // 첫 집계는 기준점만 잡는다(8.2).
+  collector.accumulate('claude_code', '2026-09-27', 'claude-opus-5', tokenCounts(1_000));
+  const report = (await now()) as TickReport;
+
+  assert.ok(report.sourceNotes.includes('claude_code: 관측 토큰 +1000'));
+  assert.equal(state.meta.sources.get('claude_code')?.status, 'connected');
+});
+
+test('COLLECT-003: 카드 재스캔은 그 소스 하나만 새로 읽는다', async () => {
+  const { collector, map } = collectHandlers();
+  const rescan = map['collect:rescan'];
+  assert.ok(rescan);
+
+  await rescan('gemini_cli');
+
+  assert.deepEqual(collector.refreshed, [['gemini_cli']]);
+});
+
+test('8.4: 꺼진 소스는 재스캔해도 새로 읽지 않는다', async () => {
+  const { collector, map } = collectHandlers();
+  const toggle = map['collect:toggle'];
+  const rescan = map['collect:rescan'];
+  assert.ok(toggle && rescan);
+
+  await toggle('codex', false);
+  collector.refreshed.length = 0;
+  await rescan('codex');
+
+  assert.deepEqual(collector.refreshed, [[]]);
+});
+
+test('데모 사용량 채널은 실제 수집기에서 오류로 거절한다', async () => {
+  const state = new MetaAppState(
+    new InMemoryMetaStore(),
+    '~/Library/…',
+    '0.1.0',
+    new InMemoryCollection(),
+    new InMemoryCurrency(),
+    new InMemoryPetClient(),
+    STUB_GROWTH_RULES,
+    {
+      collect: () => {
+        throw new Error('쓰이면 안 된다');
+      },
+      refresh: () => Promise.resolve(),
+    },
+  );
+  const demo = metaHandlers(state, noopHost)['demo:usage'];
+  assert.ok(demo);
+
+  await assert.rejects(async () => demo('claude_code'), /데모 수집기/);
+});
+
+/**
+ * `refresh`가 게이트에서 멈추는 수집기. 새로 읽지 않은 소스를 `collect`하면 위반으로 적는다 —
+ * 실제 수집기에서는 그것이 오래된 캐시를 기준점으로 삼는 일이다.
+ */
+class GatedCollector extends FixtureCollector {
+  readonly refreshed: Provider[][] = [];
+  readonly staleReads: Provider[] = [];
+  readonly #fresh = new Set<Provider>();
+  #gates: (() => void)[] = [];
+
+  override async refresh(providers: readonly Provider[]): Promise<void> {
+    this.refreshed.push([...providers]);
+    await new Promise<void>((resolve) => this.#gates.push(resolve));
+    for (const provider of providers) this.#fresh.add(provider);
+  }
+
+  override collect(provider: Provider) {
+    if (!this.#fresh.has(provider)) this.staleReads.push(provider);
+    return super.collect(provider);
+  }
+
+  release(): void {
+    const gates = this.#gates;
+    this.#gates = [];
+    for (const open of gates) open();
+  }
+
+  /** 가장 먼저 기다리기 시작한 `refresh` 하나만 끝낸다. */
+  releaseFirst(): void {
+    this.#gates.shift()?.();
+  }
+}
+
+function gatedHandlers() {
+  const collector = new GatedCollector();
+  for (const provider of PROVIDERS) collector.setSnapshot(emptySnapshot(provider));
+  const state = new MetaAppState(
+    new InMemoryMetaStore(),
+    '~/Library/…',
+    '0.1.0',
+    new InMemoryCollection(),
+    new InMemoryCurrency(),
+    new InMemoryPetClient(),
+    STUB_GROWTH_RULES,
+    collector,
+  );
+  return { state, collector, map: metaHandlers(state, noopHost) };
+}
+
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+test('8.4: 집계가 수집기를 기다리는 동안 켠 소스는 새로 읽기 전의 값을 기준점으로 삼지 않는다', async () => {
+  const { state, collector, map } = gatedHandlers();
+  const toggle = map['collect:toggle'];
+  const now = map['collect:now'];
+  assert.ok(toggle && now);
+
+  const off = toggle('codex', false);
+  collector.release();
+  await off;
+
+  const tick = now(); // claude·gemini 만 새로 읽는 중
+  await settle();
+  const on = toggle('codex', true); // 그 사이에 codex 를 켠다
+  await settle();
+  collector.releaseFirst(); // 주기 집계가 먼저 끝난다. codex 는 아직 읽는 중이다.
+  await tick;
+  collector.release();
+  await on;
+
+  assert.deepEqual(collector.staleReads, []);
+  assert.equal(state.meta.sources.get('codex')?.status, 'connected');
+});
+
+test('8.4: 소스를 끌 때는 수집기를 실행하지 않는다', async () => {
+  const { collector, map } = gatedHandlers();
+  const toggle = map['collect:toggle'];
+  assert.ok(toggle);
+
+  const off = toggle('codex', false);
+  await settle();
+  collector.release();
+  await off;
+
+  assert.deepEqual(collector.refreshed, [[]]);
+});
+
+test('갱신: 수집 실패는 보고서의 failures 로 알리고, 기록 없음(not_found)은 실패가 아니다', async () => {
+  const { collector, map } = collectHandlers();
+  const now = map['collect:now'];
+  assert.ok(now);
+  collector.setError('codex', new CollectError('execution_failed'));
+  collector.setError('gemini_cli', new CollectError('not_found'));
+
+  const report = (await now()) as TickReport;
+
+  assert.deepEqual(report.failures, ['Codex: 집계 오류']);
+});
+
+test('종료: idle() 은 진행 중인 집계가 끝나야 풀린다 — 그 전에 저장소를 닫지 않게 한다', async () => {
+  const { state, collector } = gatedHandlers();
+
+  const tick = state.aggregate();
+  let idle = false;
+  const waiting = state.idle().then(() => {
+    idle = true;
+  });
+  await settle();
+  assert.equal(idle, false, '집계가 수집기를 기다리는 중에는 idle 이 아니다');
+
+  collector.release();
+  await tick;
+  await waiting;
+  assert.equal(idle, true);
+});
+
+test('데모 시드는 실제 수집기에서 아무것도 하지 않고 그 사실을 알린다', () => {
+  const store = () => new InMemoryMetaStore();
+  const make = (collector: ConstructorParameters<typeof MetaAppState>[7]) =>
+    new MetaAppState(
+      store(),
+      '~/Library/…',
+      '0.1.0',
+      new InMemoryCollection(),
+      new InMemoryCurrency(),
+      new InMemoryPetClient(),
+      STUB_GROWTH_RULES,
+      collector,
+    );
+
+  const real = make({
+    collect: () => emptySnapshot('claude_code'),
+    refresh: () => Promise.resolve(),
+  });
+  assert.equal(real.seedDemoUsage(), false, '실제 수집기에는 심지 않는다');
+  assert.equal(make(FixtureCollector.withEmptySnapshots()).seedDemoUsage(), true, '데모 모드');
 });
