@@ -51,6 +51,8 @@ import {
 /** 기획서 8.3: 수집은 앱 시작, 실행 중 매 1분, 카드별 수동 재스캔에서 실행한다. */
 const AGGREGATION_INTERVAL_MS = 60_000;
 
+let closeBattle: (() => void) | undefined;
+
 const here = dirname(fileURLToPath(import.meta.url));
 /** `dist/main`에서 두 단계 올라가면 앱 루트다. */
 const appRoot = join(here, '..', '..');
@@ -59,7 +61,6 @@ let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
 let appDatabase: SqliteFileDatabase | undefined;
-let closeBattle: (() => void) | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -193,6 +194,8 @@ function buildAppMenu(current: MetaAppState): void {
   );
 }
 
+// 전투 자식 프로세스의 수명은 다른 기능의 저장·종료 절차와 분리한다.
+app.once('before-quit', () => closeBattle?.());
 app.setName('tamagotchi-pet');
 
 app.whenReady().then(() => {
@@ -320,7 +323,6 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  closeBattle?.();
   state?.persist();
   room?.persist();
   appDatabase?.close();
