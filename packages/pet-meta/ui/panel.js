@@ -37,25 +37,40 @@ function el(tag, options = {}, children = []) {
 const nf = new Intl.NumberFormat('ko-KR');
 const num = (value) => nf.format(value ?? 0);
 
-/** 큰 토큰 수를 짧게. 400px 폭에서 자리수가 넘치지 않게 한다. */
 /**
- * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다.
+ * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다. 화면의 모든 큰 수가 이
+ * 함수 하나를 지난다 — 같은 화면에 `5K`와 `5,000`이 섞이지 않게 한다.
  *
  * 토큰 수치는 도구가 보고하는 값이고, 그 도구들이 쓰는 단위가 K · M · B다. 한글 단위로
  * 바꾸면 사용자가 다른 화면에서 본 숫자와 머릿속으로 환산해야 한다.
+ *
+ * 1,000 미만은 그대로다. 그 이상은 100 미만이면 소수 한 자리(`.0` 생략), 100 이상이면 정수로
+ * 400px 폭에서 자리수가 넘치지 않게 한다. 반올림으로 1000 에 닿으면 다음 단위로 올린다
+ * (999,949 → `1M`, `1000K`가 아니라).
  */
+const COMPACT_UNITS = [
+  [1_000_000_000, 'B'],
+  [1_000_000, 'M'],
+  [1_000, 'K'],
+];
+
 function compact(value) {
   const n = Number(value ?? 0);
+  const sign = n < 0 ? '-' : '';
   const abs = Math.abs(n);
-  // 1000 으로 나눈 자리마다 단위를 올린다. 소수 한 자리까지만 두고 `1.0M`은 `1M`으로 줄인다.
-  const step = (divisor, unit) => {
-    const scaled = n / divisor;
-    const text = Math.abs(scaled) >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
-    return `${text.replace(/\.0$/, '')}${unit}`;
+  const format = (scaled, unit) => {
+    const text = scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
+    return `${sign}${text.replace(/\.0$/, '')}${unit}`;
   };
-  if (abs >= 1_000_000_000) return step(1_000_000_000, 'B');
-  if (abs >= 1_000_000) return step(1_000_000, 'M');
-  if (abs >= 10_000) return step(1_000, 'K');
+  for (let index = 0; index < COMPACT_UNITS.length; index += 1) {
+    const [divisor, unit] = COMPACT_UNITS[index];
+    if (abs < divisor) continue;
+    const scaled = abs / divisor;
+    const rounded = Number(scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1));
+    const larger = COMPACT_UNITS[index - 1];
+    if (rounded >= 1_000 && larger) return format(abs / larger[0], larger[1]);
+    return format(scaled, unit);
+  }
   return nf.format(n);
 }
 
@@ -110,10 +125,10 @@ function bar(ratio) {
 /* ---------- 화면 상태 ---------- */
 
 const SUBTABS = {
+  // 정보 화면 단순화: 실적 탭은 없앴다. 핵심은 요약·사용량에, 나머지는 `자세히` 안에 있다.
   info: [
     ['summary', '요약'],
     ['usage', '사용량'],
-    ['performance', '실적'],
   ],
   settings: [
     ['collect', '수집'],
@@ -136,6 +151,8 @@ const ui = {
   achievementFilter: 'all',
   /** `갱신` 실행 중. 다시 그려도 버튼이 비활성으로 남도록 화면 밖에 둔다. */
   refreshing: false,
+  /** 정보 탭의 `자세히` 펼침. 저장하지 않고, 서브탭·화면이 바뀌면 접는다. */
+  expanded: false,
 };
 
 const content = document.getElementById('content');
@@ -145,6 +162,8 @@ const subtabBar = document.getElementById('subtabs');
 
 function selectScreen(screen, { resetSubtab = true } = {}) {
   ui.screen = screen;
+  // 패널을 다시 열거나 화면을 바꾸면 항상 접힌 상태로 시작한다.
+  ui.expanded = false;
   if (resetSubtab) ui.subtab = DEFAULT_SUBTAB[screen] ?? '';
   // 탭(정보·업적)과 하단 설정 아이콘이 같은 선택 상태를 공유한다.
   for (const tab of document.querySelectorAll('[data-screen]')) {
@@ -182,6 +201,7 @@ function renderSubtabs() {
         on: {
           click: () => {
             ui.subtab = key;
+            ui.expanded = false;
             renderSubtabs();
             render();
           },
@@ -189,15 +209,40 @@ function renderSubtabs() {
       }),
     );
   }
+  // 정보 화면에서는 서브탭 줄 오른쪽 끝에 `갱신`을 둔다. 요약·사용량 어디서나 같은 자리다.
+  if (ui.screen === 'info') {
+    subtabBar.appendChild(el('span', { class: 'subtab-spacer' }));
+    subtabBar.appendChild(refreshButton());
+  }
 }
 
-async function render() {
+/**
+ * 렌더 세대. 렌더는 IPC 를 기다리므로 늦게 시작한 렌더가 먼저 끝날 수 있다 — 요약을 누르고
+ * 곧바로 사용량을 누르면 느린 요약이 나중에 도착해 사용량 화면을 덮는다. 각 렌더는 시작할
+ * 때의 세대를 들고 있다가, 그사이 새 렌더가 시작됐으면 그리지 않는다.
+ */
+let renderGeneration = 0;
+
+function commit(generation, ...nodes) {
+  if (generation !== renderGeneration) return;
+  content.replaceChildren(...nodes);
+}
+
+/** 가장 최근에 시작한 렌더. 클릭 뒤 화면이 다 그려지기를 기다려야 하는 쪽(self-test)이 쓴다. */
+let renderDone = Promise.resolve();
+
+function render() {
+  renderGeneration += 1;
+  renderDone = renderNow();
+  return renderDone;
+}
+
+async function renderNow() {
   content.classList.remove('no-scroll');
   try {
     if (ui.screen === 'info') {
       if (ui.subtab === 'summary') return await renderSummary();
-      if (ui.subtab === 'usage') return await renderUsage();
-      return await renderPerformance();
+      return await renderUsage();
     }
     if (ui.screen === 'settings') return await renderSettings();
     if (ui.screen === 'achievements') return await renderAchievements();
@@ -209,12 +254,67 @@ async function render() {
   }
 }
 
+/* ---------- 정보 · 공통 ---------- */
+
+/**
+ * `자세히` / `접기` 버튼. 정보의 두 탭은 핵심만 먼저 보이고 나머지는 여기로 펼친다.
+ *
+ * 펼침은 저장하지 않는다 — 서브탭을 바꾸거나 패널을 다시 열면 접힌다(정보 화면 단순화 사양).
+ */
+function expandButton() {
+  return el('button', {
+    class: 'expand-button',
+    text: ui.expanded ? '접기 ▴' : '자세히 ▾',
+    attrs: { 'aria-expanded': String(ui.expanded) },
+    on: {
+      click: () => {
+        ui.expanded = !ui.expanded;
+        render();
+      },
+    },
+  });
+}
+
+/**
+ * 서브탭 줄 오른쪽 끝의 `갱신` 버튼. 요약·사용량 어디서나 같은 자리다.
+ *
+ * 1분 주기와 같은 채널(`collect:now`)을 부르므로 규칙이 따로 없다. 실행 중에는 비활성이고,
+ * 연타해도 수집기가 합류시켜 한 번만 돈다.
+ */
+function refreshButton() {
+  const button = el('button', {
+    class: 'tiny-button refresh-button',
+    text: ui.refreshing ? '갱신 중…' : '갱신',
+    attrs: { 'aria-label': '사용량 지금 갱신' },
+    on: {
+      click: async () => {
+        if (ui.refreshing) return;
+        ui.refreshing = true;
+        renderSubtabs();
+        try {
+          const report = await api.aggregateNow();
+          // 실패를 성공처럼 보이지 않게 한다. 기록 없음은 실패가 아니다(보고서가 거른다).
+          if (report?.failures?.length) flash(report.failures.join(' · '), true);
+          else flash(report?.bubble ?? '갱신했습니다');
+        } catch (error) {
+          flash(String(error), true);
+        } finally {
+          ui.refreshing = false;
+          renderSubtabs();
+          render();
+        }
+      },
+    },
+  });
+  button.disabled = ui.refreshing;
+  return button;
+}
+
 /* ---------- 정보 · 요약 ---------- */
 
 async function renderSummary() {
+  const generation = renderGeneration;
   const data = await api.infoSummary();
-  // INFO-001: 요약은 스크롤 없이 보인다.
-  content.classList.add('no-scroll');
 
   /*
    * 실제 오버레이 펫의 초상화를 쓴다. 주소는 앱이 준다 — 에셋 배치는 패널이 모른다.
@@ -233,12 +333,6 @@ async function renderSummary() {
   ]);
 
   /*
-   * 조련사 이름이 없으므로 펫이 프로필의 머리줄이다.
-   *
-   * 계정도 동기화도 없는 앱에서 사용자를 부를 이름은 아무것도 식별하지 않았다.
-   * 정체성은 화면에 떠 있는 펫이 이미 맡고 있다.
-   */
-  /*
    * 활성 펫은 세 상태다 — 펫이 있음 · 아직 고른 펫이 없음 · 읽지 못함.
    *
    * `null` 과 오류를 섞지 않는다. 새 설치에는 보유 펫이 없어 “없음”이 흔한 정상 상태인데,
@@ -251,16 +345,16 @@ async function renderSummary() {
       ? '아직 함께하는 펫이 없어요'
       : `${activePet.value.name} · Lv.${activePet.value.level}`;
 
+  // 칭호는 칩이 아니라 이름 옆 작은 글자다. 없으면 아무것도 두지 않는다.
   const profile = el('div', { class: 'card' }, [
     el('div', { class: 'profile' }, [
       petThumb,
       el('div', { class: 'profile-body' }, [
-        el('div', { class: 'pet-headline', text: headline }),
-        el('div', { class: 'profile-meta' }, [
+        el('div', { class: 'pet-headline' }, [
+          el('span', { text: headline }),
           data.profile.equippedTitle
-            ? el('span', { class: 'chip', text: data.profile.equippedTitle })
-            : el('span', { class: 'chip plain', text: '칭호 없음' }),
-          el('span', { class: 'chip plain', text: data.profile.deviceLabel }),
+            ? el('span', { class: 'pet-title', text: data.profile.equippedTitle })
+            : null,
         ]),
         // 펫이 없으면 경험치를 물어볼 대상도 없다. 빈 막대를 그리지 않는다.
         ...(activePet.value ? [expRow({ value: activePet.value.experience })] : []),
@@ -271,8 +365,7 @@ async function renderSummary() {
   /*
    * 화면에서 가장 강조되는 값. 사용자가 지금 쓸 수 있는 재화다.
    *
-   * 가이드가 글자 크기를 16px까지만 허용하므로 크기만으로는 부족하다. 자기 카드를
-   * 독차지하고, 금색을 쓰고(획득·보상용 색), 맨 위에 놓아 위계를 만든다.
+   * K·M·B 로 줄여 크기를 한눈에 보이게 하고, 정확한 값은 마우스를 올리면 보인다.
    */
   const hero = el('div', { class: 'card hero' }, [
     el('div', { class: 'hero-label', text: '사용 가능 토큰' }),
@@ -281,31 +374,33 @@ async function renderSummary() {
         ? el('span', { class: 'hero-value error', text: '⚠ 조회 실패' })
         : el('span', {
             class: 'hero-value',
-            text: data.availableTokens.value.toLocaleString('ko-KR'),
+            text: compact(data.availableTokens.value),
+            title: `${num(data.availableTokens.value)} 토큰`,
           }),
       el('span', {
         class: 'hero-sub',
         text: data.todayEarnedCoins.error
           ? '오늘 조회 실패'
-          : `오늘 +${data.todayEarnedCoins.value.toLocaleString('ko-KR')}`,
+          : `오늘 +${num(data.todayEarnedCoins.value)}`,
       }),
     ]),
+    // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
+    data.hasNoRecords
+      ? el('div', { class: 'card-note', text: '설치 이후 기록이 아직 없습니다' })
+      : null,
   ]);
 
-  /*
-   * 누적과 오늘을 한 카드에 담는다.
-   *
-   * 따로 두면 카드 테두리·안쪽 여백·바깥 여백이 한 벌 더 붙어 요약이 패널 높이를
-   * 넘긴다. 패널 크기는 기획서 4.2가 고정하고 요약은 스크롤이 없어야 하므로
-   * (INFO-001), 남는 예산을 여기서 만든다. 보여주는 수치는 그대로다.
-   */
-  const numbers = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [
-      el('span', { text: '설치 이후 누적' }),
-      el('span', { text: data.hasNoRecords ? '기록이 아직 없습니다' : '' }),
-    ]),
-    el('div', { class: 'stat-grid' }, [
-      stat('관측 토큰', el('div', { class: 'value', text: compact(data.totalObservedTokens) })),
+  if (!ui.expanded) {
+    commit(generation, profile, hero, expandButton());
+    return;
+  }
+
+  const records = el('div', { class: 'card' }, [
+    el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
+    el('div', { class: 'stat-grid record-grid' }, [
+      stat('사용한 토큰', el('div', { class: 'value', text: compact(data.totalObservedTokens) })),
+      stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
+      stat('뽑은 횟수', fieldValue(data.drawCount)),
       stat('보유 펫', fieldValue(data.ownedPets)),
       stat(
         '도감',
@@ -313,88 +408,41 @@ async function renderSummary() {
           ? el('div', { class: 'value error', text: '⚠ 조회 실패' })
           : el('div', {
               class: 'value small',
-              text: `${data.dexOwned.value} / ${data.dexTotal.value}`,
+              text: `${data.dexOwned.value}/${data.dexTotal.value}`,
             }),
       ),
-    ]),
-    el('h2', { class: 'section-title spaced' }, [el('span', { text: '오늘' })]),
-    // 오늘 획득 코인은 위 히어로가 `오늘 +N`으로 이미 보여준다. 여기서 또 쓰지 않는다.
-    el('div', { class: 'stat-grid two' }, [
-      stat('관측 토큰', el('div', { class: 'value', text: compact(data.todayObservedTokens) })),
-      stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
+      stat(
+        '업적',
+        el('div', {
+          class: 'value small',
+          text: `${data.achievementsUnlocked}/${data.achievementsTotal}`,
+        }),
+      ),
     ]),
   ]);
 
-  const achievements = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [
-      el('span', { text: '업적' }),
-      el('span', {
-        text: `${data.achievementsUnlocked} / ${data.achievementsTotal} · ${data.completionPercent}%`,
-      }),
-    ]),
-    bar(data.achievementsTotal ? data.achievementsUnlocked / data.achievementsTotal : 0),
-  ]);
-
-  content.replaceChildren(hero, profile, numbers, achievements);
+  commit(generation, profile, hero, records, expandButton());
 }
 
 /* ---------- 정보 · 사용량 ---------- */
 
-/**
- * 기간 필터와 `갱신` 버튼 한 줄.
- *
- * 1분 주기를 기다리지 않고 바로 반영하고 싶을 때 쓴다. 주기 집계와 같은 채널(`collect:now`)을
- * 부르므로 규칙이 따로 없다. 실행 중에는 비활성이고, 연타해도 수집기가 합류시켜 한 번만 돈다.
- */
-function usageToolbar(filters, data) {
-  const button = el('button', {
-    class: 'tiny-button',
-    text: ui.refreshing ? '갱신 중…' : '갱신',
-    attrs: { 'aria-label': '사용량 지금 갱신' },
-    on: {
-      click: async () => {
-        if (ui.refreshing) return;
-        ui.refreshing = true;
-        render();
-        try {
-          const report = await api.aggregateNow();
-          // 실패를 성공처럼 보이지 않게 한다. 기록 없음은 실패가 아니다(보고서가 거른다).
-          if (report?.failures?.length) flash(report.failures.join(' · '), true);
-          else flash(report?.bubble ?? '갱신했습니다');
-        } catch (error) {
-          flash(String(error), true);
-        } finally {
-          ui.refreshing = false;
-          render();
-        }
-      },
-    },
-  });
-  button.disabled = ui.refreshing;
-
-  return el('div', { class: 'usage-toolbar' }, [
-    filters,
-    el('div', { class: 'usage-refresh' }, [
-      el('span', { class: 'mono-small', text: `마지막 갱신 ${data.lastRefreshedLabel}` }),
-      button,
-    ]),
-  ]);
-}
+/** 기간 필터. 순서는 전체가 먼저다 — 처음 열면 전체를 본다. */
+const PERIODS = [
+  ['all', '전체'],
+  ['today', '오늘'],
+  ['week', '주'],
+  ['month', '달'],
+];
 
 async function renderUsage() {
+  const generation = renderGeneration;
   const data = await api.infoUsage(ui.period);
 
   const filters = el(
     'div',
-    { class: 'filter-bar' },
-    [
-      ['today', '오늘'],
-      ['week', '주'],
-      ['month', '달'],
-      ['all', '전체'],
-    ].map(([key, label]) =>
+    { class: 'segmented period-filter' },
+    PERIODS.map(([key, label]) =>
       el('button', {
-        class: 'subtab',
         text: label,
         attrs: { 'aria-selected': String(ui.period === key) },
         on: {
@@ -408,43 +456,16 @@ async function renderUsage() {
     ),
   );
 
-  // 기획서 5.2: 제목 옆에 `최근 12주`를 명시해 기간 필터와 혼동하지 않게 한다.
-  const grassCard = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [
-      el('span', { text: '사용량 잔디' }),
-      el('span', { text: '최근 12주' }),
-    ]),
-    el(
-      'div',
-      { class: 'grass' },
-      data.grass.map((week) =>
-        el(
-          'div',
-          { class: 'grass-week' },
-          week.cells.map((cell) =>
-            el('div', {
-              class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
-              title: cell.future ? cell.date : `${cell.date} · ${num(cell.observed)} 토큰`,
-            }),
-          ),
-        ),
-      ),
-    ),
-    el('div', { class: 'grass-legend' }, [
-      el('span', { text: '적음' }),
-      el('div', { class: 'grass-cell' }),
-      el('div', { class: 'grass-cell l1' }),
-      el('div', { class: 'grass-cell l2' }),
-      el('div', { class: 'grass-cell l3' }),
-      el('div', { class: 'grass-cell l4' }),
-      el('span', { text: '많음' }),
-    ]),
-  ]);
-
-  const toolsCard = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [
-      el('span', { text: '도구별' }),
-      el('span', { text: `${compact(data.periodObserved)} 토큰` }),
+  // 비율(%)은 숫자로 쓰지 않는다. 막대가 보여준다.
+  const usageCard = el('div', { class: 'card' }, [
+    el('div', { class: 'card-label', text: '사용한 토큰' }),
+    el('div', { class: 'usage-headline' }, [
+      el('span', {
+        class: 'usage-total',
+        text: compact(data.periodObserved),
+        title: `${num(data.periodObserved)} 토큰`,
+      }),
+      filters,
     ]),
     ...(data.tools.length
       ? data.tools.map((row) =>
@@ -453,11 +474,19 @@ async function renderUsage() {
             el('span', { class: 'name' }, [bar(row.sharePercent / 100)]),
             row.paused ? el('span', { class: 'status paused', text: row.statusLabel }) : null,
             el('span', { class: 'num', text: compact(row.observed) }),
-            el('span', { class: 'pct', text: `${row.sharePercent}%` }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
+    el('div', {
+      class: 'usage-refreshed mono-small',
+      text: `마지막 갱신 ${data.lastRefreshedLabel}`,
+    }),
   ]);
+
+  if (!ui.expanded) {
+    commit(generation, usageCard, expandButton());
+    return;
+  }
 
   const shown = ui.modelsExpanded ? data.models : data.models.slice(0, 5);
   const modelsCard = el('div', { class: 'card' }, [
@@ -471,7 +500,6 @@ async function renderUsage() {
             el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name', text: row.rawModel, title: row.rawModel }),
             el('span', { class: 'num', text: compact(row.observed) }),
-            el('span', { class: 'pct', text: `${row.sharePercent}%` }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
@@ -490,53 +518,37 @@ async function renderUsage() {
       : null,
   ]);
 
-  content.replaceChildren(usageToolbar(filters, data), grassCard, toolsCard, modelsCard);
-}
-
-/* ---------- 정보 · 실적 ---------- */
-
-async function renderPerformance() {
-  const data = await api.infoPerformance();
-
-  const tiles = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [el('span', { text: '실적' })]),
+  // 기획서 5.2: 제목 옆에 `최근 12주`를 명시해 기간 필터와 혼동하지 않게 한다. 범례는 두지
+  // 않는다 — 칸에 마우스를 올리면 날짜와 토큰이 보인다(INFO-004).
+  const grassCard = el('div', { class: 'card' }, [
+    el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
     el(
       'div',
-      { class: 'stat-grid' },
-      data.tiles.map((tile) =>
-        el('div', { class: 'stat', title: `소유 도메인: ${tile.owner}` }, [
-          el('div', { class: 'label', text: tile.label }),
-          fieldValue(tile.value, compact),
-          el('div', { class: 'owner-tag', text: tile.owner }),
-        ]),
+      { class: 'grass' },
+      data.grass.map((week) =>
+        el(
+          'div',
+          { class: 'grass-week' },
+          week.cells.map((cell) =>
+            el('div', {
+              class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
+              title: cell.future ? cell.date : `${cell.date} · ${num(cell.observed)} 토큰`,
+              // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
+              attrs: cell.future
+                ? {}
+                : {
+                    tabindex: '0',
+                    role: 'img',
+                    'aria-label': `${cell.date} ${num(cell.observed)} 토큰`,
+                  },
+            }),
+          ),
+        ),
       ),
     ),
   ]);
 
-  const ledgerBody = data.ledger.error
-    ? [el('div', { class: 'error-block', text: data.ledger.error })]
-    : data.ledger.value.length
-      ? data.ledger.value.map((entry) =>
-          el('div', { class: 'ledger-row' }, [
-            el('span', { class: 'when', text: entry.occurredAt }),
-            el('span', { class: 'why', text: entry.reason, title: entry.reason }),
-            el('span', {
-              class: `delta ${entry.delta >= 0 ? 'plus' : 'minus'}`,
-              text: `${entry.delta >= 0 ? '+' : ''}${num(entry.delta)}`,
-            }),
-          ]),
-        )
-      : [el('div', { class: 'empty', text: '원장 기록이 아직 없습니다' })];
-
-  const ledger = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [
-      el('span', { text: '코인 원장' }),
-      el('span', { text: '최신 20건' }),
-    ]),
-    ...ledgerBody,
-  ]);
-
-  content.replaceChildren(tiles, ledger);
+  commit(generation, usageCard, modelsCard, grassCard, expandButton());
 }
 
 /* ---------- 설정 ---------- */
@@ -550,6 +562,7 @@ function switchButton(checked, onToggle) {
 }
 
 async function renderSettings() {
+  const generation = renderGeneration;
   const data = await api.settingsView();
 
   if (ui.subtab === 'collect') {
@@ -592,7 +605,8 @@ async function renderSettings() {
       ]),
     );
 
-    content.replaceChildren(
+    commit(
+      generation,
       ...[notice, ...cards].filter(Boolean),
       el('div', { class: 'card' }, [
         el('div', {
@@ -605,7 +619,8 @@ async function renderSettings() {
   }
 
   if (ui.subtab === 'display') {
-    content.replaceChildren(
+    commit(
+      generation,
       el('div', { class: 'card' }, [
         el('div', { class: 'setting-row' }, [
           el('div', { class: 'text' }, [
@@ -673,7 +688,8 @@ async function renderSettings() {
       ['achievement', '업적 달성', data.notifications.achievement, '업적 화면 열기'],
       ['gacha_ready', '뽑기 가능', data.notifications.gachaReady, '뽑기 화면 열기'],
     ];
-    content.replaceChildren(
+    commit(
+      generation,
       el(
         'div',
         { class: 'card' },
@@ -701,7 +717,8 @@ async function renderSettings() {
   }
 
   // 기타
-  content.replaceChildren(
+  commit(
+    generation,
     el('div', { class: 'card' }, [
       el('h2', { class: 'section-title' }, [el('span', { text: '로컬 데이터' })]),
       el('div', { class: 'path', text: data.misc.dataLocation }),
@@ -754,6 +771,7 @@ async function renderSettings() {
 /* ---------- 업적 ---------- */
 
 async function renderAchievements() {
+  const generation = renderGeneration;
   const data = await api.achievementsView(ui.achievementFilter);
 
   const filters = el(
@@ -857,7 +875,7 @@ async function renderAchievements() {
     ),
   );
 
-  content.replaceChildren(filters, header, titleCard, list);
+  commit(generation, filters, header, titleCard, list);
 }
 
 /* ---------- 시연 (프로토타입 전용) ---------- */
@@ -973,13 +991,111 @@ window.addEventListener('load', () => {
 });
 
 /**
+ * 정보 화면 단순화 사양의 수용 기준을 클릭 경로로 확인한다 — 탭 둘, 접힘으로 시작, `자세히`로
+ * 펼치고 `접기`로 돌아옴, 서브탭을 바꾸면 접힘, 필터 순서와 기본값, 비율 숫자 없음.
+ */
+async function selftestInfoLayout() {
+  const report = (ok, pass, fail) =>
+    api.debugLog(ok ? `[SELFTEST] 정보 ${pass}` : `[SELFTEST] 정보 실패 — ${fail}`);
+  // 고정 시간만큼 기다리지 않는다. 클릭이 시작한 렌더가 끝나기를 기다린다.
+  const clickExpand = async () => {
+    content.querySelector('.expand-button')?.click();
+    await renderDone;
+  };
+  const subtabButton = (label) =>
+    [...subtabBar.querySelectorAll('.subtab')].find((button) => button.textContent === label);
+
+  selectScreen('info');
+  await renderDone;
+  const labels = [...subtabBar.querySelectorAll('.subtab')].map((button) => button.textContent);
+  await report(
+    labels.join(',') === '요약,사용량',
+    `서브탭            ${labels.join(' · ')}`,
+    `서브탭이 ${labels.join(',')}`,
+  );
+
+  // 요약: 접힘으로 시작하고 스크롤이 없다.
+  const noScroll = content.scrollHeight <= content.clientHeight;
+  const collapsedSummary = !content.querySelector('.record-grid') && !ui.expanded;
+  await report(
+    collapsedSummary && noScroll,
+    '요약 접힘        함께한 기록 숨김 · 스크롤 없음',
+    `요약 접힘 ${collapsedSummary}, 스크롤 없음 ${noScroll}`,
+  );
+
+  await clickExpand();
+  const stats = [...content.querySelectorAll('.record-grid .stat .label')].map(
+    (node) => node.textContent,
+  );
+  const coins = Boolean(content.querySelector('.recent-coins'));
+  await report(
+    stats.join(',') === '사용한 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적' && !coins,
+    `요약 펼침        함께한 기록 ${stats.length}칸 · 최근 코인 없음`,
+    `요약 펼침 칸 ${stats.join(',')}, 최근 코인 ${coins}`,
+  );
+
+  await clickExpand();
+  await report(
+    !content.querySelector('.record-grid'),
+    '요약 접기        다시 접힘',
+    '접기를 눌러도 펼친 채다',
+  );
+
+  // 펼친 채 사용량으로 옮기면 접힌 상태여야 한다.
+  await clickExpand();
+  subtabButton('사용량')?.click();
+  await renderDone;
+  const filters = [...content.querySelectorAll('.period-filter button')].map(
+    (button) => button.textContent,
+  );
+  const selected = content.querySelector('.period-filter [aria-selected="true"]')?.textContent;
+  const usageCollapsed = !content.querySelector('.model-row') && !content.querySelector('.grass');
+  await report(
+    usageCollapsed && filters.join(',') === '전체,오늘,주,달' && selected === '전체',
+    `사용량 접힘      필터 ${filters.join(' · ')} (기본 ${selected})`,
+    `사용량 접힘 ${usageCollapsed}, 필터 ${filters.join(',')}, 선택 ${selected}`,
+  );
+
+  await clickExpand();
+  const hasGrass = Boolean(content.querySelector('.grass'));
+  const percent = [...content.querySelectorAll('.row')].some((row) =>
+    row.textContent.includes('%'),
+  );
+  await report(
+    hasGrass && !percent,
+    '사용량 펼침      모델별 · 최근 12주 · 비율 숫자 없음',
+    `잔디 ${hasGrass}, % 표시 ${percent}`,
+  );
+  ui.expanded = false;
+
+  // 숫자 축약 규칙. 화면의 모든 큰 수가 지나는 함수라 실제 런타임에서 확인한다.
+  const cases = [
+    [999, '999'],
+    [1_000, '1K'],
+    [1_250, '1.3K'],
+    [12_480, '12.5K'],
+    [123_456, '123K'],
+    [999_949, '1M'],
+    [1_250_000, '1.3M'],
+    [3_400_000_000, '3.4B'],
+    [-1_500, '-1.5K'],
+  ];
+  const wrong = cases.filter(([value, expected]) => compact(value) !== expected);
+  await report(
+    wrong.length === 0,
+    `숫자 축약        ${cases.length}건 (예: 12,480 → ${compact(12_480)})`,
+    `숫자 축약 ${wrong.map(([value, expected]) => `${value}→${compact(value)}≠${expected}`).join(', ')}`,
+  );
+}
+
+/**
  * 사용량 화면의 `갱신` 버튼을 사용자가 누르는 것과 같은 경로(`click`)로 눌러 본다.
  *
  * 누른 직후 비활성 `갱신 중…`이 되고, 집계가 끝나면 다시 `갱신`으로 돌아오며, 켜진 소스가 한
  * 번이라도 성공했다면 마지막 갱신 시각이 채워져야 한다.
  */
 async function selftestRefreshButton() {
-  const find = () => content.querySelector('button[aria-label="사용량 지금 갱신"]');
+  const find = () => subtabBar.querySelector('button[aria-label="사용량 지금 갱신"]');
   const waitFor = async (check) => {
     // `갱신 중…`은 집계 시간(수십 ms)만 보이므로 짧은 간격으로 본다. 최대 10초.
     for (let tries = 0; tries < 1000; tries += 1) {
@@ -991,17 +1107,18 @@ async function selftestRefreshButton() {
 
   ui.screen = 'info';
   ui.subtab = 'usage';
+  renderSubtabs();
   await render();
   const button = find();
   if (!button) {
-    await api.debugLog('[SELFTEST] 갱신 버튼 실패 — 사용량 화면에 버튼이 없다');
+    await api.debugLog('[SELFTEST] 갱신 버튼 실패 — 정보 서브탭 줄에 버튼이 없다');
     return;
   }
 
   button.click();
   const busy = await waitFor(() => find()?.disabled === true && find()?.textContent === '갱신 중…');
   const done = await waitFor(() => !ui.refreshing && find()?.disabled === false);
-  const label = content.querySelector('.usage-refresh .mono-small')?.textContent ?? '';
+  const label = content.querySelector('.usage-refreshed')?.textContent ?? '';
   const { lastRefreshedLabel } = await api.infoUsage(ui.period);
 
   await api.debugLog(
@@ -1022,7 +1139,6 @@ async function runSelftest() {
   const walk = [
     ['info', 'summary'],
     ['info', 'usage'],
-    ['info', 'performance'],
     ['settings', 'collect'],
     ['settings', 'display'],
     ['settings', 'notifications'],
@@ -1057,6 +1173,7 @@ async function runSelftest() {
   // 모델 전체 보기 토글이 실제로 행 수를 늘리는지 확인한다(INFO-006).
   ui.screen = 'info';
   ui.subtab = 'usage';
+  ui.expanded = true; // 모델별은 `자세히` 안에 있다.
   ui.modelsExpanded = false;
   await render();
   const collapsed = content.querySelectorAll('.model-row').length;
@@ -1073,6 +1190,10 @@ async function runSelftest() {
         : `[SELFTEST] info/usage 실패 — 전체 보기가 행을 늘리지 못했다`,
   );
 
+  ui.expanded = false;
+  ui.modelsExpanded = false;
+
+  await selftestInfoLayout();
   await selftestRefreshButton();
 
   /*

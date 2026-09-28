@@ -193,15 +193,6 @@ export function observedTotal(state: MetaState): number {
   return total;
 }
 
-/** 특정 로컬 날짜의 관측 토큰. */
-export function observedOn(state: MetaState, date: LocalDate): number {
-  let total = 0;
-  for (const [key, counts] of state.usageDaily) {
-    if (splitUsageKey(key).date === date) total += observed(counts);
-  }
-  return total;
-}
-
 /** 세 CLI가 모두 토큰을 발생시킨 로컬 날짜의 수. 히든 업적의 사실이다. */
 function threeToolsDays(state: MetaState): number {
   const perDate = new Map<LocalDate, Set<Provider>>();

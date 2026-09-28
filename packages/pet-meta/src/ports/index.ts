@@ -62,7 +62,7 @@ export interface CurrencyPort {
   balance(): Coin;
 
   /**
-   * 기획서 5.3: 최신 20개 원장 항목.
+   * 최신 원장 항목. 요약의 `오늘 +N` 합계가 쓴다.
    *
    * 알려진 계약 문제: 기획서 5.1의 `오늘 획득 코인`은 오늘 발생한 모든 양수 항목의 합인데
    * 이 조회로는 최근 N건만 볼 수 있다. 날짜 범위 조회를 재화 소유자와 합의해야 한다.
@@ -113,7 +113,7 @@ export interface CollectionPort {
   grantTrophy(achievementId: string, autoPlace: boolean): TrophyPlacement;
 }
 
-/** gacha 조회(기획서 5.3 실적 타일). */
+/** gacha 조회. 요약의 `뽑은 횟수`가 쓴다. */
 export interface GachaPort {
   drawCount(): number;
   fusionCount(): number;

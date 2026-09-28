@@ -355,15 +355,6 @@ main.no-scroll {
   font-weight: 700;
 }
 
-.profile-meta {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-  margin-top: 2px;
-  color: var(--ink);
-  font-size: 10px;
-}
-
 /* ---------- 나무 버튼 ---------- */
 
 .tiny-button {
@@ -416,10 +407,6 @@ main.no-scroll {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--space-1);
-}
-
-.stat-grid.two {
-  grid-template-columns: repeat(2, 1fr);
 }
 
 /* ---------- 사용 가능 토큰 (요약의 머리값) ---------- */
@@ -548,11 +535,6 @@ main.no-scroll {
   font-weight: 400;
 }
 
-.owner-tag {
-  color: var(--ink);
-  font-size: 10px;
-}
-
 /* ---------- 진행 바 ---------- */
 
 .bar {
@@ -614,16 +596,6 @@ main.no-scroll {
   background: var(--forest-light);
 }
 
-.grass-legend {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-  margin-top: var(--space-1);
-  color: var(--ink);
-  font-size: 10px;
-}
-
 /* ---------- 목록 행 ---------- */
 
 .row {
@@ -647,14 +619,6 @@ main.no-scroll {
 
 .row .num {
   flex: 0 0 auto;
-  font-variant-numeric: tabular-nums;
-}
-
-.row .pct {
-  flex: 0 0 36px;
-  text-align: right;
-  color: var(--ink);
-  font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -829,22 +793,6 @@ main.no-scroll {
   margin-bottom: var(--space-2);
 }
 
-/* 사용량 화면: 왼쪽 기간 필터, 오른쪽 마지막 갱신 시각과 `갱신` 버튼. */
-.usage-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2);
-}
-
-.usage-refresh {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-bottom: var(--space-2);
-}
-
 .ach {
   display: flex;
   gap: var(--space-2);
@@ -974,12 +922,6 @@ main.no-scroll {
   border-top: 2px solid var(--parchment-ring);
 }
 
-.ledger-row .when {
-  flex: 0 0 62px;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
 .ledger-row .why {
   flex: 1;
   min-width: 0;
@@ -1055,4 +997,100 @@ main.no-scroll {
   .segmented button:active {
     transform: none;
   }
+}
+
+/* ---------- 정보 · 단순화 ---------- */
+
+/* 서브탭 줄: 왼쪽 탭, 오른쪽 끝 `갱신`. */
+.subtab-spacer {
+  flex: 1 1 auto;
+}
+
+#subtabs .refresh-button {
+  align-self: center;
+}
+
+/* 칭호는 칩이 아니라 이름 옆 작은 글자다. */
+.pet-title {
+  margin-left: var(--space-2);
+  color: var(--ink);
+  font-family: 'Galmuri9', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.75;
+}
+
+/* `자세히` / `접기`: 카드 아래 넓은 나무 버튼. */
+.expand-button {
+  display: block;
+  width: 100%;
+  padding: var(--space-1) var(--space-3);
+  background: var(--wood-surface);
+  color: var(--light-text);
+  border: 2px solid var(--wood-border);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  font: inherit;
+  font-size: 12px;
+  cursor: default;
+}
+
+.expand-button:active {
+  transform: translate(2px, 2px);
+  box-shadow:
+    inset 0 2px 0 var(--wood-highlight),
+    inset 0 -2px 0 var(--wood-border);
+}
+
+/* 사용량: 큰 숫자와 기간 필터가 한 줄. */
+.usage-headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.usage-total {
+  color: var(--ink);
+  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-refreshed {
+  margin-top: var(--space-2);
+  text-align: right;
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expand-button:active {
+    transform: none;
+  }
+}
+
+/* 양피지 카드 안의 작은 제목. `.hero-label`은 짙은 히어로 카드용 밝은 글자라 여기서 쓰면
+   양피지와 구분되지 않는다(디자인 가이드: 밝은 면에는 잉크색). */
+.card-label {
+  color: var(--ink);
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+/* 기록이 없는 설치의 안내. 0 만 보이면 고장처럼 읽힌다(기획서 5.4). */
+.card-note {
+  margin-top: var(--space-1);
+  color: var(--light-text);
+  font-size: 10px;
+  opacity: 0.85;
+}
+
+.grass-cell:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 0;
 }

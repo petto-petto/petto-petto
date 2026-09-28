@@ -25,7 +25,6 @@ import {
   isCategory,
   isPeriod,
   isPetSize,
-  performanceScreen,
   setSourceEnabled,
   settingsScreen,
   summaryScreen,
@@ -195,6 +194,7 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       state.pets,
       state.currency,
       state.growthRules,
+      state.gacha,
     ),
   );
 
@@ -219,10 +219,6 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       state.today(),
       typeof period === 'string' && isPeriod(period) ? period : 'all',
     ),
-  );
-
-  handle('info:performance', () =>
-    performanceScreen(state.gacha, state.battle, state.pets, state.currency),
   );
 
   handle('settings:view', () =>

@@ -21,10 +21,8 @@ import {
   InMemoryPetClient,
   isUnlocked,
   type MetaState,
-  performanceScreen,
   runAggregation,
   STUB_GROWTH_RULES,
-  StubBattle,
   StubGacha,
   summaryScreen,
   tokenCounts,
@@ -52,7 +50,15 @@ class Harness {
   }
 
   summary() {
-    return summaryScreen(this.state, this.catalog, today(), this.pets, this.currency, this.rules);
+    return summaryScreen(
+      this.state,
+      this.catalog,
+      today(),
+      this.pets,
+      this.currency,
+      this.rules,
+      new StubGacha(0, 0),
+    );
   }
 
   evaluate() {
@@ -125,7 +131,6 @@ test('INFO-007: 펫 조회가 실패하면 프로필만 오류고 나머지는 �
   assert.ok(summary.ownedPets.error);
   // 재화는 펫과 무관하므로 그대로다.
   assert.equal(summary.availableTokens.error, undefined);
-  assert.equal(summary.profile.deviceLabel, '이 기기');
 });
 
 /* ---------- 경험치 ---------- */
@@ -167,22 +172,6 @@ test('INFO-001: 보유 펫과 도감은 PetClient 의 현재 보유에서 온다
   assert.equal(summary.ownedPets.value, 3, '마리 수');
   assert.equal(summary.dexOwned.value, 2, '종 수 — 같은 종 두 마리는 한 칸');
   assert.equal(summary.dexTotal.value, DEX_SLOT_COUNT);
-});
-
-test('INFO-007: 실적의 최고 레벨은 PetClient 에서 오고 소유를 펫으로 표시한다', () => {
-  const harness = new Harness();
-  harness.pets.give('003', { level: 4 });
-  harness.pets.give('006', { level: 18 });
-
-  const tile = performanceScreen(
-    new StubGacha(0, 0),
-    new StubBattle(0),
-    harness.pets,
-    harness.currency,
-  ).tiles.find((candidate) => candidate.key === 'best_level');
-
-  assert.equal(tile?.value.value, 18);
-  assert.equal(tile?.owner, '펫');
 });
 
 /* ---------- 업적 ---------- */

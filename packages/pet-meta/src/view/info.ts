@@ -1,19 +1,15 @@
-/** 정보 화면의 표시 모델. 기획서 5.1·5.3·5.4가 이 파일의 명세다. */
+/**
+ * 정보 화면의 표시 모델. 기획서 5.1·5.4와 정보 화면 단순화 사양
+ * (`.harness/specs/features/2026-09-28-info-screen-simplify.md`)이 이 파일의 명세다.
+ */
 
 import { localDateOf, type LocalDate } from '@pet/core';
 
-import type {
-  BattlePort,
-  CurrencyPort,
-  GachaPort,
-  GrowthRules,
-  OwnedPet,
-  PetClient,
-} from '../ports/index.ts';
-import { completionRatio, unlockedCount } from '../domain/achievement/engine.ts';
+import type { CurrencyPort, GachaPort, GrowthRules, OwnedPet, PetClient } from '../ports/index.ts';
+import { unlockedCount } from '../domain/achievement/engine.ts';
 import { DEX_SLOT_COUNT } from '../domain/achievement/facts.ts';
 import type { AchievementCatalog } from '../domain/achievement/catalog.ts';
-import { observedOn, observedTotal, type MetaState } from '../domain/state.ts';
+import { observedTotal, type MetaState } from '../domain/state.ts';
 import { failedField, fieldOf, okField, type Field } from './field.ts';
 
 /** 레벨 옆 EXP 진행. */
@@ -47,8 +43,6 @@ export interface ProfileCard {
    * 없는 설치는 오류가 아니라 빈 상태”라고 정한 것과 같은 이유로 오류와 섞지 않는다.
    */
   activePet: Field<ActivePetCard | null>;
-  /** 기획서 5.1: `이 기기` 표기. 계정도 동기화도 없다는 사실을 알린다. */
-  deviceLabel: string;
 }
 
 export interface SummaryScreen {
@@ -60,19 +54,21 @@ export interface SummaryScreen {
    * 얻은 것이므로 그 이름이 직관적이다. 저장과 계약에서는 계속 코인이다.
    */
   availableTokens: Field<number>;
+  todayEarnedCoins: Field<number>;
+
+  /* 함께한 기록 — 요약을 펼쳤을 때만 보인다. */
   totalObservedTokens: number;
+  /** 뽑은 횟수. gacha 도메인 것이라 실패할 수 있다(INFO-007). */
+  drawCount: Field<number>;
   ownedPets: Field<number>;
   dexOwned: Field<number>;
   dexTotal: Field<number>;
-  todayObservedTokens: number;
-  todayEarnedCoins: Field<number>;
   togetherMinutes: number;
   togetherLabel: string;
   /** 기획서 5.4: 설치 이후 기록이 아직 없는 상태. */
   hasNoRecords: boolean;
   achievementsUnlocked: number;
   achievementsTotal: number;
-  completionPercent: number;
 }
 
 /** 기획서 5.1: 60분 미만은 분, 그 이상은 시간과 분으로 표시한다. */
@@ -126,6 +122,7 @@ export function summaryScreen(
   pets: PetClient,
   currency: CurrencyPort,
   rules: GrowthRules,
+  gacha: GachaPort,
 ): SummaryScreen {
   const active = fieldOf(() => pets.getActivePet());
   const togetherMinutes = state.activityMinutes.size;
@@ -136,103 +133,19 @@ export function summaryScreen(
       activePet: active.error
         ? failedField<ActivePetCard | null>(active.error)
         : okField(active.value ? activePetCard(active.value, rules) : null),
-      deviceLabel: '이 기기',
     },
     availableTokens: fieldOf(() => currency.balance()),
+    todayEarnedCoins: todayEarnedCoins(currency, today),
     totalObservedTokens: observedTotal(state),
+    drawCount: fieldOf(() => gacha.drawCount()),
     ownedPets: fieldOf(() => pets.countOwnedPets()),
     // 현재 보유한 종 수다. 업적 판정은 따로 최고치를 기억하지만, 화면은 지금 상태를 보여준다.
     dexOwned: fieldOf(() => pets.countOwnedSpecies()),
     dexTotal: okField(DEX_SLOT_COUNT),
-    todayObservedTokens: observedOn(state, today),
-    todayEarnedCoins: todayEarnedCoins(currency, today),
     togetherMinutes,
     togetherLabel: formatTogether(togetherMinutes),
     hasNoRecords: state.usageDaily.size === 0,
     achievementsUnlocked: unlockedCount(state),
     achievementsTotal: catalog.size,
-    completionPercent: Math.round(completionRatio(state, catalog) * 100),
   };
-}
-
-export interface PerformanceTile {
-  key: string;
-  label: string;
-  value: Field<number>;
-  /** 어느 도메인이 이 값을 소유하는가. 경계를 눈으로 보여주기 위해 담는다. */
-  owner: string;
-}
-
-export interface LedgerRow {
-  entryId: string;
-  reason: string;
-  occurredAt: string;
-  delta: number;
-}
-
-export interface PerformanceScreen {
-  tiles: PerformanceTile[];
-  ledger: Field<LedgerRow[]>;
-}
-
-/** 기획서 5.3: 코인 원장은 최신 20개를 표시한다. */
-export const LEDGER_DISPLAY_COUNT = 20;
-
-const monthDayTime = (iso: string): string => {
-  const at = new Date(iso);
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`;
-};
-
-/**
- * 실적 화면 모델을 만든다.
- *
- * 타일 하나의 조회가 실패해도 나머지 타일과 원장은 그대로 만든다(INFO-007).
- */
-export function performanceScreen(
-  gacha: GachaPort,
-  battle: BattlePort,
-  pets: PetClient,
-  currency: CurrencyPort,
-): PerformanceScreen {
-  const totals = fieldOf(() => currency.totals());
-
-  const tiles: PerformanceTile[] = [
-    { key: 'draw', label: '뽑기', value: fieldOf(() => gacha.drawCount()), owner: 'gacha' },
-    { key: 'fusion', label: '합성', value: fieldOf(() => gacha.fusionCount()), owner: 'gacha' },
-    { key: 'battle', label: '전투', value: fieldOf(() => battle.totalWins()), owner: 'battle' },
-    {
-      key: 'best_level',
-      label: '최고',
-      value: fieldOf(() => pets.getHighestLevel()),
-      owner: '펫',
-    },
-    {
-      key: 'earned',
-      label: '획득',
-      value: totals.value
-        ? okField(Math.abs(totals.value.earned))
-        : failedField(totals.error ?? '조회 실패'),
-      owner: '재화',
-    },
-    {
-      key: 'spent',
-      label: '소비',
-      value: totals.value
-        ? okField(Math.abs(totals.value.spent))
-        : failedField(totals.error ?? '조회 실패'),
-      owner: '재화',
-    },
-  ];
-
-  const ledger = fieldOf(() =>
-    currency.recentLedger(LEDGER_DISPLAY_COUNT).map((entry) => ({
-      entryId: entry.entryId,
-      reason: entry.reason,
-      occurredAt: monthDayTime(entry.occurredAt),
-      delta: entry.delta,
-    })),
-  );
-
-  return { tiles, ledger };
 }
