@@ -22,8 +22,10 @@
 
 - 현재 main의 수집기는 `FixtureCollector`다. 실제 CLI 수집기 연결은 이 변경에 포함하지 않는다.
 - 펫 획득·선택 기능은 공통 `PetClient.createOwnedPets` / `setActivePet`으로 저장해야 한다. 전투는 이 공통 데이터만 읽는다.
-- 기존 room JSON 명부와 오버레이의 종별 데모 성장 저장은 별도 경로다. 그 데이터를 임의로 공통 소유 펫으로 복제하거나 다른 기능의 UI를 변경하지 않았다.
-- 공통 활성 펫이 비어 있으면 전투창에 선택 안내가 나온다. 기존 room의 데모 펫 선택만으로는 공통 활성 펫이 지정되지 않는다.
+- 펫룸의 `오버레이 활성화`는 공통 `PetClient.setActivePet`으로 연결되어 전투에도 같은 개체가 반영된다.
+- 기존 room JSON 개체는 최초 연결 시 ID 대응을 저장해 한 번만 이관한다. JSON은 복구용으로 보존한다. 이후 명부·레벨·활성 선택은 공통 SQLite에서 읽는다.
+- 구 명부에는 XP가 없으므로 최초 이관만 기존 레벨 시작점의 최소 XP를 성장 공식으로 계산한다. 이미 연결된 개체의 XP는 덮어쓰지 않는다. 같은 종의 서로 다른 개체도 합치지 않는다.
+- 오버레이의 종별 데모 성장 저장은 별도 경로로 남아 있다. 이번 수정은 펫룸 활성 선택과 전투의 공통 개체 연결이다.
 
 ## 검증
 
@@ -49,3 +51,15 @@
 - 변경 영역: 전투 패키지, desktop 조립·preload·성장 잔여분 저장·테스트, 성장 패키지 공개 함수, 루트 빌드 설정. `pet-core`, `pet-meta`, 펫룸·뽑기 구현은 변경하지 않았다.
 - 남은 사항: 위의 다른 기능 담당자 연결 조건. GUI 실행은 하지 않았으며 화면은 scene·UI 계약 테스트로 검증했다.
 - Evolve: 토큰 통계 기준과 XP 환산 기준을 분리하고, 누적 XP 스냅샷으로 재시작·중복 이벤트를 처리하는 경계를 이 문서에 남겼다.
+
+## 후속 수정 — 펫룸 활성화 후 전투가 비어 있는 문제
+
+- Track: `standard`. Seed는 승인된 펫룸 명세와 사용자의 `npm start` 재현 보고다.
+- 성공 기준: 펫룸에서 선택한 개체 ID·레벨이 전투에 반영되고 재시작해도 유지된다. UI 디자인·획득 규칙은 변경하지 않는다.
+- Explorer: `room:setActivePet`은 JSON 명부만 수정했고 전투는 SQLite만 읽었다.
+- Planner / Implementer: 실패 테스트를 먼저 추가한 뒤, 공통 ID 연결 저장소와 앱 조립을 수정했다. 창과 분리한 `RoomState`로 실제 선택 메서드를 테스트한다.
+- Semantic: 임시 SQLite와 실제 Rust에서 펫룸 선택 → 동일 개체 전투, 재시작, 중복 방지, XP 보존, 이관 실패 rollback을 검증한다.
+- Mechanical: `npm run build`, `bash .harness/scripts/verify-electron.sh`(215개), `npm run test:storage --workspace @pet/desktop`(48개) 통과. 펫룸 연결 테스트 6개를 포함한다.
+- 측정 제한: Electron의 `--experimental-test-coverage`는 테스트 6개 통과 후 `Cannot read properties of undefined (reading 'line')`로 보고에 실패했다. 커버리지 80% 달성으로 주장하지 않는다. 옵션을 뺀 동일 테스트와 전체 저장소 테스트는 통과했다.
+- Review: 같은 세션의 별도 diff 검토. 기존 JSON과 공통 XP를 보존하고 다른 기능 테이블은 `PetClient`를 통해서만 접근한다. GUI 실행 검증은 하지 않는다.
+- Evolve: 통합 검증 시작점을 API 직접 호출이 아니라 실제 펫룸 선택 메서드까지 확장했다.

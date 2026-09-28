@@ -113,3 +113,39 @@ test('실제 앱 조립도 공통 명부를 펫룸에 전달한다', () => {
   assert.match(main, /roomPets\.initialize\(loadRoomCollection\(roomStore\)\)/);
   assert.match(main, /new RoomState\(roomStore, systemClock, collection, ownedPets, roomPets\)/);
 });
+
+test('이미 공통 ID인 명부는 XP를 덮어쓰지 않고 삭제된 연결 개체를 다시 만들지 않는다', async (t) => {
+  const { pets, bridge, legacy } = await setup(t);
+  const imported = bridge.initialize(legacy);
+  const victim = imported.pets.find((p) => p.id !== imported.activePetId);
+  const before = pets.getOwnedPet(victim.id);
+  pets.updateGrowth(victim.id, { level: 13, totalXp: 156, xpIntoLevel: 0, evolutionStage: 1 });
+  const commonSnapshot = {
+    pets: [{ id: victim.id, speciesPetId: before.speciesId, level: 1 }],
+    activePetId: victim.id,
+  };
+  bridge.initialize(commonSnapshot);
+  assert.equal(pets.getOwnedPet(victim.id).totalXp, 156);
+  pets.replaceOwnedPets([victim.id], '003');
+  bridge.initialize(legacy);
+  bridge.initialize(commonSnapshot);
+  assert.equal(pets.countOwnedPets(), 6);
+  assert.throws(() => pets.getOwnedPet(victim.id));
+});
+
+test('연결 전 공통 개체와 빈 명부를 존중하고 잘못된 레벨은 전체 이관을 취소한다', async (t) => {
+  const { pets, bridge, legacy } = await setup(t);
+  assert.deepEqual(bridge.initialize({ pets: [], activePetId: '' }), { pets: [], activePetId: '' });
+  const [existing] = pets.createOwnedPets(['003']);
+  pets.setActivePet(existing.ownedPetId);
+  bridge.initialize({
+    pets: [{ id: existing.ownedPetId, speciesPetId: '003', level: 25 }],
+    activePetId: existing.ownedPetId,
+  });
+  assert.equal(pets.getActivePet().level, 1);
+  const invalid = structuredClone(legacy);
+  invalid.pets[1].level = -1;
+  assert.throws(() => bridge.initialize(invalid), /레벨/);
+  assert.equal(pets.countOwnedPets(), 1);
+  assert.equal(pets.getActivePet().ownedPetId, existing.ownedPetId);
+});
