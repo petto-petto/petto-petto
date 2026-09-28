@@ -10,6 +10,9 @@ import { MetaAppState } from '@pet/meta';
 import type { RoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
+import { mountBattle } from './battle.ts';
+import { readFileSync } from 'node:fs';
+import type { BattleGrowthRules } from '@pet/battle';
 import type { PetClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
@@ -37,6 +40,8 @@ import {
   createPanelWindow,
   endOverlayDrag,
   focusOverlayWindow,
+  getBattleWindow,
+  petAssetsDir,
   moveOverlayDrag,
   setOverlayInteractive,
   showPanel,
@@ -54,6 +59,7 @@ let state: MetaAppState | undefined;
 let room: RoomState | undefined;
 let tray: Tray | undefined;
 let appDatabase: SqliteFileDatabase | undefined;
+let closeBattle: (() => void) | undefined;
 
 interface OverlayPointer {
   screenX: number;
@@ -230,7 +236,28 @@ app.whenReady().then(() => {
     pets,
     OVERLAY_GROWTH_RULES,
   );
-  room = new RoomState(roomStore, systemClock, collection, ownedPets);
+  room = new RoomState(roomStore, systemClock, collection, ownedPets, pets);
+  const battleRoot = dirname(fileURLToPath(import.meta.resolve('@pet/battle/package.json')));
+  const battleRules = JSON.parse(
+    readFileSync(join(battleRoot, 'battle-rules.json'), 'utf8'),
+  ) as Pick<BattleGrowthRules, 'intervalLevels'>;
+  closeBattle = mountBattle(pets, ipcMain, {
+    binaryPath: join(
+      battleRoot,
+      'rust',
+      'target',
+      'debug',
+      process.platform === 'win32' ? 'pet-battle-engine.exe' : 'pet-battle-engine',
+    ),
+    petAssetsDir,
+    rules: {
+      ...battleRules,
+      levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
+        OVERLAY_GROWTH_RULES.requiredXp(i + 1),
+      ),
+    },
+    isBattleSender: (id) => getBattleWindow()?.webContents.id === id,
+  });
   mountMeta(state);
   mountRoom(room, roomHost);
   mountOverlayWindowIpc();
@@ -293,6 +320,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  closeBattle?.();
   state?.persist();
   room?.persist();
   appDatabase?.close();

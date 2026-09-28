@@ -64,6 +64,8 @@ export interface BattlePreviewState {
 }
 
 export interface BattleState {
+  /** Host-provided shared assets keyed by ownedPetId; absent in standalone previews. */
+  petSprites?: Record<string, Record<'idle' | 'attack', { asset: string; frameCount: number }>>;
   activePet: BattlePet | null;
   roster: BattlePet[];
   spectatorPetIds: string[];

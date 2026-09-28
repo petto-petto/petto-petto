@@ -106,6 +106,7 @@ function required<T extends Element>(selector: string): T {
 }
 
 function assetUrl(path: string): string {
+  if (path.startsWith('file:')) return new URL(path).href;
   return new URL(`../${path}`, document.baseURI).href;
 }
 
@@ -197,7 +198,7 @@ function updateSpectators(next: BattleState): void {
     .slice(0, 3);
   const theme = backgroundForEnemy(next.preview.enemyColor ?? next.enemyColor);
   const key = JSON.stringify([
-    pets.map((pet) => [pet.petId, pet.rarity, pet.displayName]),
+    pets.map((pet) => [pet.petId, pet.rarity, pet.displayName, pet.sprite, pet.evolutionStage]),
     theme,
     next.activePet?.stage,
   ]);
@@ -215,7 +216,9 @@ function updateSpectators(next: BattleState): void {
         const sprite = document.createElement('span');
         sprite.className = 'peek-sprite';
         const image = document.createElement('img');
-        image.src = assetUrl(petAssetForRarity(pet.rarity));
+        const shared = next.petSprites?.[pet.petId]?.idle;
+        image.src = assetUrl(shared?.asset ?? petAssetForRarity(pet.rarity));
+        if (shared) image.style.width = `${shared.frameCount * 100}%`;
         image.alt = `${pet.displayName} · 빼꼼 응원`;
         image.draggable = false;
         sprite.append(image);

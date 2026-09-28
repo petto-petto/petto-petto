@@ -163,8 +163,13 @@ export function deriveBattleScene(state: BattleState): BattleScene {
           : state.preview.enemyPhase;
   const petAction = isAttacking ? 'attack' : 'idle';
   const petAssetRarity = state.preview.petAssetRarity ?? state.activePet?.rarity ?? 'COMMON';
-  const petAsset = `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
-  const frameCount = isAttacking ? 6 : 4;
+  const sharedSprite =
+    state.preview.petAssetRarity === null && state.activePet
+      ? state.petSprites?.[state.activePet.petId]?.[petAction]
+      : undefined;
+  const petAsset =
+    sharedSprite?.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
+  const frameCount = sharedSprite?.frameCount ?? (isAttacking ? 6 : 4);
 
   return {
     petAsset,

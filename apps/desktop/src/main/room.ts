@@ -17,7 +17,8 @@
 
 import { ipcMain } from 'electron';
 
-import type { Clock } from '@pet/core';
+import { petId, type Clock } from '@pet/core';
+import type { OwnedPet, PetClient } from '@pet/client';
 import {
   backgroundAt,
   fromSnapshot,
@@ -77,26 +78,39 @@ export class RoomState {
   readonly store: RoomStore;
   readonly clock: Clock;
   readonly port: RoomCollectionPort;
+  readonly pets: PetClient | undefined;
 
   constructor(
     store: RoomStore,
     clock: Clock,
     port: RoomCollectionPort,
     collection: RoomCollection,
+    pets?: PetClient,
   ) {
     this.store = store;
     this.clock = clock;
     this.port = port;
+    this.pets = pets;
     this.#collection = collection;
     this.#background = backgroundAt(clock.now());
   }
 
   scene(): RoomScene {
-    return { background: this.#background, pets: roomPetViews(this.#collection) };
+    return {
+      background: this.#background,
+      pets: this.pets
+        ? this.pets.listOwnedPets().map(sharedPetView)
+        : roomPetViews(this.#collection),
+    };
   }
 
   /** 활성 펫이 바뀌었을 때 렌더러들이 받는 값. */
   activeView(): RoomPetView {
+    if (this.pets) {
+      const active = this.pets.getActivePet();
+      if (!active) throw new Error('활성 펫이 없습니다');
+      return sharedPetView(active);
+    }
     const active = roomPetViews(this.#collection).find((view) => view.isActive);
     // `RoomCollection`은 활성 펫이 항상 하나임을 구조적으로 보장한다.
     if (!active) throw new Error('활성 펫이 없습니다');
@@ -110,6 +124,11 @@ export class RoomState {
    * 갱신하지 않으므로, 알리지 않으면 발신 창의 화면이 영영 안 바뀐다.
    */
   setActivePet(ownedPetId: string, host: RoomHost): RoomPetView {
+    if (this.pets) {
+      const active = sharedPetView(this.pets.setActivePet(ownedPetId));
+      host.broadcast('room:activePetChanged', active);
+      return active;
+    }
     this.#collection = withActivePet(this.#collection, ownedPetId);
     this.port.update(this.#collection);
     this.persist();
@@ -134,12 +153,27 @@ export class RoomState {
 
   /** 저장 실패는 앱을 멈추지 않는다. 메모리 상태는 멀쩡하고 다음 저장에서 다시 시도된다. */
   persist(): void {
+    // 공통 클라이언트가 즉시 저장한다. 예전 JSON 명부는 보존하고 이중 기록하지 않는다.
+    if (this.pets) return;
     try {
       this.store.save(toSnapshot(this.#collection));
     } catch (error) {
       console.log(`[ROOM] 펫룸 상태를 저장하지 못했습니다 — ${String(error)}`);
     }
   }
+}
+
+function sharedPetView(pet: OwnedPet): RoomPetView {
+  return {
+    ownedPetId: pet.ownedPetId,
+    petId: petId(pet.speciesId),
+    slug: pet.sprite,
+    name: pet.nickname ?? pet.name,
+    rarity: pet.rarity,
+    level: pet.level,
+    stage: (pet.evolutionStage + 1) as 1 | 2 | 3,
+    isActive: pet.isActive,
+  };
 }
 
 function ownedPetIdFrom(value: unknown): string {
