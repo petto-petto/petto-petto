@@ -7,3 +7,6 @@ logs/*
 .venv/
 **/__pycache__/
 **/.omc/
+
+# 브레인스토밍 시각 도우미가 만드는 목업
+.superpowers/
