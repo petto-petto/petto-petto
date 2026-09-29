@@ -41,6 +41,7 @@ import { registerDexIpc } from './ipc/dex.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
+import { ensureStarterPet } from './starter-pet.ts';
 import {
   applyOverlayVisibility,
   beginOverlayDrag,
@@ -363,6 +364,10 @@ app.whenReady().then(async () => {
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
   const pets: PetClient = new SqlitePetClient(new PetRepository(database));
   const growth = new SqliteGrowthReadClient(growthRepository);
+  // 임시: 새 설치에는 보유 펫이 0마리라 오버레이도 meta 도 그릴 펫이 없다. 초기 지급
+  // 규칙이 정해지면 `starter-pet.ts` 와 함께 지운다.
+  const starter = ensureStarterPet(pets, (count) => Math.floor(Math.random() * count));
+  if (starter.kind !== 'already_ready') console.log(`[PET] 초기 펫 ${starter.kind}`);
   const currencyRepository = new CurrencyRepository(database);
   const tokens: TokenClient = new SqliteTokenClient(
     new TokenRepository(database),
