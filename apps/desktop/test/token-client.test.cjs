@@ -227,10 +227,27 @@ test('기존 기능의 테이블과 같은 파일에 공존한다', async () => 
   try {
     tokens.recordUsage(usage());
 
+    // 확인할 것은 "토큰이 남의 기능과 같은 파일에서 함께 산다"이지 scope 목록 자체가
+    // 아니다. 목록을 그대로 적으면 다른 팀이 migration 을 추가할 때마다 이 테스트가
+    // 깨진다 — 실제로 meta scope 가 추가되면서 한 번 깨졌다.
     const scopes = database
-      .prepare('SELECT DISTINCT scope FROM schema_migrations ORDER BY scope')
+      .prepare('SELECT DISTINCT scope FROM schema_migrations')
       .all()
       .map((row) => row.scope);
+    assert.ok(scopes.includes('token'), 'token migration 이 적용돼 있다');
+    assert.ok(
+      scopes.some((scope) => scope !== 'token'),
+      '다른 기능의 migration 과 같은 파일을 쓴다',
+    );
+
+    // 남의 테이블을 밀어내지 않았는지는 테이블 존재로 확인한다.
+    const tables = database
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .all()
+      .map((row) => row.name);
+    for (const table of ['token_stats', 'token_history', 'currency_ledger', 'owned_pets']) {
+      assert.ok(tables.includes(table), `${table} 이 있어야 한다`);
+    }
     assert.deepEqual(scopes, ['currency', 'meta', 'overlay-growth', 'pet', 'token']);
   } finally {
     database.close();
