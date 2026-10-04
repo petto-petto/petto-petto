@@ -5,7 +5,7 @@
 ## Track / Interview·Seed
 
 `work standard`입니다. 요청자는 2026-09-30 “다 진행한 뒤 mr 리팩토링 진행”으로
-[설계](../../../.harness/specs/features/2026-09-30-battle-client-isolation.md)를 승인했습니다.
+[설계](../../../.harness/specs/features/2026-09-30-battle-integration.md)를 승인했습니다.
 기준 HEAD는 `30c235d`입니다. 전투 동작 보존, 공통 변경의 소유자별 Client 격리,
 루트 Rust 빌드 의존 제거와 실제 결과에 맞춘 MR 갱신이 성공 기준입니다.
 공통 DB·성장 통합·새 명부 push·전투 디자인 변경·원격 push는 비목표입니다.
@@ -135,7 +135,7 @@ Track은 `standard`이며 기존 승인된 `battle-client-isolation` 명세와 �
 
 ## 펫룸 선택 읽기 연결 복구 — 2026-10-01
 
-- Track / Interview·Seed: `work standard`. “펫룸에서 오버레이 클릭하면 펫이 안나옴, 필요하면 만든 port/adapter에 추가” 및 “전투창. 메인 오버레이는 ㄴㄴ”를 범위로 삼았습니다. [선택 읽기 명세](../../../.harness/specs/features/2026-09-30-battle-active-pet-reader.md)를 이 제한 범위로 갱신했습니다.
+- Track / Interview·Seed: `work standard`. “펫룸에서 오버레이 클릭하면 펫이 안나옴, 필요하면 만든 port/adapter에 추가” 및 “전투창. 메인 오버레이는 ㄴㄴ”를 범위로 삼았습니다. [선택 읽기 명세](../../../.harness/specs/features/2026-09-30-battle-integration.md)를 이 제한 범위로 갱신했습니다.
 - Explorer: 기존 read wrapper는 공통 활성값만 위임하므로 룸 JSON의 선택은 도달하지 않았습니다. 룸 JSON에는 개체 ID·레벨·에셋 정보는 있지만 실제 XP가 없으며 같은 종 매칭은 개체를 혼동합니다.
 - Planner: 소유자 공개 `RoomSelectionClient` → 전투 `RoomBattlePetAdapter` → Rust 동기화. 룸은 선택·명부의 원천, 공통 `PetClient`는 정확히 같은 개체의 저장 성장 원천입니다. 룸 저장·DB·메인 오버레이는 변경하지 않습니다.
 - Implementer: RED `f501d79` — TS 신규 API/룸 선택 실패, Rust nullable 입력 7건 거절, 실제 호스트 신규 3건 및 Electron 조회 Adapter 부재를 확인했습니다. GREEN `012908f`는 조회 콜백 주입·nullable 내부 XP·미연결 표시를 추가하며 기존 owner-only 소비 계약을 유지합니다.

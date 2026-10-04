@@ -15,6 +15,8 @@
 
 ### Changed
 
+- 2026-10-04 전투의 Client 경계·선택 조회 명세를 `specs/features/2026-09-30-battle-integration.md`로 통합했다. 대화 인용과 중복·과거 실행 설명을 제거하고 기존 feature 템플릿의 요구사항·수용 기준으로 정리했다. 기능 범위와 공통 하네스 규칙은 변경하지 않았다.
+
 - 2026-09-17 결정으로 `rules/feature-contracts.md` 를 다시 썼다. **데이터를 가진 기능이 Port 를
   공표한다** — 인터페이스 · 구현체 · Repository 를 소유자가 만들고, 쓰는 쪽은 타입만 import 해
   주입받은 인스턴스를 호출한다. 선례는 `packages/pet-client` 다.
