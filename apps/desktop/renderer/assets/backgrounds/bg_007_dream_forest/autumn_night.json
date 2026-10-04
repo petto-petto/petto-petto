@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "autumn_night",
+  "name": "동화 숲 (가을 밤)",
+  "season": "autumn",
+  "phase": "night",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "autumn_night.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "autumn_night.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0B0714",
+      "#0F0A19",
+      "#100B1E",
+      "#101937",
+      "#11091B",
+      "#120B1E",
+      "#12234E",
+      "#122551",
+      "#142751",
+      "#152957",
+      "#170D21",
+      "#182E5C",
+      "#1A3263",
+      "#1B142E",
+      "#1F1B38",
+      "#201F43",
+      "#223C69",
+      "#244178",
+      "#263058",
+      "#3D1F39",
+      "#42162B",
+      "#554E5C",
+      "#601B29",
+      "#612C30",
+      "#753E36",
+      "#812027",
+      "#842E28",
+      "#A02F25",
+      "#AF3F23",
+      "#BE5024",
+      "#BE6332",
+      "#D67E36"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

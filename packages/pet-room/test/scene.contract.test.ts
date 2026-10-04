@@ -6,18 +6,27 @@ import assert from 'node:assert/strict';
 import {
   backgroundAssetPath,
   backgroundAt,
+  backgroundOf,
+  isSameBackground,
   backgroundFrameIndexAt,
   clampToWalkArea,
+  clipWalkAreaToViewport,
   drawBoxOf,
   hitTest,
   inDrawOrder,
   InvalidWalkAreaError,
   layersInDrawOrder,
   phaseAt,
+  seasonAt,
+  BACKGROUND_PHASES,
+  SEASONS,
   PET_SCALE,
   ROAM_SPEED_PX_PER_SEC,
   spawnRoamingPet,
   stepRoaming,
+  viewportOf,
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
   walkAreaOf,
   type BackgroundAnimation,
   type BackgroundMeta,
@@ -68,30 +77,108 @@ function forestMeta(): BackgroundMeta {
 
 const at = (hour: number, minute = 0): Date => new Date(2026, 8, 3, hour, minute, 0);
 
-/* ---------- 낮 / 밤 ---------- */
+/* ---------- 계절 / 시간대 ---------- */
 
-test('낮과 밤의 경계는 06:00과 18:00이다', () => {
-  assert.equal(phaseAt(at(5, 59)), 'night');
-  assert.equal(phaseAt(at(6, 0)), 'day');
-  assert.equal(phaseAt(at(17, 59)), 'day');
-  assert.equal(phaseAt(at(18, 0)), 'night');
+/** 계절을 보려면 달을 움직여야 한다. `at`은 9월로 고정이다. */
+const onDate = (month: number, day: number, hour = 12): Date =>
+  new Date(2026, month - 1, day, hour, 0, 0);
+
+test('시간대 경계는 05:00 · 08:00 · 17:00 · 20:00이다', () => {
+  assert.equal(phaseAt(at(4, 59)), 'night');
+  assert.equal(phaseAt(at(5, 0)), 'dawn');
+  assert.equal(phaseAt(at(7, 59)), 'dawn');
+  assert.equal(phaseAt(at(8, 0)), 'day');
+  assert.equal(phaseAt(at(16, 59)), 'day');
+  assert.equal(phaseAt(at(17, 0)), 'dusk');
+  assert.equal(phaseAt(at(19, 59)), 'dusk');
+  assert.equal(phaseAt(at(20, 0)), 'night');
 });
 
-test('자정과 정오도 각각 밤과 낮이다', () => {
+test('밤은 하루를 가로지른다 — 자정도 밤이다', () => {
   assert.equal(phaseAt(at(0, 0)), 'night');
-  assert.equal(phaseAt(at(12, 0)), 'day');
+  assert.equal(phaseAt(at(23, 59)), 'night');
 });
 
-test('낮에는 bg_002, 밤에는 bg_003을 쓴다', () => {
-  const day = backgroundAt(at(13));
-  assert.equal(day.id, 'bg_002');
-  assert.equal(day.directory, 'bg_002_deep_forest');
-  assert.equal(day.metaFile, 'bg_002.json');
+test('계절 경계는 3·6·9·12월이다', () => {
+  assert.equal(seasonAt(onDate(2, 28)), 'winter');
+  assert.equal(seasonAt(onDate(3, 1)), 'spring');
+  assert.equal(seasonAt(onDate(5, 31)), 'spring');
+  assert.equal(seasonAt(onDate(6, 1)), 'summer');
+  assert.equal(seasonAt(onDate(8, 31)), 'summer');
+  assert.equal(seasonAt(onDate(9, 1)), 'autumn');
+  assert.equal(seasonAt(onDate(11, 30)), 'autumn');
+  assert.equal(seasonAt(onDate(12, 1)), 'winter');
+});
 
-  const night = backgroundAt(at(22));
-  assert.equal(night.id, 'bg_003');
-  assert.equal(night.directory, 'bg_003_deep_forest_night');
-  assert.equal(night.metaFile, 'bg_003.json');
+test('겨울은 해를 가로지른다 — 1월도 겨울이다', () => {
+  assert.equal(seasonAt(onDate(1, 15)), 'winter');
+});
+
+/**
+ * 경계를 손으로 짚는 검사만 두면 구간 사이에 구멍이 나도 모른다. 하루 24시간과
+ * 열두 달을 전부 훑어 선언된 값만 나오는지 본다.
+ */
+test('24시간과 열두 달 어디에도 구멍이 없다', () => {
+  for (let hour = 0; hour < 24; hour += 1) {
+    assert.ok(
+      (BACKGROUND_PHASES as readonly string[]).includes(phaseAt(at(hour))),
+      `${hour}시가 어느 시간대에도 속하지 않는다`,
+    );
+  }
+  for (let month = 1; month <= 12; month += 1) {
+    assert.ok(
+      (SEASONS as readonly string[]).includes(seasonAt(onDate(month, 15))),
+      `${month}월이 어느 계절에도 속하지 않는다`,
+    );
+  }
+});
+
+/**
+ * 이 검사가 없어서 켜 둔 창의 배경이 하루 종일 바뀌지 않았다.
+ *
+ * `refreshBackground`가 `id`로 같은지 보는데 16 variant가 전부 `bg_007`이라
+ * 언제나 "안 바뀌었다"가 나왔다. 그림을 가르는 것은 `metaFile`이다.
+ */
+test('같은 id라도 계절이나 시간대가 다르면 다른 배경이다', () => {
+  const autumnDay = backgroundOf('autumn', 'day');
+  const autumnNight = backgroundOf('autumn', 'night');
+  const winterDay = backgroundOf('winter', 'day');
+
+  assert.equal(autumnDay.id, autumnNight.id, '전제: 16장이 같은 id를 쓴다');
+
+  assert.ok(isSameBackground(autumnDay, backgroundOf('autumn', 'day')));
+  assert.ok(!isSameBackground(autumnDay, autumnNight), '시간대가 넘어갔는데 같다고 한다');
+  assert.ok(!isSameBackground(autumnDay, winterDay), '계절이 넘어갔는데 같다고 한다');
+});
+
+test('하루가 흐르면 배경이 네 번 바뀐다', () => {
+  const seen = new Set<string>();
+  let previous = backgroundAt(at(0));
+  let changes = 0;
+  for (let hour = 0; hour < 24; hour += 1) {
+    const next = backgroundAt(at(hour));
+    seen.add(next.metaFile);
+    if (!isSameBackground(next, previous)) changes += 1;
+    previous = next;
+  }
+  assert.equal(seen.size, 4, '하루에 네 시간대가 모두 나와야 한다');
+  // 밤이 하루의 양 끝에 걸쳐 있다. 0시(밤)에서 시작해 5·8·17·20시를 지나므로 네 번이다.
+  assert.equal(changes, 4, '경계를 네 번 지난다');
+});
+
+test('배경은 계절과 시간대로 고른다 — 16장이 한 디렉터리에 있다', () => {
+  const autumnDay = backgroundAt(at(13)); // at()은 2026-09-03
+  assert.equal(autumnDay.id, 'bg_007');
+  assert.equal(autumnDay.directory, 'bg_007_dream_forest');
+  assert.equal(autumnDay.season, 'autumn');
+  assert.equal(autumnDay.phase, 'day');
+  assert.equal(autumnDay.metaFile, 'autumn_day.json');
+
+  const winterNight = backgroundAt(onDate(1, 15, 22));
+  assert.equal(winterNight.season, 'winter');
+  assert.equal(winterNight.phase, 'night');
+  assert.equal(winterNight.metaFile, 'winter_night.json');
+  assert.equal(winterNight.directory, autumnDay.directory);
 });
 
 test('배경 경로는 에셋 루트 기준 상대 경로다 — 선두 슬래시는 파일 시스템 루트를 가리킨다', () => {
@@ -296,4 +383,79 @@ test('빈 자리를 클릭하면 아무도 선택되지 않는다', () => {
   assert.equal(hitTest(boxes, 10, 10), undefined);
   // 경계는 오른쪽·아래를 포함하지 않는다.
   assert.equal(hitTest(boxes, 164, 220), undefined);
+});
+
+/* ------------------------------------------------------------------ *
+ * 창이 보여 주는 영역
+ * ------------------------------------------------------------------ */
+
+test('창은 장면 아래쪽 가운데를 640x240만 보여 준다', () => {
+  const viewport = viewportOf(forestMeta());
+
+  assert.deepEqual(viewport, { x: 160, y: 120, width: 640, height: 240 });
+  // 아래쪽을 남긴다 — 버리는 120행은 하늘이고 지면은 아래에 있다.
+  assert.equal(viewport.y + viewport.height, 360, '장면 바닥이 창 바닥과 맞아야 한다');
+  assert.equal(viewport.x + viewport.width, 800);
+});
+
+test('배경이 창보다 작으면 자르지 않는다', () => {
+  const small = { ...forestMeta(), width: 560, height: 240 };
+  const viewport = viewportOf(small);
+
+  assert.deepEqual(viewport, { x: 0, y: 0, width: 560, height: 240 });
+});
+
+test('여백이 홀수여도 오프셋은 정수다 — 픽셀이 반 칸 밀리면 안 된다', () => {
+  const odd = { ...forestMeta(), width: 961, height: 361 };
+  const viewport = viewportOf(odd);
+
+  assert.equal(Number.isInteger(viewport.x), true);
+  assert.equal(Number.isInteger(viewport.y), true);
+  assert.equal(viewport.x, 160);
+});
+
+test('배회 영역은 보이는 영역 안으로 좁혀진다 — 펫이 잘린 바깥으로 걸어가면 사라진다', () => {
+  const meta = { ...forestMeta(), walkArea: { x: 96, y: 316, width: 744, height: 36 } };
+  const viewport = viewportOf(meta);
+
+  const clipped = clipWalkAreaToViewport(walkAreaOf(meta), viewport);
+
+  // 좌표는 발 위치라 스프라이트 반 폭(24)만큼 창 안쪽으로 물러선다.
+  assert.deepEqual(clipped, { x: 184, y: 316, width: 592, height: 36 });
+  assert.ok(clipped.x >= viewport.x, '왼쪽으로 삐져나가지 않는다');
+  assert.ok(
+    clipped.x + clipped.width <= viewport.x + viewport.width,
+    '오른쪽으로 삐져나가지 않는다',
+  );
+});
+
+test('배회 영역이 이미 창 안이면 그대로 둔다', () => {
+  const viewport = viewportOf(forestMeta());
+  const inside: WalkArea = { x: 300, y: 300, width: 100, height: 20 };
+
+  assert.deepEqual(clipWalkAreaToViewport(inside, viewport), inside);
+});
+
+test('머리가 창 위로 잘리는 자리는 배회 영역에서 뺀다', () => {
+  const viewport = viewportOf(forestMeta());
+  // 발이 창 최상단이면 48px 스프라이트의 머리가 위로 잘린다.
+  const tooHigh: WalkArea = { x: 300, y: viewport.y, width: 100, height: 200 };
+
+  const clipped = clipWalkAreaToViewport(tooHigh, viewport);
+
+  assert.equal(clipped.y, viewport.y + 48, '한 프레임 높이만큼 내려온다');
+});
+
+test('보이는 영역 밖에만 있는 배회 영역은 거부한다', () => {
+  const viewport = viewportOf(forestMeta());
+  // 잘려 나가는 왼쪽 바깥.
+  const outside: WalkArea = { x: 0, y: 316, width: 80, height: 36 };
+
+  assert.throws(() => clipWalkAreaToViewport(outside, viewport), InvalidWalkAreaError);
+});
+
+test('창 크기는 뽑기·합성의 640x420과 맞는다', () => {
+  // 장면 240 + 하단 패널 180 = 420. 하단 패널 높이는 앱이 갖지만 합이 맞아야 한다.
+  assert.equal(VIEWPORT_WIDTH, 640);
+  assert.equal(VIEWPORT_HEIGHT + 180, 420);
 });

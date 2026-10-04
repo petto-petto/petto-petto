@@ -27,3 +27,10 @@ apps/desktop/renderer/assets
 # 어긋난다. 형식을 맞출지는 문서 소유자가 정할 일이다.
 design.md
 design-kr.md
+
+# 배경 픽셀화 파이프라인의 입출력.
+#
+# 생성 이미지와 그것을 줄인 산출물, 그리고 중간 측정값이다. 도구가 다시 만들면
+# 그만이라 형식을 관리하지 않는다. 스크립트와 문서는 검사 대상으로 남긴다.
+tools/backgrounds/pixelize/in/
+tools/backgrounds/pixelize/out/

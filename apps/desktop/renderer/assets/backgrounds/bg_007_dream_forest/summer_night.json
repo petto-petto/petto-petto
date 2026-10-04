@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "summer_night",
+  "name": "동화 숲 (여름 밤)",
+  "season": "summer",
+  "phase": "night",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "summer_night.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "summer_night.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#060610",
+      "#071C30",
+      "#08101F",
+      "#09243E",
+      "#0A2742",
+      "#0E2F4A",
+      "#0F0C1F",
+      "#0F0D20",
+      "#100D21",
+      "#100E21",
+      "#142F56",
+      "#14394D",
+      "#16404B",
+      "#171A34",
+      "#194753",
+      "#1B3E74",
+      "#1D3767",
+      "#1F4470",
+      "#20448B",
+      "#234A87",
+      "#24284B",
+      "#265188",
+      "#284E9C",
+      "#295877",
+      "#315F8A",
+      "#32486D",
+      "#3B6F5B",
+      "#40637B",
+      "#41755C",
+      "#44725E",
+      "#4F7E60",
+      "#7EA56B"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

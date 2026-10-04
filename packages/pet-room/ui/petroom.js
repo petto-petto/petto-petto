@@ -21,21 +21,38 @@ import {
   AURA_ROUNDNESS,
   backgroundAssetPath,
   backgroundFrameIndexAt,
+  backgroundOf,
   drawBoxOf,
+  fireflyAlpha,
+  fireflyCountFor,
+  fireflyDotAt,
+  FIREFLY_GLOW_RADIUS,
+  clipWalkAreaToViewport,
   hitTest,
   inDrawOrder,
   layersInDrawOrder,
   mockXpRatio,
   PET_SCALE,
+  spawnFireflies,
   spawnRoamingPet,
+  spawnWeather,
   stepRoaming,
+  viewportOf,
   walkAreaOf,
+  weatherAlpha,
+  weatherColor,
+  weatherCountFor,
+  weatherDotAt,
+  weatherFor,
+  WEATHER_DEPTHS,
 } from '../dist/index.js';
 import { assetUrl } from './assets.js';
 import { drawFrame, fetchJson, loadImage, SpritePlayer } from './sprite.js';
 
 const api = window.petApi;
 
+const stageEl = document.getElementById('stage');
+const openGachaBtn = document.getElementById('open-gacha');
 const layersEl = document.getElementById('layers');
 const canvas = document.getElementById('pets');
 const ctx = canvas.getContext('2d');
@@ -66,13 +83,31 @@ const room = {
   /** 배회 상태 배열. 공유 rAF 하나가 매 프레임 일괄 갱신한다. */
   roaming: [],
   walkArea: null,
-  /** 배경 애니메이션(반딧불이)의 프레임 `<img>` 목록. */
+  /** 창이 보여 주는 장면 영역. 배경마다 다르므로 배경을 적용할 때 정한다. */
+  viewport: null,
+  /** 배경 애니메이션의 프레임 `<img>` 목록. 프레임을 가진 배경에서만 쓴다. */
   animationFrames: [],
   animation: null,
+  /**
+   * 런타임이 찍는 반딧불이.
+   *
+   * 프레임 PNG를 쓰지 않는 이유는 `domain/firefly.ts` 머리말에 있다 — 배경이
+   * 16장이 되면 프레임도 16벌이 되고, 짧은 루프는 반복이 눈에 띈다.
+   */
+  fireflies: [],
+  /** 떨어지는 것들. 계절이 종류를 정하고, 없으면 kind 가 null 이다. */
+  weather: { kind: null, particles: [], area: { x: 0, y: 0, width: 0, height: 0 } },
   /** main이 push로 알려 준 활성 펫. 이 창이 직접 고치지 않는다. */
   activePetId: null,
   /** 상세 패널이 보여 주는 펫. 창 안에서만 의미 있는 로컬 UI 상태다. */
   selectedPetId: null,
+  /**
+   * 미리보기로 고정한 계절·시간대. null 이면 시각을 따른다.
+   *
+   * 고정된 동안 main 의 배경 교체 push 를 무시한다 — 안 그러면 1분 뒤 타이머가
+   * 화면을 도로 가져간다.
+   */
+  preview: null,
 };
 
 function showError(message) {
@@ -349,8 +384,88 @@ function drawAura(view, box, frame, now) {
  * 판정 상자를 그리는 순간에 만드는 이유: 프레임마다 크기가 다를 수 있고(종·단계별 캔버스
  * 차이), 위치는 매 프레임 바뀐다. 따로 계산하면 보이는 것과 눌리는 것이 어긋난다.
  */
+/** 떨어지는 것들의 외곽선. 펫 스프라이트와 같은 색이다(design.md §4). */
+const WEATHER_OUTLINE = '#2C2438';
+
+/** 반딧불이 빛. 선택 표시(금색)와 같은 색이지만 알파가 낮아 혼동되지 않는다. */
+const FIREFLY_COLOR = '#FFD166';
+
+/**
+ * 반딧불이를 찍는다.
+ *
+ * 중심 한 점에 사각 띠를 덧대 빛 번짐을 흉내 낸다. `shadowBlur`나 방사형
+ * 그라데이션을 쓰지 않는 이유는 오라와 같다 — 부드러운 빛은 도트 엣지를 뭉개서
+ * 정수 배율 화면에서 그 점만 혼자 흐려 보인다(`design.md` §4).
+ *
+ * 바깥 띠부터 그려야 중심이 위에 남는다.
+ */
+function drawFireflies(now) {
+  if (room.fireflies.length === 0) return;
+
+  const still = reducedMotion.matches;
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = FIREFLY_COLOR;
+
+  for (const fly of room.fireflies) {
+    const dot = fireflyDotAt(fly, now, still);
+    if (dot.level <= 0) continue;
+
+    for (let ring = FIREFLY_GLOW_RADIUS - 1; ring >= 0; ring -= 1) {
+      const alpha = fireflyAlpha(dot.level, ring);
+      if (alpha <= 0) continue;
+      ctx.globalAlpha = alpha;
+      const size = ring * 2 + 1;
+      ctx.fillRect(dot.x - ring, dot.y - ring, size, size);
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * 눈·꽃잎·낙엽을 찍는다.
+ *
+ * `near`가 참이면 가장 가까운 깊이만, 거짓이면 나머지만 그린다. 펫을 사이에
+ * 두고 두 번 불러 **먼 것은 펫 뒤로, 가까운 것은 앞으로** 지나가게 하려는
+ * 것이다. 한 번에 다 그리면 눈이 전부 펫 뒤에 깔려 평평해 보인다.
+ */
+function drawWeather(now, near) {
+  const { kind, particles, area } = room.weather;
+  if (!kind || particles.length === 0) return;
+
+  const still = reducedMotion.matches;
+  const color = weatherColor(kind);
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+
+  for (const particle of particles) {
+    const front = particle.depth === WEATHER_DEPTHS - 1;
+    if (front !== near) continue;
+    const dot = weatherDotAt(particle, kind, area, now, still);
+    const alpha = weatherAlpha(dot.depth);
+
+    // 흰 눈은 겨울 낮 배경(거의 흰색) 위에서 사라진다. 도트 아트가 쓰는 해법은
+    // 외곽선이다 — 펫 스프라이트가 `#2C2438`로 형태를 세우는 것과 같다. 옅게
+    // 깔아 무거워 보이지 않게 한다.
+    ctx.globalAlpha = alpha * 0.3;
+    ctx.fillStyle = WEATHER_OUTLINE;
+    ctx.fillRect(dot.x - 1, dot.y - 1, dot.size + 2, dot.size + 2);
+
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(dot.x, dot.y, dot.size, dot.size);
+  }
+
+  ctx.restore();
+}
+
 function drawPets(now) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 펫보다 먼저 — 반딧불이는 배경과 펫 사이 공기에 떠 있다.
+  drawFireflies(now);
+  drawWeather(now, false);
 
   const boxes = [];
   for (const pet of inDrawOrder(room.roaming)) {
@@ -370,6 +485,10 @@ function drawPets(now) {
 
     boxes.push(box);
   }
+
+  // 가장 가까운 깊이는 펫 앞을 지난다. 눈이 전부 뒤에만 깔리면 평평해 보인다.
+  drawWeather(now, true);
+
   return boxes;
 }
 
@@ -428,6 +547,11 @@ canvas.addEventListener('click', (event) => {
   renderDetail();
 });
 
+// 뽑기 창을 띄운다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
+openGachaBtn.addEventListener('click', () => {
+  api.openGacha().catch((error) => showError(`뽑기를 열지 못했습니다 — ${error.message}`));
+});
+
 detailClose.addEventListener('click', () => {
   room.selectedPetId = null;
   renderDetail();
@@ -473,20 +597,86 @@ function startLoop() {
 
 /* ---------- 적재 ---------- */
 
+/**
+ * 마지막으로 시작한 배경 적용의 번호.
+ *
+ * `applyBackground`는 메타와 이미지를 기다린다. 그 사이에 다음 선택이 들어오면
+ * 두 적용이 겹치고, 늦게 끝난 쪽이 화면과 선택기를 덮어쓴다 — 미리보기 드롭다운을
+ * 빠르게 바꿨을 때 실제로 엉뚱한 장면이 남았다. 번호가 밀린 적용은 조용히 버린다.
+ */
+let applySeq = 0;
+
 async function applyBackground(background) {
+  const seq = ++applySeq;
   const metaUrl = assetUrl(backgroundAssetPath(background.directory, background.metaFile));
   const meta = await fetchJson(metaUrl);
+  if (seq !== applySeq) return;
 
   canvas.width = meta.width;
   canvas.height = meta.height;
   ctx.imageSmoothingEnabled = false;
 
   await buildLayers(background, meta);
+  if (seq !== applySeq) return;
+
+  // 무대를 배경 크기로 두고 보이는 영역만큼 밀어 올린다. 캔버스와 레이어는 계속 배경
+  // 좌표계에 있으므로 배회·클릭 판정은 이 값을 몰라도 된다.
+  const viewport = viewportOf(meta);
+  room.viewport = viewport;
+  stageEl.style.width = `${meta.width}px`;
+  stageEl.style.height = `${meta.height}px`;
+  stageEl.style.left = `${-viewport.x}px`;
+  stageEl.style.top = `${-viewport.y}px`;
 
   const previous = room.walkArea;
-  room.walkArea = walkAreaOf(meta);
+  // 배경이 정한 배회 영역을 보이는 영역 안으로 좁힌다. 좁히지 않으면 펫이 잘린 바깥으로
+  // 걸어 나가 사라진다.
+  room.walkArea = clipWalkAreaToViewport(walkAreaOf(meta), viewport);
+
+  // 반딧불이는 지면 위 공기에 뜬다 — 수평선과 지면 사이, 지면보다 조금 아래까지.
+  // 계절과 시간대가 마릿수를 정한다(겨울과 낮에는 0마리).
+  const count = fireflyCountFor(background.season, background.phase);
+  const top = meta.horizon ?? Math.round(meta.height * 0.4);
+  room.fireflies = count
+    ? spawnFireflies(
+        {
+          x: room.walkArea.x,
+          y: top,
+          width: room.walkArea.width,
+          height: room.walkArea.y + room.walkArea.height - top,
+        },
+        count,
+        Math.random,
+      )
+    : [];
+
+  // 눈·꽃잎·낙엽은 하늘 끝에서 지면까지 화면 전체를 지난다. 반딧불이와 달리
+  // 좌우 끝까지 쓴다 — 가장자리가 비면 화면 밖에서 불어오는 느낌이 사라진다.
+  //
+  // "화면 전체"는 배경 원본이 아니라 **보이는 영역**이다. 배경 960x360에 뿌리면 그 중
+  // 640x240만 보여 실제 밀도가 44%로 떨어진다.
+  const weatherKind = weatherFor(background.season);
+  const weatherArea = { ...viewport };
+  const weatherCount = weatherCountFor(background.season, background.phase);
+  room.weather = {
+    kind: weatherKind,
+    area: weatherArea,
+    particles:
+      weatherKind && weatherCount
+        ? spawnWeather(weatherArea, weatherKind, weatherCount, Math.random)
+        : [],
+  };
   // 배경 이름이 이미 낮/밤을 말하므로 위상은 이름이 없을 때만 쓴다.
   phaseEl.textContent = meta.name ?? PHASE_LABEL[background.phase] ?? background.phase;
+
+  // 선택기를 지금 보고 있는 장면에 맞춘다. 시각이 넘어가 배경이 자동으로 바뀌어도
+  // 드롭다운이 엉뚱한 값을 가리키지 않는다.
+  //
+  // **미리보기 중에는 건드리지 않는다.** 사용자가 방금 고른 값을 되돌려 버린다.
+  if (!room.preview && previewSeason && previewPhase) {
+    previewSeason.value = background.season;
+    previewPhase.value = background.phase;
+  }
 
   // 배경이 바뀌면 배회 영역도 바뀔 수 있다. 이미 서 있는 펫을 새 영역 안으로 데려온다.
   if (previous) {
@@ -544,10 +734,49 @@ api.on('room:activePetChanged', (view) => {
 });
 
 api.on('room:backgroundChanged', (background) => {
+  // 미리보기로 고정해 둔 동안에는 시각이 넘어가도 화면을 빼앗지 않는다.
+  if (room.preview) return;
   applyBackground(background).catch((error) => {
     showError(`배경을 바꾸지 못했습니다 — ${error.message}`);
   });
 });
+
+/* ---------- 계절·시간대 미리보기 ---------- */
+
+const previewSeason = document.getElementById('preview-season');
+const previewPhase = document.getElementById('preview-phase');
+const previewNow = document.getElementById('preview-now');
+
+/**
+ * 고른 계절·시간대로 배경을 바꾼다.
+ *
+ * `backgroundOf`가 `backgroundAt`과 같은 규칙으로 디렉터리와 메타 파일명을
+ * 만든다 — 미리보기가 실제 경로 규칙을 우회하면 여기서만 되고 진짜로는 깨지는
+ * 조합이 생긴다.
+ */
+function showPreview() {
+  room.preview = { season: previewSeason.value, phase: previewPhase.value };
+  previewNow.disabled = false;
+  applyBackground(backgroundOf(room.preview.season, room.preview.phase)).catch((error) => {
+    showError(`미리보기를 열지 못했습니다 — ${error.message}`);
+  });
+}
+
+/** 고정을 풀고 지금 시각의 배경으로 돌아간다. */
+function clearPreview() {
+  room.preview = null;
+  previewNow.disabled = true;
+  api
+    .roomScene()
+    .then((scene) => applyBackground(scene.background))
+    .catch((error) => {
+      showError(`배경을 되돌리지 못했습니다 — ${error.message}`);
+    });
+}
+
+previewSeason.addEventListener('change', showPreview);
+previewPhase.addEventListener('change', showPreview);
+previewNow.addEventListener('click', clearPreview);
 
 /* ---------- 시작 ---------- */
 
@@ -560,6 +789,7 @@ window.addEventListener('load', async () => {
     api.debugLog(
       `[PETROOM] ${scene.background.id}(${scene.background.phase}) · ` +
         `펫 ${room.players.size}/${scene.pets.length}마리 · ` +
+        `보이는 영역 ${JSON.stringify(room.viewport)} · ` +
         `배회 영역 ${JSON.stringify(room.walkArea)} · ` +
         `반딧불이 ${room.animationFrames.length}프레임`,
     );

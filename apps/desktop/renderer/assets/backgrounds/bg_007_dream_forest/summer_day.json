@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "summer_day",
+  "name": "동화 숲 (여름 낮)",
+  "season": "summer",
+  "phase": "day",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "summer_day.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "summer_day.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0F3739",
+      "#13121C",
+      "#185F5B",
+      "#1C6250",
+      "#1F4341",
+      "#267A54",
+      "#271B2F",
+      "#2A8657",
+      "#2E1A31",
+      "#2E1B33",
+      "#2F1C34",
+      "#301C35",
+      "#3B8F56",
+      "#3C7268",
+      "#4A3F56",
+      "#52A55D",
+      "#58826B",
+      "#65AD59",
+      "#72B351",
+      "#82826F",
+      "#84B3B7",
+      "#85BE59",
+      "#8CC977",
+      "#90E2EB",
+      "#AAE0A7",
+      "#B2BA74",
+      "#B5F0EB",
+      "#B6D674",
+      "#C1F3FB",
+      "#CCE4A9",
+      "#DBF2F8",
+      "#E1F9DF"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

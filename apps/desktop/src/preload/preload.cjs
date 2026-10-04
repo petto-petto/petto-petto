@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('petApi', {
   // 펫룸
   roomScene: () => ipcRenderer.invoke('room:scene'),
   openRoom: () => ipcRenderer.invoke('room:open'),
+  openGacha: () => ipcRenderer.invoke('room:openGacha'),
   setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
 
   // 창

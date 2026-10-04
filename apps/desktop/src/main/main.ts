@@ -152,7 +152,14 @@ function mountOverlayWindowIpc(): void {
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
-const roomHost: RoomHost = { showRoom, broadcast };
+const roomHost: RoomHost = {
+  showRoom,
+  // `createGachaWindow`는 창을 돌려주지만 room 은 창을 알 필요가 없다.
+  showGacha: () => {
+    createGachaWindow();
+  },
+  broadcast,
+};
 
 const shouldOpenGachaPrototype = (): boolean => process.env['GACHA_PROTO_OPEN'] !== undefined;
 const shouldOpenCombinePrototype = (): boolean => process.env['COMBINE_PROTO_OPEN'] !== undefined;

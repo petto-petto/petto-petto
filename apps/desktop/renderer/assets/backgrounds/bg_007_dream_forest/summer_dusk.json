@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "summer_dusk",
+  "name": "동화 숲 (여름 노을)",
+  "season": "summer",
+  "phase": "dusk",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "summer_dusk.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "summer_dusk.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0F0E19",
+      "#100916",
+      "#131A22",
+      "#170D1E",
+      "#18252D",
+      "#1A0C1F",
+      "#1A0D20",
+      "#1B0B1E",
+      "#1B0D22",
+      "#1C272F",
+      "#1D0D21",
+      "#1D1122",
+      "#1F3131",
+      "#263134",
+      "#273C37",
+      "#2E4636",
+      "#302D36",
+      "#354D37",
+      "#3F5737",
+      "#4D4B44",
+      "#603144",
+      "#6A7741",
+      "#735E4A",
+      "#824364",
+      "#964866",
+      "#B24D6A",
+      "#D04F5C",
+      "#E05B58",
+      "#E0884A",
+      "#EBB65E",
+      "#F1624D",
+      "#F5774A"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

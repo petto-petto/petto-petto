@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "spring_night",
+  "name": "동화 숲 (봄 밤)",
+  "season": "spring",
+  "phase": "night",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "spring_night.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "spring_night.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0E0D16",
+      "#121E2A",
+      "#161423",
+      "#172D48",
+      "#1A1525",
+      "#1B1526",
+      "#1B1D31",
+      "#1B354A",
+      "#1B3558",
+      "#1D3A52",
+      "#1E4074",
+      "#203E63",
+      "#21477E",
+      "#244468",
+      "#244C87",
+      "#282339",
+      "#2A4D59",
+      "#2B579B",
+      "#2D535E",
+      "#325568",
+      "#335F85",
+      "#395F7D",
+      "#3A3C58",
+      "#416A8D",
+      "#497475",
+      "#4C5D72",
+      "#4F7A6D",
+      "#637F6F",
+      "#68926B",
+      "#929E78",
+      "#A1B474",
+      "#C4CD8E"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

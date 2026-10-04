@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "spring_day",
+  "name": "동화 숲 (봄 낮)",
+  "season": "spring",
+  "phase": "day",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "spring_day.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "spring_day.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#16161E",
+      "#1F3C3E",
+      "#2D1A2A",
+      "#2D1D2A",
+      "#2D1E2E",
+      "#2E1F30",
+      "#2E3940",
+      "#3A454A",
+      "#3C6E68",
+      "#45716D",
+      "#4B7F73",
+      "#5A9482",
+      "#624D5A",
+      "#688C89",
+      "#6BA56F",
+      "#769E73",
+      "#7CB796",
+      "#97C2DA",
+      "#99DCE9",
+      "#9DC36D",
+      "#ACDCCC",
+      "#B08F85",
+      "#BAD877",
+      "#BCE7D6",
+      "#C4EFFD",
+      "#C7E172",
+      "#D1F3FD",
+      "#D8E5AD",
+      "#E5CAB3",
+      "#E8F7F1",
+      "#E8F7FC",
+      "#EAF28D"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

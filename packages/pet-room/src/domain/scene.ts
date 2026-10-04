@@ -50,17 +50,45 @@ export interface BackgroundMeta {
 }
 
 /* ------------------------------------------------------------------ *
- * 낮 / 밤
+ * 계절 / 시간대
  * ------------------------------------------------------------------ */
 
-export type BackgroundPhase = 'day' | 'night';
+/**
+ * 배열이 먼저고 타입이 따라온다.
+ *
+ * 이렇게 두면 시간대를 하나 더 만들 때 배열에 넣는 것만으로 타입이 넓어지고,
+ * `PHASE_START_HOUR`에 경계 시각을 안 넣으면 컴파일이 깨진다. 값과 타입이
+ * 갈라져서 조용히 빠지는 자리를 없애려는 것이다.
+ */
+export const BACKGROUND_PHASES = ['dawn', 'day', 'dusk', 'night'] as const;
+export type BackgroundPhase = (typeof BACKGROUND_PHASES)[number];
 
-/** 낮이 시작되는 시(로컬). */
-export const DAY_START_HOUR = 6;
-/** 밤이 시작되는 시(로컬). */
-export const NIGHT_START_HOUR = 18;
+export const SEASONS = ['spring', 'summer', 'autumn', 'winter'] as const;
+export type Season = (typeof SEASONS)[number];
+
+/**
+ * 각 시간대가 시작되는 시(로컬).
+ *
+ * `night`가 하루를 가로지른다 — 20:00에 시작해 다음 날 05:00에 끝난다.
+ * 그래서 `phaseAt`은 밤을 먼저 걸러낸 뒤 나머지를 순서대로 본다.
+ */
+export const PHASE_START_HOUR: Record<BackgroundPhase, number> = {
+  dawn: 5,
+  day: 8,
+  dusk: 17,
+  night: 20,
+};
+
+/** 각 계절이 시작되는 달(1~12). 북반구 기준이다. */
+export const SEASON_START_MONTH: Record<Season, number> = {
+  spring: 3,
+  summer: 6,
+  autumn: 9,
+  winter: 12,
+};
 
 export interface BackgroundChoice {
+  season: Season;
   phase: BackgroundPhase;
   id: string;
   /** `assets/backgrounds/` 아래의 디렉터리명. */
@@ -69,33 +97,67 @@ export interface BackgroundChoice {
   metaFile: string;
 }
 
-const DAY: BackgroundChoice = {
-  phase: 'day',
-  id: 'bg_002',
-  directory: 'bg_002_deep_forest',
-  metaFile: 'bg_002.json',
-};
-
-const NIGHT: BackgroundChoice = {
-  phase: 'night',
-  id: 'bg_003',
-  directory: 'bg_003_deep_forest_night',
-  metaFile: 'bg_003.json',
-};
+/**
+ * 계절 x 시간대 16장이 한 디렉터리에 있다.
+ *
+ * 16장 모두 같은 장소를 그린 것이라 `groundTop`과 `petAnchor`가 같다 — 계절이
+ * 바뀔 때 펫 발 높이가 달라지면 화면에서 튄다.
+ */
+const BACKGROUND_ID = 'bg_007';
+const BACKGROUND_DIRECTORY = 'bg_007_dream_forest';
 
 /**
- * 로컬 시각이 낮인가 밤인가.
+ * 로컬 시각이 어느 시간대인가.
  *
- * 경계는 06:00과 18:00이다. 05:59는 밤, 06:00은 낮.
+ * 경계는 05:00 새벽 / 08:00 낮 / 17:00 노을 / 20:00 밤이다. 04:59는 밤,
+ * 05:00은 새벽.
  */
 export function phaseAt(at: Date): BackgroundPhase {
   const hour = at.getHours();
-  return hour >= DAY_START_HOUR && hour < NIGHT_START_HOUR ? 'day' : 'night';
+  if (hour >= PHASE_START_HOUR.night || hour < PHASE_START_HOUR.dawn) return 'night';
+  if (hour < PHASE_START_HOUR.day) return 'dawn';
+  if (hour < PHASE_START_HOUR.dusk) return 'day';
+  return 'dusk';
 }
 
-/** 지금 시각에 쓸 배경. */
+/**
+ * 로컬 날짜가 어느 계절인가.
+ *
+ * 겨울이 해를 가로지른다 — 12월에 시작해 다음 해 2월에 끝난다.
+ */
+export function seasonAt(at: Date): Season {
+  const month = at.getMonth() + 1;
+  if (month >= SEASON_START_MONTH.winter || month < SEASON_START_MONTH.spring) return 'winter';
+  if (month < SEASON_START_MONTH.summer) return 'spring';
+  if (month < SEASON_START_MONTH.autumn) return 'summer';
+  return 'autumn';
+}
+
+/** 지금 쓸 배경. */
 export function backgroundAt(at: Date): BackgroundChoice {
-  return phaseAt(at) === 'day' ? DAY : NIGHT;
+  return backgroundOf(seasonAt(at), phaseAt(at));
+}
+
+/** 계절과 시간대로 직접 고른다. 검수 화면이 시각을 무시하고 부를 때 쓴다. */
+export function backgroundOf(season: Season, phase: BackgroundPhase): BackgroundChoice {
+  return {
+    season,
+    phase,
+    id: BACKGROUND_ID,
+    directory: BACKGROUND_DIRECTORY,
+    metaFile: `${season}_${phase}.json`,
+  };
+}
+
+/**
+ * 두 선택이 같은 그림인가.
+ *
+ * **`id`로 비교하면 안 된다.** 16 variant가 전부 `bg_007`이라 계절과 시간대가
+ * 넘어가도 같다고 판정된다. 실제로 그 비교 때문에 켜 둔 창의 배경이 하루 종일
+ * 바뀌지 않았다. 그림을 가르는 것은 `metaFile`이다.
+ */
+export function isSameBackground(a: BackgroundChoice, b: BackgroundChoice): boolean {
+  return a.directory === b.directory && a.metaFile === b.metaFile;
 }
 
 /**
@@ -199,6 +261,75 @@ export function randomPointIn(area: WalkArea, random: () => number): { x: number
     x: area.x + random() * area.width,
     y: area.y + random() * area.height,
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * 창이 보여 주는 영역
+ * ------------------------------------------------------------------ */
+
+/**
+ * 창은 장면의 **일부만** 보여 준다.
+ *
+ * 배경 원본은 960x360인데 창은 640x240만 쓴다. 픽셀 아트는 정수 배율만 허용되므로
+ * (design.md §4) 0.667배로 줄여 그릴 수 없어, 1배로 두고 **잘라서** 보여 준다.
+ * 뽑기·합성과 같은 640x420 창에 들어가려면 장면 240 + 하단 패널 180이 되어야 한다.
+ *
+ * 좌우는 가운데를 남기고, 위아래는 **아래쪽**을 남긴다. 버리는 120행은 하늘이고 지면과
+ * 배회 영역은 아래에 있다 — 위를 남기면 펫이 서는 자리가 통째로 잘린다.
+ */
+export const VIEWPORT_WIDTH = 640;
+export const VIEWPORT_HEIGHT = 240;
+
+/** 장면 좌표계에서 창이 보여 주는 사각형. */
+export interface SceneViewport {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 배경 메타에서 보이는 영역을 얻는다.
+ *
+ * 배경이 창보다 작으면 자를 것이 없으므로 배경 크기가 그대로 보이는 영역이 된다.
+ */
+export function viewportOf(meta: BackgroundMeta): SceneViewport {
+  const width = Math.min(VIEWPORT_WIDTH, meta.width);
+  const height = Math.min(VIEWPORT_HEIGHT, meta.height);
+
+  return {
+    // 남는 여백이 홀수면 왼쪽에 준다. 오프셋이 정수여야 픽셀이 반 칸 밀리지 않는다.
+    x: Math.floor((meta.width - width) / 2),
+    y: meta.height - height,
+    width,
+    height,
+  };
+}
+
+/** 최대 프레임 크기. EPIC stage3가 48x48이다(`PET_HALF_WIDTH` 주석과 같은 근거). */
+const PET_FRAME_MAX = 48;
+
+/**
+ * 배회 영역을 보이는 영역 안으로 좁힌다.
+ *
+ * 좌표가 **발 위치**(스프라이트 하단 중앙)라, 스프라이트 전체가 보이려면 좌우로 반 폭,
+ * 위로 한 프레임 높이만큼 물러서야 한다. 좁히지 않으면 펫이 잘려 나간 바깥으로 걸어가
+ * 화면에서 사라진다 — 배회는 계속하므로 사용자에게는 펫이 없어진 것으로 보인다.
+ */
+export function clipWalkAreaToViewport(area: WalkArea, viewport: SceneViewport): WalkArea {
+  const left = Math.max(area.x, viewport.x + PET_HALF_WIDTH);
+  const right = Math.min(area.x + area.width, viewport.x + viewport.width - PET_HALF_WIDTH);
+  const top = Math.max(area.y, viewport.y + PET_FRAME_MAX);
+  const bottom = Math.min(area.y + area.height, viewport.y + viewport.height);
+
+  if (right <= left || bottom <= top) {
+    throw new InvalidWalkAreaError(
+      `보이는 영역 안에 배회 영역이 남지 않습니다: ` +
+        `배회 ${JSON.stringify(area)}, 창 ${JSON.stringify(viewport)}`,
+    );
+  }
+
+  return { x: left, y: top, width: right - left, height: bottom - top };
 }
 
 /* ------------------------------------------------------------------ *

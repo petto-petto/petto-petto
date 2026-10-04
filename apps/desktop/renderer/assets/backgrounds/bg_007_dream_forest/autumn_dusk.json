@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "autumn_dusk",
+  "name": "동화 숲 (가을 노을)",
+  "season": "autumn",
+  "phase": "dusk",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "autumn_dusk.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "autumn_dusk.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#220A14",
+      "#280E1B",
+      "#2A0E1A",
+      "#2B0E1D",
+      "#2F0F1C",
+      "#38121F",
+      "#421727",
+      "#48212F",
+      "#621723",
+      "#642934",
+      "#773C45",
+      "#7B2933",
+      "#7E1A28",
+      "#8F1D28",
+      "#94262A",
+      "#A04447",
+      "#A42827",
+      "#B14B4E",
+      "#B52D24",
+      "#B93A26",
+      "#C64023",
+      "#C95B45",
+      "#CE4D3A",
+      "#D14320",
+      "#DB502D",
+      "#E45C39",
+      "#F06B37",
+      "#F16225",
+      "#F46545",
+      "#F76C3B",
+      "#F77B38",
+      "#FCA24B"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

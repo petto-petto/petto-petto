@@ -11,6 +11,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
+import { VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '@pet/room';
 
 import {
   OVERLAY_WINDOW_HEIGHT,
@@ -383,18 +384,18 @@ export function createBattleWindow(): BrowserWindow | undefined {
 }
 
 /**
- * 펫룸 창 크기.
+ * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
  *
- * 장면은 배경 원본 그대로 960x360이다. 픽셀 아트는 정수 배율만 허용되므로(design.md §4)
- * 1배로 두어 확대 보간이 아예 일어나지 않게 한다.
+ * 배경 원본은 960x360이지만 픽셀 아트는 정수 배율만 허용되므로(design.md §4) 줄여 그리지
+ * 않고 1배로 두고 **잘라서** 640x240만 보여 준다. 그 규칙과 상수는 `@pet/room`의
+ * `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
  *
- * 상세 패널은 장면을 덮지 않고 **옆 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을 막지
- * 않는 자리에). 그래서 창은 장면보다 패널 폭만큼 넓다.
+ * 상세 패널은 장면을 덮지 않고 **아래 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을
+ * 막지 않는 자리에). 높이 180px은 합성 창과 같은 값이다.
  */
-const SCENE_WIDTH = 960;
-const SIDE_WIDTH = 264;
-export const ROOM_WIDTH = SCENE_WIDTH + SIDE_WIDTH;
-export const ROOM_HEIGHT = 360;
+const ROOM_PANEL_HEIGHT = 180;
+export const ROOM_WIDTH = VIEWPORT_WIDTH;
+export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 
 /**
  * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
