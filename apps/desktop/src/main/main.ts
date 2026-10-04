@@ -10,9 +10,10 @@ import { createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
 import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
-import type { StoredRoomSnapshot } from '@pet/room';
+import { PetClientRoomAdapter, RoomSelectionAdapter, type StoredRoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
+import { mountBattle } from '@pet/battle/node';
 import type { PetClient, TokenClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
@@ -47,10 +48,13 @@ import {
   createPanelWindow,
   endOverlayDrag,
   focusOverlayWindow,
+  getBattleWindow,
+  petAssetsDir,
   moveOverlayDrag,
   setOverlayInteractive,
   showPanel,
   showRoom,
+  subscribeBattleWindowClosed,
 } from './windows.ts';
 
 /** 기획서 8.3: 수집은 앱 시작, 실행 중 매 1분, 카드별 수동 재스캔에서 실행한다. */
@@ -340,6 +344,24 @@ app.whenReady().then(async () => {
   };
   registerOverlayGrowthIpc(growthRepository, growthHost);
 
+  const battleRoom = room;
+  mountBattle(new PetClientRoomAdapter(pets), ipcMain, {
+    selection: new RoomSelectionAdapter(() => battleRoom.scene().pets),
+    petAssetsDir,
+    levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
+      OVERLAY_GROWTH_RULES.requiredXp(i + 1),
+    ),
+    isBattleSender: (id) => getBattleWindow()?.webContents.id === id,
+    lifecycle: {
+      onQuit(listener) {
+        app.once('before-quit', listener);
+        return () => {
+          app.removeListener('before-quit', listener);
+        };
+      },
+      onWindowClosed: subscribeBattleWindowClosed,
+    },
+  });
   mountMeta(state);
   mountRoom(room, roomHost);
   mountOverlayWindowIpc();

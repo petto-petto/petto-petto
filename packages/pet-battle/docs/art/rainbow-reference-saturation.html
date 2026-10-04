@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="UTF-8" />
+  <title>무지개 적 · 원본 색상 복원</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 28px;
+      background: #171725;
+      color: #ece7f0;
+      font:
+        14px -apple-system,
+        sans-serif;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+    }
+    p {
+      margin: 0 0 22px;
+      color: #b4adbf;
+    }
+    h2 {
+      font-size: 15px;
+      margin: 22px 0 12px;
+    }
+    .palette {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0;
+      align-items: center;
+    }
+    .palette span {
+      width: 70px;
+      height: 14px;
+      background: var(--color);
+    }
+    .palette label {
+      width: 150px;
+      font-size: 12px;
+      color: #c4bed1;
+    }
+    .lineup {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .faces {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    figure {
+      margin: 0;
+      padding: 18px 4px 12px;
+      text-align: center;
+      background: #242235;
+      border: 1px solid #39354a;
+    }
+    img {
+      height: 64px;
+      width: auto;
+      display: block;
+      margin: 0 auto 12px;
+      image-rendering: pixelated;
+    }
+    .faces img {
+      height: 96px;
+    }
+    figcaption {
+      font-size: 12px;
+      color: #cac3d5;
+    }
+    .current {
+      border-color: #a396b5;
+    }
+    small {
+      display: block;
+      margin-top: 18px;
+      color: #a69eb5;
+    }
+  </style>
+  <h1>무지개 적 · 원본 5색 복원</h1>
+  <p>분홍 · 레몬 · 민트 · 하늘 · 라일락 유지 / 채도만 원안의 90% / 기존 몸체 명암 유지</p>
+  <div class="palette">
+    <label>기준 문서의 원본 팔레트</label>
+    <span style="--color: #f3bfcb"></span><span style="--color: #f4f6a3"></span
+    ><span style="--color: #b2dfa7"></span><span style="--color: #d2eeec"></span
+    ><span style="--color: #eaaaf1"></span>
+  </div>
+  <div class="palette">
+    <label>색상·명도 유지, 채도 −10%</label>
+    <span style="--color: #f0c2cc"></span><span style="--color: #f0f2a7"></span
+    ><span style="--color: #b4dcaa"></span><span style="--color: #d3edeb"></span
+    ><span style="--color: #e7aeed"></span>
+  </div>
+  <h2>실제 적용 · 다른 적 색상은 변경 없음</h2>
+  <div class="lineup">
+    <figure>
+      <img src="../../assets/enemies/v2/red-steady.png" alt="빨강 적" />
+      <figcaption>빨강</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/orange-steady.png" alt="주황 적" />
+      <figcaption>주황</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/yellow-steady.png" alt="노랑 적" />
+      <figcaption>노랑</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/green-steady.png" alt="초록 적" />
+      <figcaption>초록</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/blue-steady.png" alt="파랑 적" />
+      <figcaption>파랑</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/purple-steady.png" alt="보라 적" />
+      <figcaption>보라</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-steady.png" alt="복원한 무지개 적" />
+      <figcaption>무지개</figcaption>
+    </figure>
+  </div>
+  <h2>세 표정 · 색면 위치와 눈·외곽선 그대로</h2>
+  <div class="faces">
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-steady.png" alt="평온한 무지개 적" />
+      <figcaption>평온</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-worried.png" alt="걱정하는 무지개 적" />
+      <figcaption>걱정</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-exhausted.png" alt="지친 무지개 적" />
+      <figcaption>지침</figcaption>
+    </figure>
+  </div>
+  <small>새로운 색으로 교체하지 않음 · 캐릭터 크기·모션·펫·배경 변경 없음</small>
+</html>

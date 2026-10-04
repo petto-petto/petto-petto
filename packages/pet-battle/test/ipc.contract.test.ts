@@ -75,3 +75,54 @@ test('feature 패키지가 자기 Electron IPC 채널과 핸들러를 모두 소
   assert.deepEqual(commands, [{ type: 'TOGGLE_BATTLE' }]);
   assert.deepEqual(broadcasts, [BATTLE_CHANNELS.stateChanged]);
 });
+
+test('엔진 무응답은 시간 제한 후 실패하고 다음 요청을 막지 않는다', async () => {
+  const transport = new FakeTransport();
+  const client = new RustBattleClient(transport, () => 'request', 20);
+  await assert.rejects(client.execute({ type: 'GET_STATE', nowMs: 0 }), /timeout/);
+  const pending = client.execute({ type: 'GET_STATE', nowMs: 0 });
+  transport.reply(JSON.stringify({ requestId: 'request', ok: true, state: {}, events: [] }));
+  await pending;
+  client.dispose();
+  await assert.rejects(client.execute({ type: 'GET_STATE', nowMs: 0 }), /disposed/);
+});
+
+test('오류 응답·닫힘·전송 실패는 대기 중인 요청을 거부하고 정리한다', async () => {
+  const transport = new FakeTransport();
+  const client = new RustBattleClient(transport, () => 'request');
+  assert.equal(client.closed, false);
+  const pending = client.execute({ type: 'GET_STATE', nowMs: 0 });
+  transport.reply('not json');
+  transport.reply('null');
+  transport.reply(JSON.stringify({ requestId: 'unknown', ok: true }));
+  transport.reply(JSON.stringify({ requestId: 'request', ok: false, error: 'invalid action' }));
+  await assert.rejects(pending, /invalid action/);
+  const defaultFailure = client.execute({ type: 'GET_STATE', nowMs: 0 });
+  transport.reply(JSON.stringify({ requestId: 'request', ok: false }));
+  await assert.rejects(defaultFailure, /request failed/);
+  const disposed = client.execute({ type: 'GET_STATE', nowMs: 0 });
+  client.dispose();
+  await assert.rejects(disposed, /disposed/);
+  assert.equal(client.closed, true);
+  const broken = new RustBattleClient({
+    onLine: () => () => undefined,
+    send() {
+      throw new Error('closed pipe');
+    },
+  });
+  await assert.rejects(broken.execute({ type: 'GET_STATE', nowMs: 0 }), /closed pipe/);
+  broken.dispose();
+  let fail: (error: Error) => void = () => undefined;
+  const crashed = new RustBattleClient({
+    onLine: () => () => undefined,
+    send: () => undefined,
+    onError(listener) {
+      fail = listener;
+      return () => undefined;
+    },
+  });
+  const crash = crashed.execute({ type: 'GET_STATE', nowMs: 0 });
+  fail(new Error('process exited'));
+  await assert.rejects(crash, /process exited/);
+  crashed.dispose();
+});

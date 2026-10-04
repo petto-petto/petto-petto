@@ -3,6 +3,7 @@ import type {
   BattleState,
   EnemyColor,
   EnemyPreviewSize,
+  EnemyPreviewPhase,
   Rarity,
 } from '../contracts.ts';
 
@@ -22,13 +23,17 @@ export interface PetSpriteProfile {
 }
 
 export interface BattleScene {
+  petCombatSpecies: string | undefined;
   petAsset: string;
+  petIdleAsset: string;
+  petAttackAsset: string;
   enemyAsset: string;
   backgroundAsset: string;
   enemyHpRatio: number;
   enemyFace: EnemyFace;
   enemyHeight: number;
   enemyVisible: boolean;
+  enemyPhase: EnemyPreviewPhase;
   displayOpacity: number;
   attackEffect: AttackEffectProfile;
   petSprite: PetSpriteProfile;
@@ -62,13 +67,50 @@ const ENEMY_HEIGHT: Record<EnemyPreviewSize, number> = {
   LARGE: 80,
 };
 
+const SIZE_SEQUENCE: readonly EnemyPreviewSize[] = ['SMALL', 'MEDIUM', 'LARGE'];
+
 function assertNever(value: never, context: string): never {
   throw new Error(`${context}: ${String(value)}`);
 }
 
 export function enemyColorForStage(stage: number): EnemyColor {
   const normalized = Math.max(1, Math.trunc(stage));
-  return COLOR_SEQUENCE[(normalized - 1) % COLOR_SEQUENCE.length] ?? 'RED';
+  return COLOR_SEQUENCE[Math.floor((normalized - 1) / 3) % COLOR_SEQUENCE.length] ?? 'RED';
+}
+
+export function enemySizeForStage(stage: number): EnemyPreviewSize {
+  const normalized = Math.max(1, Math.trunc(stage));
+  return SIZE_SEQUENCE[(normalized - 1) % SIZE_SEQUENCE.length] ?? 'SMALL';
+}
+
+/** The active pet has already advanced while its defeated enemy is still on screen. */
+export function visibleEnemyStage(state: BattleState): number {
+  if (state.overlay && state.overlay.phase !== 'FIGHTING') {
+    return state.overlay.phase === 'SPAWNING'
+      ? state.overlay.nextStage
+      : state.overlay.defeatedStage;
+  }
+  return state.activePet?.stage ?? 1;
+}
+
+export function selectRandomPetSpectators<T extends { petId: string }>(
+  roster: readonly T[],
+  activePetId: string | null,
+  random: () => number = Math.random,
+): T[] {
+  const candidates = roster.filter((pet) => pet.petId !== activePetId);
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex]!, candidates[index]!];
+  }
+  return candidates.slice(0, 3);
+}
+
+export function defeatedEnemyColors(currentStage: number): EnemyColor[] {
+  const defeatedCount = Math.max(0, Math.trunc(currentStage) - 1);
+  return Array.from({ length: Math.min(3, defeatedCount) }, (_, index) =>
+    enemyColorForStage(defeatedCount - index),
+  );
 }
 
 export function backgroundForEnemy(color: EnemyColor): BackgroundTheme {
@@ -114,26 +156,61 @@ export function shouldStartEnemyHitReaction(
   return actualImpactStarted || previewHitStarted;
 }
 
-export function deriveBattleScene(state: BattleState): BattleScene {
-  const hpRatio = Math.max(0, Math.min(1, state.preview.enemyHpRatio ?? state.enemyHpRatio));
+export function deriveBattleScene(state: BattleState, arenaAttacking?: boolean): BattleScene {
+  const transitioning = state.overlay !== null;
+  const hpRatio = Math.max(
+    0,
+    Math.min(
+      1,
+      transitioning ? state.enemyHpRatio : (state.preview.enemyHpRatio ?? state.enemyHpRatio),
+    ),
+  );
   const face = enemyFaceForHp(hpRatio);
-  const enemyColor = state.preview.enemyColor ?? state.enemyColor;
+  const enemyColor = transitioning
+    ? state.enemyColor
+    : (state.preview.enemyColor ?? state.enemyColor);
+  const stageSize = enemySizeForStage(visibleEnemyStage(state));
+  const enemySize = transitioning ? stageSize : (state.preview.enemySize ?? stageSize);
   const background = backgroundForEnemy(enemyColor);
   const rarity = state.preview.attackEffectRarity ?? state.activePet?.rarity ?? 'COMMON';
   const isAttackMotion = state.motion?.beat !== undefined && state.motion.beat !== 'IDLE';
-  const isAttacking = state.preview.petAction === 'ATTACK' || isAttackMotion;
+  const isAttacking =
+    !transitioning && (arenaAttacking ?? (state.preview.petAction === 'ATTACK' || isAttackMotion));
+  const enemyPhase: EnemyPreviewPhase =
+    state.overlay?.phase === 'DEFEAT_MOTION'
+      ? 'DEFEATING'
+      : state.overlay?.phase === 'AWAITING_ADVANCE'
+        ? 'HIDDEN'
+        : state.overlay?.phase === 'SPAWNING'
+          ? 'SPAWNING'
+          : state.preview.enemyPhase;
   const petAction = isAttacking ? 'attack' : 'idle';
-  const petAsset = `assets/pets/v2/${PET_SLUG[state.activePet?.rarity ?? 'COMMON']}-${petAction}.png`;
-  const frameCount = isAttacking ? 6 : 4;
+  const petAssetRarity = state.preview.petAssetRarity ?? state.activePet?.rarity ?? 'COMMON';
+  const sharedSprites =
+    state.preview.petAssetRarity === null && state.activePet
+      ? state.petSprites?.[state.activePet.petId]
+      : undefined;
+  const sharedSprite = sharedSprites?.[petAction];
+  const petAsset =
+    sharedSprite?.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-${petAction}.png`;
+  const petIdleAsset =
+    sharedSprites?.idle.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-idle.png`;
+  const petAttackAsset =
+    sharedSprites?.attack.asset ?? `assets/pets/v2/${PET_SLUG[petAssetRarity]}-attack.png`;
+  const frameCount = sharedSprite?.frameCount ?? (isAttacking ? 6 : 4);
 
   return {
+    petCombatSpecies: sharedSprites ? state.activePet?.sprite : undefined,
     petAsset,
+    petIdleAsset,
+    petAttackAsset,
     enemyAsset: `assets/enemies/v2/${enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
     backgroundAsset: `assets/backgrounds/v2/${BACKGROUND_SLUG[background]}.png`,
     enemyHpRatio: hpRatio,
     enemyFace: face,
-    enemyHeight: state.preview.enemySize ? ENEMY_HEIGHT[state.preview.enemySize] : 80,
-    enemyVisible: state.preview.enemyPhase !== 'HIDDEN',
+    enemyHeight: ENEMY_HEIGHT[enemySize],
+    enemyVisible: state.activePet !== null && enemyPhase !== 'HIDDEN',
+    enemyPhase,
     displayOpacity: Math.max(0, Math.min(1, state.preview.displayOpacity)),
     attackEffect: attackEffectForRarity(rarity),
     petSprite: {

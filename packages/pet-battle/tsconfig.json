@@ -5,5 +5,5 @@
     "outDir": "dist"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../pet-core" }]
+  "references": [{ "path": "../pet-core" }, { "path": "../pet-client" }, { "path": "../pet-room" }]
 }

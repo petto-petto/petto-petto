@@ -5,20 +5,25 @@ use pet_battle::{
 };
 
 #[test]
-fn conquest_waits_for_two_step_overlay_click_flow() {
+fn conquest_click_is_an_optional_skip_to_automatic_spawn() {
     let mut flow = OverlayFlow::default();
     flow.begin_conquest(5.0, 3, 4);
     assert_eq!(flow.click(5.2), OverlayClick::DefeatMotionSkipped);
-    assert_eq!(flow.phase(), OverlayPhase::AwaitingAdvance);
-    assert_eq!(flow.click(5.3), OverlayClick::NextStageStarted);
     assert_eq!(flow.phase(), OverlayPhase::Spawning);
+    assert_eq!(flow.click(5.3), OverlayClick::NoTransition);
+    assert_eq!(flow.phase(), OverlayPhase::Spawning);
+    flow.tick(6.0);
+    assert_eq!(flow.phase(), OverlayPhase::Fighting);
 }
 
 #[test]
 fn preview_controls_are_independent_and_resettable() {
     let mut preview = MotionPreview::default();
     preview.toggle_menu(PreviewMenu::Enemy);
-    assert_eq!(preview.cycle_enemy_size(), EnemyPreviewSize::Small);
+    assert_eq!(
+        preview.cycle_enemy_size(EnemyPreviewSize::Small),
+        EnemyPreviewSize::Medium
+    );
     assert_eq!(
         preview.cycle_enemy_color(EnemyColorStage::Red),
         EnemyColorStage::Orange

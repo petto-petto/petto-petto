@@ -48,20 +48,29 @@ fn pet_sync_changes_identity_without_resetting_battle_progress() {
         pet_id: "mio".to_owned(),
         display_name: "미오 2세".to_owned(),
         rarity: PetRarity::Rare,
+        level: 12,
+        sprite: "midnight_zebra".to_owned(),
+        evolution_stage: 1,
     });
 
     let pet = controller.pet("mio").expect("pet remains available");
     assert_eq!(pet.display_name, "미오 2세");
     assert_eq!(pet.rarity, PetRarity::Rare);
+    assert_eq!(pet.level, 12);
+    assert_eq!(pet.sprite, "midnight_zebra");
+    assert_eq!(pet.evolution_stage, 1);
     assert_eq!(pet.stage, 7);
 }
 
 #[test]
 fn stage_color_and_background_cycle_together() {
     assert_eq!(EnemyColorStage::for_stage(1), EnemyColorStage::Red);
-    assert_eq!(EnemyColorStage::for_stage(4), EnemyColorStage::Green);
-    assert_eq!(EnemyColorStage::for_stage(7), EnemyColorStage::Rainbow);
-    assert_eq!(EnemyColorStage::for_stage(8), EnemyColorStage::Red);
+    assert_eq!(EnemyColorStage::for_stage(3), EnemyColorStage::Red);
+    assert_eq!(EnemyColorStage::for_stage(4), EnemyColorStage::Orange);
+    assert_eq!(EnemyColorStage::for_stage(10), EnemyColorStage::Green);
+    assert_eq!(EnemyColorStage::for_stage(19), EnemyColorStage::Rainbow);
+    assert_eq!(EnemyColorStage::for_stage(21), EnemyColorStage::Rainbow);
+    assert_eq!(EnemyColorStage::for_stage(22), EnemyColorStage::Red);
     assert_ne!(
         EnemyColorStage::Red.background(),
         EnemyColorStage::Green.background()

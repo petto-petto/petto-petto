@@ -105,18 +105,24 @@ impl BattleController {
                 pet_id,
                 display_name,
                 rarity,
+                level,
+                sprite,
+                evolution_stage,
             } => {
                 if let Some(pet) = self.pet_mut(&pet_id) {
                     pet.display_name = display_name;
                     pet.rarity = rarity;
+                    pet.level = level.max(1);
+                    pet.sprite = sprite;
+                    pet.evolution_stage = evolution_stage.min(2);
                     return None;
                 }
 
-                self.snapshot.pets.push(PetBattleProgress::new(
-                    pet_id.clone(),
-                    display_name,
-                    rarity,
-                ));
+                let mut pet = PetBattleProgress::new(pet_id.clone(), display_name, rarity);
+                pet.level = level.max(1);
+                pet.sprite = sprite;
+                pet.evolution_stage = evolution_stage.min(2);
+                self.snapshot.pets.push(pet);
                 if self.snapshot.active_pet_id.is_none() {
                     self.snapshot.active_pet_id = Some(pet_id.clone());
                     return Some(PetBattleEvent {
@@ -143,6 +149,7 @@ impl BattleController {
                 PetBattleProgress::new("mio", "미오", PetRarity::Common),
                 PetBattleProgress::new("lumi", "루미", PetRarity::Rare),
                 PetBattleProgress::new("nova", "노바", PetRarity::Epic),
+                PetBattleProgress::new("mori", "모리", PetRarity::Common),
             ],
         }
     }

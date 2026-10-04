@@ -1,0 +1,241 @@
+diff --git a/packages/pet-overlay/src/overlay/PetSprite.jsx b/packages/pet-overlay/src/overlay/PetSprite.jsx
+index 471aed9..26621c4 100644
+--- a/packages/pet-overlay/src/overlay/PetSprite.jsx
++++ b/packages/pet-overlay/src/overlay/PetSprite.jsx
+@@ -60,6 +60,8 @@ export default forwardRef(function PetSprite({ pet, stage, onError }, ref) {
+           if (m === 'idle') continue;
+           loadImage(spritePng(pet, stage, m))
+             .then((im) => {
++              // 이전 펫·진화 단계의 늦은 응답이 현재 모션 캐시를 덮어쓰지 않게 한다.
++              if (!alive) return;
+               imagesRef.current[m] = im;
+             })
+             .catch(() => {});
+diff --git a/packages/pet-overlay/test/pet-sprite-loading.test.ts b/packages/pet-overlay/test/pet-sprite-loading.test.ts
+new file mode 100644
+index 0000000..839f10c
+--- /dev/null
++++ b/packages/pet-overlay/test/pet-sprite-loading.test.ts
+@@ -0,0 +1,222 @@
++import assert from 'node:assert/strict';
++import { readFileSync } from 'node:fs';
++import { fileURLToPath } from 'node:url';
++import { runInNewContext } from 'node:vm';
++import test from 'node:test';
++import ts from 'typescript';
++import * as catalog from '../src/pets/catalog.ts';
++
++type Pet = (typeof catalog.PETS)[number];
++type Motion = (typeof catalog.MOTIONS)[number];
++type Cleanup = () => void;
++type Effect = { deps: unknown[]; cleanup: Cleanup | undefined };
++type Handle = { play(motion: Motion): void };
++type Props = { pet: Pet; stage: number; onError(error: Error): void };
++type CanvasNode = { ref: { current: unknown } };
++type Component = (props: Props, ref: { current?: Handle }) => CanvasNode | null;
++const filename = fileURLToPath(new URL('../src/overlay/PetSprite.jsx', import.meta.url));
++const compiled = ts.transpileModule(readFileSync(filename, 'utf8'), {
++  compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.CommonJS, esModuleInterop: true },
++}).outputText;
++
++// Execute the real component with controlled image completion and a small hook/RAF host.
++// No React/DOM dependency is added; assertions inspect the image sent to canvas.drawImage.
++function fixture() {
++  const pending = new Map<string, DeferredImage>();
++  class DeferredImage {
++    src = '';
++    onload = () => {};
++    onerror = () => {};
++    constructor() {
++      Object.defineProperty(this, 'src', {
++        get: () => this.url,
++        set: (url: string) => {
++          this.url = url;
++          pending.set(url, this);
++        },
++      });
++    }
++    private url = '';
++  }
++  const slots: unknown[] = [];
++  const effects = new Map<number, Effect>();
++  const frames = new Map<number, (now: number) => void>();
++  const errors: Error[] = [];
++  let cursor = 0,
++    frameId = 0,
++    clock = 0,
++    dirty = false;
++  let props: Props;
++  let commits: Cleanup[] = [];
++  let drawn: DeferredImage | undefined;
++  const handle: { current?: Handle } = {};
++  const context = {
++    imageSmoothingEnabled: false,
++    clearRect() {},
++    drawImage(image: DeferredImage) {
++      drawn = image;
++    },
++  };
++  const canvas = { width: 0, height: 0, getContext: () => context };
++  function useEffect(body: () => Cleanup | void, deps: unknown[]) {
++    const key = cursor++;
++    const previous = effects.get(key);
++    if (previous && deps.every((dep, i) => Object.is(dep, previous.deps[i]))) return;
++    commits.push(() => {
++      previous?.cleanup?.();
++      effects.set(key, { deps, cleanup: body() || undefined });
++    });
++  }
++  const react = {
++    forwardRef: (component: Component) => component,
++    createElement: (_tag: string, attributes: CanvasNode) => attributes,
++    useRef<T>(value: T): { current: T } {
++      const key = cursor++;
++      slots[key] ??= { current: value };
++      return slots[key] as { current: T };
++    },
++    useState<T>(initial: T): [T, (value: T) => void] {
++      const key = cursor++;
++      if (!(key in slots)) slots[key] = initial;
++      return [
++        slots[key] as T,
++        (value) => {
++          if (!Object.is(slots[key], value)) {
++            slots[key] = value;
++            dirty = true;
++          }
++        },
++      ];
++    },
++    useEffect,
++    useImperativeHandle(ref: { current?: Handle }, factory: () => Handle, deps: unknown[]) {
++      useEffect(() => {
++        ref.current = factory();
++      }, deps);
++    },
++  };
++  const module = { exports: {} as { default: Component } };
++  runInNewContext(
++    compiled,
++    {
++      exports: module.exports,
++      require: (id: string) => {
++        if (id === 'react') return react;
++        if (id === '../pets/catalog.ts') return catalog;
++        throw new Error(`Unexpected import: ${id}`);
++      },
++      Image: DeferredImage,
++      performance: { now: () => clock },
++      requestAnimationFrame: (callback: (now: number) => void) => {
++        frames.set(++frameId, callback);
++        return frameId;
++      },
++      cancelAnimationFrame: (id: number) => frames.delete(id),
++    },
++    { filename },
++  );
++  function render() {
++    dirty = false;
++    cursor = 0;
++    commits = [];
++    const node = module.exports.default(props, handle);
++    if (node) node.ref.current = canvas;
++    for (const commit of commits) commit();
++  }
++  async function flush() {
++    for (let i = 0; i < 6; i++) {
++      await Promise.resolve();
++      if (dirty) render();
++    }
++  }
++  return {
++    errors,
++    async select(pet: Pet, stage = 1) {
++      props = { pet, stage, onError: (error) => errors.push(error) };
++      render();
++      await flush();
++    },
++    async complete(pet: Pet, stage: number, motion: Motion, fail = false) {
++      const image = pending.get(catalog.spritePng(pet, stage, motion));
++      assert.ok(image, 'image request must exist');
++      if (fail) image.onerror();
++      else image.onload();
++      await flush();
++    },
++    play(motion: Motion) {
++      handle.current?.play(motion);
++    },
++    frame(elapsed = 0) {
++      clock += elapsed;
++      const callbacks = [...frames.values()];
++      frames.clear();
++      for (const callback of callbacks) callback(clock);
++      return drawn?.src;
++    },
++    close() {
++      for (const effect of effects.values()) effect.cleanup?.();
++    },
++  };
++}
++
++const wizard = catalog.getPet('star_wizard');
++const previous = catalog.PETS.find((pet) => pet.key !== wizard.key)!;
++
++for (const motion of ['click', 'click2', 'attack'] as const) {
++  test(`별빛마법사 ${motion}: 이전 펫의 늦은 로딩으로 그림이 바뀌지 않는다`, async (t) => {
++    const f = fixture();
++    t.after(f.close);
++    await f.select(previous);
++    await f.complete(previous, 1, 'idle');
++    await f.select(wizard);
++    await f.complete(wizard, 1, 'idle');
++    await f.complete(wizard, 1, motion);
++    await f.complete(previous, 1, motion);
++    f.play(motion);
++    assert.equal(f.frame(), catalog.spritePng(wizard, 1, motion));
++    f.frame(10000);
++    assert.equal(f.frame(1), catalog.spritePng(wizard, 1, 'idle'));
++  });
++}
++
++test('진화 후 이전 단계의 클릭 이미지가 현재 단계를 덮어쓰지 않는다', async (t) => {
++  const f = fixture();
++  t.after(f.close);
++  await f.select(wizard, 1);
++  await f.complete(wizard, 1, 'idle');
++  await f.select(wizard, 2);
++  await f.complete(wizard, 2, 'idle');
++  await f.complete(wizard, 2, 'click');
++  await f.complete(wizard, 1, 'click');
++  f.play('click');
++  assert.equal(f.frame(), catalog.spritePng(wizard, 2, 'click'));
++});
++
++test('현재 클릭이 로딩 전이거나 실패해도 이전 펫 대신 현재 idle을 유지한다', async (t) => {
++  const f = fixture();
++  t.after(f.close);
++  await f.select(previous);
++  await f.complete(previous, 1, 'idle');
++  await f.select(wizard);
++  await f.complete(wizard, 1, 'idle');
++  await f.complete(previous, 1, 'click');
++  f.play('click');
++  assert.equal(f.frame(), catalog.spritePng(wizard, 1, 'idle'));
++  await f.complete(wizard, 1, 'click', true);
++  f.play('click');
++  assert.equal(f.frame(), catalog.spritePng(wizard, 1, 'idle'));
++  assert.equal(f.errors.length, 0);
++});
++
++test('선택 해제된 펫의 늦은 idle 성공·실패는 현재 펫에 영향을 주지 않는다', async (t) => {
++  for (const fail of [false, true]) {
++    const f = fixture();
++    t.after(f.close);
++    await f.select(previous);
++    await f.select(wizard);
++    await f.complete(wizard, 1, 'idle');
++    await f.complete(previous, 1, 'idle', fail);
++    assert.equal(f.frame(), catalog.spritePng(wizard, 1, 'idle'));
++    assert.equal(f.errors.length, 0);
++  }
++});

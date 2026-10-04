@@ -18,6 +18,17 @@ export function spawnBattleSidecar(binaryPath: string): {
 
 function processTransport(process: ChildProcessWithoutNullStreams): RustSidecar {
   const listeners = new Set<(line: string) => void>();
+  const errors = new Set<(error: Error) => void>();
+  let failure: Error | undefined;
+  const fail = (error: Error) => {
+    failure = error;
+    for (const listener of errors) listener(error);
+  };
+  process.on('error', fail);
+  process.stdin.on('error', fail);
+  process.on('exit', (code, signal) =>
+    fail(new Error(`battle sidecar exited (${code ?? signal})`)),
+  );
   const lines = createInterface({ input: process.stdout });
   lines.on('line', (line) => {
     for (const listener of listeners) listener(line);
@@ -28,16 +39,23 @@ function processTransport(process: ChildProcessWithoutNullStreams): RustSidecar 
 
   return {
     send(line) {
+      if (failure) throw failure;
       process.stdin.write(`${line}\n`);
     },
     onLine(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onError(listener) {
+      errors.add(listener);
+      if (failure) listener(failure);
+      return () => errors.delete(listener);
+    },
     close() {
       lines.close();
       process.kill();
       listeners.clear();
+      errors.clear();
     },
   };
 }

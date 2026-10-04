@@ -17,7 +17,7 @@ const COLORS: [EnemyColorStage; 7] = [
 const FACES: [&str; 3] = ["steady", "worried", "exhausted"];
 
 #[derive(Clone, Copy)]
-struct RainbowSpot {
+struct RainbowPatch {
     center: (i32, i32),
     radius: (i32, i32),
     color: (u8, u8, u8),
@@ -45,10 +45,8 @@ pub fn colorize_enemy_image(
         let lightness = red.max(green).max(blue) / 255.0;
         let (target_red, target_green, target_blue) =
             stage_color(stage, x, y, source.width(), source.height());
-        let strength = match stage {
-            EnemyColorStage::Rainbow => (0.76 + lightness * 0.22).min(0.96),
-            _ => (0.28 + lightness * 0.68).min(0.92),
-        };
+        // All variants retain the same source shadows and highlight contrast.
+        let strength = (0.28 + lightness * 0.68).min(0.92);
         pixel[0] = (f32::from(target_red) * strength).min(255.0) as u8;
         pixel[1] = (f32::from(target_green) * strength).min(255.0) as u8;
         pixel[2] = (f32::from(target_blue) * strength).min(255.0) as u8;
@@ -70,77 +68,83 @@ fn stage_color(stage: EnemyColorStage, x: u32, y: u32, width: u32, height: u32) 
 
 #[must_use]
 pub fn rainbow_mottle_color(x: u32, y: u32, width: u32, height: u32) -> (u8, u8, u8) {
-    const BASE: (u8, u8, u8) = (184, 173, 211);
-    const SPOTS: [RainbowSpot; 14] = [
-        RainbowSpot {
+    // Approved reference palette (2026-09-29). Preserve its hue and lightness;
+    // saturation alone is reduced below, separately from the shared shading.
+    const PINK: (u8, u8, u8) = (243, 191, 203);
+    const LEMON: (u8, u8, u8) = (244, 246, 163);
+    const MINT: (u8, u8, u8) = (178, 223, 167);
+    const AQUA: (u8, u8, u8) = (210, 238, 236);
+    const LILAC: (u8, u8, u8) = (234, 170, 241);
+    const PATCHES: [RainbowPatch; 14] = [
+        RainbowPatch {
             center: (10, 22),
             radius: (6, 5),
-            color: (232, 174, 193),
+            color: PINK,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (27, 12),
             radius: (6, 6),
-            color: (235, 195, 164),
+            color: LEMON,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (47, 21),
             radius: (5, 6),
-            color: (232, 216, 166),
+            color: LEMON,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (68, 12),
             radius: (6, 5),
-            color: (169, 214, 188),
+            color: MINT,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (86, 24),
             radius: (5, 7),
-            color: (162, 207, 213),
+            color: AQUA,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (78, 42),
             radius: (5, 5),
-            color: (165, 186, 222),
+            color: AQUA,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (91, 57),
             radius: (6, 5),
-            color: (204, 174, 224),
+            color: LILAC,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (80, 77),
             radius: (6, 6),
-            color: (228, 172, 207),
+            color: PINK,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (60, 87),
             radius: (5, 6),
-            color: (235, 195, 164),
+            color: LEMON,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (44, 70),
             radius: (6, 5),
-            color: (169, 214, 188),
+            color: MINT,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (24, 86),
             radius: (5, 7),
-            color: (162, 207, 213),
+            color: AQUA,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (10, 65),
             radius: (6, 5),
-            color: (165, 186, 222),
+            color: AQUA,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (30, 49),
             radius: (5, 5),
-            color: (204, 174, 224),
+            color: LILAC,
         },
-        RainbowSpot {
+        RainbowPatch {
             center: (54, 48),
             radius: (6, 5),
-            color: (232, 174, 193),
+            color: PINK,
         },
     ];
 
@@ -149,10 +153,10 @@ pub fn rainbow_mottle_color(x: u32, y: u32, width: u32, height: u32) -> (u8, u8,
     let normalized_x = normalized_x as i32;
     let normalized_y = normalized_y as i32;
 
-    SPOTS
+    let reference = PATCHES
         .iter()
         .enumerate()
-        .find_map(|(index, spot)| {
+        .min_by_key(|(index, spot)| {
             let (center_x, center_y) = spot.center;
             let (radius_x, radius_y) = spot.radius;
             let delta_x = normalized_x - center_x;
@@ -160,10 +164,19 @@ pub fn rainbow_mottle_color(x: u32, y: u32, width: u32, height: u32) -> (u8, u8,
             let distance = delta_x * delta_x * 100 / (radius_x * radius_x)
                 + delta_y * delta_y * 100 / (radius_y * radius_y);
             let jagged_edge =
-                (normalized_x * 17 + normalized_y * 23 + index as i32 * 29).rem_euclid(19) - 9;
-            (distance <= 100 + jagged_edge).then_some(spot.color)
+                (normalized_x * 17 + normalized_y * 23 + *index as i32 * 29).rem_euclid(19) - 9;
+            distance - jagged_edge
         })
-        .unwrap_or(BASE)
+        .map_or(PINK, |(_, patch)| patch.color);
+    soften_reference_saturation(reference)
+}
+
+fn soften_reference_saturation((r, g, b): (u8, u8, u8)) -> (u8, u8, u8) {
+    // Interpolate 10% toward HSL's mid-gray (max + min) / 2. This keeps hue
+    // and lightness, unlike substituting a darker RGB palette. Round once.
+    let midpoint_twice = u16::from(r.max(g).max(b)) + u16::from(r.min(g).min(b));
+    let channel = |value| ((18 * u16::from(value) + midpoint_twice + 10) / 20) as u8;
+    (channel(r), channel(g), channel(b))
 }
 
 pub fn generate_enemy_asset_set(source_root: &Path, output_root: &Path) -> Result<(), String> {

@@ -1,4 +1,19 @@
+use crate::BattleSnapshot;
+use crate::domain::growth::{IntervalLevels, progression};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OwnedGrowthPet {
+    pub pet_id: String,
+    pub display_name: String,
+    pub rarity: PetRarity,
+    pub level: u32,
+    pub sprite: String,
+    pub evolution_stage: u8,
+    /// None keeps the selected pet visible without inventing persisted growth.
+    pub total_xp: Option<u64>,
+}
 
 use crate::{
     BackgroundTheme, BattleConfig, BattleController, BattleEvent, BattleInput, BattleMode,
@@ -22,6 +37,14 @@ const DEFAULT_CONFIG: BattleConfig = BattleConfig {
     rename_all_fields = "camelCase"
 )]
 pub enum BattleCommand {
+    SyncOwnedPets {
+        pets: Vec<OwnedGrowthPet>,
+        active_pet_id: Option<String>,
+        spectator_pet_ids: Vec<String>,
+        level_xp_costs: Vec<u64>,
+        interval_levels: IntervalLevels,
+        now_ms: u64,
+    },
     GetState {
         now_ms: u64,
     },
@@ -29,9 +52,15 @@ pub enum BattleCommand {
         pet_id: String,
         display_name: String,
         rarity: PetRarity,
+        level: u32,
+        sprite: String,
+        evolution_stage: u8,
     },
     SetActivePet {
         pet_id: String,
+    },
+    SetPetSpectators {
+        pet_ids: Vec<String>,
     },
     GrowthXpAdded {
         pet_id: String,
@@ -62,6 +91,7 @@ pub enum BattleCommand {
     SetDisplayOpacity {
         percent: u8,
     },
+    CyclePetAsset,
     CycleAttackEffect,
     ToggleReducedMotion,
 }
@@ -70,12 +100,14 @@ impl BattleCommand {
     const fn now_ms(&self, fallback: u64) -> u64 {
         match self {
             Self::GetState { now_ms }
+            | Self::SyncOwnedPets { now_ms, .. }
             | Self::GrowthXpAdded { now_ms, .. }
             | Self::OverlayClick { now_ms }
             | Self::PreviewPet { now_ms, .. }
             | Self::PreviewEnemy { now_ms, .. } => *now_ms,
             Self::UpsertPet { .. }
             | Self::SetActivePet { .. }
+            | Self::SetPetSpectators { .. }
             | Self::ToggleBattle
             | Self::SetBattleRunning { .. }
             | Self::ToggleMenu { .. }
@@ -83,6 +115,7 @@ impl BattleCommand {
             | Self::CycleEnemyColor
             | Self::CycleEnemyHp
             | Self::SetDisplayOpacity { .. }
+            | Self::CyclePetAsset
             | Self::CycleAttackEffect
             | Self::ToggleReducedMotion => fallback,
         }
@@ -137,6 +170,7 @@ pub struct EnginePreviewState {
     pub enemy_size: Option<EnemyPreviewSize>,
     pub enemy_color: Option<EnemyColorStage>,
     pub enemy_hp_ratio: Option<f32>,
+    pub pet_asset_rarity: Option<PetRarity>,
     pub attack_effect_rarity: Option<PetRarity>,
     pub reduced_motion: bool,
 }
@@ -146,6 +180,7 @@ pub struct EnginePreviewState {
 pub struct EngineState {
     pub active_pet: Option<PetBattleProgress>,
     pub roster: Vec<PetBattleProgress>,
+    pub spectator_pet_ids: Vec<String>,
     pub enemy_hp_ratio: f32,
     pub enemy_color: EnemyColorStage,
     pub background: BackgroundTheme,
@@ -172,6 +207,7 @@ pub struct BattleEngine {
     reduced_motion: bool,
     now_ms: u64,
     attack_cycle_started_at_ms: Option<u64>,
+    spectator_pet_ids: Vec<String>,
 }
 
 impl BattleEngine {
@@ -184,6 +220,7 @@ impl BattleEngine {
             reduced_motion: false,
             now_ms: 0,
             attack_cycle_started_at_ms: None,
+            spectator_pet_ids: vec!["lumi".to_owned(), "nova".to_owned(), "mori".to_owned()],
         }
     }
 
@@ -195,16 +232,115 @@ impl BattleEngine {
 
         let mut events = Vec::new();
         match request.command {
+            BattleCommand::SyncOwnedPets {
+                pets,
+                active_pet_id,
+                spectator_pet_ids,
+                level_xp_costs,
+                interval_levels,
+                ..
+            } => {
+                if let Err(error) = interval_levels.validate(&level_xp_costs) {
+                    return self.error_response(request.request_id, error.to_owned());
+                }
+                let previous_active = self.controller.snapshot().active_pet_id.clone();
+                let active = active_pet_id.filter(|id| pets.iter().any(|p| &p.pet_id == id));
+                if previous_active != active {
+                    self.overlay.reset();
+                    self.preview.reset_actions();
+                    self.attack_cycle_started_at_ms = None;
+                }
+                let mut roster = Vec::new();
+                for input in pets {
+                    let old = self.controller.pet(&input.pet_id);
+                    let same_active = active.as_deref() == Some(input.pet_id.as_str())
+                        && previous_active == active;
+                    if same_active
+                        && old.is_some_and(|previous| {
+                            previous.synced_total_xp.is_some() != input.total_xp.is_some()
+                        })
+                    {
+                        self.overlay.reset();
+                        self.preview.reset_actions_preserving_display_opacity();
+                    }
+                    let (stage, interval_xp, target) =
+                        input.total_xp.map_or((1, 0, None), |total_xp| {
+                            let (stage, interval_xp, target) =
+                                progression(total_xp, &level_xp_costs);
+                            (stage, interval_xp, Some(target))
+                        });
+                    if let Some(previous) = old
+                        && let Some(previous_xp) = previous.synced_total_xp
+                        && let Some(total_xp) = input.total_xp
+                        && let Some(target) = target
+                        && same_active
+                        && total_xp > previous_xp
+                    {
+                        if stage > previous.stage {
+                            let defeated = self
+                                .overlay
+                                .visual(now)
+                                .map_or(previous.stage, |v| v.defeated_stage);
+                            self.overlay.begin_conquest(now, defeated, stage);
+                            self.preview.reset_actions_preserving_display_opacity();
+                            events.push(EngineEvent::EnemyDefeated {
+                                pet_id: input.pet_id.clone(),
+                                defeated_stage: previous.stage,
+                                next_stage: stage,
+                                skipped_stages: u64::from(stage - previous.stage - 1),
+                            });
+                        } else {
+                            events.push(EngineEvent::XpApplied {
+                                pet_id: input.pet_id.clone(),
+                                amount: total_xp - previous_xp,
+                                enemy_hp_ratio: 1.0 - interval_xp as f32 / target as f32,
+                            });
+                        }
+                    }
+                    let mut pet =
+                        PetBattleProgress::new(input.pet_id, input.display_name, input.rarity);
+                    pet.battle_mode = old.map_or(BattleMode::Fighting, |p| p.battle_mode);
+                    pet.level = input.level;
+                    pet.sprite = input.sprite;
+                    pet.evolution_stage = input.evolution_stage;
+                    pet.stage = stage;
+                    pet.interval_xp = interval_xp;
+                    pet.growth_target_xp = target;
+                    pet.synced_total_xp = input.total_xp;
+                    roster.push(pet);
+                }
+                self.spectator_pet_ids = spectator_pet_ids
+                    .into_iter()
+                    .filter(|id| {
+                        Some(id) != active.as_ref() && roster.iter().any(|p| &p.pet_id == id)
+                    })
+                    .take(3)
+                    .collect();
+                self.controller = BattleController::new(
+                    self.controller.config(),
+                    BattleSnapshot {
+                        active_pet_id: active,
+                        pets: roster,
+                    },
+                );
+                self.anchor_attack_cycle_if_needed();
+            }
             BattleCommand::GetState { .. } => self.anchor_attack_cycle_if_needed(),
             BattleCommand::UpsertPet {
                 pet_id,
                 display_name,
                 rarity,
+                level,
+                sprite,
+                evolution_stage,
             } => {
                 if let Some(event) = self.controller.handle_input(BattleInput::UpsertPet {
                     pet_id,
                     display_name,
                     rarity,
+                    level,
+                    sprite,
+                    evolution_stage,
                 }) {
                     events.push(engine_event(event.pet_id, event.event));
                 }
@@ -218,6 +354,9 @@ impl BattleEngine {
                 {
                     events.push(engine_event(event.pet_id, event.event));
                 }
+            }
+            BattleCommand::SetPetSpectators { pet_ids } => {
+                self.spectator_pet_ids = pet_ids.into_iter().take(3).collect();
             }
             BattleCommand::GrowthXpAdded { pet_id, amount, .. } => {
                 if let Some(event) = self
@@ -262,7 +401,9 @@ impl BattleEngine {
             BattleCommand::PreviewPet { action, .. } => self.preview.trigger_pet(action, now),
             BattleCommand::PreviewEnemy { action, .. } => self.preview.trigger_enemy(action, now),
             BattleCommand::CycleEnemySize => {
-                self.preview.cycle_enemy_size();
+                let stage = self.visual_enemy_stage(self.overlay.visual(now));
+                self.preview
+                    .cycle_enemy_size(EnemyPreviewSize::for_stage(stage));
             }
             BattleCommand::CycleEnemyColor => {
                 self.preview.cycle_enemy_color(self.canonical_enemy_color());
@@ -273,6 +414,13 @@ impl BattleEngine {
             BattleCommand::SetDisplayOpacity { percent } => {
                 self.preview
                     .set_display_opacity(f32::from(percent.min(100)) / 100.0);
+            }
+            BattleCommand::CyclePetAsset => {
+                let rarity = self
+                    .controller
+                    .active_pet()
+                    .map_or(PetRarity::Common, |pet| pet.rarity);
+                self.preview.cycle_pet_asset_rarity(rarity);
             }
             BattleCommand::CycleAttackEffect => {
                 let rarity = self
@@ -320,30 +468,34 @@ impl BattleEngine {
             .map_or(EnemyColorStage::Red, PetBattleProgress::enemy_color_stage)
     }
 
+    fn visual_enemy_stage(&self, overlay: Option<OverlayVisual>) -> u32 {
+        let active_stage = self.controller.active_pet().map_or(1, |pet| pet.stage);
+        overlay.map_or(active_stage, |visual| match visual.phase {
+            OverlayPhase::Spawning => visual.next_stage,
+            OverlayPhase::DefeatMotion | OverlayPhase::AwaitingAdvance => visual.defeated_stage,
+            OverlayPhase::Fighting => active_stage,
+        })
+    }
+
     fn state(&self) -> EngineState {
         let now = self.now_seconds();
         let overlay = self.overlay.visual(now);
         let preview = self.preview.visual(now);
         let live_hp = self.live_enemy_hp();
-        let active_stage = self.controller.active_pet().map_or(1, |pet| pet.stage);
-        let visual_stage = overlay.map_or(active_stage, |visual| match visual.phase {
-            OverlayPhase::Spawning => visual.next_stage,
-            OverlayPhase::DefeatMotion | OverlayPhase::AwaitingAdvance => visual.defeated_stage,
-            OverlayPhase::Fighting => active_stage,
-        });
+        let visual_stage = self.visual_enemy_stage(overlay);
         let canonical_color = EnemyColorStage::for_stage(visual_stage);
         let enemy_color = if overlay.is_none() {
             preview.enemy_color_stage.unwrap_or(canonical_color)
         } else {
             canonical_color
         };
-        let enemy_hp_ratio = if overlay.is_none() {
-            preview.enemy_hp_ratio.unwrap_or(live_hp)
-        } else {
-            live_hp
+        let enemy_hp_ratio = match overlay.map(|visual| visual.phase) {
+            Some(OverlayPhase::DefeatMotion | OverlayPhase::AwaitingAdvance) => 0.0,
+            Some(_) => live_hp,
+            None => preview.enemy_hp_ratio.unwrap_or(live_hp),
         };
         let phase = preview.pet_attack_phase.unwrap_or_else(|| {
-            if self.controller.is_fighting() {
+            if self.controller.is_fighting() && overlay.is_none() {
                 let elapsed = self
                     .now_ms
                     .saturating_sub(self.attack_cycle_started_at_ms.unwrap_or(self.now_ms));
@@ -360,6 +512,7 @@ impl BattleEngine {
         EngineState {
             active_pet: self.controller.active_pet().cloned(),
             roster: self.controller.snapshot().pets.clone(),
+            spectator_pet_ids: self.spectator_pet_ids.clone(),
             enemy_hp_ratio,
             enemy_color,
             background: enemy_color.background(),
@@ -373,6 +526,7 @@ impl BattleEngine {
                 enemy_size: preview.enemy_size,
                 enemy_color: preview.enemy_color_stage,
                 enemy_hp_ratio: preview.enemy_hp_ratio,
+                pet_asset_rarity: preview.pet_asset_rarity,
                 attack_effect_rarity: preview.attack_effect_rarity,
                 reduced_motion: self.reduced_motion,
             },
@@ -423,7 +577,13 @@ fn engine_event(pet_id: String, event: BattleEvent) -> EngineEvent {
 pub fn handle_json_line(engine: &mut BattleEngine, line: &str) -> String {
     let response = match serde_json::from_str::<BattleRequest>(line) {
         Ok(request) => engine.handle(request),
-        Err(error) => engine.error_response("invalid".to_owned(), error.to_string()),
+        Err(error) => {
+            let request_id = serde_json::from_str::<serde_json::Value>(line)
+                .ok()
+                .and_then(|value| value.get("requestId")?.as_str().map(str::to_owned))
+                .unwrap_or_else(|| "invalid".to_owned());
+            engine.error_response(request_id, error.to_string())
+        }
     };
     serde_json::to_string(&response).unwrap_or_else(|error| {
         format!(

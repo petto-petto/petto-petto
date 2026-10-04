@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="UTF-8" />
+  <title>무지개 적 · 명암과 채도 맞춤</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #171725;
+      color: #ece7f0;
+      font:
+        14px -apple-system,
+        sans-serif;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 23px;
+    }
+    p {
+      margin: 0 0 24px;
+      color: #b4adbf;
+    }
+    h2 {
+      margin: 24px 0 14px;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .lineup {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .faces {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    figure {
+      margin: 0;
+      padding: 22px 4px 16px;
+      text-align: center;
+      background: #242235;
+      border: 1px solid #39354a;
+    }
+    img {
+      display: block;
+      margin: 0 auto 18px;
+      height: 64px;
+      width: auto;
+      image-rendering: pixelated;
+    }
+    .faces img {
+      height: 80px;
+    }
+    figcaption {
+      color: #cac3d5;
+      font-size: 13px;
+    }
+    .current {
+      border-color: #77708b;
+    }
+    small {
+      display: block;
+      margin-top: 18px;
+      color: #a69eb5;
+    }
+  </style>
+  <h1>무지개 적 · 명암과 채도 맞춤</h1>
+  <p>기존 적과 같은 그림자 · 낮춘 밝기와 채도 · 얼룩 배합 유지</p>
+  <div class="lineup">
+    <figure>
+      <img src="../../assets/enemies/v2/red-steady.png" alt="빨강 적" />
+      <figcaption>빨강</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/orange-steady.png" alt="주황 적" />
+      <figcaption>주황</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/yellow-steady.png" alt="노랑 적" />
+      <figcaption>노랑</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/green-steady.png" alt="초록 적" />
+      <figcaption>초록</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/blue-steady.png" alt="파랑 적" />
+      <figcaption>파랑</figcaption>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/purple-steady.png" alt="보라 적" />
+      <figcaption>보라</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-steady.png" alt="무지개 적" />
+      <figcaption>무지개</figcaption>
+    </figure>
+  </div>
+  <h2>수정 전후 · 세 표정 모두 적용</h2>
+  <div class="faces">
+    <figure>
+      <img
+        src="data:image/png;base64,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"
+        alt="수정 전 무지개 적"
+      />
+      <figcaption>수정 전</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-steady.png" alt="수정 후 평온" />
+      <figcaption>수정 후 · 평온</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-worried.png" alt="수정 후 걱정" />
+      <figcaption>수정 후 · 걱정</figcaption>
+    </figure>
+    <figure class="current">
+      <img src="../../assets/enemies/v2/rainbow-exhausted.png" alt="수정 후 지침" />
+      <figcaption>수정 후 · 지침</figcaption>
+    </figure>
+  </div>
+  <small>상단 높이 64px / 하단 높이 80px · 눈, 윤곽, 투명 영역, 크기, 모션 변경 없음</small>
+</html>

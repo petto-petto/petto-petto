@@ -71,6 +71,15 @@ pub enum EnemyPreviewSize {
 
 impl EnemyPreviewSize {
     #[must_use]
+    pub const fn for_stage(stage: u32) -> Self {
+        match stage.saturating_sub(1) % 3 {
+            0 => Self::Small,
+            1 => Self::Medium,
+            _ => Self::Large,
+        }
+    }
+
+    #[must_use]
     pub const fn height(self) -> f32 {
         match self {
             Self::Small => 56.0,
@@ -114,6 +123,7 @@ pub struct MotionPreviewVisual {
     pub enemy_size: Option<EnemyPreviewSize>,
     pub enemy_color_stage: Option<EnemyColorStage>,
     pub enemy_hp_ratio: Option<f32>,
+    pub pet_asset_rarity: Option<PetRarity>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -137,6 +147,7 @@ pub struct MotionPreview {
     display_opacity: DisplayOpacity,
     menu: PreviewMenu,
     pet: PetPreviewState,
+    pet_asset_rarity: Option<PetRarity>,
     attack_effect_rarity: Option<PetRarity>,
     enemy: EnemyPreviewState,
     enemy_size: Option<EnemyPreviewSize>,
@@ -150,6 +161,7 @@ impl Default for MotionPreview {
             display_opacity: DisplayOpacity::FULL,
             menu: PreviewMenu::Closed,
             pet: PetPreviewState::Idle,
+            pet_asset_rarity: None,
             attack_effect_rarity: None,
             enemy: EnemyPreviewState::Visible,
             enemy_size: None,
@@ -161,9 +173,15 @@ impl Default for MotionPreview {
 
 impl MotionPreview {
     pub fn reset_actions(&mut self) {
-        self.menu = PreviewMenu::Closed;
         self.display_opacity = DisplayOpacity::FULL;
+        self.reset_actions_preserving_display_opacity();
+    }
+
+    /// Conquest clears temporary previews, not the user's display setting.
+    pub(crate) fn reset_actions_preserving_display_opacity(&mut self) {
+        self.menu = PreviewMenu::Closed;
         self.pet = PetPreviewState::Idle;
+        self.pet_asset_rarity = None;
         self.attack_effect_rarity = None;
         self.enemy = EnemyPreviewState::Visible;
         self.reset_enemy_overrides();
@@ -204,6 +222,15 @@ impl MotionPreview {
         next
     }
 
+    pub fn cycle_pet_asset_rarity(&mut self, active_rarity: PetRarity) -> PetRarity {
+        let next = match self.pet_asset_rarity {
+            None => next_rarity(active_rarity),
+            Some(rarity) => next_rarity(rarity),
+        };
+        self.pet_asset_rarity = Some(next);
+        next
+    }
+
     pub fn trigger_enemy(&mut self, action: EnemyPreviewAction, now: f64) {
         if action == EnemyPreviewAction::Reset {
             self.reset_enemy_overrides();
@@ -216,8 +243,8 @@ impl MotionPreview {
         };
     }
 
-    pub fn cycle_enemy_size(&mut self) -> EnemyPreviewSize {
-        let next = match self.enemy_size.unwrap_or(EnemyPreviewSize::Large) {
+    pub fn cycle_enemy_size(&mut self, current: EnemyPreviewSize) -> EnemyPreviewSize {
+        let next = match self.enemy_size.unwrap_or(current) {
             EnemyPreviewSize::Large => EnemyPreviewSize::Small,
             EnemyPreviewSize::Small => EnemyPreviewSize::Medium,
             EnemyPreviewSize::Medium => EnemyPreviewSize::Large,
@@ -345,6 +372,15 @@ impl MotionPreview {
             enemy_size: self.enemy_size,
             enemy_color_stage: self.enemy_color_stage,
             enemy_hp_ratio: self.enemy_hp_ratio,
+            pet_asset_rarity: self.pet_asset_rarity,
         }
+    }
+}
+
+const fn next_rarity(rarity: PetRarity) -> PetRarity {
+    match rarity {
+        PetRarity::Common => PetRarity::Rare,
+        PetRarity::Rare => PetRarity::Epic,
+        PetRarity::Epic => PetRarity::Common,
     }
 }

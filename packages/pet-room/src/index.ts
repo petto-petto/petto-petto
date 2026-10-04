@@ -25,13 +25,15 @@
  *
  * ## 의존 방향
  *
- * `@pet/room` → `@pet/core` 한 방향뿐이다. `@pet/meta`를 의존하지 않는다 — meta가
+ * `@pet/room`은 `@pet/core`와 펫 소유자의 타입 계약 `@pet/client`를 사용한다.
+ * `@pet/meta`를 의존하지 않는다 — meta가
  * 요구하는 `CollectionPort`를 이 패키지로 채우는 어댑터는 **앱**이 갖는다
  * (`apps/desktop/src/main/collection.ts`).
  */
 
 export * from './domain/aura.ts';
 export * from './domain/firefly.ts';
+export * from './client.ts';
 export * from './domain/pet.ts';
 export * from './domain/sprite.ts';
 export * from './domain/scene.ts';

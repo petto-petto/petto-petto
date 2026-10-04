@@ -43,7 +43,7 @@ pub enum EnemyColorStage {
 impl EnemyColorStage {
     #[must_use]
     pub const fn for_stage(stage: u32) -> Self {
-        match (stage.saturating_sub(1)) % 7 {
+        match (stage.saturating_sub(1) / 3) % 7 {
             0 => Self::Red,
             1 => Self::Orange,
             2 => Self::Yellow,
@@ -78,9 +78,23 @@ pub struct PetBattleProgress {
     pub pet_id: String,
     pub display_name: String,
     pub rarity: PetRarity,
+    #[serde(default = "default_pet_level")]
+    pub level: u32,
+    #[serde(default)]
+    pub sprite: String,
+    #[serde(default)]
+    pub evolution_stage: u8,
     pub stage: u32,
     pub interval_xp: u64,
+    #[serde(default)]
+    pub growth_target_xp: Option<u64>,
+    #[serde(default)]
+    pub synced_total_xp: Option<u64>,
     pub battle_mode: BattleMode,
+}
+
+const fn default_pet_level() -> u32 {
+    1
 }
 
 impl PetBattleProgress {
@@ -94,8 +108,13 @@ impl PetBattleProgress {
             pet_id: pet_id.into(),
             display_name: display_name.into(),
             rarity,
+            level: 1,
+            sprite: String::new(),
+            evolution_stage: 0,
             stage: 1,
             interval_xp: 0,
+            growth_target_xp: None,
+            synced_total_xp: None,
             battle_mode: BattleMode::Fighting,
         }
     }
@@ -112,7 +131,9 @@ impl PetBattleProgress {
 
     #[must_use]
     pub fn enemy_hp_ratio(&self, config: BattleConfig) -> f32 {
-        let target = config.target_xp(self.rarity);
+        let target = self
+            .growth_target_xp
+            .unwrap_or(config.target_xp(self.rarity));
         1.0 - (self.interval_xp.min(target) as f32 / target as f32)
     }
 
@@ -243,8 +264,11 @@ mod tests {
     #[test]
     fn enemy_visuals_cycle_through_all_seven_color_stages() {
         assert_eq!(EnemyColorStage::for_stage(1), EnemyColorStage::Red);
-        assert_eq!(EnemyColorStage::for_stage(4), EnemyColorStage::Green);
-        assert_eq!(EnemyColorStage::for_stage(7), EnemyColorStage::Rainbow);
-        assert_eq!(EnemyColorStage::for_stage(8), EnemyColorStage::Red);
+        assert_eq!(EnemyColorStage::for_stage(3), EnemyColorStage::Red);
+        assert_eq!(EnemyColorStage::for_stage(4), EnemyColorStage::Orange);
+        assert_eq!(EnemyColorStage::for_stage(10), EnemyColorStage::Green);
+        assert_eq!(EnemyColorStage::for_stage(19), EnemyColorStage::Rainbow);
+        assert_eq!(EnemyColorStage::for_stage(21), EnemyColorStage::Rainbow);
+        assert_eq!(EnemyColorStage::for_stage(22), EnemyColorStage::Red);
     }
 }
