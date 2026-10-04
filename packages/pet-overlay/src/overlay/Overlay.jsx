@@ -10,7 +10,7 @@ import Vfx from './Vfx.jsx';
 import { setInteractive, dragStart, dragMove, dragEnd } from '../platform/bridge.js';
 import { stageForEvolution, randomClick } from '../pets/catalog.ts';
 
-export default function Overlay({ g, activePet, petKey, setPetKey }) {
+export default function Overlay({ g, activePet, roster, activeId, onSelectPet }) {
   const { pet, overlayState, toasts, levelUpFx, evolveFx, xpFx, attackFx, mood } = g;
   const [menuOpen, setMenuOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
@@ -168,8 +168,9 @@ export default function Overlay({ g, activePet, petKey, setPetKey }) {
         g={g}
         open={devOpen}
         onToggle={() => setDevOpen((v) => !v)}
-        petKey={petKey}
-        setPetKey={setPetKey}
+        roster={roster}
+        activeId={activeId}
+        onSelectPet={onSelectPet}
       />
     </div>
   );

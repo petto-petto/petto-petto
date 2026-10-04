@@ -1,0 +1,42 @@
+[legend]
+C = accent.3
+c = accent.2
+d = accent.1
+o = light.3
+g = wood.1
+h = wood.4
+w = wood.3
+s = wood.2
+[grid]
+...........CCCCCCCCCC
+.........CCCCCCCCCCCCCC
+.......CCCCCCCCCCCCCCCCcc
+......CCCCCCCCCCCCCoCCcccc
+.....CCCCoCCCCCCCCooodccccc
+....CCCCooodCCCCCCCodccccccc
+...CCCCCCodCCCCCCCcdccccccccc
+...CCCCCCdCCCCCCCcccccccocccc
+..CCCoCCCCCCCCoCcccccccooodccc
+..CCooodCCCCCooodcccccccodcccd
+.CCCCodCCCCCCcodccccccccdcccddd
+.CCCCdCCCCCCccdcccccccoccccdddd
+.CCCCCCoCCCccccccccccooodcddddd
+CCCCCCooodccccccccccccoddddddddd
+CCCCCCCodcccccccccccccdddddddddd
+gggggggggggggggggggggggggggggggg
+............ssssssss
+............hhhwwwss
+............hhhwwwss
+............hhhwwwss
+............hhhwwwss
+............hhhwwwss
+............hhhwwwws
+............hhhwwwws
+............hhhwwwws
+...........hhhhwwwwss
+...........hhhwwwwwss
+...........hhhwwwwwss
+...........hhhwwwwwss
+..........hhhhwwwwwsss
+..........hhhhwwwwwwss
+..........hhhhwwwwwwss

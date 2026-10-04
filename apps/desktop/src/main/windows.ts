@@ -10,7 +10,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, petSizePixels, type Rect } from '@pet/meta';
+import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
+import { VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '@pet/room';
 
 import {
   OVERLAY_WINDOW_HEIGHT,
@@ -55,7 +56,6 @@ const battleUiDir = join(
  */
 const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).href });
 
-let petWindow: BrowserWindow | undefined;
 let overlayWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
@@ -63,7 +63,6 @@ let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
 
-export const getPetWindow = (): BrowserWindow | undefined => petWindow;
 export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
 export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
@@ -227,15 +226,6 @@ export function endOverlayDrag(): void {
   saveOverlayWindowState();
 }
 
-export function createPetWindow(petSize: string): BrowserWindow {
-  const side = petSizePixels(petSize as never) + 24;
-  petWindow = new BrowserWindow({ ...commonOptions(), width: side, height: side });
-  injectFonts(petWindow);
-  void petWindow.loadFile(join(roomUiDir, 'pet.html'), { query: assetsQuery() });
-  placePetInitially();
-  return petWindow;
-}
-
 /**
  * 도트 폰트를 창에 넣는다.
  *
@@ -394,18 +384,18 @@ export function createBattleWindow(): BrowserWindow | undefined {
 }
 
 /**
- * 펫룸 창 크기.
+ * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
  *
- * 장면은 배경 원본 그대로 960x360이다. 픽셀 아트는 정수 배율만 허용되므로(design.md §4)
- * 1배로 두어 확대 보간이 아예 일어나지 않게 한다.
+ * 배경 원본은 960x360이지만 픽셀 아트는 정수 배율만 허용되므로(design.md §4) 줄여 그리지
+ * 않고 1배로 두고 **잘라서** 640x240만 보여 준다. 그 규칙과 상수는 `@pet/room`의
+ * `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
  *
- * 상세 패널은 장면을 덮지 않고 **옆 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을 막지
- * 않는 자리에). 그래서 창은 장면보다 패널 폭만큼 넓다.
+ * 상세 패널은 장면을 덮지 않고 **아래 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을
+ * 막지 않는 자리에). 높이 180px은 합성 창과 같은 값이다.
  */
-const SCENE_WIDTH = 960;
-const SIDE_WIDTH = 264;
-export const ROOM_WIDTH = SCENE_WIDTH + SIDE_WIDTH;
-export const ROOM_HEIGHT = 360;
+const ROOM_PANEL_HEIGHT = 180;
+export const ROOM_WIDTH = VIEWPORT_WIDTH;
+export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 
 /**
  * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
@@ -473,8 +463,8 @@ function workAreaFor(window: BrowserWindow): Rect {
  * 구조적으로 성립한다. 화면을 바꾸는 것은 같은 창의 내용을 갈아 끼우는 일이다.
  */
 export function showPanel(): void {
-  const anchorWindow = overlayWindow ?? petWindow;
-  if (!anchorWindow || !panelWindow) return;
+  if (!overlayWindow || !panelWindow) return;
+  const anchorWindow = overlayWindow;
   const placement = placePanel(windowRect(anchorWindow), workAreaFor(anchorWindow));
   panelWindow.setPosition(Math.round(placement.x), Math.round(placement.y));
   panelWindow.show();
@@ -491,12 +481,11 @@ export function hidePanel(): void {
  * 오버레이를 숨겨도 앱과 수집기는 계속 실행된다. 그래서 창을 닫는 게 아니라 감춘다.
  */
 export function applyOverlayVisibility(visible: boolean): void {
-  const activeOverlay = overlayWindow ?? petWindow;
-  if (!activeOverlay) return;
+  if (!overlayWindow) return;
   if (visible) {
-    activeOverlay.show();
+    overlayWindow.show();
   } else {
-    activeOverlay.hide();
+    overlayWindow.hide();
     hidePanel();
   }
 }
@@ -504,21 +493,13 @@ export function applyOverlayVisibility(visible: boolean): void {
 /**
  * 펫 크기 설정을 창에 적용한다(기획서 6.2).
  *
- * 패널 창은 건드리지 않는다 — SET-005가 요구하는 바로 그 분리다.
+ * **지금은 적용할 창이 없다.** 이 설정은 펫 크기를 창 크기로 표현하던 옛 펫 창의 것이었고 그
+ * 창은 삭제됐다. 현재 오버레이(`@pet/main-overlay`)는 창 크기가 고정이고 펫 크기는 렌더러가
+ * CSS 로 정하므로, 설정을 살리려면 값을 렌더러까지 내려보내야 한다.
+ *
+ * 조용히 무시하지 않고 로그를 남긴다. 설정을 바꿨는데 아무 일도 일어나지 않는 이유가
+ * 어딘가에는 적혀 있어야 한다 — 빈 함수로 두면 다음 사람이 창 코드를 뒤진다.
  */
 export function applyPetSize(petSize: string): void {
-  if (!petWindow) return;
-  const side = petSizePixels(petSize as never) + 24;
-  petWindow.setSize(side, side);
-}
-
-/** 시작 시 펫을 화면 오른쪽 아래에 놓는다. */
-export function placePetInitially(): void {
-  if (!petWindow) return;
-  const area = workAreaFor(petWindow);
-  const rect = windowRect(petWindow);
-  petWindow.setPosition(
-    Math.round(Math.max(area.x + area.width - rect.width - 40, area.x)),
-    Math.round(Math.max(area.y + area.height - rect.height - 60, area.y)),
-  );
+  console.log(`[WINDOW] 펫 크기(${petSize})를 적용할 창이 없습니다 — 오버레이는 고정 크기입니다.`);
 }

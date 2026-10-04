@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "spring_dusk",
+  "name": "동화 숲 (봄 노을)",
+  "season": "spring",
+  "phase": "dusk",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "spring_dusk.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "spring_dusk.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#140A13",
+      "#20111E",
+      "#250F22",
+      "#270F22",
+      "#271023",
+      "#281F28",
+      "#291124",
+      "#36383B",
+      "#423F47",
+      "#452E3E",
+      "#484849",
+      "#4C4F4A",
+      "#596951",
+      "#5A5052",
+      "#5B3147",
+      "#6D8359",
+      "#717457",
+      "#888A52",
+      "#8C4A58",
+      "#AC9F5A",
+      "#AF6962",
+      "#B3556B",
+      "#BAAF5C",
+      "#D3656E",
+      "#DE8964",
+      "#E6666F",
+      "#E96F6C",
+      "#E9CA70",
+      "#F6786A",
+      "#F87B62",
+      "#F99D5B",
+      "#FD8C5B"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

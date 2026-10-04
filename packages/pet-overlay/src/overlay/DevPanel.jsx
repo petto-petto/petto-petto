@@ -1,10 +1,9 @@
 import React from 'react';
 import { requiredXp } from '../growth/engine.js';
 import { isElectron } from '../platform/bridge.js';
-import { PETS } from '../pets/catalog.ts';
 
 // 실제 Claude Code 없이도 성장/오버레이를 시연하기 위한 디버그 패널
-export default function DevPanel({ g, open, onToggle, petKey, setPetKey }) {
+export default function DevPanel({ g, open, onToggle, roster, activeId, onSelectPet }) {
   const { pet, session } = g;
   const need = requiredXp(pet.level);
   return (
@@ -37,16 +36,21 @@ export default function DevPanel({ g, open, onToggle, petKey, setPetKey }) {
             </button>
             <button onClick={() => g.resetAll()}>저장 초기화</button>
           </div>
-          <div className="dev-title">펫 선택 (도트 에셋)</div>
+          {/*
+            보유 펫 목록은 명부(`room:scene`)에서 온다. 카탈로그의 종 목록이 아니다 —
+            아직 뽑지 않은 종을 오버레이에 세울 수는 없다. 누르면 명부에 지정을 요청만 하고,
+            화면은 `room:activePetChanged` 를 받고 나서 바뀐다.
+          */}
+          <div className="dev-title">활성 펫 (보유 펫)</div>
           <div className="dev-btns dev-pets">
-            {PETS.map((p) => (
+            {(roster ?? []).map((pet) => (
               <button
-                key={p.key}
-                className={petKey === p.key ? 'active' : ''}
-                onClick={() => setPetKey?.(p.key)}
-                title={`${p.grade} · ${p.slug}`}
+                key={pet.ownedPetId}
+                className={activeId === pet.ownedPetId ? 'active' : ''}
+                onClick={() => onSelectPet?.(pet.ownedPetId)}
+                title={`${pet.rarity ?? ''} · ${pet.slug} · Lv.${pet.level ?? '-'}`}
               >
-                {p.name}
+                {pet.name}
               </button>
             ))}
           </div>

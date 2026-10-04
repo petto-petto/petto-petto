@@ -1,0 +1,853 @@
+{
+  "id": "bg_007",
+  "name": "동화 숲 (사계절)",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated (codex-astra) -> quantize.py 32색",
+  "width": 1080,
+  "height": 540,
+  "seamless": false,
+  "horizon": 365,
+  "groundTop": 495,
+  "petAnchor": {
+    "x": 508,
+    "y": 431,
+    "w": 64,
+    "h": 64
+  },
+  "seasons": [
+    "spring",
+    "summer",
+    "autumn",
+    "winter"
+  ],
+  "phases": [
+    "dawn",
+    "day",
+    "dusk",
+    "night"
+  ],
+  "variants": {
+    "spring_dawn": {
+      "season": "spring",
+      "phase": "dawn",
+      "composite": "spring_dawn.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "spring_dawn.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#0F0B17",
+          "#1D1F2F",
+          "#25122C",
+          "#25162A",
+          "#25162E",
+          "#261730",
+          "#291632",
+          "#2A2539",
+          "#353245",
+          "#4C4056",
+          "#4F6B6C",
+          "#5B7B76",
+          "#668973",
+          "#769476",
+          "#858C8A",
+          "#85A66A",
+          "#85A678",
+          "#9EB28B",
+          "#A3A8F2",
+          "#A791B2",
+          "#AEB5C5",
+          "#B0ADF7",
+          "#B4C877",
+          "#BAC5DA",
+          "#C6B7F8",
+          "#CDB3C9",
+          "#D0D5C8",
+          "#D6C9F7",
+          "#E0C9CD",
+          "#E3DAF1",
+          "#F1D5EC",
+          "#F6E6E8"
+        ]
+      }
+    },
+    "spring_day": {
+      "season": "spring",
+      "phase": "day",
+      "composite": "spring_day.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "spring_day.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#111117",
+          "#1F3B3D",
+          "#261E2A",
+          "#2D1B2B",
+          "#2D1D2A",
+          "#2D1E2E",
+          "#2E1F30",
+          "#2E323B",
+          "#396A65",
+          "#3A363F",
+          "#48716D",
+          "#52857B",
+          "#5D4553",
+          "#5F9B7E",
+          "#6EA871",
+          "#6F8D7C",
+          "#88C085",
+          "#8CC3E3",
+          "#8DAF7B",
+          "#91E0F8",
+          "#A6CFB8",
+          "#A98A82",
+          "#A9CD6B",
+          "#AEDDB7",
+          "#B0E9F5",
+          "#C3EEFD",
+          "#CCE575",
+          "#CED88E",
+          "#D7E7C6",
+          "#DEF5FC",
+          "#E5F7EF",
+          "#E7F28B"
+        ]
+      }
+    },
+    "spring_dusk": {
+      "season": "spring",
+      "phase": "dusk",
+      "composite": "spring_dusk.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "spring_dusk.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#140912",
+          "#1C111B",
+          "#260E1D",
+          "#260F22",
+          "#261023",
+          "#270F24",
+          "#27111D",
+          "#28091C",
+          "#280F23",
+          "#282429",
+          "#291124",
+          "#3D2E3B",
+          "#413F46",
+          "#464B48",
+          "#51514E",
+          "#553245",
+          "#6A8058",
+          "#81685A",
+          "#854656",
+          "#94835A",
+          "#AF9559",
+          "#B25669",
+          "#C6A95C",
+          "#D16374",
+          "#D35E76",
+          "#DCC46A",
+          "#DF6072",
+          "#E66A70",
+          "#EF7068",
+          "#F97E67",
+          "#FB845C",
+          "#FD945A"
+        ]
+      }
+    },
+    "spring_night": {
+      "season": "spring",
+      "phase": "night",
+      "composite": "spring_night.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "spring_night.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#06070D",
+          "#13101D",
+          "#141F30",
+          "#172E55",
+          "#192F55",
+          "#192F56",
+          "#1A1525",
+          "#1A325A",
+          "#1A334B",
+          "#1B1526",
+          "#1B1727",
+          "#1C395B",
+          "#1E3D65",
+          "#213E63",
+          "#224677",
+          "#231E31",
+          "#234879",
+          "#264E81",
+          "#2C4D61",
+          "#2D5780",
+          "#325771",
+          "#38628B",
+          "#3C3653",
+          "#406A87",
+          "#445770",
+          "#4B727E",
+          "#4F7871",
+          "#5C7771",
+          "#5E896B",
+          "#899878",
+          "#A2B476",
+          "#D2D49F"
+        ]
+      }
+    },
+    "summer_dawn": {
+      "season": "summer",
+      "phase": "dawn",
+      "composite": "summer_dawn.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "summer_dawn.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#0B0D14",
+          "#1C2F36",
+          "#1D1928",
+          "#25162A",
+          "#28182D",
+          "#29192E",
+          "#2A192F",
+          "#2C4A51",
+          "#37525B",
+          "#382A41",
+          "#405F66",
+          "#4C7365",
+          "#58756A",
+          "#5A8165",
+          "#728A73",
+          "#776680",
+          "#7F9C6A",
+          "#88A469",
+          "#97A4A2",
+          "#9CAB92",
+          "#ADA9DB",
+          "#B2B2E6",
+          "#BABCDE",
+          "#C4BBF4",
+          "#C8B5E8",
+          "#C8B7F3",
+          "#CDC9EF",
+          "#D1BBF3",
+          "#DFBEED",
+          "#E6D2EB",
+          "#EFC9EA",
+          "#F2DEE6"
+        ]
+      }
+    },
+    "summer_day": {
+      "season": "summer",
+      "phase": "day",
+      "composite": "summer_day.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "summer_day.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#11272C",
+          "#12111A",
+          "#164644",
+          "#1C6156",
+          "#297E56",
+          "#2C1731",
+          "#2C192F",
+          "#2D8857",
+          "#2E1A32",
+          "#2E1B34",
+          "#2F1C34",
+          "#301B35",
+          "#48746E",
+          "#4A3E57",
+          "#4C9A5B",
+          "#6ED1AF",
+          "#70CEAF",
+          "#70D1A9",
+          "#71D1AF",
+          "#73B85C",
+          "#797F6F",
+          "#7DA668",
+          "#86DED8",
+          "#8AC152",
+          "#8CB9C5",
+          "#9ADDCA",
+          "#B5EFE2",
+          "#BBD374",
+          "#C4F0FC",
+          "#C8E4A5",
+          "#D7F5CB",
+          "#E3F9EE"
+        ]
+      }
+    },
+    "summer_dusk": {
+      "season": "summer",
+      "phase": "dusk",
+      "composite": "summer_dusk.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "summer_dusk.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#0E0914",
+          "#11131D",
+          "#17232B",
+          "#190C1F",
+          "#1A0B1E",
+          "#1A0C1F",
+          "#1A0C20",
+          "#1B0D22",
+          "#1C202A",
+          "#1D0D21",
+          "#1F3031",
+          "#282D33",
+          "#293E35",
+          "#293E39",
+          "#304837",
+          "#384F37",
+          "#442839",
+          "#565B3F",
+          "#674B51",
+          "#797444",
+          "#813E5A",
+          "#A64B69",
+          "#C2526E",
+          "#C34F66",
+          "#D2536C",
+          "#DB525F",
+          "#DC5962",
+          "#E0864A",
+          "#EF5D52",
+          "#EFAC5A",
+          "#F15F4C",
+          "#F77349"
+        ]
+      }
+    },
+    "summer_night": {
+      "season": "summer",
+      "phase": "night",
+      "composite": "summer_night.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "summer_night.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#060610",
+          "#081121",
+          "#092138",
+          "#0B2940",
+          "#0F0D1E",
+          "#0F0D20",
+          "#0F2F50",
+          "#100D21",
+          "#100D22",
+          "#100E21",
+          "#13132B",
+          "#143A49",
+          "#16325F",
+          "#16414C",
+          "#192E59",
+          "#193F6A",
+          "#1A3974",
+          "#1B3567",
+          "#1D3E79",
+          "#1E4181",
+          "#204487",
+          "#212346",
+          "#225066",
+          "#264E9A",
+          "#285096",
+          "#2A4577",
+          "#2B568D",
+          "#356780",
+          "#385C88",
+          "#40745B",
+          "#426D65",
+          "#6F976F"
+        ]
+      }
+    },
+    "autumn_dawn": {
+      "season": "autumn",
+      "phase": "dawn",
+      "composite": "autumn_dawn.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "autumn_dawn.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#1B0C13",
+          "#2C1923",
+          "#311920",
+          "#311927",
+          "#321A28",
+          "#351422",
+          "#3B1A28",
+          "#4C303F",
+          "#763F50",
+          "#7C2B3B",
+          "#815A68",
+          "#A37376",
+          "#A45C4A",
+          "#A5373B",
+          "#AC93C2",
+          "#AEADE4",
+          "#B0A6EE",
+          "#B5A4E3",
+          "#B9ADEA",
+          "#BB4639",
+          "#C2AFE8",
+          "#C45C39",
+          "#C6BCE7",
+          "#D2763E",
+          "#D9AFB8",
+          "#DF5E33",
+          "#E89562",
+          "#EE7934",
+          "#F0C1DE",
+          "#F0C6DE",
+          "#F0D6DA",
+          "#F19131"
+        ]
+      }
+    },
+    "autumn_day": {
+      "season": "autumn",
+      "phase": "day",
+      "composite": "autumn_day.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "autumn_day.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#1A0C17",
+          "#31182F",
+          "#32162F",
+          "#351832",
+          "#35192D",
+          "#361934",
+          "#37162F",
+          "#401931",
+          "#4F3549",
+          "#7C616A",
+          "#82D2FC",
+          "#87D5FC",
+          "#8ADBFC",
+          "#8C2237",
+          "#8C3543",
+          "#96ABDC",
+          "#A5E3FB",
+          "#BD643D",
+          "#BE2F37",
+          "#C1EEFC",
+          "#D04132",
+          "#D7E4C5",
+          "#D88A3D",
+          "#DAF3FA",
+          "#DBA969",
+          "#DBF6EE",
+          "#E65A2E",
+          "#F0722E",
+          "#F7832F",
+          "#F99932",
+          "#FBB43A",
+          "#FDC73C"
+        ]
+      }
+    },
+    "autumn_dusk": {
+      "season": "autumn",
+      "phase": "dusk",
+      "composite": "autumn_dusk.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "autumn_dusk.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#16070D",
+          "#280E1B",
+          "#2A0E1A",
+          "#2B0E1D",
+          "#2C0D1A",
+          "#2E0F1C",
+          "#34111E",
+          "#411A29",
+          "#5C1823",
+          "#602B37",
+          "#782D37",
+          "#7D1B28",
+          "#911E28",
+          "#982A2B",
+          "#98464A",
+          "#AE2A25",
+          "#B04A4F",
+          "#BA3624",
+          "#BB4E56",
+          "#BE4435",
+          "#C94322",
+          "#CB4C44",
+          "#D05B45",
+          "#D5472D",
+          "#D8503B",
+          "#E95E37",
+          "#EF6B3A",
+          "#F46437",
+          "#F56544",
+          "#F76C3C",
+          "#F77B3A",
+          "#FC9F4A"
+        ]
+      }
+    },
+    "autumn_night": {
+      "season": "autumn",
+      "phase": "night",
+      "composite": "autumn_night.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "autumn_night.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#08050F",
+          "#0D0817",
+          "#10091C",
+          "#100A1C",
+          "#101D41",
+          "#112451",
+          "#12091C",
+          "#120A1C",
+          "#12244E",
+          "#130B1F",
+          "#132550",
+          "#132552",
+          "#142754",
+          "#151D40",
+          "#160F26",
+          "#172C59",
+          "#182F5D",
+          "#1B3364",
+          "#1F3A6C",
+          "#272B52",
+          "#28162F",
+          "#291F3F",
+          "#2A4776",
+          "#3A3C5B",
+          "#4C192D",
+          "#632A2F",
+          "#741D28",
+          "#962B26",
+          "#9C5D43",
+          "#9E3A26",
+          "#A64A2B",
+          "#CE8548"
+        ]
+      }
+    },
+    "winter_dawn": {
+      "season": "winter",
+      "phase": "dawn",
+      "composite": "winter_dawn.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "winter_dawn.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#1E1326",
+          "#281931",
+          "#291A32",
+          "#2B1930",
+          "#363153",
+          "#534068",
+          "#615987",
+          "#7477AD",
+          "#858CCE",
+          "#8E93E3",
+          "#9094E6",
+          "#9298E3",
+          "#9DA3E5",
+          "#A194D5",
+          "#A19DE6",
+          "#A3A9E9",
+          "#A6AEED",
+          "#AEA4E9",
+          "#AEAEEF",
+          "#B0B9F4",
+          "#B0BFFB",
+          "#B8C7FA",
+          "#C1AFEC",
+          "#C1B8F3",
+          "#C5CDF9",
+          "#CDB4E9",
+          "#D0DBFC",
+          "#D3DDFB",
+          "#D7E1FC",
+          "#E1B7E0",
+          "#E6C8E0",
+          "#ECF1FC"
+        ]
+      }
+    },
+    "winter_day": {
+      "season": "winter",
+      "phase": "day",
+      "composite": "winter_day.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "winter_day.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#1C1221",
+          "#28192F",
+          "#281A2F",
+          "#291A30",
+          "#2B1B30",
+          "#2F2036",
+          "#423E59",
+          "#5A425B",
+          "#6B6376",
+          "#7083AC",
+          "#7ECBFD",
+          "#81CDFD",
+          "#87B0EA",
+          "#99D5FD",
+          "#9FE1FC",
+          "#A0BEF5",
+          "#A1ABCC",
+          "#A3CAF8",
+          "#ADD6FC",
+          "#AEE0FB",
+          "#C0DCF7",
+          "#C1DEFD",
+          "#C6E6FC",
+          "#CBF2F6",
+          "#D4E0FC",
+          "#D6E7FA",
+          "#D7F7F4",
+          "#DAEFFB",
+          "#E3F7F7",
+          "#E4F2FB",
+          "#EAF7FA",
+          "#F8FCFB"
+        ]
+      }
+    },
+    "winter_dusk": {
+      "season": "winter",
+      "phase": "dusk",
+      "composite": "winter_dusk.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "winter_dusk.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#1E162D",
+          "#281E38",
+          "#2A1D37",
+          "#2A1E37",
+          "#2A1E39",
+          "#2D1F3B",
+          "#332546",
+          "#453762",
+          "#613F65",
+          "#7A4F7A",
+          "#8D5C8C",
+          "#9C74A2",
+          "#A6AAE5",
+          "#B25F85",
+          "#B4BAF2",
+          "#B8BBF0",
+          "#BEC2F3",
+          "#CC5C7A",
+          "#CD5878",
+          "#CE5B7A",
+          "#D36A7F",
+          "#D55E78",
+          "#DED1E6",
+          "#E66771",
+          "#E87072",
+          "#F06E6A",
+          "#F17368",
+          "#F3E0EB",
+          "#F47A6A",
+          "#F49F75",
+          "#F6E6EE",
+          "#F98963"
+        ]
+      }
+    },
+    "winter_night": {
+      "season": "winter",
+      "phase": "night",
+      "composite": "winter_night.png",
+      "layers": [
+        {
+          "name": "composite",
+          "file": "winter_night.png",
+          "z": 0,
+          "parallax": 0.0,
+          "opaque": true
+        }
+      ],
+      "palette": {
+        "outlineReserved": "#2C2438",
+        "colors": [
+          "#0E0D1E",
+          "#121223",
+          "#121229",
+          "#121A34",
+          "#151227",
+          "#151328",
+          "#18162E",
+          "#1A3160",
+          "#1C305B",
+          "#1C3363",
+          "#1D3463",
+          "#1D3465",
+          "#1D3567",
+          "#1D376C",
+          "#1E3668",
+          "#22254D",
+          "#25437C",
+          "#254987",
+          "#284C8A",
+          "#2A3562",
+          "#354E7D",
+          "#3F5077",
+          "#415D8F",
+          "#4F6693",
+          "#6280C2",
+          "#809ADB",
+          "#8AABF7",
+          "#94B1F4",
+          "#ABC5F9",
+          "#B1C8F8",
+          "#B9CEF8",
+          "#DEE7F0"
+        ]
+      }
+    }
+  },
+  "notes": [
+    "16 variant 가 같은 장소다. groundTop/petAnchor 를 공유해야 계절이 바뀔 때 펫 발 높이가 튀지 않는다.",
+    "지면 밴드 45px 로 bg_check 의 캔버스 1/8(67px) 기준에 미달한다. 실제 화면에서는 펫이 잔디 위에 자연스럽게 섰다.",
+    "레이어 미분리 — parallax 와 애니메이션 프레임을 아직 쓰지 못한다."
+  ]
+}

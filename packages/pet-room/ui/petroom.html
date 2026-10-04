@@ -17,17 +17,26 @@
 
 <div id="room">
   <!--
-    장면과 옆 패널을 겹치지 않게 나란히 둔다. 패널을 장면 위에 얹으면 그 아래를 배회하는
+    장면과 패널을 겹치지 않게 위아래로 둔다. 패널을 장면 위에 얹으면 그 아래를 배회하는
     펫이 가려진다 — design.md §7이 "상세 패널은 펫 이동을 막지 않는 자리에" 라고 정한 것이
     정확히 이 경우다.
   -->
   <div id="scene">
-    <!-- 배경 레이어. 개수와 순서는 배경 json이 정하므로 JS가 채운다. -->
-    <div id="layers"></div>
+    <!--
+      창은 장면의 일부만 보여 준다(`scene.ts`의 `viewportOf`). `#stage`는 배경 원본 크기를
+      그대로 갖고 음수 위치로 밀리므로, 레이어와 캔버스는 계속 **배경 좌표계**에서 산다.
+      좌표계를 창 기준으로 바꾸면 배회·클릭 판정·반딧불이가 전부 따라 바뀐다. 크기와
+      위치는 배경마다 다르므로 JS가 넣는다.
+    -->
+    <div id="stage">
+      <!-- 배경 레이어. 개수와 순서는 배경 json이 정하므로 JS가 채운다. -->
+      <div id="layers"></div>
 
-    <!-- 펫은 전 레이어 위에 그린다. `petroom.css`의 주석 참조. -->
-    <canvas id="pets"></canvas>
+      <!-- 펫은 전 레이어 위에 그린다. `petroom.css`의 주석 참조. -->
+      <canvas id="pets"></canvas>
+    </div>
 
+    <!-- 오류는 잘린 장면이 아니라 보이는 영역에 붙는다. -->
     <p id="error" class="pixel-panel" hidden></p>
   </div>
 
@@ -35,28 +44,66 @@
     <h1 id="title">🌲 펫룸</h1>
     <p id="phase"></p>
 
+    <!-- 뽑기로 건너가는 길. 창을 만드는 일은 main 이 한다(`room:openGacha`). -->
+    <button id="open-gacha" class="pixel-button" type="button">✨ 펫 뽑기</button>
+
     <div id="detail" class="pixel-panel" hidden>
       <div id="detail-head">
         <h2 id="detail-name"></h2>
         <button id="detail-close" type="button" aria-label="상세 닫기">✕</button>
       </div>
 
-      <span id="detail-grade" class="grade-badge"></span>
+      <!--
+        180px 하단 패널에는 세로로 쌓을 높이가 없다. 이름 아래를 좌우로 갈라 왼쪽에 등급·
+        레벨·XP, 오른쪽에 안내와 버튼을 둔다. 격자로 행을 걸치면 걸친 항목이 행 높이를
+        부풀려(실측: 레벨 한 줄이 78px) 오히려 넘친다.
+      -->
+      <div id="detail-body">
+        <div id="detail-info">
+          <span id="detail-grade" class="grade-badge"></span>
+          <p id="detail-level"></p>
 
-      <p id="detail-level"></p>
+          <div class="xp-row">
+            <div class="xp-bar"><div id="detail-xp" class="xp-bar__fill"></div></div>
+            <span id="detail-xp-label" class="xp-label"></span>
+          </div>
+        </div>
 
-      <div class="xp-row">
-        <div class="xp-bar"><div id="detail-xp" class="xp-bar__fill"></div></div>
-        <span id="detail-xp-label" class="xp-label"></span>
-      </div>
-
-      <div id="detail-actions">
-        <p id="detail-note"></p>
-        <button id="detail-activate" class="pixel-button" type="button"></button>
+        <div id="detail-actions">
+          <p id="detail-note"></p>
+          <button id="detail-activate" class="pixel-button" type="button"></button>
+        </div>
       </div>
     </div>
 
     <p id="hint">펫을 누르면 상세가 열립니다.</p>
+
+    <!--
+      계절·시간대 미리보기.
+
+      배경 16장을 실제 날짜가 오기를 기다리지 않고 확인하기 위한 것이다. 고르면
+      그 장면에 고정되고, "지금"을 누르면 시각을 따르는 원래 동작으로 돌아간다.
+      고정된 동안에는 main이 보내는 배경 교체 push를 무시한다(`petroom.js` 참조).
+    -->
+    <div id="preview" class="pixel-panel">
+      <label for="preview-season">계절</label>
+      <select id="preview-season">
+        <option value="spring">봄</option>
+        <option value="summer">여름</option>
+        <option value="autumn">가을</option>
+        <option value="winter">겨울</option>
+      </select>
+
+      <label for="preview-phase">시간</label>
+      <select id="preview-phase">
+        <option value="dawn">새벽</option>
+        <option value="day">낮</option>
+        <option value="dusk">노을</option>
+        <option value="night">밤</option>
+      </select>
+
+      <button id="preview-now" class="pixel-button" type="button">지금</button>
+    </div>
   </aside>
 </div>
 

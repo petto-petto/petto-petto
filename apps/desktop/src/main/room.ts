@@ -21,10 +21,15 @@ import type { Clock } from '@pet/core';
 import {
   backgroundAt,
   fromSnapshot,
+  growthSeeds,
+  isSameBackground,
   roomPetViews,
   toSnapshot,
   withActivePet,
+  withPetGrowth,
   type BackgroundChoice,
+  type PetGrowth,
+  type PetGrowthSeed,
   type RoomCollection,
   type RoomPetView,
   type RoomStore,
@@ -36,6 +41,8 @@ import type { RoomCollectionPort } from './collection.ts';
 export interface RoomHost {
   /** 펫룸 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
   showRoom(): void;
+  /** 뽑기 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
+  showGacha(): void;
   /** 열려 있는 **모든** 창에 같은 이벤트를 보낸다. 발신 창도 포함이다. */
   broadcast(channel: string, payload: unknown): void;
 }
@@ -71,7 +78,7 @@ export function loadRoomCollection(store: RoomStore): RoomCollection {
  */
 export class RoomState {
   #collection: RoomCollection;
-  /** 마지막으로 알린 배경. 낮↔밤이 실제로 넘어갔을 때만 브로드캐스트하기 위해 기억한다. */
+  /** 마지막으로 알린 배경. 계절이나 시간대가 실제로 넘어갔을 때만 브로드캐스트하려고 기억한다. */
   #background: BackgroundChoice;
 
   readonly store: RoomStore;
@@ -120,14 +127,43 @@ export class RoomState {
     return active;
   }
 
+  /** 성장 저장소가 개체를 받아들이는 데 필요한 정보. */
+  growthSeeds(): PetGrowthSeed[] {
+    return growthSeeds(this.#collection);
+  }
+
+  /**
+   * 성장 저장소가 말하는 레벨·진화 단계를 명부에 반영하고, 달라졌으면 알린다.
+   *
+   * 레벨과 진화 단계의 정본은 성장 저장소다(`PetGrowthRepository` 참조). 여기서 하는 일은
+   * 그 값을 명부에 **투영**하는 것뿐이라, 이 메서드가 값을 만들어 내지 않는다. 명부가 자기
+   * 레벨을 따로 올리면 프로필(명부에서 읽는다)과 오버레이(성장 저장소에서 읽는다)가 서로
+   * 다른 숫자를 말하게 된다.
+   *
+   * 성장은 활성 펫에게만 적용되므로 알릴 값도 활성 펫 뷰 하나면 충분하다. 실제로 바뀐 게
+   * 없으면 브로드캐스트하지 않는다 — 성장 저장은 자주 일어나고, 매번 전 창을 깨울 이유가
+   * 없다.
+   */
+  applyGrowth(growth: ReadonlyMap<string, PetGrowth>, host: RoomHost): void {
+    const before = this.activeView();
+    this.#collection = withPetGrowth(this.#collection, growth);
+    this.port.update(this.#collection);
+    this.persist();
+
+    const after = this.activeView();
+    if (after.level === before.level && after.stage === before.stage) return;
+    host.broadcast('room:activePetChanged', after);
+  }
+
   /**
    * 시각이 넘어갔으면 배경을 바꾸고 알린다.
    *
-   * 앱의 1분 주기 타이머에 얹힌다. 창을 다시 열지 않아도 18시에 밤이 된다.
+   * 앱의 1분 주기 타이머에 얹힌다. 창을 다시 열지 않아도 20시가 되면 밤 배경으로 넘어가고,
+   * 12월 1일이 되면 겨울로 바뀐다.
    */
   refreshBackground(host: RoomHost): void {
     const next = backgroundAt(this.clock.now());
-    if (next.id === this.#background.id) return;
+    if (isSameBackground(next, this.#background)) return;
     this.#background = next;
     host.broadcast('room:backgroundChanged', next);
   }
@@ -152,6 +188,10 @@ export function mountRoom(state: RoomState, host: RoomHost): void {
   ipcMain.handle('room:scene', () => state.scene());
   ipcMain.handle('room:open', () => {
     host.showRoom();
+  });
+  // 펫룸에서 뽑기로 건너가는 길. 창을 만드는 일은 앱이 하고, room 은 요청만 한다.
+  ipcMain.handle('room:openGacha', () => {
+    host.showGacha();
   });
   ipcMain.handle('room:setActivePet', (_event, ownedPetId: unknown) =>
     state.setActivePet(ownedPetIdFrom(ownedPetId), host),

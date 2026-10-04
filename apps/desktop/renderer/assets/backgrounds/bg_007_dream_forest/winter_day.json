@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "winter_day",
+  "name": "동화 숲 (겨울 낮)",
+  "season": "winter",
+  "phase": "day",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "winter_day.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "winter_day.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#1A1320",
+      "#29192E",
+      "#291A30",
+      "#2C1C32",
+      "#403149",
+      "#494C68",
+      "#5F4860",
+      "#6A7CA6",
+      "#6E6474",
+      "#7EA3DD",
+      "#96C2FB",
+      "#9ACCFB",
+      "#9EA1B7",
+      "#A0BAF1",
+      "#A4CAF9",
+      "#A8DAFC",
+      "#B2E1FB",
+      "#B3CEF4",
+      "#B4DAFC",
+      "#C3E8FB",
+      "#C4DDFB",
+      "#CBE1FC",
+      "#D1EFF9",
+      "#D5E0FC",
+      "#D8E8FA",
+      "#DBF0FC",
+      "#DDF8F4",
+      "#E4F2FB",
+      "#E4F4FC",
+      "#E9F6FC",
+      "#F1F8F8",
+      "#F7FCFA"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

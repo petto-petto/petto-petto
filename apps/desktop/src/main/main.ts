@@ -10,7 +10,7 @@ import { createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
 import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
-import type { RoomSnapshot } from '@pet/room';
+import type { StoredRoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
 import type { PetClient, TokenClient } from '@pet/client';
@@ -28,7 +28,7 @@ import { mountMeta } from './mount.ts';
 import { CcusageCollector, resolveCcusageBinary } from './usage/ccusage-collector.ts';
 import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
 import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
-import { registerOverlayGrowthIpc } from './ipc/overlay-growth.ts';
+import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
@@ -152,7 +152,14 @@ function mountOverlayWindowIpc(): void {
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
-const roomHost: RoomHost = { showRoom, broadcast };
+const roomHost: RoomHost = {
+  showRoom,
+  // `createGachaWindow`는 창을 돌려주지만 room 은 창을 알 필요가 없다.
+  showGacha: () => {
+    createGachaWindow();
+  },
+  broadcast,
+};
 
 const shouldOpenGachaPrototype = (): boolean => process.env['GACHA_PROTO_OPEN'] !== undefined;
 const shouldOpenCombinePrototype = (): boolean => process.env['COMBINE_PROTO_OPEN'] !== undefined;
@@ -254,7 +261,7 @@ app.setName('tamagotchi-pet');
 app.whenReady().then(async () => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
-  const roomStore = new JsonFileStore<RoomSnapshot>(directory, ROOM_FILE_NAME);
+  const roomStore = new JsonFileStore<StoredRoomSnapshot>(directory, ROOM_FILE_NAME);
   const databasePath = join(directory, 'petto.sqlite');
   const database = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
   appDatabase = database;
@@ -272,7 +279,6 @@ app.whenReady().then(async () => {
     ],
   });
   growthRepository.migrateLegacyData();
-  registerOverlayGrowthIpc(growthRepository);
   console.log(`[STORE] 저장 위치 ${databasePath}`);
 
   // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
@@ -311,6 +317,29 @@ app.whenReady().then(async () => {
     createUsageCollector(),
   );
   room = new RoomState(roomStore, systemClock, collection, ownedPets);
+
+  // 명부의 개체가 모두 성장 행을 갖게 하고, 그 값을 명부에 투영한다. 이게 없으면 프로필은
+  // 명부의 레벨을, 오버레이는 성장 저장소의 레벨을 말해 두 화면이 갈라진다.
+  //
+  // 실패해도 앱은 뜬다. 이 줄은 창·IPC·트레이보다 **앞**이라, 여기서 던지면 사용자는 창이
+  // 하나도 없는 죽은 프로세스만 보게 된다 — 손댄 저장 파일 하나가 앱을 통째로 못 쓰게
+  // 만드는 것이 저장 파일을 방어하는 이유 그 자체였다. 성장이 안 붙으면 명부의 값으로
+  // 그리면 되고, 다음 실행에서 다시 시도된다.
+  try {
+    room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
+  } catch (error) {
+    console.log(`[GROWTH] 성장 기록을 명부에 맞추지 못했습니다 — ${String(error)}`);
+  }
+
+  const growthHost: OverlayGrowthHost = {
+    growthChanged: () => room?.applyGrowth(growthRepository.growth(), roomHost),
+    reseed: () => {
+      if (!room) return;
+      room.applyGrowth(growthRepository.resetGrowth(room.growthSeeds()), roomHost);
+    },
+  };
+  registerOverlayGrowthIpc(growthRepository, growthHost);
+
   mountMeta(state);
   mountRoom(room, roomHost);
   mountOverlayWindowIpc();

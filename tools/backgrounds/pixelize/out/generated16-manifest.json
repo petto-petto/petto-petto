@@ -1,0 +1,123 @@
+{
+  "date": "2026-09-16",
+  "generator": "built-in image_gen",
+  "reference": "../control/summer_source.png",
+  "prompts": "../control/generated-prompts.json",
+  "requestedSize": [
+    1536,
+    768
+  ],
+  "actualSize": [
+    1774,
+    887
+  ],
+  "rawDirectory": "../in",
+  "paletteDirectory": "generated16",
+  "paletteCommand": ".venv/bin/python tools/backgrounds/pixelize/repalette.py INPUT OUTPUT --no-accent --clean 6",
+  "paletteCandidates": 31,
+  "notes": [
+    "22 colors in prompts.md describes the older summer output, not the current repalette.py palette contract.",
+    "The original 36-color bg_005 palette has 5 accent colors excluded by --no-accent.",
+    "Palette mapping changes seasonal and time-of-day hues; keep originals for further processing.",
+    "autumn_dusk uses 8 colors and fails check_dots minimum of 16. The accent experiment uses 10 and also fails.",
+    "Generated structure is similar, not pixel-registered. No ControlNet was used."
+  ],
+  "assets": [
+    {
+      "id": "spring_dawn",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-d80cba03-638f-4450-af1e-8ce55b841d52.png",
+      "raw": "../in/spring_dawn.png",
+      "palette": "generated16/spring_dawn.png"
+    },
+    {
+      "id": "spring_day",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-689ee3b1-f21a-4f97-9650-950cbd740b48.png",
+      "raw": "../in/spring_day.png",
+      "palette": "generated16/spring_day.png"
+    },
+    {
+      "id": "spring_dusk",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-a74db286-8171-45e6-b8ab-465709c58cb0.png",
+      "raw": "../in/spring_dusk.png",
+      "palette": "generated16/spring_dusk.png"
+    },
+    {
+      "id": "spring_night",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-0d4b7aa3-c1e2-4d31-97d9-fe50c5c20ada.png",
+      "raw": "../in/spring_night.png",
+      "palette": "generated16/spring_night.png"
+    },
+    {
+      "id": "summer_dawn",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-a7d0cf06-091b-4793-a12e-a50c4b2c4f12.png",
+      "raw": "../in/summer_dawn.png",
+      "palette": "generated16/summer_dawn.png"
+    },
+    {
+      "id": "summer_day",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-08894f82-a24d-41c7-a2c8-4074eaba645c.png",
+      "raw": "../in/summer_day.png",
+      "palette": "generated16/summer_day.png"
+    },
+    {
+      "id": "summer_dusk",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-44cea1fa-96c6-4e76-8d38-efbdd29f653a.png",
+      "raw": "../in/summer_dusk.png",
+      "palette": "generated16/summer_dusk.png"
+    },
+    {
+      "id": "summer_night",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-6e9a5dff-a0a7-4985-9d11-5d450dd34174.png",
+      "raw": "../in/summer_night.png",
+      "palette": "generated16/summer_night.png"
+    },
+    {
+      "id": "autumn_dawn",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-6dbc5c30-472d-4b41-8476-374e0e45f2bd.png",
+      "raw": "../in/autumn_dawn.png",
+      "palette": "generated16/autumn_dawn.png"
+    },
+    {
+      "id": "autumn_day",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-d6f4922f-e550-4903-b545-718b2c65921b.png",
+      "raw": "../in/autumn_day.png",
+      "palette": "generated16/autumn_day.png"
+    },
+    {
+      "id": "autumn_dusk",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-072d290b-f9dd-49c6-b3c4-7b5f69db24e3.png",
+      "raw": "../in/autumn_dusk.png",
+      "palette": "generated16/autumn_dusk.png"
+    },
+    {
+      "id": "autumn_night",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-ee516b91-5e1d-45a9-bbdf-08581ec76dd7.png",
+      "raw": "../in/autumn_night.png",
+      "palette": "generated16/autumn_night.png"
+    },
+    {
+      "id": "winter_dawn",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-250aa866-8ab2-4255-9152-28fc80d53633.png",
+      "raw": "../in/winter_dawn.png",
+      "palette": "generated16/winter_dawn.png"
+    },
+    {
+      "id": "winter_day",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-e4a66587-fb5c-45c6-8cc4-c1b0eb2f5e01.png",
+      "raw": "../in/winter_day.png",
+      "palette": "generated16/winter_day.png"
+    },
+    {
+      "id": "winter_dusk",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-1caa1c2e-0152-4ca1-b376-bf366bd81497.png",
+      "raw": "../in/winter_dusk.png",
+      "palette": "generated16/winter_dusk.png"
+    },
+    {
+      "id": "winter_night",
+      "source": "/Users/sowonpark/.codex/generated_images/01a0aa28-4d24-7ff1-977b-37f8aaeefbc3/exec-87d57305-cca5-46e4-b484-a6910fb0a576.png",
+      "raw": "../in/winter_night.png",
+      "palette": "generated16/winter_night.png"
+    }
+  ]
+}

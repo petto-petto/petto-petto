@@ -4,8 +4,10 @@
  * 팀 디자인 가이드(`design.md`)를 따른다 — 둥근 모서리 없음, 블러 없는 2px 그림자,
  * 정보는 양피지 패널, 조작은 나무 버튼, 선택은 금색.
  *
- * 배경은 960x360 원본을 1배로 깐다. 픽셀 아트는 정수 배율만 허용되므로(가이드 §4) 창
- * 크기를 고정하고 늘이지 않는다. 상세 패널은 그 옆 칸에 두어 장면을 덮지 않는다.
+ * 창은 뽑기·합성과 같은 640x420이다. 배경 원본은 960x360인데, 픽셀 아트는 정수 배율만
+ * 허용되므로(가이드 §4) 줄여 그리지 않고 1배로 두고 **잘라서** 640x240만 보여 준다.
+ * 남은 180px은 하단 패널이 쓴다 — 상세 패널을 장면 위에 얹지 않는 이유는 `#side` 주석에
+ * 있다. 잘라내는 규칙은 `scene.ts`의 `viewportOf`가 갖는다.
  */
 
 :root {
@@ -75,30 +77,86 @@ body {
 
 #room {
   display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
+/*
+ * 보이는 영역. 배경보다 좁고 낮아서 `overflow: hidden`이 자르는 일을 한다.
+ */
 #scene {
   position: relative;
   flex: none;
-  width: 960px;
-  height: 360px;
+  width: 640px;
+  height: 240px;
   overflow: hidden;
 }
 
-/* 옆 칸. 어두운 나무 표면 위에 양피지 패널을 얹는다(design.md §1). */
+/*
+ * 배경 원본 크기를 그대로 갖고 음수 위치로 밀린다. 크기와 위치는 배경마다 달라서 JS가
+ * 넣는다 — 여기 숫자를 박으면 배경이 바뀔 때 어긋난다.
+ */
+#stage {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/*
+ * 하단 패널. 어두운 나무 표면 위에 양피지 패널을 얹는다(design.md §1).
+ *
+ * 장면 **아래**에 둔다. 장면 위에 얹으면 그 아래를 배회하는 펫이 가려진다 — design.md §7이
+ * "상세 패널은 펫 이동을 막지 않는 자리에"라고 정한 것이 정확히 이 경우다. 예전에는 옆
+ * 칸이었지만 창이 640으로 좁아져 옆에 264px을 둘 자리가 없다.
+ *
+ * 높이 180px은 합성 창과 같은 값이다(`2026-09-08-compact-feature-windows.md`).
+ * 세 칸으로 나눈다 — 제목·안내 / 상세 / 미리보기.
+ */
 #side {
-  flex: 1;
-  min-width: 0;
-  padding: var(--space-7);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  flex: none;
+  height: 180px;
+  padding: var(--space-3) var(--space-4);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr) auto;
+  grid-template-rows: auto auto auto 1fr;
+  gap: var(--space-2) var(--space-4);
   background: var(--wood-surface);
-  border-left: 3px solid var(--wood-border);
-  box-shadow: inset 3px 0 0 var(--wood-highlight);
+  border-top: 3px solid var(--wood-border);
+  box-shadow: inset 0 3px 0 var(--wood-highlight);
+}
+
+#title {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+#phase {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+#open-gacha {
+  grid-column: 1;
+  grid-row: 3;
+  /* 안내 문구보다 먼저 눈에 들도록 위쪽에 붙인다. */
+  align-self: start;
+}
+
+#hint {
+  grid-column: 1;
+  grid-row: 4;
+}
+
+#detail {
+  grid-column: 2;
+  grid-row: 1 / -1;
+}
+
+#preview {
+  grid-column: 3;
+  grid-row: 1 / -1;
 }
 
 #title {
@@ -197,13 +255,35 @@ body {
 
 /* ---------- 상세 패널 ---------- */
 
+/*
+ * 상세 패널.
+ *
+ * 세로로만 쌓으면 180px 하단 패널을 넘어 "오버레이로 지정" 버튼이 창 밖으로 잘린다
+ * (실측: 필요 192px / 가용 151px). 이름 아래를 좌우로 갈라 넓이를 쓴다.
+ */
 #detail {
-  flex: 1;
   min-height: 0;
-  padding: var(--space-6);
+  /* 옆 칸 시절의 여백은 이 높이에서 쓸 수 없다. */
+  padding: var(--space-2) var(--space-3);
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-2);
+  overflow: hidden;
+}
+
+#detail-body {
+  min-height: 0;
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+#detail-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 #detail-head {
@@ -216,7 +296,7 @@ body {
 #detail-name {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 15px;
+  font-size: 13px;
 }
 
 /* 상세가 열리면 안내 문구는 자리를 비켜 준다. */
@@ -306,16 +386,23 @@ body {
 }
 
 #detail-actions {
-  margin-top: auto;
+  flex: none;
+  width: 104px;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 #detail-note {
   margin: 0;
   font-size: 10px;
-  line-height: 1.5;
+  line-height: 1.4;
+}
+
+/* 하단 패널 높이에 맞춘 버튼. 공용 `.pixel-button` 의 여백은 여기서 과하다. */
+#detail-activate {
+  padding: var(--space-2) var(--space-1);
+  font-size: 11px;
 }
 
 /* ---------- 오류 ---------- */
@@ -338,4 +425,43 @@ body {
   .pixel-button:active:not(:disabled) {
     transform: none;
   }
+}
+
+/*
+ * 계절·시간대 미리보기.
+ *
+ * 하단 패널의 오른쪽 칸에 둔다. 라벨과 선택기를 두 칸 격자로 붙여 높이를 아낀다.
+ */
+#preview {
+  align-self: start;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  font-family: var(--font-body);
+  font-size: 11px;
+}
+
+#preview label {
+  color: var(--ink);
+}
+
+#preview select {
+  /* 도트 화면이라 기본 크롬 위젯이 튄다. 테두리와 배경을 패널과 맞춘다. */
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 2px solid var(--wood-border);
+  padding: 2px 4px;
+}
+
+#preview select:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+#preview #preview-now {
+  grid-column: 1 / -1;
+  font-size: 11px;
 }

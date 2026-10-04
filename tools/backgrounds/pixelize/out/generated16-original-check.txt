@@ -1,0 +1,116 @@
+비교용 실측값
+  bg_005 (프리미티브)     36색 / 중간톤 4.4% / 고립 2.9% / 1px
+  dream_forest_ref.jpg  40,113색 / 중간톤 77.7% / 고립 25.7%
+  G_clean6 (픽셀화 후)    22색 / 중간톤 0.0% / 고립 1.3% / 1px
+
+tools/backgrounds/pixelize/in/autumn_dawn.png  1774x887
+  [FAIL] 색 수                    427,628        (도트 기준 16~64)
+  [FAIL] 중간톤                    89.4%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   74.5%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/autumn_day.png  1774x887
+  [FAIL] 색 수                    390,140        (도트 기준 16~64)
+  [FAIL] 중간톤                    89.4%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   63.7%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/autumn_dusk.png  1774x887
+  [FAIL] 색 수                    258,349        (도트 기준 16~64)
+  [FAIL] 중간톤                    90.6%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   71.4%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/autumn_night.png  1774x887
+  [FAIL] 색 수                    245,713        (도트 기준 16~64)
+  [FAIL] 중간톤                    86.3%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   69.5%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/spring_dawn.png  1774x887
+  [FAIL] 색 수                    441,327        (도트 기준 16~64)
+  [FAIL] 중간톤                    93.8%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   79.4%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/spring_day.png  1774x887
+  [FAIL] 색 수                    423,366        (도트 기준 16~64)
+  [FAIL] 중간톤                    89.3%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   70.2%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/spring_dusk.png  1774x887
+  [FAIL] 색 수                    339,133        (도트 기준 16~64)
+  [FAIL] 중간톤                    90.4%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   70.9%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/spring_night.png  1774x887
+  [FAIL] 색 수                    245,384        (도트 기준 16~64)
+  [FAIL] 중간톤                    84.6%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   57.8%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/summer_dawn.png  1774x887
+  [FAIL] 색 수                    242,803        (도트 기준 16~64)
+  [FAIL] 중간톤                    90.1%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   66.5%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/summer_day.png  1774x887
+  [FAIL] 색 수                    329,632        (도트 기준 16~64)
+  [FAIL] 중간톤                    88.7%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   61.1%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/summer_dusk.png  1774x887
+  [FAIL] 색 수                    228,134        (도트 기준 16~64)
+  [FAIL] 중간톤                    88.4%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   64.3%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/summer_night.png  1774x887
+  [FAIL] 색 수                    139,244        (도트 기준 16~64)
+  [FAIL] 중간톤                    83.2%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   49.9%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/winter_dawn.png  1774x887
+  [FAIL] 색 수                    217,800        (도트 기준 16~64)
+  [FAIL] 중간톤                    89.7%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   66.1%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/winter_day.png  1774x887
+  [FAIL] 색 수                    209,312        (도트 기준 16~64)
+  [FAIL] 중간톤                    86.7%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   56.3%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/winter_dusk.png  1774x887
+  [FAIL] 색 수                    247,760        (도트 기준 16~64)
+  [FAIL] 중간톤                    90.1%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   66.4%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.
+
+tools/backgrounds/pixelize/in/winter_night.png  1774x887
+  [FAIL] 색 수                    171,959        (도트 기준 16~64)
+  [FAIL] 중간톤                    84.7%          (<= 10%, 상위 32색 밖)
+  [FAIL] 고립픽셀                   61.1%          (<= 6%)
+  [ok  ] 블록 크기                  1px            (1이면 네이티브, 2 이상은 업스케일본)
+  => 생성 이미지 그대로다. repalette.py 로 팔레트를 고정해야 한다.

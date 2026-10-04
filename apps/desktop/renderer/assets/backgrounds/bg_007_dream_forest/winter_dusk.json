@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "winter_dusk",
+  "name": "동화 숲 (겨울 노을)",
+  "season": "winter",
+  "phase": "dusk",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "winter_dusk.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "winter_dusk.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#1E172E",
+      "#281F3A",
+      "#291D38",
+      "#2A1E37",
+      "#2A1E39",
+      "#31213F",
+      "#3C2B51",
+      "#493762",
+      "#504474",
+      "#6A456C",
+      "#7E5482",
+      "#8F5F8F",
+      "#928ECB",
+      "#A9618B",
+      "#B3B9F2",
+      "#B6BBF2",
+      "#BEBEEE",
+      "#C4607F",
+      "#CE6780",
+      "#D1CCF0",
+      "#D35E79",
+      "#D57B89",
+      "#E86970",
+      "#EE6E6D",
+      "#EF766E",
+      "#F1DCE2",
+      "#F47569",
+      "#F6E3EC",
+      "#F77F69",
+      "#F7E7EE",
+      "#FA8B60",
+      "#FB9A67"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}

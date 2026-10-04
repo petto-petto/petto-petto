@@ -231,7 +231,7 @@ test('기존 기능의 테이블과 같은 파일에 공존한다', async () => 
       .prepare('SELECT DISTINCT scope FROM schema_migrations ORDER BY scope')
       .all()
       .map((row) => row.scope);
-    assert.deepEqual(scopes, ['currency', 'overlay-growth', 'pet', 'token']);
+    assert.deepEqual(scopes, ['currency', 'meta', 'overlay-growth', 'pet', 'token']);
   } finally {
     database.close();
     rmSync(directory, { recursive: true, force: true });

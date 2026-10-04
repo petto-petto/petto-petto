@@ -20,7 +20,7 @@
  */
 
 import type { CollectionPort, PetSummary, TrophyPlacement } from '@pet/meta';
-import { activePet, speciesOf, type RoomCollection } from '@pet/room';
+import { activePet, speciesOf, stageForEvolution, type RoomCollection } from '@pet/room';
 
 /**
  * 명부를 들고 meta의 조회에 답한다.
@@ -54,6 +54,8 @@ export class RoomCollectionPort implements CollectionPort {
       rarity: species.rarity,
       // 스프라이트 식별자는 slug다. 실제 경로는 그리는 쪽이 조립한다.
       sprite: species.slug,
+      // 레벨이 아니라 진화 횟수가 모습을 정한다. 오버레이·펫룸과 같은 규칙이다.
+      stage: stageForEvolution(pet.evolutionStage),
     };
   }
 

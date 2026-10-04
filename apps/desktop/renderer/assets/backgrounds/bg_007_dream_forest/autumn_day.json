@@ -1,0 +1,75 @@
+{
+  "id": "bg_007",
+  "variant": "autumn_day",
+  "name": "동화 숲 (가을 낮)",
+  "season": "autumn",
+  "phase": "day",
+  "kind": "outdoor",
+  "layout": "ground",
+  "source": "generated(codex-astra) -> tools/backgrounds/pixelize/quantize.py 32색",
+  "width": 960,
+  "height": 360,
+  "seamless": false,
+  "horizon": 205,
+  "groundTop": 310,
+  "petAnchor": {
+    "x": 448,
+    "y": 246,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "autumn_day.png",
+  "layers": [
+    {
+      "name": "composite",
+      "file": "autumn_day.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#1B0D18",
+      "#31182E",
+      "#35162F",
+      "#351832",
+      "#35192D",
+      "#361A34",
+      "#421931",
+      "#4D273B",
+      "#5C495F",
+      "#7F5D64",
+      "#88D6FC",
+      "#8E2338",
+      "#913341",
+      "#979FC4",
+      "#9DDBFA",
+      "#B7ECFD",
+      "#B82D39",
+      "#B85E3C",
+      "#C4EDFC",
+      "#CB3D33",
+      "#D3EFFC",
+      "#D4853A",
+      "#D9A461",
+      "#E1542F",
+      "#EAFAF1",
+      "#EC6A2E",
+      "#F47A2D",
+      "#F7882F",
+      "#F79E33",
+      "#F9CF51",
+      "#FBB438",
+      "#FDC635"
+    ]
+  },
+  "walkArea": {
+    "x": 96,
+    "y": 316,
+    "width": 744,
+    "height": 36
+  },
+  "notes": []
+}
