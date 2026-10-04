@@ -8,8 +8,8 @@ import type { PetSpecies } from '@pet/client';
 import type { BattleCommand, BattlePet, BattleResult } from '../src/contracts.ts';
 import { BATTLE_CHANNELS } from '../src/app/handlers.ts';
 import { FileBattleSpriteAdapter } from '../src/adapters/file-sprites.ts';
-import { SpriteBattleGateway, type BattlePetSprites } from '../src/integration/sprite-gateway.ts';
-import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/ipc/host.ts';
+import { SpriteBattleGateway, type BattlePetSprites } from '../src/app/sprite-gateway.ts';
+import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/app/ipc.ts';
 
 const command: BattleCommand = { type: 'GET_STATE', nowMs: 1234 };
 const species: PetSpecies = {
@@ -222,7 +222,7 @@ for (const raw of [
         fixture.handler()({ sender: { id: 7 } }, raw as BattleCommand),
         /허용하지 않습니다/,
       );
-      assert.equal(creates, 0, 'invalid client command must not start Rust');
+      assert.equal(creates, 0, 'invalid client command must not start the engine');
       assert.equal(executes, 0);
     } finally {
       dispose();
@@ -295,7 +295,7 @@ test('요청 전 dispose도 멱등이며 캡처된 IPC handler로 runtime을 만
 
 test('runtime 생성 실패는 그대로 전파하고 다음 승인된 요청에서 재시도한다', async () => {
   const fixture = ipcFixture();
-  const failure = new Error('sidecar startup failed');
+  const failure = new Error('engine startup failed');
   const response = result();
   let creates = 0;
   let closes = 0;

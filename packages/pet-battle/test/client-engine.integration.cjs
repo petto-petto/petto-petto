@@ -1,5 +1,4 @@
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const { test } = require('node:test');
 
 // Contract fixture only: no owner implementation, SQLite, or user data is accessed.
@@ -21,8 +20,8 @@ const initialPet = {
   isActive: true,
 };
 
-test('PetClient 저장값 → 실제 Rust HP·정복·다음 적, 중복 알림·재연결·활성 해제', async (t) => {
-  const { PetBattleIntegration, spawnBattleSidecar, deriveBattleScene } =
+test('PetClient 저장값 → Electron 엔진 HP·정복·다음 적, 중복 알림·재연결·활성 해제', async (t) => {
+  const { PetBattleIntegration, ElectronBattleEngine, deriveBattleScene } =
     await import('../dist/index.js');
   let active = { ...initialPet };
   const client = new Proxy(
@@ -38,11 +37,8 @@ test('PetClient 저장값 → 실제 Rust HP·정복·다음 적, 중복 알림�
     },
   );
   const connect = () => {
-    const engine = spawnBattleSidecar(
-      path.resolve(__dirname, '../rust/target/debug/pet-battle-engine'),
-    );
-    t.after(() => engine.sidecar.close());
-    return new PetBattleIntegration(client, engine.client, rules);
+    const engine = new ElectronBattleEngine();
+    return new PetBattleIntegration(client, engine, rules);
   };
   const battle = connect();
   let result = await battle.syncActivePet();
@@ -90,7 +86,7 @@ test('PetClient 저장값 → 실제 Rust HP·정복·다음 적, 중복 알림�
 });
 
 test('실제 XP 정복은 클릭 없이 다음 적으로 전환하며 투명도·STOP·누적 XP를 보존한다', async (t) => {
-  const { PetBattleIntegration, spawnBattleSidecar, deriveBattleScene } =
+  const { PetBattleIntegration, ElectronBattleEngine, deriveBattleScene } =
     await import('../dist/index.js');
   let now = 1_700_000_000_000;
   t.mock.method(Date, 'now', () => now);
@@ -109,11 +105,8 @@ test('실제 XP 정복은 클릭 없이 다음 적으로 전환하며 투명도�
         },
       },
     );
-    const engine = spawnBattleSidecar(
-      path.resolve(__dirname, '../rust/target/debug/pet-battle-engine'),
-    );
-    t.after(() => engine.sidecar.close());
-    const battle = new PetBattleIntegration(client, engine.client, rules);
+    const engine = new ElectronBattleEngine();
+    const battle = new PetBattleIntegration(client, engine, rules);
     let result = await battle.syncActivePet();
     assert.equal(result.state.activePet.stage, 3);
     assert.equal(result.state.enemyColor, 'RED');
@@ -161,8 +154,8 @@ test('실제 XP 정복은 클릭 없이 다음 적으로 전환하며 투명도�
   }
 });
 
-test('같은 레벨의 저장 XP도 실제 Rust HP를 줄이고 표시 HP는 중복 알림 없이 연속 감소한다', async (t) => {
-  const { PetBattleIntegration, spawnBattleSidecar } = await import('../dist/index.js');
+test('같은 레벨의 저장 XP도 Electron 엔진 HP를 줄이고 표시 HP는 중복 알림 없이 연속 감소한다', async (t) => {
+  const { PetBattleIntegration, ElectronBattleEngine } = await import('../dist/index.js');
   const { HpBarMotion } = await import('../dist/view/hp-bar-motion.js');
   let now = 1_700_000_000_000;
   t.mock.method(Date, 'now', () => now);
@@ -179,11 +172,8 @@ test('같은 레벨의 저장 XP도 실제 Rust HP를 줄이고 표시 HP는 중
       },
     },
   );
-  const engine = spawnBattleSidecar(
-    path.resolve(__dirname, '../rust/target/debug/pet-battle-engine'),
-  );
-  t.after(() => engine.sidecar.close());
-  const battle = new PetBattleIntegration(client, engine.client, rules);
+  const engine = new ElectronBattleEngine();
+  const battle = new PetBattleIntegration(client, engine, rules);
   const motion = new HpBarMotion();
   const frame = (state) =>
     motion.frame({

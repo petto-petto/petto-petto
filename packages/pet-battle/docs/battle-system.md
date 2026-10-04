@@ -45,7 +45,7 @@ flowchart LR
 | 파스텔 무지개 | 43~44 / 63         | 45~46 / 65         | 47~49 / 101        | 1,090             |
 
 - 소·중·대의 표시 높이는 56·64·80px이다. 등급은 공격 이펙트에만 차이를 준다.
-- 구간 패턴은 Rust 전투 도메인의 `[2, 2, 3]`이다. `battle-rules.json`의 `intervalLevels`는 기존 호스트 연결 호환용이며 보유 펫의 진행 속도에 더 이상 적용하지 않는다.
+- 구간 패턴은 전투 도메인의 `[2, 2, 3]`이다. `battle-rules.json`의 `intervalLevels`는 기존 호스트 연결 호환용이며 보유 펫의 진행 속도에 더 이상 적용하지 않는다.
 - 만렙 이후에도 누적 XP로 전투를 진행한다. 마지막 레벨 비용 35 XP를 적용하여 다음 바퀴의 소·중·대는 각각 70·70·105 XP가 된다.
 - 적 HP = `1 - (현재 구간 XP / 구간 목표 XP)`. 공격 모션은 XP나 피해량을 생성하지 않는다.
 - 예: 빨강·소는 0 XP에서 HP 100%, 20 XP에서 약 4.76%, 21 XP에 정복한다. 다음 빨강·중은 23 XP 구간이다.
@@ -63,7 +63,7 @@ flowchart LR
 
 ## 공통 인터페이스 연결
 
-- `PetBattleIntegration`에 `PetClient`·Rust 엔진·성장 곡선을 주입한다.
+- `PetBattleIntegration`에 `PetClient`·TypeScript 엔진·성장 곡선을 주입한다.
 - 전투는 `getActivePet()`·`listOwnedPets()`만 호출한다. 저장소·테이블·다른 기능 구현체에 직접 접근하지 않는다.
 - 성장 담당자가 XP를 저장한 뒤 재조회한다. 알림의 XP 증가량을 다시 더하지 않는다.
 - `TokenClient`의 통계는 펫별 성장 값이 아니므로 전투에서 XP로 환산하지 않는다. 토큰 저장·환산·활성 펫 선택은 해당 기능 담당자의 책임이다.
@@ -72,6 +72,6 @@ flowchart LR
 
 ## 경계
 
-- Rust: 전투 상태, 정복 간격, HP 계산, 이벤트, 정복 전환·수동 미리보기 타임라인
-- TypeScript: IPC 연결, 화면용 scene·지면 이동·지연 카메라 계산, Electron renderer. 이동·타격 연출로 HP·XP를 생성하지 않는다.
-- 통신: 한 줄에 하나의 JSON 요청·응답, `requestId`로 대응
+- domain: 전투 상태, 정복 간격, HP 계산, 이벤트, 정복 전환·수동 미리보기 타임라인
+- app·view·ui: IPC 연결, 화면용 scene·지면 이동·지연 카메라 계산, Electron renderer. 이동·타격 연출로 HP·XP를 생성하지 않는다.
+- 통신: 전투 전용 Electron IPC에서 명령을 받아 내부 엔진 결과를 반환한다.

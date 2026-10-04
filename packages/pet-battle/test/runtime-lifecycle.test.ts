@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { test } from 'node:test';
 import type { BattleCommand, BattleResult } from '../src/contracts.ts';
-import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/ipc/host.ts';
+import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/app/ipc.ts';
 
 const command: BattleCommand = { type: 'GET_STATE', nowMs: 100 };
 const response = { marker: 'ready runtime' } as unknown as BattleResult;
@@ -107,7 +107,7 @@ test('비동기 준비 실패는 모든 요청에 전파되며 다음 요청에�
   const host = fixture();
   const build = deferred<BattleRuntime>();
   const engine = runtime();
-  const failure = new Error('Cargo build failed');
+  const failure = new Error('engine initialization failed');
   let prepares = 0;
   const dispose = mountBattleIpc(
     host.ipc,

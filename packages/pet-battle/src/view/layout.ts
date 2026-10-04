@@ -17,7 +17,7 @@ export interface BattleLayout {
   compact: boolean;
 }
 
-/** Presentation only: the host owns window size, Rust owns combat timing/state. */
+/** Presentation only: the host owns window size, the engine owns combat timing/state. */
 export function battleLayout(width: number, height: number): BattleLayout {
   const petSize = 96;
   const enemyFrameSize = 128;

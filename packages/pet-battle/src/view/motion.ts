@@ -14,7 +14,7 @@ export function restingMotion(): CombatMotion {
   };
 }
 
-/** Shared engine/renderer motion sampling; preserves the original Rust motion contract. */
+/** Shared engine/renderer motion sampling; used by both the engine and renderer. */
 export function sampleCombatMotion(
   phase: number,
   frame: number,

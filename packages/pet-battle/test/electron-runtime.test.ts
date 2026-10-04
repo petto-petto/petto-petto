@@ -118,3 +118,48 @@ test('default IPC rejects other windows and preserves settings across closing/re
   assert.equal(removed, 1);
   assert.throws(() => send({ type: 'GET_STATE', nowMs: 0 }), /종료/);
 });
+
+test('catalog failure is propagated before the owner roster is read', () => {
+  const f = fixture();
+  const failure = new Error('catalog unavailable');
+  let reads = 0;
+  assert.throws(
+    () =>
+      createBattleRuntime(
+        {
+          ...f.pets,
+          listSpecies() {
+            throw failure;
+          },
+          listOwnedPets() {
+            reads++;
+            return [];
+          },
+        },
+        f.options,
+      ),
+    (error: unknown) => error === failure,
+  );
+  assert.equal(reads, 0);
+});
+
+test('closing the runtime twice prevents further owner reads', async () => {
+  const f = fixture();
+  let reads = 0;
+  const runtime = createBattleRuntime(
+    {
+      ...f.pets,
+      listOwnedPets() {
+        reads++;
+        return f.pets.listOwnedPets();
+      },
+    },
+    f.options,
+  );
+  await runtime.execute({ type: 'GET_STATE', nowMs: 0 });
+  const before = reads;
+  runtime.close();
+  runtime.close();
+  await assert.rejects(runtime.execute({ type: 'GET_STATE', nowMs: 1 }), /종료/);
+  assert.equal(reads, before);
+});

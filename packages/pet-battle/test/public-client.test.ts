@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import type { BattleClient, BattleClientCommand } from '../src/client.ts';
 import type { BattleCommand } from '../src/contracts.ts';
-import type { BattleRuntime } from '../src/ipc/host.ts';
+import type { BattleRuntime } from '../src/app/ipc.ts';
 import type { BattleClient as ExportedClient } from '../src/index.ts';
 import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
 

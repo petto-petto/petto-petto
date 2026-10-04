@@ -312,16 +312,14 @@ test('v2 펫은 전투 캐릭터와 이펙트보다 위 레이어에 유지된�
   assert.match(css, /\.combat-effects\s*\{[^}]*z-index:\s*3;/s);
 });
 
-test('전투 패키지 공개 계약과 에셋 생성기는 v1 선택 경로를 제공하지 않는다', async () => {
-  const [contracts, overlay, pipeline] = await Promise.all([
+test('전투 패키지 공개 계약과 화면은 v1 선택 경로를 제공하지 않는다', async () => {
+  const [contracts, overlay] = await Promise.all([
     readFile(new URL('../src/contracts.ts', import.meta.url), 'utf8'),
     readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
-    readFile(new URL('../rust/src/asset_pipeline.rs', import.meta.url), 'utf8'),
   ]);
 
   assert.doesNotMatch(contracts, /AssetVersion|SELECT_ASSET_VERSION|V1/);
   assert.doesNotMatch(overlay, /ASSET_V1|ASSET_V2|SELECT_ASSET_VERSION/);
-  assert.doesNotMatch(pipeline, /\("v1"/);
 });
 
 test('걸음 프레임은 지면 발구름과 동기화하고 수동 공격도 몸 접촉 거리를 공유한다', async () => {

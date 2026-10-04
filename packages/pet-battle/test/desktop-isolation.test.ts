@@ -1,15 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 const read = (file: string) => readFileSync(new URL(file, import.meta.url), 'utf8');
 
-test('일반 앱 build·start는 Cargo에 의존하지 않고 전투 명시 빌드는 유지한다', () => {
+test('앱과 전투 패키지는 Electron 실행 경로만 제공한다', () => {
   const root = JSON.parse(read('../../../package.json'));
   const battle = JSON.parse(read('../package.json'));
   assert.doesNotMatch(root.scripts.build, /cargo|build:rust/);
   assert.match(root.scripts.start, /npm run build/);
-  assert.match(battle.scripts['build:rust'], /cargo build/);
+  assert.equal(battle.scripts['build:rust'], undefined);
+  assert.equal(battle.scripts['test:rust'], undefined);
+  assert.doesNotMatch(JSON.stringify(battle.scripts), /cargo|sidecar|client-rust/);
+  for (const removed of ['rust', 'src/runtime', 'src/ipc', 'src/integration']) {
+    assert.equal(existsSync(new URL('../' + removed, import.meta.url)), false, removed);
+  }
   assert.doesNotMatch(battle.scripts.demo, /cargo|build:rust/);
 });
 

@@ -111,12 +111,12 @@ test('실제 앱 전투창은 640×420으로 열리고 360×180까지 모서리 
   const fixture = hostFixture();
   const window = fixture.createBattleWindow();
   assertBattleOptions(window.options);
-  assert.equal(window.loadedFile, '/test/battle/ui/index.html');
+  assert.equal(window.loadedFile, path.join('/test/battle/ui', 'index.html'));
   const security = window.options.webPreferences as Record<string, unknown>;
   assert.equal(security.contextIsolation, true);
   assert.equal(security.nodeIntegration, false);
   assert.equal(security.sandbox, true);
-  assert.equal(security.preload, '/test/battle/ui/host-preload.cjs');
+  assert.equal(security.preload, path.join('/test/battle/ui', 'host-preload.cjs'));
 });
 
 test('데모도 실제 앱과 같은 기본·최소 크기와 크기 조절 옵션을 사용한다', async () => {

@@ -69,7 +69,7 @@ test('효과 버튼과 모션 감소 상태에서도 타격 시점의 검 이펙
   assert.deepEqual(state.motion.petOffset, { x: 0, y: 0 });
 });
 
-test('공격 각 구간은 Rust 연출과 같은 순서와 이동 한계를 유지한다', () => {
+test('공격 각 구간은 전투 연출과 같은 순서와 이동 한계를 유지한다', () => {
   for (const [phase, beat] of [
     [0, 'IDLE'],
     [0.43, 'ANTICIPATION'],

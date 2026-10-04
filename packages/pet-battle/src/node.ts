@@ -3,17 +3,15 @@ import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import { readFileSync } from 'node:fs';
 import { FileBattleSpriteAdapter } from './adapters/file-sprites.ts';
-import { PetBattleIntegration } from './integration/pet-client.ts';
-import type { BattleGrowthRules } from './integration/owned-pet-gateway.ts';
-import { SpriteBattleGateway } from './integration/sprite-gateway.ts';
+import { PetBattleIntegration } from './app/pet-client.ts';
+import type { BattleGrowthRules } from './app/owned-pet-gateway.ts';
+import { SpriteBattleGateway } from './app/sprite-gateway.ts';
 import {
   mountBattleIpc,
   type BattleIpcRegistry,
   type BattleLifecyclePort,
   type BattleRuntime,
-} from './ipc/host.ts';
-import { spawnBattleSidecar } from './ipc/sidecar.ts';
-import { createBattleBinaryPreparer } from './runtime/prepare.ts';
+} from './app/ipc.ts';
 import { ElectronBattleEngine } from './domain/engine.ts';
 
 export { FileBattleSpriteAdapter } from './adapters/file-sprites.ts';
@@ -22,7 +20,7 @@ export {
   type BattleIpcRegistry,
   type BattleLifecyclePort,
   type BattleRuntime,
-} from './ipc/host.ts';
+} from './app/ipc.ts';
 
 export interface BattleRuntimeOptions {
   /** Optional owner-provided room selection; never changes room or common storage. */
@@ -30,15 +28,13 @@ export interface BattleRuntimeOptions {
   petAssetsDir: string;
   /** The growth owner supplies this curve; battle does not define pet growth. */
   levelXpCosts: readonly number[];
-  /** Optional legacy sidecar override. Omit to run the engine inside Electron/Node. */
-  binaryPath?: string;
 }
 
 export function createBattleRuntime(
   pets: Pick<PetClient, 'listSpecies' | 'getActivePet' | 'listOwnedPets'>,
   options: BattleRuntimeOptions,
 ): BattleRuntime {
-  // Owner/catalog and configuration failures must occur before spawning a child.
+  // Validate the owner catalog and configuration before creating the engine.
   const species = pets.listSpecies();
   const config = JSON.parse(
     readFileSync(new URL('../battle-rules.json', import.meta.url), 'utf8'),
@@ -48,9 +44,7 @@ export function createBattleRuntime(
     levelXpCosts: [...options.levelXpCosts],
   };
   const sprites = new FileBattleSpriteAdapter(options.petAssetsDir, species);
-  const legacy =
-    options.binaryPath === undefined ? undefined : spawnBattleSidecar(options.binaryPath);
-  const engine = legacy?.client ?? new ElectronBattleEngine();
+  const engine = new ElectronBattleEngine();
   let closed = false;
   const gateway = new SpriteBattleGateway(
     new PetBattleIntegration(
@@ -74,8 +68,6 @@ export function createBattleRuntime(
     close() {
       if (closed) return;
       closed = true;
-      legacy?.client.dispose();
-      legacy?.sidecar.close();
     },
   };
 }
@@ -86,40 +78,12 @@ export function mountBattle(
   options: BattleRuntimeOptions & {
     isBattleSender(id: number): boolean;
     lifecycle?: BattleLifecyclePort;
-    preparationTimeoutMs?: number;
   },
 ): () => void {
-  if (options.binaryPath === undefined) {
-    return mountBattleIpc(
-      ipc,
-      () => createBattleRuntime(pets, options),
-      options.isBattleSender,
-      options.lifecycle,
-    );
-  }
-  const preparer = createBattleBinaryPreparer({
-    ...(options.binaryPath === undefined ? {} : { binaryPath: options.binaryPath }),
-    ...(options.preparationTimeoutMs === undefined
-      ? {}
-      : { timeoutMs: options.preparationTimeoutMs }),
-  });
-  const hostLifecycle = options.lifecycle;
-  const lifecycle: BattleLifecyclePort | undefined = hostLifecycle && {
-    onQuit: (listener) => hostLifecycle.onQuit(listener),
-    onWindowClosed: (listener) =>
-      hostLifecycle.onWindowClosed(() => {
-        preparer.resetFailure();
-        listener();
-      }),
-  };
   return mountBattleIpc(
     ipc,
-    async (signal) => {
-      const binaryPath = await preparer.prepare(signal);
-      signal.throwIfAborted();
-      return createBattleRuntime(pets, { ...options, binaryPath });
-    },
+    () => createBattleRuntime(pets, options),
     options.isBattleSender,
-    lifecycle,
+    options.lifecycle,
   );
 }

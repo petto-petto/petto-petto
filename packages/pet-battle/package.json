@@ -30,10 +30,9 @@
   },
   "scripts": {
     "build": "tsc --build tsconfig.json",
-    "build:rust": "cargo build --manifest-path rust/Cargo.toml --bin pet-battle-engine",
     "demo": "npm run build && electron ui/demo-main.cjs",
     "test": "node --test \"test/**/*.test.ts\"",
-    "test:integration": "npm run build && npm run build:rust && node --test test/client-rust.integration.cjs",
-    "test:rust": "cargo test --manifest-path rust/Cargo.toml"
+    "test:integration": "npm run build && node --test test/client-engine.integration.cjs",
+    "test:electron": "npm run build && node test/run-electron-smoke.cjs"
   }
 }

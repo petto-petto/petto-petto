@@ -2,7 +2,7 @@ import type { BattleClientCommand } from '../client.ts';
 import type { BattleCommand } from '../contracts.ts';
 
 // Exhaustive against the public contract: adding/removing a client command requires
-// updating this policy. Internal Rust protocol additions never become public implicitly.
+// updating this policy. Internal engine command additions never become public implicitly.
 const allowed: Record<BattleClientCommand['type'], true> = {
   GET_STATE: true,
   TOGGLE_BATTLE: true,
