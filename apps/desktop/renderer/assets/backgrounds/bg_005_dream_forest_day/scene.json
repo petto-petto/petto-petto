@@ -1,0 +1,2029 @@
+{
+  "id": "bg_005",
+  "name": "동화 숲 (낮)",
+  "preset": "dream_forest",
+  "canvas": [
+    1080,
+    540
+  ],
+  "layout": "ground",
+  "seamless": false,
+  "horizon": 252,
+  "groundTop": 414,
+  "petAnchor": {
+    "x": 476,
+    "y": 286,
+    "w": 128,
+    "h": 128
+  },
+  "layers": [
+    {
+      "name": "sky",
+      "z": 0,
+      "parallax": 0.0,
+      "ops": [
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 4,
+          "to": 0,
+          "y0": 0,
+          "y1": 420,
+          "block": 1,
+          "dither": false
+        },
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 4,
+          "to": 3,
+          "box": [
+            0,
+            32,
+            1080,
+            40
+          ],
+          "dither": true,
+          "block": 1
+        },
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 3,
+          "to": 2,
+          "box": [
+            0,
+            137,
+            1080,
+            40
+          ],
+          "dither": true,
+          "block": 1
+        },
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 2,
+          "to": 1,
+          "box": [
+            0,
+            242,
+            1080,
+            40
+          ],
+          "dither": true,
+          "block": 1
+        },
+        {
+          "op": "vgradient",
+          "ramp": "sky",
+          "from": 1,
+          "to": 0,
+          "box": [
+            0,
+            347,
+            1080,
+            40
+          ],
+          "dither": true,
+          "block": 1
+        },
+        {
+          "op": "rect",
+          "x": 0,
+          "y": 420,
+          "w": 1080,
+          "h": 120,
+          "color": "sky.0"
+        },
+        {
+          "op": "clouds",
+          "color": "sky.3",
+          "mid": "sky.2",
+          "shade": "sky.1",
+          "blobs": [
+            [
+              140,
+              92,
+              60,
+              20
+            ],
+            [
+              106,
+              96,
+              32,
+              15
+            ],
+            [
+              176,
+              97,
+              28,
+              13
+            ],
+            [
+              127,
+              84,
+              25,
+              12
+            ],
+            [
+              156,
+              85,
+              20,
+              10
+            ],
+            [
+              300,
+              120,
+              68,
+              22
+            ],
+            [
+              261,
+              124,
+              36,
+              16
+            ],
+            [
+              340,
+              125,
+              32,
+              14
+            ],
+            [
+              286,
+              111,
+              28,
+              14
+            ],
+            [
+              319,
+              113,
+              23,
+              11
+            ],
+            [
+              452,
+              80,
+              54,
+              18
+            ],
+            [
+              421,
+              84,
+              29,
+              13
+            ],
+            [
+              484,
+              85,
+              25,
+              12
+            ],
+            [
+              441,
+              73,
+              22,
+              11
+            ],
+            [
+              467,
+              74,
+              18,
+              9
+            ],
+            [
+              600,
+              128,
+              62,
+              20
+            ],
+            [
+              565,
+              132,
+              33,
+              15
+            ],
+            [
+              637,
+              133,
+              29,
+              13
+            ],
+            [
+              587,
+              120,
+              26,
+              12
+            ],
+            [
+              617,
+              121,
+              21,
+              10
+            ],
+            [
+              756,
+              96,
+              64,
+              21
+            ],
+            [
+              719,
+              100,
+              34,
+              15
+            ],
+            [
+              794,
+              101,
+              30,
+              14
+            ],
+            [
+              742,
+              87,
+              26,
+              13
+            ],
+            [
+              773,
+              89,
+              21,
+              11
+            ],
+            [
+              900,
+              138,
+              56,
+              18
+            ],
+            [
+              868,
+              142,
+              30,
+              13
+            ],
+            [
+              933,
+              143,
+              26,
+              12
+            ],
+            [
+              888,
+              131,
+              23,
+              11
+            ],
+            [
+              915,
+              132,
+              19,
+              9
+            ],
+            [
+              1010,
+              96,
+              48,
+              16
+            ],
+            [
+              983,
+              100,
+              25,
+              12
+            ],
+            [
+              1038,
+              101,
+              23,
+              10
+            ],
+            [
+              1000,
+              89,
+              20,
+              10
+            ],
+            [
+              1023,
+              91,
+              16,
+              8
+            ],
+            [
+              212,
+              192,
+              54,
+              18
+            ],
+            [
+              181,
+              196,
+              29,
+              13
+            ],
+            [
+              244,
+              197,
+              25,
+              12
+            ],
+            [
+              201,
+              185,
+              22,
+              11
+            ],
+            [
+              227,
+              186,
+              18,
+              9
+            ],
+            [
+              520,
+              206,
+              58,
+              19
+            ],
+            [
+              487,
+              210,
+              31,
+              14
+            ],
+            [
+              554,
+              211,
+              27,
+              12
+            ],
+            [
+              508,
+              198,
+              24,
+              12
+            ],
+            [
+              536,
+              200,
+              19,
+              10
+            ],
+            [
+              830,
+              196,
+              52,
+              17
+            ],
+            [
+              800,
+              200,
+              28,
+              12
+            ],
+            [
+              861,
+              201,
+              24,
+              11
+            ],
+            [
+              819,
+              189,
+              21,
+              10
+            ],
+            [
+              844,
+              190,
+              17,
+              9
+            ],
+            [
+              380,
+              258,
+              50,
+              16
+            ],
+            [
+              352,
+              262,
+              27,
+              12
+            ],
+            [
+              410,
+              263,
+              24,
+              10
+            ],
+            [
+              369,
+              251,
+              21,
+              10
+            ],
+            [
+              394,
+              253,
+              17,
+              8
+            ],
+            [
+              700,
+              266,
+              54,
+              17
+            ],
+            [
+              669,
+              270,
+              29,
+              12
+            ],
+            [
+              732,
+              271,
+              25,
+              11
+            ],
+            [
+              689,
+              259,
+              22,
+              10
+            ],
+            [
+              715,
+              260,
+              18,
+              9
+            ]
+          ]
+        },
+        {
+          "op": "clouds",
+          "color": "sky.4",
+          "blobs": [
+            [
+              126,
+              82,
+              20,
+              9
+            ],
+            [
+              152,
+              83,
+              15,
+              7
+            ],
+            [
+              101,
+              90,
+              16,
+              7
+            ],
+            [
+              166,
+              89,
+              14,
+              6
+            ],
+            [
+              284,
+              109,
+              23,
+              10
+            ],
+            [
+              313,
+              110,
+              17,
+              8
+            ],
+            [
+              256,
+              118,
+              19,
+              8
+            ],
+            [
+              329,
+              117,
+              16,
+              7
+            ],
+            [
+              440,
+              71,
+              18,
+              8
+            ],
+            [
+              462,
+              72,
+              14,
+              6
+            ],
+            [
+              417,
+              78,
+              15,
+              6
+            ],
+            [
+              475,
+              77,
+              12,
+              5
+            ],
+            [
+              586,
+              118,
+              21,
+              9
+            ],
+            [
+              612,
+              119,
+              16,
+              7
+            ],
+            [
+              560,
+              126,
+              17,
+              7
+            ],
+            [
+              627,
+              125,
+              14,
+              6
+            ],
+            [
+              741,
+              86,
+              21,
+              9
+            ],
+            [
+              768,
+              87,
+              16,
+              7
+            ],
+            [
+              714,
+              94,
+              17,
+              7
+            ],
+            [
+              784,
+              93,
+              15,
+              6
+            ],
+            [
+              887,
+              129,
+              19,
+              8
+            ],
+            [
+              911,
+              130,
+              14,
+              6
+            ],
+            [
+              864,
+              136,
+              15,
+              6
+            ],
+            [
+              924,
+              135,
+              13,
+              5
+            ],
+            [
+              999,
+              88,
+              16,
+              7
+            ],
+            [
+              1019,
+              89,
+              12,
+              6
+            ],
+            [
+              979,
+              95,
+              13,
+              6
+            ],
+            [
+              1031,
+              94,
+              11,
+              5
+            ],
+            [
+              200,
+              183,
+              18,
+              8
+            ],
+            [
+              222,
+              184,
+              14,
+              6
+            ],
+            [
+              177,
+              190,
+              15,
+              6
+            ],
+            [
+              235,
+              189,
+              12,
+              5
+            ],
+            [
+              507,
+              197,
+              19,
+              8
+            ],
+            [
+              531,
+              198,
+              15,
+              7
+            ],
+            [
+              482,
+              204,
+              16,
+              7
+            ],
+            [
+              545,
+              203,
+              13,
+              6
+            ],
+            [
+              818,
+              188,
+              17,
+              7
+            ],
+            [
+              840,
+              189,
+              13,
+              6
+            ],
+            [
+              796,
+              194,
+              14,
+              6
+            ],
+            [
+              852,
+              193,
+              12,
+              5
+            ],
+            [
+              368,
+              250,
+              17,
+              7
+            ],
+            [
+              390,
+              251,
+              13,
+              6
+            ],
+            [
+              347,
+              257,
+              14,
+              6
+            ],
+            [
+              402,
+              256,
+              12,
+              5
+            ],
+            [
+              688,
+              258,
+              18,
+              7
+            ],
+            [
+              710,
+              259,
+              14,
+              6
+            ],
+            [
+              665,
+              264,
+              15,
+              6
+            ],
+            [
+              723,
+              263,
+              12,
+              5
+            ]
+          ]
+        },
+        {
+          "op": "glow",
+          "x": 210,
+          "y": 76,
+          "color": "light.4",
+          "rx": 104,
+          "ry": 88,
+          "strength": 0.98,
+          "gamma": 1.5
+        },
+        {
+          "op": "rays",
+          "xs": [
+            128,
+            262,
+            448,
+            660,
+            868
+          ],
+          "y0": 0,
+          "y1": 200,
+          "slope": 2.4,
+          "width": 11,
+          "strength": 0.3,
+          "color": "light.3"
+        },
+        {
+          "op": "rays",
+          "xs": [
+            196,
+            372,
+            578,
+            796
+          ],
+          "y0": 0,
+          "y1": 182,
+          "slope": 2.4,
+          "width": 16,
+          "strength": 0.16,
+          "color": "light.2"
+        }
+      ]
+    },
+    {
+      "name": "far",
+      "z": 1,
+      "parallax": 0.25,
+      "ops": [
+        {
+          "op": "foliage",
+          "box": [
+            0,
+            0,
+            1080,
+            36
+          ],
+          "ramp": "far",
+          "base": 1,
+          "rim": 2,
+          "shadow": 0,
+          "r": [
+            11,
+            19
+          ],
+          "spacing": 0.88,
+          "rimW": 5,
+          "depthTone": false,
+          "seed": 2,
+          "spread": 3.2,
+          "depthRange": 1
+        },
+        {
+          "op": "hills",
+          "base": 208,
+          "amp": 14,
+          "period": 580,
+          "phase": 0.4,
+          "color": "far.0",
+          "edge": "far.2",
+          "edgeH": 7,
+          "to": 540
+        },
+        {
+          "op": "foliage",
+          "box": [
+            -18,
+            216,
+            356,
+            80
+          ],
+          "ramp": "far",
+          "base": 1,
+          "rim": 2,
+          "shadow": 0,
+          "r": [
+            10,
+            18
+          ],
+          "spacing": 0.9,
+          "rimW": 5,
+          "depthRange": 1,
+          "seed": 21,
+          "fillBelow": 540,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            396,
+            196,
+            332,
+            96
+          ],
+          "ramp": "far",
+          "base": 1,
+          "rim": 2,
+          "shadow": 0,
+          "r": [
+            10,
+            18
+          ],
+          "spacing": 0.9,
+          "rimW": 5,
+          "depthRange": 1,
+          "seed": 24,
+          "fillBelow": 540,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            768,
+            222,
+            330,
+            72
+          ],
+          "ramp": "far",
+          "base": 1,
+          "rim": 2,
+          "shadow": 0,
+          "r": [
+            10,
+            18
+          ],
+          "spacing": 0.9,
+          "rimW": 5,
+          "depthRange": 1,
+          "seed": 27,
+          "fillBelow": 540,
+          "spread": 3.2
+        },
+        {
+          "op": "scatter_depth",
+          "name": "conifer_tall",
+          "y0": 232,
+          "y1": 300,
+          "count": 12,
+          "scale": [
+            1,
+            1
+          ],
+          "shade": [
+            1,
+            0
+          ],
+          "seed": 31,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "rays",
+          "xs": [
+            150,
+            318,
+            506,
+            742,
+            930
+          ],
+          "y0": 40,
+          "y1": 330,
+          "slope": 2.4,
+          "width": 13,
+          "strength": 0.22,
+          "color": "light.2"
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "mid",
+      "z": 2,
+      "parallax": 0.55,
+      "ops": [
+        {
+          "op": "tree_column",
+          "x": 178,
+          "ramp": "wood",
+          "w": [
+            46,
+            64
+          ],
+          "y0": 0,
+          "y1": 452,
+          "base": 2,
+          "lit": 4,
+          "dark": 0,
+          "sway": 14,
+          "period": 300,
+          "phase": 0.4,
+          "grooves": 5,
+          "seed": 70,
+          "edge": "wood.0",
+          "bark": "fissure",
+          "barkLanes": 5,
+          "moss": "leaf",
+          "mossCount": 3,
+          "knots": [
+            [
+              196,
+              7,
+              5
+            ],
+            [
+              330,
+              6,
+              4
+            ]
+          ],
+          "stubs": [
+            [
+              262,
+              1,
+              30,
+              13
+            ]
+          ],
+          "flare": 14,
+          "flareTop": 9,
+          "wobble": 0.5
+        },
+        {
+          "op": "tree_column",
+          "x": 908,
+          "ramp": "wood",
+          "w": [
+            50,
+            70
+          ],
+          "y0": 0,
+          "y1": 452,
+          "base": 2,
+          "lit": 4,
+          "dark": 0,
+          "sway": 14,
+          "period": 300,
+          "phase": 1.3,
+          "grooves": 5,
+          "seed": 71,
+          "edge": "wood.0",
+          "bark": "plate",
+          "barkLanes": 5,
+          "plateLanes": 5,
+          "moss": "leaf",
+          "mossCount": 3,
+          "knots": [
+            [
+              214,
+              7,
+              5
+            ],
+            [
+              352,
+              6,
+              4
+            ]
+          ],
+          "stubs": [
+            [
+              286,
+              -1,
+              30,
+              13
+            ]
+          ],
+          "flare": 14,
+          "flareTop": 9,
+          "wobble": 0.5
+        },
+        {
+          "op": "branch_platform",
+          "x": 208,
+          "y": 156,
+          "w": 214,
+          "thickness": 22,
+          "mossH": 8,
+          "base": 2,
+          "lit": 3,
+          "dark": 0,
+          "mossBase": 2,
+          "mossLit": 4,
+          "taper": 14,
+          "seed": 80
+        },
+        {
+          "op": "branch_platform",
+          "x": 686,
+          "y": 112,
+          "w": 226,
+          "thickness": 21,
+          "mossH": 8,
+          "base": 2,
+          "lit": 3,
+          "dark": 0,
+          "mossBase": 2,
+          "mossLit": 4,
+          "taper": 14,
+          "seed": 81
+        },
+        {
+          "op": "stamp",
+          "name": "bloom_vine",
+          "x": 196,
+          "y": 52,
+          "anchor": "top",
+          "scale": 2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            218,
+            122,
+            72,
+            36
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 110,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            306,
+            110,
+            64,
+            48
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 111,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            374,
+            130,
+            42,
+            28
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 112,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            696,
+            78,
+            76,
+            36
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 117,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            789,
+            66,
+            67,
+            48
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 118,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            862,
+            86,
+            45,
+            28
+          ],
+          "ramp": "leaf",
+          "base": 2,
+          "rim": 4,
+          "shadow": 0,
+          "r": [
+            8,
+            15
+          ],
+          "spacing": 0.95,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 119,
+          "crest": 0.34,
+          "crestFreq": 1.7,
+          "litSpan": 0.45,
+          "twigs": 1,
+          "spread": 3.2
+        },
+        {
+          "op": "scatter_depth",
+          "name": "broadleaf_round",
+          "y0": 296,
+          "y1": 352,
+          "count": 7,
+          "scale": [
+            1,
+            2
+          ],
+          "shade": [
+            2,
+            0
+          ],
+          "seed": 33,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "fringe",
+          "from": "bottom",
+          "base": 342,
+          "r": 30,
+          "spacing": 44,
+          "jitter": 10,
+          "seed": 4,
+          "to": 540,
+          "color": "mid.1",
+          "edge": "mid.3",
+          "edgeH": 7
+        },
+        {
+          "op": "foliage",
+          "box": [
+            -22,
+            342,
+            372,
+            64
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            12,
+            22
+          ],
+          "spacing": 0.95,
+          "rimW": 6,
+          "depthRange": 2,
+          "seed": 23,
+          "fillBelow": 540,
+          "crest": 0.34,
+          "crestFreq": 1.8,
+          "litSpan": 0.45,
+          "twigs": 2,
+          "spread": 3.2,
+          "litClumps": 2.4
+        },
+        {
+          "op": "foliage",
+          "box": [
+            390,
+            324,
+            338,
+            78
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            12,
+            22
+          ],
+          "spacing": 0.95,
+          "rimW": 6,
+          "depthRange": 2,
+          "seed": 26,
+          "fillBelow": 540,
+          "crest": 0.34,
+          "crestFreq": 1.8,
+          "litSpan": 0.45,
+          "twigs": 2,
+          "spread": 3.2,
+          "litClumps": 2.4
+        },
+        {
+          "op": "foliage",
+          "box": [
+            760,
+            348,
+            342,
+            58
+          ],
+          "ramp": "mid",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            12,
+            22
+          ],
+          "spacing": 0.95,
+          "rimW": 6,
+          "depthRange": 2,
+          "seed": 29,
+          "fillBelow": 540,
+          "crest": 0.34,
+          "crestFreq": 1.8,
+          "litSpan": 0.45,
+          "twigs": 2,
+          "spread": 3.2,
+          "litClumps": 2.4
+        },
+        {
+          "op": "foliage",
+          "box": [
+            -4,
+            350,
+            336,
+            50
+          ],
+          "ramp": "mid",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [
+            7,
+            12
+          ],
+          "spacing": 0.86,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 140,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            408,
+            332,
+            302,
+            64
+          ],
+          "ramp": "mid",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [
+            7,
+            12
+          ],
+          "spacing": 0.86,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 145,
+          "spread": 3.2
+        },
+        {
+          "op": "foliage",
+          "box": [
+            778,
+            356,
+            306,
+            44
+          ],
+          "ramp": "mid",
+          "base": 2,
+          "rim": 4,
+          "shadow": 1,
+          "r": [
+            7,
+            12
+          ],
+          "spacing": 0.86,
+          "rimW": 3,
+          "depthTone": false,
+          "seed": 150,
+          "spread": 3.2
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock_mossy",
+          "y0": 358,
+          "y1": 412,
+          "count": 8,
+          "scale": [
+            2,
+            3
+          ],
+          "shade": [
+            2,
+            0
+          ],
+          "seed": 47,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "bush_leafy",
+          "y0": 366,
+          "y1": 414,
+          "count": 9,
+          "scale": [
+            2,
+            3
+          ],
+          "shade": [
+            1,
+            0
+          ],
+          "seed": 35,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1
+        }
+      ]
+    },
+    {
+      "name": "near",
+      "z": 3,
+      "parallax": 1.0,
+      "ops": [
+        {
+          "op": "tree_column",
+          "x": 14,
+          "ramp": "wood",
+          "w": [
+            84,
+            112
+          ],
+          "y0": 0,
+          "y1": 540,
+          "base": 1,
+          "lit": 4,
+          "dark": 0,
+          "bark": "fissure",
+          "barkLanes": 7,
+          "sway": 9,
+          "period": 460,
+          "phase": 0.0,
+          "grooves": 6,
+          "seed": 50,
+          "edge": "near.0",
+          "moss": "leaf",
+          "mossCount": 4,
+          "knots": [
+            [
+              178,
+              11,
+              8
+            ],
+            [
+              352,
+              9,
+              6
+            ],
+            [
+              452,
+              7,
+              5
+            ]
+          ],
+          "stubs": [
+            [
+              246,
+              1,
+              44,
+              20
+            ],
+            [
+              398,
+              1,
+              30,
+              15
+            ]
+          ],
+          "rootH": 54,
+          "flare": 18,
+          "flareTop": 10,
+          "wobble": 0.5,
+          "ivyStrands": 2,
+          "ivy": "leaf"
+        },
+        {
+          "op": "tree_column",
+          "x": 1040,
+          "ramp": "wood",
+          "w": [
+            72,
+            96
+          ],
+          "y0": 0,
+          "y1": 540,
+          "base": 1,
+          "lit": 4,
+          "dark": 0,
+          "bark": "plate",
+          "barkLanes": 7,
+          "plateLanes": 5,
+          "sway": 9,
+          "period": 460,
+          "phase": 2.0,
+          "grooves": 6,
+          "seed": 51,
+          "edge": "near.0",
+          "moss": "leaf",
+          "mossCount": 4,
+          "knots": [
+            [
+              208,
+              10,
+              7
+            ],
+            [
+              386,
+              9,
+              6
+            ],
+            [
+              470,
+              7,
+              5
+            ]
+          ],
+          "stubs": [
+            [
+              300,
+              -1,
+              42,
+              19
+            ],
+            [
+              430,
+              -1,
+              28,
+              14
+            ]
+          ],
+          "rootH": 50,
+          "flare": 18,
+          "flareTop": 10,
+          "wobble": 0.5,
+          "ivyStrands": 2,
+          "ivy": "leaf"
+        },
+        {
+          "op": "stamp",
+          "name": "bloom_vine",
+          "x": 74,
+          "y": 0,
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "bloom_vine",
+          "x": 986,
+          "y": 12,
+          "anchor": "top",
+          "flip": true,
+          "scale": 3,
+          "keepTone": true
+        },
+        {
+          "op": "stamp",
+          "name": "bloom_vine",
+          "x": 40,
+          "y": 128,
+          "anchor": "top",
+          "scale": 3
+        },
+        {
+          "op": "stamp",
+          "name": "bloom_vine",
+          "x": 1000,
+          "y": 150,
+          "anchor": "top",
+          "flip": true,
+          "scale": 2,
+          "keepTone": true
+        },
+        {
+          "op": "ground_plane",
+          "y": 414,
+          "h": 126,
+          "ramp": "wood",
+          "far": 4,
+          "near": 1,
+          "cell": [
+            4,
+            32
+          ],
+          "seed": 5,
+          "edge": "leaf.3",
+          "edgeH": 11,
+          "furrow0": 1,
+          "furrowShift": 2,
+          "furrowStrength": 0.9,
+          "markShift": -1,
+          "patches": true,
+          "pebbles": true,
+          "pebbleMax": 4,
+          "debris": true
+        },
+        {
+          "op": "texture",
+          "box": [
+            0,
+            418,
+            1080,
+            86
+          ],
+          "color": "leaf.1",
+          "marks": "leaf",
+          "density": 0.03,
+          "seed": 13
+        },
+        {
+          "op": "foliage",
+          "box": [
+            -20,
+            392,
+            420,
+            44
+          ],
+          "ramp": "near",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            11,
+            20
+          ],
+          "spacing": 1.05,
+          "rimW": 5,
+          "depthTone": false,
+          "seed": 91,
+          "crest": 0.3,
+          "crestFreq": 1.5,
+          "litSpan": 0.45,
+          "twigs": 1
+        },
+        {
+          "op": "foliage",
+          "box": [
+            360,
+            404,
+            392,
+            36
+          ],
+          "ramp": "near",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            11,
+            20
+          ],
+          "spacing": 1.05,
+          "rimW": 5,
+          "depthTone": false,
+          "seed": 93,
+          "crest": 0.3,
+          "crestFreq": 1.5,
+          "litSpan": 0.45,
+          "twigs": 1
+        },
+        {
+          "op": "foliage",
+          "box": [
+            700,
+            396,
+            400,
+            42
+          ],
+          "ramp": "near",
+          "base": 1,
+          "rim": 3,
+          "shadow": 0,
+          "r": [
+            11,
+            20
+          ],
+          "spacing": 1.05,
+          "rimW": 5,
+          "depthTone": false,
+          "seed": 95,
+          "crest": 0.3,
+          "crestFreq": 1.5,
+          "litSpan": 0.45,
+          "twigs": 1
+        },
+        {
+          "op": "scatter_depth",
+          "name": "log_mossy",
+          "y0": 440,
+          "y1": 516,
+          "count": 4,
+          "scale": [
+            2,
+            4
+          ],
+          "shade": [
+            2,
+            1
+          ],
+          "seed": 53,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "mushroom",
+          "y0": 456,
+          "y1": 524,
+          "count": 18,
+          "scale": [
+            1,
+            2
+          ],
+          "shade": [
+            2,
+            -1
+          ],
+          "seed": 57,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "mushroom_cluster",
+          "y0": 452,
+          "y1": 502,
+          "count": 8,
+          "scale": [
+            1,
+            2
+          ],
+          "shade": [
+            2,
+            0
+          ],
+          "seed": 45,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "grass_tuft",
+          "y0": 416,
+          "y1": 506,
+          "count": 52,
+          "scale": [
+            2,
+            4
+          ],
+          "shade": [
+            0,
+            1
+          ],
+          "seed": 37
+        },
+        {
+          "op": "scatter_depth",
+          "name": "bush_leafy",
+          "y0": 418,
+          "y1": 452,
+          "count": 10,
+          "scale": [
+            1,
+            2
+          ],
+          "shade": [
+            1,
+            0
+          ],
+          "seed": 71,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "scatter_depth",
+          "name": "flower",
+          "y0": 424,
+          "y1": 486,
+          "count": 16,
+          "scale": [
+            2,
+            4
+          ],
+          "shade": [
+            0,
+            1
+          ],
+          "seed": 63
+        },
+        {
+          "op": "scatter_depth",
+          "name": "rock_mossy",
+          "y0": 430,
+          "y1": 520,
+          "count": 6,
+          "scale": [
+            1,
+            2
+          ],
+          "shade": [
+            1,
+            0
+          ],
+          "seed": 67,
+          "avoid": [
+            440,
+            640
+          ]
+        },
+        {
+          "op": "contact_shadow",
+          "x": 700,
+          "y": 508,
+          "w": 34,
+          "h": 6,
+          "color": "near.0",
+          "strength": 0.55
+        },
+        {
+          "op": "contact_shadow",
+          "x": 286,
+          "y": 522,
+          "w": 34,
+          "h": 7,
+          "color": "near.0",
+          "strength": 0.55
+        },
+        {
+          "op": "stamp",
+          "name": "mushroom_giant",
+          "x": 700,
+          "y": 506,
+          "anchor": "bottom",
+          "align": "center",
+          "scale": 1
+        },
+        {
+          "op": "stamp",
+          "name": "mushroom_giant",
+          "x": 790,
+          "y": 530,
+          "anchor": "bottom",
+          "align": "center",
+          "scale": 1,
+          "shade": 1
+        },
+        {
+          "op": "stamp",
+          "name": "mushroom_giant",
+          "x": 286,
+          "y": 520,
+          "anchor": "bottom",
+          "align": "center",
+          "scale": 1,
+          "shade": 1
+        },
+        {
+          "op": "specks",
+          "box": [
+            60,
+            150,
+            960,
+            252
+          ],
+          "count": 30,
+          "color": "light.3",
+          "seed": 71,
+          "animate": true
+        },
+        {
+          "op": "specks",
+          "box": [
+            140,
+            318,
+            800,
+            144
+          ],
+          "count": 18,
+          "color": "light.4",
+          "seed": 73,
+          "animate": true
+        },
+        {
+          "op": "glow",
+          "x": 232,
+          "y": 248,
+          "color": "light.4",
+          "rx": 6,
+          "ry": 6,
+          "strength": 0.44,
+          "gamma": 1.9,
+          "animate": true
+        },
+        {
+          "op": "glow",
+          "x": 452,
+          "y": 320,
+          "color": "light.3",
+          "rx": 7,
+          "ry": 7,
+          "strength": 0.52,
+          "gamma": 1.9,
+          "animate": true
+        },
+        {
+          "op": "glow",
+          "x": 640,
+          "y": 214,
+          "color": "light.4",
+          "rx": 5,
+          "ry": 5,
+          "strength": 0.38,
+          "gamma": 1.9,
+          "animate": true
+        },
+        {
+          "op": "glow",
+          "x": 836,
+          "y": 344,
+          "color": "light.3",
+          "rx": 5,
+          "ry": 5,
+          "strength": 0.31,
+          "gamma": 1.9,
+          "animate": true
+        },
+        {
+          "op": "glow",
+          "x": 330,
+          "y": 386,
+          "color": "light.4",
+          "rx": 5,
+          "ry": 5,
+          "strength": 0.46,
+          "gamma": 1.9,
+          "animate": true
+        },
+        {
+          "op": "autoshade",
+          "depth": 1,
+          "highlight": 1,
+          "shadow": 1,
+          "only": [
+            "leaf",
+            "accent"
+          ]
+        }
+      ]
+    }
+  ]
+}

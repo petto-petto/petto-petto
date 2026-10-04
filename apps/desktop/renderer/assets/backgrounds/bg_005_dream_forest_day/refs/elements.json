@@ -1,0 +1,19 @@
+{
+  "reference": "레퍼런스 없음 — 인터뷰(모호도 0%)에서 사용자가 말한 것을 요소로 옮겨 적었다",
+  "structure": "horizontal",
+  "note": "낮/밤 2본이 같은 요소를 공유한다. 색만 다르다.",
+  "elements": [
+    { "name": "좌우 액자 프레이밍 고목", "op": "tree_column", "min": 4 },
+    { "name": "나무에서 뻗은 이끼 낀 가지 발판", "op": "branch_platform", "min": 2 },
+    { "name": "잎 덩어리 군락 (원경·중경·발판 위)", "op": "foliage", "min": 6 },
+    { "name": "중경 실루엣 라인", "op": "fringe", "min": 1 },
+    { "name": "물러나는 숲 바닥", "op": "ground_plane", "min": 1 },
+    { "name": "삼단계 버섯 · 이끼바위 · 통나무 · 풀포기", "op": "scatter_depth", "min": 6 },
+    { "name": "대형 버섯 · 꽃 덩굴", "op": "stamp", "min": 6 },
+    { "name": "나무 사이로 떨어지는 빛줄기", "op": "rays", "min": 3 },
+    { "name": "하늘 뭉게구름", "op": "clouds", "min": 1 },
+    { "name": "반딧불이", "op": "specks", "min": 2 },
+    { "name": "반딧불이 발광", "op": "glow", "min": 5 },
+    { "name": "접지 그림자", "op": "contact_shadow", "min": 2 }
+  ]
+}

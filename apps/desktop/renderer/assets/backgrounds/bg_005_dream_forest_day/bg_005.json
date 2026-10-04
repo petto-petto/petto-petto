@@ -1,0 +1,91 @@
+{
+  "id": "bg_005",
+  "name": "동화 숲 (낮)",
+  "preset": "dream_forest",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 1080,
+  "height": 540,
+  "seamless": false,
+  "horizon": 252,
+  "groundTop": 414,
+  "petAnchor": {
+    "x": 476,
+    "y": 286,
+    "w": 128,
+    "h": 128
+  },
+  "composite": "bg_005_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_005_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_005_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_005_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_005_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#0A3417",
+      "#0E4120",
+      "#10714C",
+      "#14522D",
+      "#188E67",
+      "#195D36",
+      "#1B6D3B",
+      "#21150C",
+      "#22B38A",
+      "#258951",
+      "#2CCBA2",
+      "#312112",
+      "#33AD6E",
+      "#378C68",
+      "#42C283",
+      "#49341D",
+      "#49B18B",
+      "#4CD2B3",
+      "#5B1A6E",
+      "#5CCCEE",
+      "#5D4527",
+      "#65C99A",
+      "#775B35",
+      "#7BC6AE",
+      "#93DDF3",
+      "#9A2280",
+      "#A2D3C4",
+      "#C2ECF9",
+      "#CCE4DE",
+      "#D6395C",
+      "#E6F8FE",
+      "#EFDC92",
+      "#F2703C",
+      "#F8EEC4",
+      "#FFC94A",
+      "#FFFCEC"
+    ],
+    "rampOverride": []
+  }
+}

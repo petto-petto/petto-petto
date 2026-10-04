@@ -1,0 +1,322 @@
+[
+  {
+    "file": "autumn_dawn.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "autumn_day.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "autumn_dusk.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "autumn_night.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "spring_dawn.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "spring_day.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "spring_dusk.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "spring_night.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "summer_dawn.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "summer_day.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "summer_dusk.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "summer_night.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "winter_dawn.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "winter_day.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "winter_dusk.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  },
+  {
+    "file": "winter_night.png",
+    "width": 1080,
+    "height": 540,
+    "horizon": 365,
+    "groundTop": 495,
+    "petAnchor": {
+      "x": 508,
+      "y": 431,
+      "w": 64,
+      "h": 64
+    },
+    "confidence": {
+      "ground": 1.0,
+      "horizon": 1.0
+    },
+    "notes": [
+      "지면 밴드 45px — 캔버스의 1/8(67px) 미만"
+    ]
+  }
+]
