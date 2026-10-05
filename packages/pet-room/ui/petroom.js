@@ -52,7 +52,7 @@ import { drawFrame, fetchJson, loadImage, SpritePlayer } from './sprite.js';
 const api = window.petApi;
 
 const stageEl = document.getElementById('stage');
-const openGachaBtn = document.getElementById('open-gacha');
+const destinationsEl = document.getElementById('destinations');
 const layersEl = document.getElementById('layers');
 const canvas = document.getElementById('pets');
 const ctx = canvas.getContext('2d');
@@ -547,9 +547,13 @@ canvas.addEventListener('click', (event) => {
   renderDetail();
 });
 
-// 뽑기 창을 띄운다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
-openGachaBtn.addEventListener('click', () => {
-  api.openGacha().catch((error) => showError(`뽑기를 열지 못했습니다 — ${error.message}`));
+// 뽑기·합성 화면으로 넘어간다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
+destinationsEl.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-destination]');
+  if (!button) return;
+  api
+    .navigateFromRoom(button.dataset.destination)
+    .catch((error) => showError(`화면을 옮기지 못했습니다 — ${error.message}`));
 });
 
 detailClose.addEventListener('click', () => {

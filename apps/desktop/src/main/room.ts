@@ -15,7 +15,7 @@
  * 그리면 그 창의 로컬 상태와 push 로 받은 상태가 경쟁해 진실의 원천이 둘로 쪼개진다.
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, type WebContents } from 'electron';
 
 import type { Clock } from '@pet/core';
 import {
@@ -41,10 +41,18 @@ import type { RoomCollectionPort } from './collection.ts';
 export interface RoomHost {
   /** 펫룸 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
   showRoom(): void;
-  /** 뽑기 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
-  showGacha(): void;
+  /** 펫룸 창을 닫고 그 자리에 다른 화면을 띄운다. 새 창을 하나 더 여는 것이 아니다. */
+  navigate(destination: RoomDestination, sender: WebContents): void;
   /** 열려 있는 **모든** 창에 같은 이벤트를 보낸다. 발신 창도 포함이다. */
   broadcast(channel: string, payload: unknown): void;
+}
+
+/** 펫룸에서 건너갈 수 있는 화면. */
+export type RoomDestination = 'gacha' | 'combine';
+
+function destinationFrom(value: unknown): RoomDestination {
+  if (value === 'gacha' || value === 'combine') return value;
+  throw new Error(`이동할 수 없는 화면입니다: ${String(value)}`);
 }
 
 /** 렌더러가 받는 장면 정보. 배경 파일은 렌더러가 이 값으로 조립해 읽는다. */
@@ -189,9 +197,9 @@ export function mountRoom(state: RoomState, host: RoomHost): void {
   ipcMain.handle('room:open', () => {
     host.showRoom();
   });
-  // 펫룸에서 뽑기로 건너가는 길. 창을 만드는 일은 앱이 하고, room 은 요청만 한다.
-  ipcMain.handle('room:openGacha', () => {
-    host.showGacha();
+  // 펫룸에서 뽑기·합성으로 건너가는 길. 창을 다루는 일은 앱이 하고, room 은 요청만 한다.
+  ipcMain.handle('room:navigate', (event, destination: unknown) => {
+    host.navigate(destinationFrom(destination), event.sender);
   });
   ipcMain.handle('room:setActivePet', (_event, ownedPetId: unknown) =>
     state.setActivePet(ownedPetIdFrom(ownedPetId), host),

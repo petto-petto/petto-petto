@@ -269,6 +269,12 @@ export function createPanelWindow(): BrowserWindow {
   return panelWindow;
 }
 
+export function isRoomWebContents(contents: WebContents): boolean {
+  return (
+    roomWindow !== undefined && !roomWindow.isDestroyed() && roomWindow.webContents === contents
+  );
+}
+
 export function isGachaWebContents(contents: WebContents): boolean {
   return (
     gachaWindow !== undefined && !gachaWindow.isDestroyed() && gachaWindow.webContents === contents
@@ -403,11 +409,11 @@ export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
  * 오버레이·패널과 달리 투명 프레임리스가 아니다. 펫룸은 오버레이가 아니라 들여다보는
  * 화면이라 창 크롬이 있어야 옮기고 닫을 수 있다.
  */
-export function showRoom(): void {
+export function showRoom(): BrowserWindow {
   if (roomWindow && !roomWindow.isDestroyed()) {
     roomWindow.show();
     roomWindow.focus();
-    return;
+    return roomWindow;
   }
 
   roomWindow = new BrowserWindow({
@@ -432,6 +438,36 @@ export function showRoom(): void {
 
   injectFonts(roomWindow);
   void roomWindow.loadFile(join(roomUiDir, 'petroom.html'), { query: assetsQuery() });
+  return roomWindow;
+}
+
+/**
+ * `from` 창을 닫고 그 자리에 `next` 창을 놓는다.
+ *
+ * 사용자에게는 같은 창에서 화면이 바뀌는 것처럼 보여야 한다. 한 창에서 `loadFile`로 갈아
+ * 끼우지 않는 이유: 뽑기·합성은 전용 preload 를 쓰고 IPC 도 자기 창에서 온 요청만 받는데,
+ * preload 는 창을 만들 때 정해져 바꿀 수 없다. 그래서 창은 바꾸되 이전 화면이 있던 자리에
+ * 띄운다. 펫룸만 제목 표시줄이 있으므로 창 위치가 아니라 **내용 영역**을 맞춘다. 크기는
+ * 셋 다 640x420이다.
+ */
+function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
+  if (from.isDestroyed() || from === next) return;
+  const { x, y } = from.getContentBounds();
+  const { width, height } = next.getContentBounds();
+  next.setContentBounds({ x, y, width, height });
+  next.show();
+  next.focus();
+  from.close();
+}
+
+/** 펫룸 화면에서 뽑기·합성 화면으로 넘어간다. 펫룸 창이 없으면 `next`만 연 채로 둔다. */
+export function replaceRoomWith(next: BrowserWindow): void {
+  if (roomWindow) replaceWindow(roomWindow, next);
+}
+
+/** 뽑기·합성 화면에서 펫룸으로 돌아간다. */
+export function returnToRoom(from: BrowserWindow): void {
+  replaceWindow(from, showRoom());
 }
 
 /** 창의 논리 픽셀 사각형. */

@@ -7,11 +7,18 @@
   box-sizing: border-box;
 }
 
-.window-close {
+/* 뒤로가기와 닫기를 오른쪽 위 한 줄에 둔다. */
+.window-controls {
   position: fixed;
   top: 16px;
   right: 16px;
   z-index: 100;
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.window-close {
   width: 28px;
   height: 28px;
   padding: 0;
@@ -27,6 +34,25 @@
 
 .window-close:hover {
   background: #762f35;
+}
+
+/* 이 창을 닫고 그 자리에 펫룸을 띄운다. */
+.window-back {
+  height: 28px;
+  padding: 0 8px;
+  border: 2px solid #3a2a1c;
+  background: #6b4a2e;
+  color: #f5ecd8;
+  font:
+    700 12px/1 Galmuri11,
+    ui-monospace,
+    monospace;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.window-back:hover {
+  background: #8a6340;
 }
 
 button:focus-visible {

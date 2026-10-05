@@ -43,11 +43,14 @@ import {
   createCombineWindow,
   createGachaWindow,
   isGachaWebContents,
+  isRoomWebContents,
   isCombineWebContents,
   createPanelWindow,
   endOverlayDrag,
   focusOverlayWindow,
   moveOverlayDrag,
+  replaceRoomWith,
+  returnToRoom,
   setOverlayInteractive,
   showPanel,
   showRoom,
@@ -149,14 +152,33 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
+  // 뽑기·합성 화면의 "펫룸" 버튼. 그 두 창에서 온 요청만 받는다.
+  ipcMain.handle('window:backToRoom', (event) => {
+    if (!isGachaWebContents(event.sender) && !isCombineWebContents(event.sender)) return;
+    const from = BrowserWindow.fromWebContents(event.sender);
+    if (from) returnToRoom(from);
+  });
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = {
   showRoom,
-  // `createGachaWindow`는 창을 돌려주지만 room 은 창을 알 필요가 없다.
-  showGacha: () => {
-    createGachaWindow();
+  // room 은 어느 화면으로 갈지만 말하고, 창을 갈아 끼우는 일은 앱이 한다.
+  navigate: (destination, sender) => {
+    // 펫룸 창의 버튼만 이 길을 쓴다. 다른 창이 부르면 펫룸 없이 뽑기·합성 창만 열린다.
+    if (!isRoomWebContents(sender)) return;
+    switch (destination) {
+      case 'gacha':
+        replaceRoomWith(createGachaWindow());
+        return;
+      case 'combine':
+        replaceRoomWith(createCombineWindow());
+        return;
+      default: {
+        const unreachable: never = destination;
+        throw new Error(`이동할 수 없는 화면입니다: ${String(unreachable)}`);
+      }
+    }
   },
   broadcast,
 };

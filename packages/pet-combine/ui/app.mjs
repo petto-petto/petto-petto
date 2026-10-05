@@ -1,5 +1,8 @@
 const assets = new URLSearchParams(window.location.search).get('assets');
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
+document.querySelector('.window-back')?.addEventListener('click', () => {
+  void bridge().backToRoom();
+});
 
 if (!assets) throw new Error('Combine UI requires the assets query parameter.');
 
