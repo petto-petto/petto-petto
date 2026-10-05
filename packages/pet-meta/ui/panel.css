@@ -87,12 +87,10 @@ body {
    * 픽셀 글꼴. 저장소에 폰트 파일이 없으므로 가이드가 정한 폴백으로 떨어진다.
    * 폰트를 추가하면 이 한 줄로 바로 적용된다.
    */
-  font-family: 'Galmuri9', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   line-height: 1.5;
   /* 픽셀 글꼴의 외곽을 부드럽게 처리하지 않는다. */
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
 
   /* 양피지 패널: 3px 나무 테두리, 2px 나무 하이라이트, 5px 양피지 안쪽 링. */
   border: 3px solid var(--wood-border);
@@ -154,7 +152,7 @@ body {
     inset 0 2px 0 var(--wood-highlight),
     inset 0 -2px 0 var(--wood-border);
   font: inherit;
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 700;
   cursor: default;
@@ -255,7 +253,7 @@ body {
 #mode-title {
   flex: 1;
   color: var(--light-text);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 700;
 }
@@ -309,7 +307,7 @@ main.no-scroll {
   justify-content: space-between;
   margin: 0 0 var(--space-2);
   color: var(--ink);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 11px;
   font-weight: 700;
 }
@@ -350,7 +348,7 @@ main.no-scroll {
 /* 조련사 이름을 뺀 뒤 프로필의 머리줄. */
 .pet-headline {
   color: var(--ink);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 700;
 }
@@ -454,7 +452,7 @@ main.no-scroll {
 
 .hero-value {
   color: var(--gold);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -483,7 +481,7 @@ main.no-scroll {
 
 .exp-label {
   color: var(--ink);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
   font-weight: 700;
 }
@@ -518,7 +516,7 @@ main.no-scroll {
 
 .stat .value {
   margin-top: 1px;
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 15px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
@@ -647,7 +645,7 @@ main.no-scroll {
 
 .collect-card .head .name {
   flex: 1;
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-weight: 700;
 }
 
@@ -831,7 +829,7 @@ main.no-scroll {
 }
 
 .ach .title-line .name {
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1014,7 +1012,7 @@ main.no-scroll {
 .pet-title {
   margin-left: var(--space-2);
   color: var(--ink);
-  font-family: 'Galmuri9', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
   font-weight: 400;
   opacity: 0.75;
@@ -1056,7 +1054,7 @@ main.no-scroll {
 
 .usage-total {
   color: var(--ink);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 16px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;

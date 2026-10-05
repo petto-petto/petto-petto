@@ -1,6 +1,5 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import '@fontsource/press-start-2p'; // 픽셀 폰트 (로컬 번들)
 import App from './App.jsx';
 import './styles.css';
 import { isElectron } from './platform/bridge.js';

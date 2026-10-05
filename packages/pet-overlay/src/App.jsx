@@ -2,7 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useGrowth } from './growth/useGrowth.js';
 import Overlay from './overlay/Overlay.jsx';
 import { getPet, DEFAULT_PET_KEY } from './pets/catalog.ts';
-import { isElectron, onActivePetChanged, roomScene, setActivePet } from './platform/bridge.js';
+import {
+  isElectron,
+  onActivePetChanged,
+  onRosterChanged,
+  roomScene,
+  setActivePet,
+} from './platform/bridge.js';
 
 /**
  * 오버레이에 뜨는 펫은 **명부가 정한다.**
@@ -63,9 +69,15 @@ export default function App() {
       setActiveId(view.ownedPetId);
     });
 
+    // 뽑기·합성으로 보유 펫이 바뀌면 Growth Debug 의 보유 펫 목록도 따라간다.
+    const offRoster = onRosterChanged((views) => {
+      if (Array.isArray(views)) setRoster(views);
+    });
+
     return () => {
       alive = false;
       off();
+      offRoster();
     };
   }, []);
 

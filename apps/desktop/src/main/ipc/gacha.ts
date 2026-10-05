@@ -6,6 +6,8 @@ export function registerGachaIpc(
   ipc: Pick<IpcMain, 'handle'>,
   gacha: PersistentGacha,
   isGachaWindow: (event: IpcMainInvokeEvent) => boolean,
+  /** 보유 펫이 바뀐 뒤 부른다. 펫룸·오버레이가 새 명부를 읽게 하는 것은 앱의 일이다. */
+  petsChanged: () => void,
 ): void {
   function respond<T>(event: IpcMainInvokeEvent, work: () => T): GachaResponse<T> {
     if (!isGachaWindow(event)) return { ok: false, message: '뽑기 창에서만 사용할 수 있습니다.' };
@@ -23,7 +25,9 @@ export function registerGachaIpc(
     respond(event, () => {
       if (count !== 1 && count !== 10) throw new Error('유효하지 않은 뽑기 횟수입니다.');
       if (typeof requestId !== 'string') throw new Error('유효하지 않은 소환 요청 ID입니다.');
-      return gacha.draw(count, requestId);
+      const result = gacha.draw(count, requestId);
+      petsChanged();
+      return result;
     }),
   );
 }

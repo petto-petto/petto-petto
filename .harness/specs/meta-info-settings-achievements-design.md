@@ -283,7 +283,7 @@ Claude Code, Codex, Gemini CLI를 항상 같은 순서로 표시한다. 각 카�
 | `collection.dex_5` | 수집 | 수집가 Ⅰ | 도감 5종 | 브론즈 | 30 | — | — | collection |
 | `collection.dex_15` | 수집 | 수집가 Ⅱ | 도감 15종 | 실버 | 80 | — | — | collection |
 | `collection.dex_complete` | 수집 | 도감 마스터 | 현재 도감의 전체 종 보유 | 골드 | 300 | 도감 마스터 | 예 | collection |
-| `collection.first_epic` | 수집 | 행운아 | 에픽 펫 첫 획득 | — | 50 | 행운아 | — | gacha·collection |
+| `collection.first_epic` | 수집 | 행운아 | EPIC 펫 첫 획득 | — | 50 | 행운아 | — | gacha·collection |
 | `collection.fusion_5` | 수집 | 연금술사 Ⅰ | 합성 5회 | 브론즈 | 30 | — | — | gacha |
 | `collection.fusion_50` | 수집 | 연금술사 Ⅱ | 합성 50회 | 실버 | 120 | 심야의 연금술사 | — | gacha |
 | `growth.level_5` | 성장 | 첫 걸음 | 한 펫이 Lv.5 달성 | — | 20 | — | — | overlay-growth |
@@ -300,7 +300,7 @@ Claude Code, Codex, Gemini CLI를 항상 같은 순서로 표시한다. 각 카�
 | `usage.tokens_100m` | 사용량 | 토큰 마일스톤 Ⅲ | 관측 토큰 1억 | 골드 | 200 | 토큰 헤비유저 | — | meta |
 | `usage.active_24h` | 사용량 | 함께한 시간 Ⅰ | 활동 시간 1,440분 | 브론즈 | 30 | — | — | meta |
 | `hidden.three_tools_day` | 히든 | 세 도구의 조련사 | 같은 로컬 날짜에 세 CLI 모두 관측 토큰 발생 | — | 70 | 세 도구의 조련사 | — | meta |
-| `hidden.common_fusion_epic` | 히든 | 연금술의 기적 | 커먼 펫 2마리 합성으로 에픽 펫 획득 | — | 100 | 기적의 연금술사 | — | gacha |
+| `hidden.common_fusion_epic` | 히든 | 연금술의 기적 | COMMON 펫 2마리 합성으로 EPIC 펫 획득 | — | 100 | 기적의 연금술사 | — | gacha |
 
 ### 7.3 칭호
 
@@ -436,9 +436,9 @@ AchievementEvent {
 
 업적 엔진은 설치 이후 이벤트에서 다음 사실을 영속적으로 투영한다.
 
-- 첫 펫·첫 에픽 획득 여부
+- 첫 펫·첫 EPIC 획득 여부
 - 현재 도감 보유·전체 수와 최고 보유 수
-- 누적 합성 횟수와 커먼 2마리에서 에픽이 나온 횟수
+- 누적 합성 횟수와 COMMON 2마리에서 EPIC이 나온 횟수
 - 펫 최고 레벨과 진화 발생 여부
 - 누적 전투 승수와 최고 연승
 - 누적 관측 토큰과 활동 분
