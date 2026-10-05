@@ -11,7 +11,7 @@
   "scripts": {
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "postinstall": "node scripts/rebuild-native.mjs && node scripts/fetch-fonts.mjs",
+    "postinstall": "node scripts/rebuild-native.mjs && node scripts/fetch-fonts.mjs && node scripts/brand-dev-electron.mjs",
     "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "typecheck": "tsc --build && tsc -p tsconfig.test.json",
     "test": "tsc --build && node --experimental-strip-types --test \"packages/*/test/**/*.test.ts\"",

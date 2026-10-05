@@ -282,8 +282,6 @@ function buildTray(current: MetaAppState): void {
   );
 }
 
-// `userData` 경로가 앱 이름에서 나오므로 `whenReady` 전에 정해야 한다. 이걸 빼면
-// 저장 파일이 `Application Support/Electron/`에 들어가 다른 Electron 개발 앱과 섞인다.
 /**
  * 앱 메뉴. 트레이와 별개로 **항상 보이는** 진입점이다.
  *
@@ -316,7 +314,24 @@ function buildAppMenu(current: MetaAppState): void {
   );
 }
 
-app.setName('tamagotchi-pet');
+/**
+ * 화면에 보이는 앱 이름. 메뉴의 "숨기기·종료" 항목 등이 이 이름을 쓴다. 메뉴 막대의 굵은 이름과
+ * Dock 이름은 번들 `Info.plist`가 정하므로, 개발 중에는 `scripts/brand-dev-electron.mjs`가
+ * `Electron.app`의 이름·아이콘·번들 ID 를 바꾼다.
+ */
+const APP_NAME = 'Petto Petto';
+
+/**
+ * 저장 위치는 옛 이름 `tamagotchi-pet` 폴더에 그대로 둔다. `userData`는 앱 이름에서 나오므로
+ * 이름만 바꾸면 기존 사용자의 펫·토큰 DB 를 못 찾는다. `--user-data-dir`로 띄우면(검증용 임시
+ * 프로필) 그 값을 따른다. 둘 다 `whenReady` 전에 정해야 한다.
+ */
+const DATA_DIRECTORY_NAME = 'tamagotchi-pet';
+
+app.setName(APP_NAME);
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), DATA_DIRECTORY_NAME));
+}
 
 app.whenReady().then(async () => {
   // 패키징하지 않고 `electron`으로 띄우면 Dock 에 Electron 기본 아이콘이 뜬다. 앱 아이콘은
