@@ -2,6 +2,7 @@ import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleResult, Rarity } from '../contracts.ts';
 import type { BattleGateway } from '../ports/battle-gateway.ts';
+import type { BattleGrowthReader } from '../ports/growth.ts';
 import { assertBattleClientCommand } from './client-policy.ts';
 import { selectRandomPetSpectators } from '../view/scene.ts';
 import { ownedGrowthPet, RoomBattlePetAdapter } from './room-pets.ts';
@@ -27,11 +28,12 @@ export class OwnedPetBattleGateway implements BattleGateway {
     engine: BattleGateway,
     rules: BattleGrowthRules,
     selection?: RoomSelectionClient,
+    growthReader?: BattleGrowthReader,
   ) {
     this.#pets = pets;
     this.#engine = engine;
     this.#rules = rules;
-    this.#room = selection && new RoomBattlePetAdapter(selection, pets);
+    this.#room = selection && new RoomBattlePetAdapter(selection, pets, growthReader);
   }
 
   execute(command: BattleCommand): Promise<BattleResult> {

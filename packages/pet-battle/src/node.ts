@@ -8,11 +8,13 @@ import type { BattleGrowthRules } from './app/owned-pet-gateway.ts';
 import { SpriteBattleGateway } from './app/sprite-gateway.ts';
 import { mountBattleIpc } from './platform/ipc.ts';
 import type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
+import type { BattleGrowthReader } from './ports/growth.ts';
 import { ElectronBattleEngine } from './app/battle-engine.ts';
 
 export { FileBattleSpriteAdapter } from './platform/file-sprites.ts';
 export { mountBattleIpc } from './platform/ipc.ts';
 export type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
+export type { BattleGrowthReader, BattlePetGrowthSnapshot } from './ports/growth.ts';
 
 export interface BattleRuntimeOptions {
   /** Optional owner-provided room selection; never changes room or common storage. */
@@ -20,6 +22,8 @@ export interface BattleRuntimeOptions {
   petAssetsDir: string;
   /** The growth owner supplies this curve; battle does not define pet growth. */
   levelXpCosts: readonly number[];
+  /** Optional read-only source of saved growth, keyed by room-owned pet identity. */
+  growthReader?: BattleGrowthReader;
 }
 
 export function createBattleRuntime(
@@ -49,6 +53,7 @@ export function createBattleRuntime(
       },
       rules,
       options.selection,
+      options.growthReader,
     ),
     sprites,
   );

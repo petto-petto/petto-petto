@@ -2,6 +2,7 @@ import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleResult } from '../contracts.ts';
 import type { BattleGateway } from '../ports/battle-gateway.ts';
+import type { BattleGrowthReader } from '../ports/growth.ts';
 import { OwnedPetBattleGateway, type BattleGrowthRules } from './owned-pet-gateway.ts';
 
 export interface GrowthXpNotification {
@@ -26,10 +27,11 @@ export class PetBattleIntegration implements BattleGateway {
     engine: BattleGateway,
     rules: BattleGrowthRules,
     selection?: RoomSelectionClient,
+    growthReader?: BattleGrowthReader,
   ) {
     this.#pets = pets;
     this.#selection = selection;
-    this.#gateway = new OwnedPetBattleGateway(pets, engine, rules, selection);
+    this.#gateway = new OwnedPetBattleGateway(pets, engine, rules, selection, growthReader);
   }
 
   execute(command: BattleCommand): Promise<BattleResult> {

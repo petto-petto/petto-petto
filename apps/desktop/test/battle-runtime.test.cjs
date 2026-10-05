@@ -6,11 +6,14 @@ const { fileURLToPath } = require('node:url');
 const test = require('node:test');
 const { roomFixture } = require('./room-battle-selection.test.cjs');
 
-async function fixture(t) {
+async function fixture(t, { persistedGrowth = false } = {}) {
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
   const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
   const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
+  const { PetGrowthRepository } =
+    await import('../dist/main/persistence/repositories/pet-growth-repository.js');
+  const { createBattleGrowthReader } = await import('../dist/main/clients/battle-growth-reader.js');
   const { createBattleRuntime, mountBattle } = await import('@pet/battle/node');
   const { PetClientRoomAdapter } = await import('@pet/room');
   const { OVERLAY_GROWTH_RULES } = await import('../dist/main/growth-rules.js');
@@ -21,9 +24,11 @@ async function fixture(t) {
   });
   db.open();
   const pets = new SqlitePetClient(new PetRepository(db));
+  const growthRepository = new PetGrowthRepository(db);
   const roomPets = new PetClientRoomAdapter(pets);
   const options = {
     petAssetsDir: join(__dirname, '../renderer/assets/pets'),
+    ...(persistedGrowth && { growthReader: createBattleGrowthReader(growthRepository) }),
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
       OVERLAY_GROWTH_RULES.requiredXp(i + 1),
     ),
@@ -37,6 +42,7 @@ async function fixture(t) {
   return {
     db,
     pets,
+    growthRepository,
     roomPets,
     options,
     mountBattle,
@@ -81,6 +87,40 @@ test('공통 SQLite 소유자 선택 → 읽기 Adapter → Rust 전투 이미�
   result = await f.connect().execute({ type: 'GET_STATE', nowMs: 0 });
   assert.equal(result.state.activePet.petId, squirrel.ownedPetId);
   assert.equal(f.pets.getOwnedPet(wizard.ownedPetId).totalXp, 384);
+});
+
+test('펫룸 개체 ID로 성장 정본 XP를 읽고 저장 변경을 열린 전투에 반영한다', async (t) => {
+  const f = await fixture(t, { persistedGrowth: true });
+  const room = await roomFixture();
+  const { RoomSelectionAdapter } = await import('@pet/room');
+  f.growthRepository.adoptRoster(room.state.growthSeeds());
+  const seeded = f.growthRepository.loadAll();
+  const initialXp = seeded['seed-006'].pet.totalXp;
+  const initial = seeded['seed-006'].pet;
+  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
+
+  let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
+  assert.equal(result.state.activePet.petId, 'seed-006');
+  assert.equal(result.state.activePet.syncedTotalXp, initialXp);
+  assert.equal(result.state.growthStatus, 'LINKED');
+  assert.deepEqual(f.pets.listOwnedPets(), [], 'growth lookup must not create PetClient records');
+
+  const next = f.growthRepository.loadAll();
+  next['seed-006'].pet.totalXp = initialXp + 1;
+  next['seed-006'].pet.evolutionStage = 2;
+  f.growthRepository.saveAll(next);
+
+  result = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(result.state.activePet.syncedTotalXp, initialXp + 1);
+  assert.equal(result.state.activePet.evolutionStage, 2);
+  assert.ok(result.state.enemyHpRatio < 1);
+  assert.equal(result.events.filter((event) => event.type === 'XP_APPLIED').length, 1);
+  assert.deepEqual(f.pets.listOwnedPets(), []);
+  assert.equal(
+    initial.totalXp,
+    initialXp,
+    'repository snapshots returned to callers are independent',
+  );
 });
 
 test('읽기 Adapter는 같은 종의 선택·저장 XP를 실제 Rust에 전달하고 소유 데이터에 쓰지 않는다', async (t) => {
@@ -228,10 +268,14 @@ test('JSON 룸 선택 Client는 열린 Rust 전투와 재연결에 실제 선택
   room.handlers.get('room:setActivePet')({}, 'seed-006');
   result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
   assert.equal(result.state.activePet.petId, 'seed-006');
-  assert.equal(result.state.activePet.level, 25);
-  assert.equal(result.state.activePet.evolutionStage, 2);
+  assert.equal(
+    result.state.activePet.level,
+    16,
+    'a different PetClient identity must not lend its growth',
+  );
+  assert.equal(result.state.activePet.evolutionStage, 0);
   assert.equal(result.state.growthStatus, 'UNLINKED');
-  assert.match(deriveBattleScene(result.state).petAsset, /star_wizard\/stage3\/pet_006_s3_/);
+  assert.match(deriveBattleScene(result.state).petAsset, /star_wizard\/stage1\/pet_006_s1_/);
   for (const sprite of Object.values(result.state.petSprites)) {
     for (const sheet of Object.values(sprite)) accessSync(fileURLToPath(sheet.asset));
   }

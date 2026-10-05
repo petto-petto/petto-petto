@@ -1,6 +1,7 @@
 import type { OwnedPet, PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleState } from '../contracts.ts';
+import type { BattleGrowthReader } from '../ports/growth.ts';
 
 type GrowthPet = Extract<BattleCommand, { type: 'SYNC_OWNED_PETS' }>['pets'][number];
 
@@ -20,10 +21,16 @@ export function ownedGrowthPet(pet: OwnedPet): GrowthPet {
 export class RoomBattlePetAdapter {
   readonly #selection: RoomSelectionClient;
   readonly #growth: Pick<PetClient, 'listOwnedPets'>;
+  readonly #persistedGrowth: BattleGrowthReader | undefined;
 
-  constructor(selection: RoomSelectionClient, growth: Pick<PetClient, 'listOwnedPets'>) {
+  constructor(
+    selection: RoomSelectionClient,
+    growth: Pick<PetClient, 'listOwnedPets'>,
+    persistedGrowth?: BattleGrowthReader,
+  ) {
     this.#selection = selection;
     this.#growth = growth;
+    this.#persistedGrowth = persistedGrowth;
   }
 
   getSnapshot(): {
@@ -33,23 +40,32 @@ export class RoomBattlePetAdapter {
   } {
     const room = this.#selection.getSnapshot();
     const owned = new Map(this.#growth.listOwnedPets().map((pet) => [pet.ownedPetId, pet]));
+    const persisted =
+      this.#persistedGrowth?.readOwnedPetGrowth(room.pets.map((pet) => pet.ownedPetId)) ??
+      new Map();
     const pets = room.pets.map((pet): GrowthPet => {
       const linked = owned.get(pet.ownedPetId);
+      const saved = persisted.get(pet.ownedPetId);
       if (linked) {
         if (linked.speciesId !== pet.petId || linked.sprite !== pet.slug) {
           throw new Error(`펫 개체 정보 불일치: ${pet.ownedPetId}`);
         }
-        return ownedGrowthPet(linked);
+        return {
+          ...ownedGrowthPet(linked),
+          level: saved?.level ?? linked.level,
+          evolutionStage: saved?.evolutionStage ?? linked.evolutionStage,
+          totalXp: saved?.totalXp ?? linked.totalXp,
+        };
       }
       return {
         petId: pet.ownedPetId,
         displayName: pet.name,
         rarity: pet.rarity,
-        level: pet.level,
+        level: saved?.level ?? pet.level,
         sprite: pet.slug,
-        evolutionStage: pet.stage === 3 ? 2 : pet.stage === 2 ? 1 : 0,
+        evolutionStage: saved?.evolutionStage ?? (pet.stage === 3 ? 2 : pet.stage === 2 ? 1 : 0),
         // Legacy room JSON has no XP. Do not turn its level into fabricated growth.
-        totalXp: null,
+        totalXp: saved?.totalXp ?? null,
       };
     });
     const active = pets.find((pet) => pet.petId === room.activePetId);
