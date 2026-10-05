@@ -12,6 +12,7 @@ import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
 import { VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '@pet/room';
+import battleWindowOptions from '@pet/battle/ui/window-options.json' with { type: 'json' };
 
 import {
   OVERLAY_WINDOW_HEIGHT,
@@ -43,10 +44,7 @@ const combineUiDir = join(
 );
 const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
 const overlayUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/main-overlay/ui'))));
-const battleUiDir = join(
-  dirname(fileURLToPath(import.meta.resolve('@pet/battle/package.json'))),
-  'ui',
-);
+const battleUiDir = dirname(fileURLToPath(import.meta.resolve('@pet/battle/ui')));
 
 /**
  * 정적 에셋의 루트.
@@ -62,11 +60,22 @@ let roomWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
+let growthUsageReadyWebContentsId: number | undefined;
+const pendingGrowthUsage: unknown[] = [];
+const battleWindowClosedListeners = new Set<() => void>();
 
 export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
 export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
 export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
 export const getBattleWindow = (): BrowserWindow | undefined => battleWindow;
+
+/** 전투 준비 취소 신호만 전달한다. 다른 창의 수명이나 전투 상태를 소유하지 않는다. */
+export function subscribeBattleWindowClosed(listener: () => void): () => void {
+  battleWindowClosedListeners.add(listener);
+  return () => {
+    battleWindowClosedListeners.delete(listener);
+  };
+}
 
 /**
  * 열려 있는 **모든** 창에 같은 이벤트를 보낸다.
@@ -76,9 +85,31 @@ export const getBattleWindow = (): BrowserWindow | undefined => battleWindow;
  * 정확히 그렇게 깨진다 — 그래서 목록을 사람이 관리하지 않는다.
  */
 export function broadcast(channel: string, payload: unknown): void {
+  if (channel === 'growth:usage') {
+    const overlay = overlayWindow;
+    if (
+      overlay &&
+      !overlay.isDestroyed() &&
+      !overlay.webContents.isDestroyed() &&
+      overlay.webContents.id === growthUsageReadyWebContentsId
+    ) {
+      overlay.webContents.send(channel, payload);
+    } else {
+      pendingGrowthUsage.push(payload);
+    }
+    return;
+  }
+
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
   }
+}
+
+/** Growth notifications wait until the overlay has installed its listener. */
+export function markGrowthUsageReady(sender: WebContents): void {
+  if (!overlayWindow || overlayWindow.isDestroyed() || overlayWindow.webContents !== sender) return;
+  growthUsageReadyWebContentsId = sender.id;
+  for (const payload of pendingGrowthUsage.splice(0)) sender.send('growth:usage', payload);
 }
 
 function commonOptions() {
@@ -354,9 +385,8 @@ export function isCombineWebContents(contents: WebContents): boolean {
 /**
  * 전투 UI와 에셋은 `@pet/battle`이 소유하고, 데스크톱 앱은 창 수명만 맡는다.
  *
- * 공통 preload에는 `window.petBattle`을 노출하지 않는다. 전투 UI가 제공하는 브라우저
- * fallback gateway를 사용하므로 Rust sidecar·개별 Electron 실행 없이도 같은 앱에서
- * 전투 화면을 확인할 수 있다.
+ * 전투 전용 sandbox preload를 통해 공유 PetClient를 주입받은 Electron 내부 전투를 사용한다.
+ * 브라우저 fallback은 앱 밖 독립 미리보기에서만 사용한다.
  */
 export function createBattleWindow(): BrowserWindow | undefined {
   if (battleWindow && !battleWindow.isDestroyed()) {
@@ -366,16 +396,9 @@ export function createBattleWindow(): BrowserWindow | undefined {
   }
 
   battleWindow = new BrowserWindow({
-    width: 360,
-    height: 180,
-    useContentSize: true,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    alwaysOnTop: true,
-    show: false,
+    ...battleWindowOptions,
     webPreferences: {
-      preload: preloadPath,
+      preload: join(battleUiDir, 'host-preload.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -387,6 +410,7 @@ export function createBattleWindow(): BrowserWindow | undefined {
   battleWindow.once('ready-to-show', () => battleWindow?.show());
   battleWindow.on('closed', () => {
     battleWindow = undefined;
+    for (const listener of battleWindowClosedListeners) listener();
   });
   return battleWindow;
 }

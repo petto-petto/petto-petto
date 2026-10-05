@@ -29,4 +29,11 @@ a = rt.applyNow({ tokens: 100000, timestamp: 100 }); // 누적 106000 -> base 21
 assert.strictEqual(a.gained, 20);
 assert.strictEqual(rt.pet.totalXp, 21);
 
+const deduped = new GrowthController();
+const firstUsage = deduped.applyNow({ tokens: 5000, timestamp: 0, eventId: 'usage:one' });
+assert.strictEqual(firstUsage.gained, 1);
+const repeatedUsage = deduped.applyNow({ tokens: 5000, timestamp: 1, eventId: 'usage:one' });
+assert.strictEqual(repeatedUsage.gained, 0);
+assert.strictEqual(deduped.pet.totalXp, 1);
+
 console.log('controller.test.mjs OK');

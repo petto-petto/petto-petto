@@ -31,7 +31,6 @@ desktop host에서는 이미 열린 공용 DB로 한 번 조립한 뒤 필요한
 import type { PetClient } from '@pet/client';
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { PetRepository } from './persistence/repositories/pet-repository.ts';
-
 const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
 // 각 기능의 생성자나 초기화 함수에 pets를 전달한다.
 ```

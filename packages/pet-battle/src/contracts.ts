@@ -3,7 +3,8 @@ import type { Rarity } from '@pet/core';
 export type { Rarity } from '@pet/core';
 
 export type BattleMode = 'FIGHTING' | 'PAUSED';
-export type EnemyColor = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RAINBOW';
+export type EnemyColor =
+  'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'INDIGO' | 'PURPLE' | 'RAINBOW';
 export type BackgroundTheme = 'MUSHROOM_FOREST' | 'CRYSTAL_RUINS' | 'STARLIGHT_SHRINE';
 export type PreviewMenu = 'CLOSED' | 'PET' | 'ENEMY';
 export type PetPreviewAction = 'ATTACK' | 'GROWTH';
@@ -34,6 +35,9 @@ export interface BattlePet {
   petId: string;
   displayName: string;
   rarity: Rarity;
+  level: number;
+  sprite: string;
+  evolutionStage: 0 | 1 | 2;
   stage: number;
   intervalXp: number;
   battleMode: BattleMode;
@@ -55,13 +59,20 @@ export interface BattlePreviewState {
   enemySize: EnemyPreviewSize | null;
   enemyColor: EnemyColor | null;
   enemyHpRatio: number | null;
+  petAssetRarity: Rarity | null;
   attackEffectRarity: Rarity | null;
   reducedMotion: boolean;
 }
 
 export interface BattleState {
+  /** Present only when the host supplies the room's live selection client. */
+  selectionSource?: 'ROOM';
+  growthStatus?: 'LINKED' | 'UNLINKED' | null;
+  /** Host-provided shared assets keyed by ownedPetId; absent in standalone previews. */
+  petSprites?: Record<string, Record<'idle' | 'attack', { asset: string; frameCount: number }>>;
   activePet: BattlePet | null;
   roster: BattlePet[];
+  spectatorPetIds: string[];
   enemyHpRatio: number;
   enemyColor: EnemyColor;
   background: BackgroundTheme;
@@ -92,9 +103,32 @@ export type BattleEvent =
     };
 
 export type BattleCommand =
+  | {
+      type: 'SYNC_OWNED_PETS';
+      pets: Array<
+        Pick<
+          BattlePet,
+          'petId' | 'displayName' | 'rarity' | 'level' | 'sprite' | 'evolutionStage'
+        > & { totalXp: number | null }
+      >;
+      activePetId: string | null;
+      spectatorPetIds: string[];
+      levelXpCosts: number[];
+      intervalLevels: Record<Rarity, number>;
+      nowMs: number;
+    }
   | { type: 'GET_STATE'; nowMs: number }
-  | { type: 'UPSERT_PET'; petId: string; displayName: string; rarity: Rarity }
+  | {
+      type: 'UPSERT_PET';
+      petId: string;
+      displayName: string;
+      rarity: Rarity;
+      level: number;
+      sprite: string;
+      evolutionStage: 0 | 1 | 2;
+    }
   | { type: 'SET_ACTIVE_PET'; petId: string }
+  | { type: 'SET_PET_SPECTATORS'; petIds: string[] }
   | { type: 'GROWTH_XP_ADDED'; petId: string; amount: number; nowMs: number }
   | { type: 'TOGGLE_BATTLE' }
   | { type: 'SET_BATTLE_RUNNING'; running: boolean }
@@ -106,6 +140,7 @@ export type BattleCommand =
   | { type: 'CYCLE_ENEMY_COLOR' }
   | { type: 'CYCLE_ENEMY_HP' }
   | { type: 'SET_DISPLAY_OPACITY'; percent: number }
+  | { type: 'CYCLE_PET_ASSET' }
   | { type: 'CYCLE_ATTACK_EFFECT' }
   | { type: 'TOGGLE_REDUCED_MOTION' };
 
@@ -114,6 +149,4 @@ export interface BattleResult {
   events: BattleEvent[];
 }
 
-export interface BattleGateway {
-  execute(command: BattleCommand): Promise<BattleResult>;
-}
+export type { BattleGateway } from './ports/battle-gateway.ts';

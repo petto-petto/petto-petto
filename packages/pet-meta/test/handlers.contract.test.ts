@@ -126,7 +126,7 @@ test('INFO: 활성 펫이 있으면 초상화 채널이 진화 단계를 넘긴�
   assert.equal((received as { speciesId: string }).speciesId, '006');
 });
 
-function collectHandlers() {
+function collectHandlers(host: MetaHost = noopHost) {
   const collector = new RecordingCollector();
   for (const provider of PROVIDERS) collector.setSnapshot(emptySnapshot(provider));
   const state = new MetaAppState(
@@ -139,8 +139,36 @@ function collectHandlers() {
     STUB_GROWTH_RULES,
     collector,
   );
-  return { state, collector, map: metaHandlers(state, noopHost) };
+  return { state, collector, map: metaHandlers(state, host) };
 }
+
+test('성장에는 캐시를 제외한 input/output 증가분을 안정적인 이벤트 id와 함께 전달한다', async () => {
+  const messages: Array<{ channel: string; payload: unknown }> = [];
+  const { collector, map } = collectHandlers({
+    ...noopHost,
+    broadcast: (channel, payload) => messages.push({ channel, payload }),
+  });
+  const collect = map['collect:now'];
+  assert.ok(collect);
+
+  await collect(); // 첫 스캔은 기준점만 잡는다.
+  collector.accumulate(
+    'claude_code',
+    '2026-08-24',
+    'claude-opus-5',
+    tokenCounts(1_000, 200, 300, 700),
+  );
+  await collect();
+  await collect(); // 같은 증가분을 다시 전달하지 않는다.
+
+  const growthEvents = messages.filter((message) => message.channel === 'growth:usage');
+  assert.deepEqual(growthEvents, [
+    {
+      channel: 'growth:usage',
+      payload: { eventId: 'usage:claude_code:0->2200', tokens: 1_200 },
+    },
+  ]);
+});
 
 test('COLLECT-003: 갱신(collect:now)은 켜진 소스만 새로 읽은 뒤 집계한다', async () => {
   const { collector, map } = collectHandlers();

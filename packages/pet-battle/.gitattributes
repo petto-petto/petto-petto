@@ -1,0 +1,3 @@
+# Keep battle text files compatible with Prettier on Windows checkouts.
+# text=auto leaves sprite sheets and other binary assets unchanged.
+* text=auto eol=lf

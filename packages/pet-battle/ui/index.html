@@ -7,45 +7,63 @@
     <link rel="stylesheet" href="battle.css" />
   </head>
   <body>
+    <button class="window-close" type="button" aria-label="전투 창 닫기" title="전투 창 닫기">
+      ×
+    </button>
     <main id="battle-overlay" aria-label="펫 자동 전투 오버레이">
+      <div class="window-drag-handle" aria-hidden="true"></div>
       <div id="battle-environment" class="battle-environment" aria-hidden="true">
-        <img
-          id="battle-background"
-          class="battle-background"
-          src="../assets/backgrounds/v2/mushroom-forest.png"
-          alt=""
-          draggable="false"
-        />
-        <div class="vignette"></div>
-      </div>
-
-      <header class="battle-hud">
-        <span id="stage-label">STAGE 1</span>
-        <div class="enemy-hp" aria-label="적 체력">
-          <span id="enemy-hp-fill"></span>
-          <strong id="enemy-hp-label">100%</strong>
-        </div>
-        <button
-          class="motion-toggle"
-          type="button"
-          data-action="REDUCED_MOTION"
-          aria-label="모션 감소 전환"
-        >
-          모션↓
-        </button>
-      </header>
-
-      <section id="pet" class="character pet" data-character="pet" aria-label="펫 모션 메뉴 열기">
-        <span class="ground-shadow" aria-hidden="true"></span>
-        <span class="pet-viewport">
+        <div id="battle-world" class="camera-world">
           <img
-            id="pet-sheet"
-            class="pet-sheet"
-            src="../assets/pets/v2/common-idle.png"
-            alt="전투 중인 펫"
+            id="battle-background"
+            class="battle-background"
+            src="assets/backgrounds/v2/mushroom-forest.png"
+            decoding="async"
+            alt=""
             draggable="false"
           />
-        </span>
+          <div class="vignette"></div>
+          <div class="fireflies"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <aside
+            id="pet-spectators"
+            class="peeking-spectators"
+            aria-label="배경 뒤에서 응원하는 보유 펫"
+          ></aside>
+        </div>
+      </div>
+
+      <canvas class="sprout-roots" aria-hidden="true" hidden></canvas>
+
+      <header class="battle-hud">
+        <span id="stage-label" hidden>STAGE 1-1</span>
+        <div class="enemy-hp" aria-label="적 체력" hidden>
+          <div class="enemy-hp-track" aria-hidden="true">
+            <span id="enemy-hp-fill"></span>
+          </div>
+          <strong id="enemy-hp-label">100%</strong>
+        </div>
+      </header>
+
+      <section
+        id="pet"
+        class="character pet"
+        data-character="pet"
+        aria-label="펫 모션 메뉴 열기"
+        hidden
+      >
+        <span class="ground-shadow" aria-hidden="true"></span>
+        <span class="pet-body-clip"
+          ><span class="pet-viewport">
+            <img
+              id="pet-sheet"
+              class="pet-sheet"
+              decoding="async"
+              alt="전투 중인 펫"
+              draggable="false"
+            /> </span
+        ></span>
+        <span class="mole-soil" aria-hidden="true"><i></i><i></i><i></i></span>
+        <canvas class="mole-native-sprite" width="48" height="32" aria-hidden="true"></canvas>
       </section>
 
       <section
@@ -53,17 +71,13 @@
         class="character enemy"
         data-character="enemy"
         aria-label="적 모션 메뉴 열기"
+        hidden
       >
         <span class="ground-shadow" aria-hidden="true"></span>
-        <img
-          id="enemy-image"
-          src="../assets/enemies/v2/red-steady.png"
-          alt="현재 적"
-          draggable="false"
-        />
+        <img id="enemy-image" decoding="async" alt="현재 적" draggable="false" />
       </section>
 
-      <div class="combat-effects" aria-hidden="true">
+      <div class="combat-effects" aria-hidden="true" hidden>
         <i class="speed-line line-1"></i><i class="speed-line line-2"></i>
         <i class="slash slash-1"></i><i class="slash slash-2"></i><i class="slash slash-3"></i>
         <i class="impact-wave wave-1"></i><i class="impact-wave wave-2"></i
@@ -71,6 +85,8 @@
         ><i class="growth-particle particle-2"></i><i class="growth-particle particle-3"></i
         ><i class="growth-particle particle-4"></i>
       </div>
+      <div class="enemy-slam" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="defeat-burst" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
       <nav id="pet-menu" class="radial-menu pet-menu" aria-label="펫 모션" hidden>
         <button type="button" data-action="START" class="radial-button">START</button>
@@ -78,6 +94,7 @@
         <button type="button" data-action="ATTACK" class="radial-button">공격</button>
         <button type="button" data-action="GROWTH" class="radial-button">성장</button>
         <button type="button" data-action="ATTACK_EFFECT" class="radial-button">효과</button>
+        <button type="button" data-action="PET_ASSET" class="radial-button">펫</button>
       </nav>
 
       <nav id="enemy-menu" class="radial-menu enemy-menu" aria-label="적 모션" hidden>
@@ -94,8 +111,25 @@
         </label>
       </nav>
 
+      <aside class="ambient-log-panel" data-ambient-side="PET" aria-label="펫 대화" hidden>
+        <ol
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="펫 말풍선 목록"
+        ></ol>
+      </aside>
+      <aside class="ambient-log-panel" data-ambient-side="ENEMY" aria-label="적 대화" hidden>
+        <ol
+          role="log"
+          aria-live="polite"
+          aria-relevant="additions"
+          aria-label="적 말풍선 목록"
+        ></ol>
+      </aside>
       <output id="battle-toast" class="battle-toast" aria-live="polite"></output>
+      <p id="battle-notice" class="battle-notice" role="status">전투 정보를 불러오는 중…</p>
     </main>
-    <script type="module" src="../dist/ui/battle-overlay.js"></script>
+    <script type="module" src="./battle-overlay.js"></script>
   </body>
 </html>

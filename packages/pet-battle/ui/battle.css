@@ -1,6 +1,6 @@
 :root {
-  --battle-width: 360px;
-  --battle-height: 180px;
+  --pet-size: 96px;
+  --enemy-frame-size: 128px;
   --forest-deep: #10231a;
   --forest-mid: #1c4a34;
   --wood-border: #3a2a1c;
@@ -13,7 +13,7 @@
   --cyan: #55d7cf;
   --outline: #2c2438;
   --danger: #762f35;
-  --enemy-height: 80px;
+  --enemy-height: 112px;
   --slash-opacity: 0;
   --impact-opacity: 0;
   --speed-opacity: 0;
@@ -25,8 +25,8 @@
 
 html,
 body {
-  width: var(--battle-width);
-  height: var(--battle-height);
+  width: 100%;
+  height: 100%;
   margin: 0;
   overflow: hidden;
   background: transparent;
@@ -44,10 +44,41 @@ input {
   font: inherit;
 }
 
+img:not([src]) {
+  visibility: hidden;
+}
+
+.window-close {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid var(--wood-border);
+  background: var(--wood);
+  color: var(--cream);
+  font:
+    20px/1 ui-monospace,
+    monospace;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.window-close:hover {
+  background: var(--danger);
+}
+
+.window-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 #battle-overlay {
   position: relative;
-  width: var(--battle-width);
-  height: var(--battle-height);
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   border: 2px solid var(--outline);
   background: transparent;
@@ -55,6 +86,15 @@ input {
     inset 0 0 0 2px rgba(143, 214, 138, 0.22),
     2px 2px 0 rgba(0, 0, 0, 0.38);
   isolation: isolate;
+}
+
+/* Native drag hit testing is separate from DOM z-index. Never cover the X button. */
+.window-drag-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 48px;
+  height: 40px;
   -webkit-app-region: drag;
 }
 
@@ -67,15 +107,238 @@ input {
   height: 100%;
 }
 
+.camera-world {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* The director selects a discrete idle frame in sync with each footstep. */
+.pet-sheet.walking-sheet {
+  animation: none;
+}
+
+[data-pet-hit='true'] .pet-viewport {
+  filter: brightness(1.45) saturate(0.55);
+}
+
+.enemy-slam,
+.defeat-burst {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.enemy-slam i {
+  position: absolute;
+  width: 64px;
+  height: 14px;
+  left: -32px;
+  top: -7px;
+  border: 3px solid #f6d9aa;
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 2px 0 #91728b;
+}
+
+.enemy-slam i:nth-child(2) {
+  width: 8px;
+  height: 6px;
+  left: -36px;
+  border: 0;
+  background: #d4bc9a;
+}
+.enemy-slam i:nth-child(3) {
+  width: 6px;
+  height: 6px;
+  left: 28px;
+  border: 0;
+  background: #bba6be;
+}
+.enemy-slam.active i {
+  animation: ground-impact 380ms ease-out both;
+}
+.enemy-slam.active i:nth-child(2) {
+  animation-name: dust-left;
+}
+.enemy-slam.active i:nth-child(3) {
+  animation-name: dust-right;
+}
+@keyframes ground-impact {
+  from {
+    opacity: 0.95;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes dust-left {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-18px, -22px) rotate(-55deg);
+  }
+}
+@keyframes dust-right {
+  from {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(18px, -18px) rotate(55deg);
+  }
+}
+
+.defeat-burst i {
+  --angle: 0deg;
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  left: -2px;
+  top: -2px;
+  background: #f8dbab;
+  box-shadow: 0 0 5px #dcc0fc;
+  opacity: 0;
+}
+.defeat-burst i:nth-child(2) {
+  --angle: 60deg;
+}
+.defeat-burst i:nth-child(3) {
+  --angle: 120deg;
+}
+.defeat-burst i:nth-child(4) {
+  --angle: 180deg;
+}
+.defeat-burst i:nth-child(5) {
+  --angle: 240deg;
+}
+.defeat-burst i:nth-child(6) {
+  --angle: 300deg;
+}
+[data-enemy-phase='DEFEATING'] .defeat-burst i {
+  animation: defeat-spark 1100ms ease-out both;
+}
+@keyframes defeat-spark {
+  0%,
+  12% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(4px);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(45px) scale(0.4);
+  }
+}
+.reduced-motion .enemy-slam i,
+.reduced-motion .defeat-burst i,
+.reduced-motion .walking-sheet {
+  animation: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .enemy-slam i,
+  .defeat-burst i,
+  .walking-sheet {
+    animation: none !important;
+  }
+}
+
+.fireflies {
+  position: absolute;
+  z-index: 2;
+  inset: 42px 18px 72px;
+  pointer-events: none;
+}
+
+.fireflies i {
+  --x: 12%;
+  --y: 28%;
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 3px;
+  height: 3px;
+  background: #fff2a8;
+  box-shadow: 0 0 0 2px rgb(255 209 102 / 20%);
+  animation:
+    firefly-drift 4.8s steps(12, end) infinite alternate,
+    firefly-blink 1.7s steps(4, end) infinite;
+}
+
+.fireflies i:nth-child(2) {
+  --x: 24%;
+  --y: 58%;
+  animation-delay: -1.1s;
+}
+.fireflies i:nth-child(3) {
+  --x: 39%;
+  --y: 22%;
+  animation-delay: -2.4s;
+}
+.fireflies i:nth-child(4) {
+  --x: 51%;
+  --y: 48%;
+  animation-delay: -0.7s;
+}
+.fireflies i:nth-child(5) {
+  --x: 63%;
+  --y: 16%;
+  animation-delay: -3.2s;
+}
+.fireflies i:nth-child(6) {
+  --x: 72%;
+  --y: 61%;
+  animation-delay: -1.8s;
+}
+.fireflies i:nth-child(7) {
+  --x: 84%;
+  --y: 34%;
+  animation-delay: -2.8s;
+}
+.fireflies i:nth-child(8) {
+  --x: 92%;
+  --y: 70%;
+  animation-delay: -0.3s;
+}
+
+@keyframes firefly-drift {
+  to {
+    transform: translate(10px, -14px);
+  }
+}
+
+@keyframes firefly-blink {
+  0%,
+  100% {
+    opacity: 0.18;
+  }
+  45%,
+  65% {
+    opacity: 1;
+  }
+}
+
 .battle-environment {
   z-index: -3;
-  background: var(--forest-deep);
+  background: #101628;
   transition: opacity 80ms linear;
 }
 
 .battle-background {
   z-index: 0;
   object-fit: cover;
+  object-position: center;
   image-rendering: pixelated;
 }
 
@@ -90,11 +353,11 @@ input {
 .battle-hud {
   position: absolute;
   z-index: 6;
-  top: 6px;
-  left: 8px;
-  right: 8px;
+  top: 12px;
+  left: 16px;
+  right: 52px;
   display: grid;
-  grid-template-columns: 62px 1fr 44px;
+  grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   height: 18px;
@@ -105,6 +368,7 @@ input {
 }
 
 #stage-label {
+  white-space: nowrap;
   text-shadow: 1px 1px 0 var(--outline);
   transition: opacity 80ms linear;
 }
@@ -118,11 +382,53 @@ input {
   transition: opacity 80ms linear;
 }
 
+.enemy-hp-track {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 #enemy-hp-fill {
-  display: block;
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
   height: 100%;
+  overflow: hidden;
   background: linear-gradient(90deg, #1c4a34, #3c7a4a, #8fd68a);
-  transition: width 140ms steps(5, end);
+  box-shadow: inset 0 1px #b2e3a8;
+}
+
+/* Crossfade reversed green gradients; geometry and background position never move. */
+#enemy-hp-fill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #8fd68a, #3c7a4a, #1c4a34);
+  opacity: var(--hp-tone, 0);
+}
+
+/* Only the endpoint's two-pixel seam is nicked; no bright trail or flying fragments. */
+#enemy-hp-fill::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 2px;
+  max-width: 25%;
+  background: #202439;
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    50% 100%,
+    50% 75%,
+    0 75%,
+    0 50%,
+    50% 50%,
+    50% 25%,
+    0 25%
+  );
+  opacity: var(--hp-edge-opacity, 0);
 }
 
 #enemy-hp-label {
@@ -134,20 +440,10 @@ input {
   text-shadow: 1px 1px 0 var(--outline);
 }
 
-.motion-toggle {
-  height: 18px;
-  border: 2px solid var(--wood-border);
-  border-radius: 0;
-  background: var(--wood);
-  color: var(--cream);
-  box-shadow: inset 0 2px 0 var(--wood-light);
-  cursor: pointer;
-}
-
 .character {
   position: absolute;
   z-index: 2;
-  bottom: 12px;
+  bottom: var(--floor-bottom);
   transform-origin: 50% 100%;
   cursor: pointer;
   -webkit-app-region: no-drag;
@@ -160,16 +456,16 @@ input {
 
 .pet {
   z-index: 7;
-  left: 50px;
-  width: 112px;
-  height: 112px;
+  left: var(--pet-left);
+  width: var(--pet-size);
+  height: var(--pet-size);
 }
 
 .enemy {
   z-index: 2;
-  left: 192px;
-  width: 120px;
-  height: 112px;
+  left: var(--enemy-left);
+  width: var(--enemy-frame-size);
+  height: var(--enemy-frame-size);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -187,10 +483,15 @@ input {
   clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
 }
 
+.enemy .ground-shadow {
+  transform: translateY(var(--jump-shadow-offset, 0px));
+}
+
 .pet-viewport {
   position: absolute;
   inset: 0;
   overflow: hidden;
+  transform: translateY(var(--pet-ground-offset, 0px));
 }
 
 .pet-sheet {
@@ -199,8 +500,10 @@ input {
   --sheet-shift: 0px;
   --sheet-duration: 667ms;
   display: block;
-  width: calc(112px * var(--frame-count));
-  height: 112px;
+  /* Keep the painted bitmap's square frames intact while a new src is decoding.
+     A pending 4-frame idle request can still display the previous 6-frame attack. */
+  width: auto;
+  height: var(--pet-size);
   object-fit: fill;
   image-rendering: pixelated;
 }
@@ -209,10 +512,124 @@ input {
   animation: pet-frames var(--sheet-duration) steps(var(--frame-steps)) 1 forwards;
 }
 
+.pet-body-clip {
+  display: contents;
+}
+
+.sprout-roots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+[data-pet-animation='sprout'] .pet-body-clip {
+  display: block;
+  position: absolute;
+  inset: 0;
+  transform: translateY(var(--sprout-dip, 0px));
+}
+
+[data-pet-animation='sprout'] .combat-effects .slash,
+[data-pet-animation='sprout'] .combat-effects .speed-line {
+  display: none;
+}
+.mole-soil,
+.mole-native-sprite {
+  display: none;
+  pointer-events: none;
+}
+
+[data-pet-animation='mole'] .pet-body-clip {
+  display: block;
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+[data-pet-animation='mole'] .pet-viewport {
+  transform: translateY(calc(var(--pet-ground-offset, 0px) + var(--burrow-depth, 0px)));
+}
+
+[data-pet-animation='mole'] .ground-shadow {
+  opacity: var(--mole-shadow, 1);
+}
+
+[data-pet-animation='mole'] .mole-soil {
+  display: block;
+  position: absolute;
+  bottom: -2px;
+  left: 28%;
+  width: 44%;
+  height: 8px;
+  overflow: visible;
+}
+
+[data-pet-animation='mole'] .mole-soil::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: #554334;
+  border-bottom: 3px solid #2c2438;
+  clip-path: polygon(
+    0 45%,
+    14% 45%,
+    14% 10%,
+    30% 10%,
+    30% 35%,
+    70% 35%,
+    70% 10%,
+    85% 10%,
+    85% 45%,
+    100% 45%,
+    100% 100%,
+    0 100%
+  );
+}
+
+[data-pet-animation='mole'] .mole-soil i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: #9b7956;
+  box-shadow: 3px 3px #2c2438;
+  left: 6px;
+  top: var(--dirt-y, -6px);
+}
+[data-pet-animation='mole'] .mole-soil i:nth-child(2) {
+  left: 20px;
+  top: -2px;
+}
+[data-pet-animation='mole'] .mole-soil i:nth-child(3) {
+  left: 32px;
+}
+
+/* Same native pixels and ground offset as the idle frame. Extra transparent width
+   leaves room for the stage-3 arm; it does not enlarge the 32px / 96px body. */
+[data-pet-animation='mole'] .mole-native-sprite {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: calc(var(--pet-size) * 1.5);
+  height: var(--pet-size);
+  transform: translateY(var(--pet-ground-offset, 0px));
+  image-rendering: pixelated;
+}
+
+[data-pet-animation='mole'] .combat-effects .slash,
+[data-pet-animation='mole'] .combat-effects .speed-line {
+  display: none;
+}
+
 .enemy img {
   width: auto;
   height: var(--enemy-height);
-  max-width: 120px;
+  max-width: var(--enemy-frame-size);
   object-fit: contain;
   image-rendering: pixelated;
 }
@@ -226,9 +643,108 @@ input {
 .combat-effects {
   position: absolute;
   z-index: 3;
-  inset: 0;
+  left: var(--enemy-left);
+  top: var(--character-top);
+  width: 128px;
+  height: 128px;
+  transform: scale(var(--arena-scale));
+  transform-origin: 0 0;
   pointer-events: none;
   transition: opacity 80ms linear;
+}
+
+.character[hidden],
+.enemy-hp[hidden],
+#stage-label[hidden],
+.combat-effects[hidden],
+.battle-notice[hidden] {
+  display: none;
+}
+
+.battle-notice {
+  position: absolute;
+  z-index: 8;
+  inset: auto 12px 8px;
+  margin: 0;
+  padding: 7px 10px;
+  text-align: center;
+  color: #f2e9db;
+  background: #211b35dc;
+  border-radius: 6px;
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.peeking-spectators {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.peek-slot {
+  --peek-frame: 64px;
+  --peek-hidden: calc(-1 * var(--peek-frame));
+  --peek-angle: 32deg;
+  position: absolute;
+  overflow: hidden;
+  /* The obstacle half occludes the entire actor, not a cropped neck. */
+  clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+}
+
+.peek-slot[data-direction='LEFT'] {
+  --peek-hidden: var(--peek-frame);
+  --peek-angle: -32deg;
+  clip-path: polygon(0 0, 50% 0, 50% 100%, 0 100%);
+}
+
+.peek-actor {
+  position: absolute;
+  left: calc(var(--peek-frame) * 0.375);
+  top: calc(var(--peek-frame) * 0.375);
+  width: var(--peek-frame);
+  height: var(--peek-frame);
+  transform-origin: 50% 87.5%;
+  transform: translateX(var(--peek-hidden)) rotate(0deg);
+  animation: spectator-peek var(--peek-duration) steps(8, end) var(--peek-delay) infinite;
+}
+
+.peek-slot[data-direction='LEFT'] .peek-actor {
+  left: calc(var(--peek-frame) * 0.625);
+}
+
+/* Keep the whole first 32px idle frame; lean the head out while the body stays behind. */
+.peek-sprite {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.peek-slot[data-direction='RIGHT'] .peek-sprite {
+  transform: scaleX(-1);
+}
+
+.peek-sprite img {
+  display: block;
+  width: 400%;
+  height: 100%;
+  max-width: none;
+  image-rendering: pixelated;
+  filter: saturate(0.78) brightness(0.9);
+}
+
+@keyframes spectator-peek {
+  0%,
+  20%,
+  72%,
+  100% {
+    transform: translateX(var(--peek-hidden)) rotate(0deg);
+  }
+  32%,
+  56% {
+    transform: translateX(0) rotate(var(--peek-angle));
+  }
 }
 
 .speed-line,
@@ -241,7 +757,7 @@ input {
 }
 
 .speed-line {
-  left: 126px;
+  left: -34px;
   width: 56px;
   height: 2px;
   background: var(--cyan);
@@ -249,17 +765,17 @@ input {
 }
 
 .line-1 {
-  top: 78px;
+  top: 76px;
 }
 
 .line-2 {
-  top: 102px;
+  top: 100px;
   width: 38px;
 }
 
 .slash {
-  left: 205px;
-  top: 66px;
+  left: 30px;
+  top: 60px;
   width: 4px;
   height: 55px;
   background: var(--cyan);
@@ -269,13 +785,13 @@ input {
 }
 
 .slash-2 {
-  left: 216px;
+  left: 41px;
   display: none;
   transform: rotate(50deg) scale(0.86);
 }
 
 .slash-3 {
-  left: 225px;
+  left: 50px;
   display: none;
   transform: rotate(29deg) scale(0.72);
 }
@@ -287,8 +803,8 @@ input {
 }
 
 .impact-wave {
-  left: 219px;
-  top: 77px;
+  left: 32px;
+  top: 68px;
   width: 42px;
   height: 42px;
   border: 3px solid var(--gold);
@@ -326,31 +842,31 @@ input {
 }
 
 .particle-1 {
-  left: 55px;
-  top: 58px;
+  left: calc(var(--growth-x) - 50px);
+  top: 20px;
 }
 
 .particle-2 {
-  left: 147px;
-  top: 52px;
+  left: calc(var(--growth-x) + 46px);
+  top: 14px;
   background: var(--gold);
 }
 
 .particle-3 {
-  left: 74px;
-  top: 132px;
+  left: calc(var(--growth-x) - 32px);
+  top: 114px;
   background: var(--gold);
 }
 
 .particle-4 {
-  left: 143px;
-  top: 122px;
+  left: calc(var(--growth-x) + 42px);
+  top: 104px;
 }
 
 @keyframes growth-gather {
   to {
-    left: 105px;
-    top: 92px;
+    left: var(--growth-x);
+    top: 64px;
     opacity: 0;
   }
 }
@@ -369,11 +885,11 @@ input {
 
 @keyframes enemy-hit {
   30% {
-    transform: translateX(7px) scale(1.13, 0.82);
+    transform: translateX(calc(7px * var(--arena-scale))) scale(1.13, 0.82);
     filter: brightness(1.8);
   }
   55% {
-    transform: translateX(-5px) scale(0.94, 1.08);
+    transform: translateX(calc(-5px * var(--arena-scale))) scale(0.94, 1.08);
   }
 }
 
@@ -383,14 +899,14 @@ input {
     filter: brightness(2);
   }
   100% {
-    transform: translateY(16px) scale(1.38, 0.08);
+    transform: scale(1.38, 0.08);
     opacity: 0;
   }
 }
 
 @keyframes enemy-spawn {
   from {
-    transform: translateY(22px) scale(0.4, 0.15);
+    transform: scale(0.4, 0.15);
     opacity: 0;
   }
 }
@@ -450,70 +966,10 @@ input {
   }
 }
 
-.pet-menu [data-action='START'] {
-  left: 16px;
-  top: 79px;
-}
-
-.pet-menu [data-action='STOP'] {
-  left: 29px;
-  top: 43px;
-}
-
-.pet-menu [data-action='ATTACK'] {
-  left: 66px;
-  top: 21px;
-}
-
-.pet-menu [data-action='GROWTH'] {
-  left: 108px;
-  top: 27px;
-}
-
-.pet-menu [data-action='ATTACK_EFFECT'] {
-  left: 143px;
-  top: 52px;
-}
-
-.enemy-menu [data-action='HIT'] {
-  left: 187px;
-  top: 54px;
-}
-
-.enemy-menu [data-action='DEFEAT'] {
-  left: 218px;
-  top: 26px;
-}
-
-.enemy-menu [data-action='SPAWN'] {
-  left: 263px;
-  top: 21px;
-}
-
-.enemy-menu [data-action='RESET'] {
-  left: 305px;
-  top: 45px;
-}
-
-.enemy-menu [data-action='SIZE'] {
-  left: 320px;
-  top: 82px;
-}
-
-.enemy-menu [data-action='COLOR'] {
-  left: 306px;
-  top: 119px;
-}
-
-.enemy-menu [data-action='HP'] {
-  left: 266px;
-  top: 137px;
-}
-
 .opacity-control {
   position: absolute;
-  left: 185px;
-  top: 158px;
+  right: 8px;
+  bottom: 8px;
   width: 158px;
   height: 18px;
   display: grid;
@@ -533,6 +989,122 @@ input {
   margin: 0;
   accent-color: var(--forest-mid);
   cursor: ew-resize;
+}
+
+.ambient-log-panel {
+  --bubble-paper: var(--parchment);
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.ambient-log-panel[data-ambient-side='ENEMY'] {
+  --bubble-paper: #dce8df;
+}
+
+.ambient-log-panel ol {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ambient-log-entry {
+  display: flex;
+  align-items: center;
+  flex: 0 0 36px;
+  min-width: 0;
+  gap: 8px;
+  animation: ambient-log-pop 320ms steps(6, end) both;
+}
+
+.ambient-log-panel[data-ambient-side='ENEMY'] .ambient-log-entry {
+  flex-direction: row-reverse;
+}
+
+.ambient-log-portrait {
+  flex: 0 0 40px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ambient-portrait-crop {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+
+.ambient-portrait-crop img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: auto;
+  max-width: none;
+  image-rendering: pixelated;
+}
+
+.ambient-log-text {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 2px 7px;
+  border: 2px solid var(--wood-border);
+  background: var(--bubble-paper);
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 14px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 25%);
+}
+
+.ambient-log-text::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: 12px;
+  width: 6px;
+  height: 8px;
+  border-left: 2px solid var(--wood-border);
+  border-bottom: 2px solid var(--wood-border);
+  background: var(--bubble-paper);
+  transform: skewY(-35deg);
+}
+
+.ambient-log-panel[data-ambient-side='ENEMY'] .ambient-log-text::before {
+  left: auto;
+  right: -6px;
+  border-left: 0;
+  border-right: 2px solid var(--wood-border);
+  transform: skewY(35deg);
+}
+
+@keyframes ambient-log-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+  78% {
+    transform: translateY(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .battle-toast {
@@ -561,10 +1133,24 @@ input {
   background: #f08a8a;
 }
 
+[data-layout='compact'] .battle-toast {
+  bottom: auto;
+  top: 76px;
+}
+
+[data-layout='compact'] .fireflies {
+  inset: 36px 8px 28px;
+}
+
 .reduced-motion * {
   animation-duration: 1ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 1ms !important;
+}
+
+.reduced-motion .peek-actor {
+  animation: none !important;
+  transform: translateX(0) rotate(var(--peek-angle));
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -572,5 +1158,9 @@ input {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
+  }
+  .peek-actor {
+    animation: none !important;
+    transform: translateX(0) rotate(var(--peek-angle));
   }
 }

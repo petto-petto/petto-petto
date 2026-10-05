@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const battleWindowOptions = require('./window-options.json');
 
 const { app, BrowserWindow } = require('electron');
 
@@ -10,14 +11,7 @@ function capturePathFromArguments() {
 
 app.whenReady().then(() => {
   const window = new BrowserWindow({
-    width: 360,
-    height: 180,
-    useContentSize: true,
-    frame: false,
-    transparent: true,
-    resizable: false,
-    alwaysOnTop: true,
-    show: false,
+    ...battleWindowOptions,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
       contextIsolation: true,

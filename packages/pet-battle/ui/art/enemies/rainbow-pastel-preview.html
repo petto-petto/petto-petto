@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="UTF-8" />
+  <title>무지개 적 · 파스텔 팔레트</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 40px;
+      background: #151426;
+      color: #efebf5;
+      font-family: -apple-system, sans-serif;
+    }
+    h1 {
+      margin: 0 0 12px;
+      font-size: 22px;
+    }
+    p {
+      color: #b8b1c9;
+      font-size: 13px;
+    }
+    .palette {
+      display: flex;
+      gap: 8px;
+      margin: 22px 0 28px;
+    }
+    .palette span {
+      width: 64px;
+      height: 10px;
+      background: var(--color);
+    }
+    .faces {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    figure {
+      margin: 0;
+      padding: 24px 10px;
+      text-align: center;
+      border: 1px solid #383247;
+      background: #201d32;
+    }
+    img {
+      display: block;
+      margin: 0 auto 22px;
+      height: 160px;
+      width: auto;
+      image-rendering: pixelated;
+    }
+    .actual {
+      height: 80px;
+      margin: 20px auto 10px;
+    }
+    figcaption {
+      color: #efe6d6;
+      font-size: 13px;
+    }
+    small {
+      color: #a99fbb;
+      font-size: 11px;
+    }
+  </style>
+  <h1>무지개 적 · 파스텔 배합</h1>
+  <p>연핑크 · 레몬 · 민트 · 하늘 · 라일락 / 기존 모양·눈 위치·표정 유지</p>
+  <div class="palette" aria-label="파스텔 5색">
+    <span style="--color: #f3bfcb"></span><span style="--color: #f4f6a3"></span>
+    <span style="--color: #b2dfa7"></span><span style="--color: #d2eeec"></span>
+    <span style="--color: #eaaaf1"></span>
+  </div>
+  <div class="faces">
+    <figure>
+      <img src="../../assets/enemies/v2/rainbow-steady.png" alt="평온한 무지개 슬라임" />
+      <figcaption>평온</figcaption>
+      <img
+        class="actual"
+        src="../../assets/enemies/v2/rainbow-steady.png"
+        alt="게임 표시 크기 평온"
+      /><small>표시 높이 80px</small>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/rainbow-worried.png" alt="걱정하는 무지개 슬라임" />
+      <figcaption>걱정</figcaption>
+      <img
+        class="actual"
+        src="../../assets/enemies/v2/rainbow-worried.png"
+        alt="게임 표시 크기 걱정"
+      /><small>표시 높이 80px</small>
+    </figure>
+    <figure>
+      <img src="../../assets/enemies/v2/rainbow-exhausted.png" alt="지친 무지개 슬라임" />
+      <figcaption>지침</figcaption>
+      <img
+        class="actual"
+        src="../../assets/enemies/v2/rainbow-exhausted.png"
+        alt="게임 표시 크기 지침"
+      /><small>표시 높이 80px</small>
+    </figure>
+  </div>
+</html>

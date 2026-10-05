@@ -1,0 +1,86 @@
+{
+  "id": "bg_203",
+  "name": "Starlight Shrine",
+  "preset": "arcane_cavern",
+  "kind": "outdoor",
+  "layout": "ground",
+  "width": 360,
+  "height": 180,
+  "seamless": false,
+  "horizon": 84,
+  "groundTop": 138,
+  "petAnchor": {
+    "x": 148,
+    "y": 74,
+    "w": 64,
+    "h": 64
+  },
+  "composite": "bg_203_composite.png",
+  "layers": [
+    {
+      "name": "sky",
+      "file": "bg_203_sky.png",
+      "z": 0,
+      "parallax": 0.0,
+      "opaque": true
+    },
+    {
+      "name": "far",
+      "file": "bg_203_far.png",
+      "z": 1,
+      "parallax": 0.25,
+      "opaque": false
+    },
+    {
+      "name": "mid",
+      "file": "bg_203_mid.png",
+      "z": 2,
+      "parallax": 0.55,
+      "opaque": false
+    },
+    {
+      "name": "near",
+      "file": "bg_203_near.png",
+      "z": 3,
+      "parallax": 1.0,
+      "opaque": false
+    }
+  ],
+  "palette": {
+    "outlineReserved": "#2C2438",
+    "colors": [
+      "#3F3650",
+      "#433C5E",
+      "#494563",
+      "#4C425F",
+      "#504667",
+      "#51496E",
+      "#565078",
+      "#565171",
+      "#5B4F70",
+      "#5E5276",
+      "#635D86",
+      "#655A87",
+      "#665B83",
+      "#67627F",
+      "#6E6088",
+      "#6E6183",
+      "#736B96",
+      "#746798",
+      "#83749D",
+      "#847795",
+      "#8577AA",
+      "#867DA8",
+      "#887099",
+      "#9A8AB3",
+      "#9A8CBE",
+      "#9B82AB",
+      "#9C93BA",
+      "#B097BE",
+      "#B2A5D0",
+      "#C5ADD1",
+      "#F7E7C0"
+    ],
+    "rampOverride": ["accent", "far", "leaf", "light", "mid", "near", "sky", "wood"]
+  }
+}

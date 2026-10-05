@@ -13,6 +13,7 @@
     "./ui/*": "./ui/*"
   },
   "dependencies": {
+    "@pet/client": "*",
     "@pet/core": "*"
   },
   "main": "./dist/index.js",

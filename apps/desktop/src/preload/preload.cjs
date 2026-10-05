@@ -105,6 +105,21 @@ contextBridge.exposeInMainWorld('overlay', {
   loadGrowth: () => ipcRenderer.invoke('growth:load-all'),
   saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
   clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),
+  onGrowthUsage: (listener) => {
+    const wrapped = (_event, payload) => {
+      if (
+        payload &&
+        typeof payload.eventId === 'string' &&
+        Number.isSafeInteger(payload.tokens) &&
+        payload.tokens > 0
+      ) {
+        listener({ eventId: payload.eventId, tokens: payload.tokens });
+      }
+    };
+    ipcRenderer.on('growth:usage', wrapped);
+    ipcRenderer.send('growth:ready');
+    return () => ipcRenderer.removeListener('growth:usage', wrapped);
+  },
 
   /**
    * 활성 펫은 오버레이가 정하지 않는다.

@@ -60,3 +60,7 @@ export function onActivePetChanged(cb) {
   if (api?.onActivePetChanged) return api.onActivePetChanged(cb);
   return () => {};
 }
+export function onGrowthUsage(cb) {
+  if (api?.onGrowthUsage) return api.onGrowthUsage(cb);
+  return () => {};
+}

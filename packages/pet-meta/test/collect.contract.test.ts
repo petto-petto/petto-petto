@@ -99,6 +99,7 @@ test('COLLECT-003: 재스캔이 주기 집계와 같은 수집 경계를 쓴다'
     kind: 'applied',
     observedDelta: 2_000,
     rewardTokens: 2_000,
+    growthTokenDelta: 2_000,
   });
   assert.equal(observedTotal(harness.state), 2_000);
 });
@@ -171,6 +172,7 @@ test('COLLECT-005: 한 소스의 실패가 다른 두 소스를 막지 않는다
     kind: 'applied',
     observedDelta: 2_000,
     rewardTokens: 2_000,
+    growthTokenDelta: 2_000,
   });
   const codex = Harness.resultFor(results, 'codex');
   assert.equal(codex.kind, 'failed');
@@ -178,6 +180,7 @@ test('COLLECT-005: 한 소스의 실패가 다른 두 소스를 막지 않는다
     kind: 'applied',
     observedDelta: 4_000,
     rewardTokens: 4_000,
+    growthTokenDelta: 4_000,
   });
   assert.equal(observedTotal(harness.state), 6_000);
 });
@@ -200,6 +203,7 @@ test('COLLECT-006: 관측 토큰과 보상 대상 토큰이 각자의 계약값�
   assert.equal(result.kind, 'applied');
   assert.equal(result.observedDelta, 2_000_000);
   assert.equal(result.rewardTokens, 1_000_000);
+  assert.equal(result.growthTokenDelta, 700_000, '성장 환산에서는 캐시 생성·읽기 토큰을 뺀다');
   assert.notEqual(result.observedDelta, result.rewardTokens, '두 값은 분리되어야 한다');
 
   // 정보는 관측 토큰을 쓴다.
@@ -226,7 +230,12 @@ test('COLLECT-006: 보상 대상 토큰이 0인 증가분은 재화를 지급하
 
   const result = Harness.resultFor(harness.run(), 'claude_code');
 
-  assert.deepEqual(result, { kind: 'applied', observedDelta: 5_000, rewardTokens: 0 });
+  assert.deepEqual(result, {
+    kind: 'applied',
+    observedDelta: 5_000,
+    rewardTokens: 0,
+    growthTokenDelta: 0,
+  });
   assert.equal(harness.tokens.grantedKeyCount, 0, '0짜리 원장 항목을 만들지 않는다');
   assert.equal(harness.tokens.entries.length, 1, '사용량 자체는 토큰 원장에 남는다');
 });
@@ -272,7 +281,12 @@ test('TOKEN: 토큰 원장 적재가 실패하면 증가분을 반영하지 않�
 
   const retried = Harness.resultFor(harness.run(), 'codex');
 
-  assert.deepEqual(retried, { kind: 'applied', observedDelta: 4_000, rewardTokens: 4_000 });
+  assert.deepEqual(retried, {
+    kind: 'applied',
+    observedDelta: 4_000,
+    rewardTokens: 4_000,
+    growthTokenDelta: 4_000,
+  });
   assert.equal(observedTotal(harness.state), 4_000);
   assert.equal(harness.tokens.entries.length, 1, '한 번만 적재된다');
   assert.equal(harness.tokens.grantedAmount('codex:0->4000'), 4_000);

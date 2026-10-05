@@ -1,0 +1,12 @@
+{
+  "width": 640,
+  "height": 420,
+  "minWidth": 360,
+  "minHeight": 180,
+  "useContentSize": true,
+  "frame": false,
+  "transparent": true,
+  "resizable": true,
+  "alwaysOnTop": true,
+  "show": false
+}
