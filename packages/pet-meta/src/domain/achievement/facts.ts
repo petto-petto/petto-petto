@@ -20,16 +20,13 @@
  */
 
 import { assertNever, type EventPayload } from '../../events/index.ts';
-import type { GrowthRules, OwnedPet, PetClient } from '../../ports/index.ts';
-
-/**
- * 도감 칸 수.
- *
- * 기획서 MVP 목표 종 수다. `PetClient.countSpecies()` 는 **DB 에 등록된** 종 수(지금 6)라서
- * 도감 칸과 다르다 — 인계 문서도 둘이 별개라고 적었다. 등록 종 수로 나누면 여섯 종을 모으는
- * 순간 “도감 완성”이 되어 진행도가 의미를 잃는다.
- */
-export const DEX_SLOT_COUNT = 20;
+import {
+  LEDGER_BEGINNING,
+  type GrowthRules,
+  type OwnedPet,
+  type PetClient,
+  type TokenPort,
+} from '../../ports/index.ts';
 
 /**
  * 판정에 쓸 수 있는 모든 사실 키.
@@ -43,13 +40,13 @@ export const FACT_KEYS = [
   'dex_owned',
   'dex_complete',
   'fusion_count',
-  'common_fusion_epic',
+  'fusion_epic',
   'max_pet_level',
   'max_level_reached',
   'evolution_count',
   'battle_wins',
   'max_streak',
-  'observed_tokens',
+  'earned_tokens',
   'activity_minutes',
   'three_tools_days',
 ] as const;
@@ -70,15 +67,22 @@ export interface EventFacts {
   firstPet: number;
   firstEpic: number;
   dexOwned: number;
-  dexTotal: number;
   dexComplete: number;
   fusionCount: number;
-  commonFusionEpic: number;
+  /** 결과가 에픽이었던 합성 횟수. */
+  fusionEpic: number;
   maxPetLevel: number;
   maxLevelReached: number;
   evolutionCount: number;
   battleWins: number;
   maxStreak: number;
+  /**
+   * 관측한 누적 토큰의 최고치. 토큰 마일스톤의 기준이다.
+   *
+   * 요약의 `누적 토큰` 과 같은 값 — 재화 원장에 지급된 합 — 을 판정할 때마다 읽어 온다. 화면에
+   * 보이는 숫자가 목표에 닿는 순간 업적이 열려야 해서, 화면과 다른 기준을 쓰지 않는다.
+   */
+  earnedTokens: number;
 }
 
 export function createEventFacts(): EventFacts {
@@ -86,15 +90,15 @@ export function createEventFacts(): EventFacts {
     firstPet: 0,
     firstEpic: 0,
     dexOwned: 0,
-    dexTotal: 0,
     dexComplete: 0,
     fusionCount: 0,
-    commonFusionEpic: 0,
+    fusionEpic: 0,
     maxPetLevel: 0,
     maxLevelReached: 0,
     evolutionCount: 0,
     battleWins: 0,
     maxStreak: 0,
+    earnedTokens: 0,
   };
 }
 
@@ -107,10 +111,15 @@ export function createEventFacts(): EventFacts {
  * 현재 값을 그대로 쓰면 펫을 합성한 사용자의 업적 진행률이 뒤로 간다.
  *
  * 펫 데이터를 저장하는 게 아니다. “meta 가 지금까지 관측한 최고치”라는 meta 자신의 사실이다.
+ *
+ * `registeredSpecies` 는 도감의 전체 칸 수다. 등록된 펫 종 수(`PetClient.countSpecies()`)를
+ * 그대로 쓴다 — 상수로 두면 종이 늘거나 줄 때 도감 완성이 실제 종과 어긋난다. 등록된 종이
+ * 0이면 `0 >= 0` 을 완성으로 치지 않는다.
  */
 export function observePets(
   facts: EventFacts,
   pets: readonly OwnedPet[],
+  registeredSpecies: number,
   rules: GrowthRules,
 ): void {
   const speciesOwned = new Set(pets.map((pet) => pet.speciesId)).size;
@@ -120,9 +129,10 @@ export function observePets(
 
   facts.firstPet = Math.max(facts.firstPet, pets.length > 0 ? 1 : 0);
   facts.firstEpic = Math.max(facts.firstEpic, pets.some((pet) => pet.rarity === 'EPIC') ? 1 : 0);
+  const dexComplete = registeredSpecies > 0 && speciesOwned >= registeredSpecies;
+
   facts.dexOwned = Math.max(facts.dexOwned, speciesOwned);
-  facts.dexTotal = Math.max(facts.dexTotal, DEX_SLOT_COUNT);
-  facts.dexComplete = Math.max(facts.dexComplete, speciesOwned >= DEX_SLOT_COUNT ? 1 : 0);
+  facts.dexComplete = Math.max(facts.dexComplete, dexComplete ? 1 : 0);
   facts.maxPetLevel = Math.max(facts.maxPetLevel, highestLevel);
   facts.maxLevelReached = Math.max(facts.maxLevelReached, highestLevel >= rules.maxLevel ? 1 : 0);
   facts.evolutionCount = Math.max(facts.evolutionCount, evolutions);
@@ -137,12 +147,34 @@ export function observePets(
  */
 export function tryObservePets(facts: EventFacts, client: PetClient, rules: GrowthRules): boolean {
   let pets: OwnedPet[];
+  let registeredSpecies: number;
   try {
     pets = client.listOwnedPets();
+    registeredSpecies = client.countSpecies();
   } catch {
     return false;
   }
-  observePets(facts, pets, rules);
+  observePets(facts, pets, registeredSpecies, rules);
+  return true;
+}
+
+/**
+ * 누적 토큰을 읽어 사실에 반영한다. 읽지 못하면 사실을 건드리지 않고 `false`.
+ *
+ * 원장의 지급 합은 줄지 않지만 최댓값만 취한다 — 다른 사실과 같은 방식으로, 진행률이 감소할
+ * 코드 경로를 아예 두지 않는다. 읽기 실패를 던지지 않는 이유는 `tryObservePets` 와 같다.
+ */
+export function tryObserveEarnedTokens(
+  facts: EventFacts,
+  tokens: Pick<TokenPort, 'earnedSince'>,
+): boolean {
+  let earned: number;
+  try {
+    earned = tokens.earnedSince(LEDGER_BEGINNING);
+  } catch {
+    return false;
+  }
+  facts.earnedTokens = Math.max(facts.earnedTokens, earned);
   return true;
 }
 
@@ -156,10 +188,8 @@ export function applyEvent(facts: EventFacts, payload: EventPayload): void {
   switch (payload.eventType) {
     case 'fusion.completed': {
       facts.fusionCount += 1;
-      const bothParentsCommon = payload.parentRarities.every((rarity) => rarity === 'COMMON');
-      if (bothParentsCommon && payload.resultRarity === 'EPIC') {
-        facts.commonFusionEpic += 1;
-      }
+      // 합성은 같은 등급 열 마리로 한 단계 위를 만든다. 에픽이 나왔다면 레어 합성이었다.
+      if (payload.resultRarity === 'EPIC') facts.fusionEpic += 1;
       return;
     }
     case 'battle.finished': {
@@ -167,7 +197,7 @@ export function applyEvent(facts: EventFacts, payload: EventPayload): void {
       facts.maxStreak = Math.max(facts.maxStreak, payload.streak);
       return;
     }
-    // 사용량 사실은 이벤트가 아니라 meta 자신의 사용량 테이블에서 파생한다.
+    // 사용량에서 나온 사실은 이벤트가 아니라 원장과 meta 자신의 사용량 테이블에서 얻는다.
     // 여기서도 세면 같은 증가분을 두 번 세게 된다.
     case 'usage.aggregated':
       return;
@@ -187,7 +217,6 @@ export function applyEvent(facts: EventFacts, payload: EventPayload): void {
  * 테이블 자체가 이미 감소하지 않으므로(기획서 8.8), 파생값도 자동으로 감소하지 않는다.
  */
 export interface UsageFacts {
-  observedTokens: number;
   activityMinutes: number;
   /** 세 CLI가 모두 토큰을 발생시킨 로컬 날짜의 수. */
   threeToolsDays: number;
@@ -203,13 +232,13 @@ export function buildFactSnapshot(events: EventFacts, usage: UsageFacts): FactSn
     dex_owned: events.dexOwned,
     dex_complete: events.dexComplete,
     fusion_count: events.fusionCount,
-    common_fusion_epic: events.commonFusionEpic,
+    fusion_epic: events.fusionEpic,
     max_pet_level: events.maxPetLevel,
     max_level_reached: events.maxLevelReached,
     evolution_count: events.evolutionCount,
     battle_wins: events.battleWins,
     max_streak: events.maxStreak,
-    observed_tokens: usage.observedTokens,
+    earned_tokens: events.earnedTokens,
     activity_minutes: usage.activityMinutes,
     three_tools_days: usage.threeToolsDays,
   };

@@ -20,7 +20,7 @@
  *
  * | 저장한다 | 근거 |
  * |---|---|
- * | 소스별 기준점·상태 | 8.2 "재스캔과 앱 재실행은 정상 기준점을 과거로 되돌리지 않는다" |
+ * | 소스별 기준점·상태 | 기준점은 같은 실행 안에서만 쓴다 — 앱을 켤 때 비우고 새로 잡는다. 상태(켬·끔, 최초 감지 여부)는 실행을 넘어 유지한다 |
  * | 사용량·활동 분 | 5.2, 8.6 |
  * | 수집 멱등 키 | 8.3 "중간 실패 후 재실행해도 두 번 반영하지 않는다" |
  * | 업적 사실·진행률·보상 | 9.4 "영속적으로 투영한다", ACH-004 소급 판정 |
@@ -34,7 +34,7 @@
 import { PROVIDERS, type LocalDate, type LocalMinute, type Provider } from '@pet/core';
 import { type EventId } from '../events/index.ts';
 
-import type { EventFacts } from '../domain/achievement/facts.ts';
+import { createEventFacts, type EventFacts } from '../domain/achievement/facts.ts';
 import type { AchievementProgress, RewardRecord } from '../domain/achievement/progress.ts';
 import type { UserProfile } from '../domain/profile/index.ts';
 import type { MetaSettings } from '../domain/settings/index.ts';
@@ -55,7 +55,7 @@ import {
  *
  * 처음부터 넣는다. 나중에 넣으면 "버전 없는 파일"을 위한 특수 처리가 영구히 남는다.
  */
-export const SNAPSHOT_SCHEMA_VERSION = 2;
+export const SNAPSHOT_SCHEMA_VERSION = 3;
 
 /** 사용량 한 줄. 맵의 합성 키를 필드로 펴 놓은 것이다. */
 export interface UsageRow {
@@ -244,8 +244,21 @@ export function migrateSnapshot(snapshot: MetaSnapshot): MetaSnapshot {
    * 남아 있는 `profile.displayName`은 지우지 않고 그냥 읽지 않는다. 삭제하려면 저장
    * 형식마다 대응하는 제거 코드가 영구히 쌓이고, 읽지 않는 키는 다음 저장에서 저절로
    * 사라진다.
+   *
+   * v2 → v3: 재화를 코인이라 부르던 것을 없앴다. 재화의 단위는 토큰이다.
+   *
+   * 보상 종류 `coin` 을 `token` 으로 옮기고, 지급 결과 문구도 함께 바꾼다. 업적 사실은 지금
+   * 코드가 아는 이름만 남긴다 — 도감 칸 수(`dexTotal`)와 옛 합성 사실(`commonFusionEpic`)은
+   * 더 이상 판정에 쓰지 않는데, 그대로 두면 상태를 거쳐 저장소에 다시 쓰인다.
    */
-  if (snapshot.schemaVersion === 1) return { ...snapshot, schemaVersion: 2 };
+  if (snapshot.schemaVersion === 1 || snapshot.schemaVersion === 2) {
+    return {
+      ...snapshot,
+      schemaVersion: SNAPSHOT_SCHEMA_VERSION,
+      eventFacts: knownFacts(snapshot.eventFacts),
+      rewards: snapshot.rewards.map(tokenReward),
+    };
+  }
 
   throw new SnapshotError(
     `지원하지 않는 저장 형식 버전 ${snapshot.schemaVersion}`,
@@ -253,6 +266,27 @@ export function migrateSnapshot(snapshot: MetaSnapshot): MetaSnapshot {
       ? '저장 파일이 이 버전보다 새롭습니다'
       : '저장 파일 형식이 너무 오래되어 읽을 수 없습니다',
   );
+}
+
+/** 지금 코드가 아는 사실만 옮긴다. 저장본에 없는 사실은 0에서 시작한다. */
+function knownFacts(stored: EventFacts): EventFacts {
+  const facts = createEventFacts();
+  const known = facts as unknown as Record<string, number>;
+  for (const [key, value] of Object.entries(stored)) {
+    if (key in known && typeof value === 'number') known[key] = value;
+  }
+  return facts;
+}
+
+/** v2 이전의 `coin` 보상 기록을 `token` 으로 옮긴다. 다른 종류는 그대로 둔다. */
+function tokenReward(record: RewardSnapshot): RewardSnapshot {
+  // 옛 파일의 값이라 지금의 `RewardKind` 에는 없다.
+  if ((record.kind as string) !== 'coin') return record;
+  return {
+    ...record,
+    kind: 'token',
+    detail: record.detail?.startsWith('코인 ') ? `토큰 ${record.detail.slice(3)}` : record.detail,
+  };
 }
 
 /** 저장 형식을 런타임 상태로 되돌린다. */
@@ -299,7 +333,9 @@ export function stateOf(snapshot: MetaSnapshot): MetaState {
     snapshot.pendingUsageGrants.map((grant) => [grant.dedupeKey, grant.rewardTokens]),
   );
   state.processedEvents = new Set(snapshot.processedEvents);
-  state.eventFacts = { ...snapshot.eventFacts };
+  // 저장본에 없는 사실(나중에 추가된 것)은 0에서 시작한다. 그대로 펴 넣으면 `undefined` 가 들어가
+  // 최댓값 계산이 `NaN` 이 된다.
+  state.eventFacts = knownFacts(snapshot.eventFacts);
   state.progress = new Map(
     snapshot.progress.map((entry): [string, AchievementProgress] => [
       entry.achievementId,

@@ -9,68 +9,49 @@
  * 공용 커널에 두면 다섯 도메인의 요구가 한 파일에 쌓여 커널이 쓰레기통이 되고,
  * `meta`가 자기 화면 사정으로 인터페이스를 고칠 때마다 무관한 도메인이 전부 영향받는다.
  *
- * ## 실제 도메인이 완성되면
+ * ## 이미 있는 Port 는 재사용한다
  *
- * `@pet/currency` 같은 진짜 패키지는 **이 인터페이스를 알지 못한다.** 자기 도메인 언어로
- * 자기 API를 갖는다. 둘을 잇는 것은 앱이 쓰는 어댑터다.
- *
- * ```text
- * @pet/meta ──requires──▶ CurrencyPort ◀──implements── 어댑터 ──uses──▶ @pet/currency
- * ```
+ * 펫과 토큰은 공통 `PetClient` · `TokenClient` 가 있어 그대로(또는 `Pick` 으로 좁혀) 쓴다.
+ * 여기서 새로 선언하는 것은 아직 공통 Port 가 없는 도메인 — 뽑기 · 전투 · 트로피 — 뿐이고,
+ * 그 도메인이 값을 저장하기 전까지는 대역으로 채운다.
  *
  * ## 실패는 던진다
  *
- * 포트는 실패를 `PortError`로 **던진다**. TypeScript에서는 그것이 관용이고, 화면은
- * 블록마다 `try`로 감싸 자기 자리에만 오류를 표시한다(기획서 11.1, INFO-007).
+ * 포트는 실패를 **던진다**. TypeScript에서는 그것이 관용이고, 화면은 블록마다 `try`로 감싸
+ * 자기 자리에만 오류를 표시한다(기획서 11.1, INFO-007).
  * 그 변환을 하는 곳이 `view/` 계층이다.
  */
 
-import type { Coin, PetId, Rarity } from '@pet/core';
+import type { PetId, Rarity } from '@pet/core';
+import type { TokenClient } from '@pet/client';
 
-/** 지급 결과. 이미 지급된 키였는지 구분해야 멱등성을 관찰할 수 있다. */
-export type GrantOutcome = { kind: 'granted'; amount: Coin } | { kind: 'already_granted' };
+/**
+ * 토큰 — 사용량 원장과 재화.
+ *
+ * 공통 `TokenClient` 가 이미 있으므로 새 인터페이스를 만들지 않고, meta 가 부르는 메서드만 좁혀
+ * 받는다. 같은 테이블 위에 meta 만의 인터페이스를 하나 더 두면 계약이 둘이 되어 어긋난다.
+ *
+ * **재화의 단위는 토큰이다.** 뽑기·합성이 차감하는 것과 같은 원장이고 같은 단위라서 환산
+ * 비율이 없다. 사용량 보상은 보상 대상 토큰 수를 그대로, 업적 보상은 정의에 적힌 토큰 수를
+ * 그대로 지급한다.
+ *
+ * | 메서드 | meta 가 쓰는 곳 |
+ * |---|---|
+ * | `recordUsage` | 수집한 증가분을 공용 토큰 표에 적재. 같은 `dedupeKey` 는 한 번만 쌓인다 |
+ * | `grantOnce` | 사용량 보상(증가분 키)과 업적 보상(`achievement:<id>`). 이미 지급한 키면 `false` |
+ * | `balance` | 요약의 `사용 가능 토큰` |
+ * | `earnedSince` | 요약의 `오늘 +N` |
+ *
+ * 네 메서드 모두 저장·조회 실패를 던진다.
+ */
+export type TokenPort = Pick<TokenClient, 'recordUsage' | 'grantOnce' | 'balance' | 'earnedSince'>;
+export type { UsageEntry } from '@pet/client';
 
-export interface LedgerEntry {
-  entryId: string;
-  reason: string;
-  /** ISO 8601. */
-  occurredAt: string;
-  delta: Coin;
-}
-
-export interface CurrencyTotals {
-  earned: Coin;
-  spent: Coin;
-  balance: Coin;
-}
-
-/** 재화에 대해 `meta`가 필요로 하는 것(기획서 9.5). */
-export interface CurrencyPort {
-  /**
-   * 같은 `rewardKey`로 두 번 불러도 한 번만 지급한다.
-   * 업적 보상의 멱등 키는 `achievement:<achievementId>`다.
-   */
-  grantOnce(rewardKey: string, amount: Coin, reason: string): GrantOutcome;
-
-  /**
-   * 토큰 → 코인 환산은 **재화 도메인의 정책**이다. `meta`는 보상 대상 토큰만 넘기고
-   * 환산 비율을 모른다. 기획서 8.5가 관측 토큰과 보상 대상 토큰을 분리하라고 한 이유가
-   * 여기서 구조로 드러난다.
-   */
-  grantUsageTokens(dedupeKey: string, rewardTokens: number, reason: string): GrantOutcome;
-
-  balance(): Coin;
-
-  /**
-   * 최신 원장 항목. 요약의 `오늘 +N` 합계가 쓴다.
-   *
-   * 알려진 계약 문제: 기획서 5.1의 `오늘 획득 코인`은 오늘 발생한 모든 양수 항목의 합인데
-   * 이 조회로는 최근 N건만 볼 수 있다. 날짜 범위 조회를 재화 소유자와 합의해야 한다.
-   */
-  recentLedger(limit: number): LedgerEntry[];
-
-  totals(): CurrencyTotals;
-}
+/**
+ * 원장의 어떤 항목보다도 이른 시각. `earnedSince(LEDGER_BEGINNING)` 이 곧 **누적 토큰** — 지금까지
+ * 지급된 재화의 합이다.
+ */
+export const LEDGER_BEGINNING = new Date(0).toISOString();
 
 /**
  * 펫 데이터는 공통 `PetClient` 에서 읽는다.
@@ -121,10 +102,20 @@ export interface CollectionPort {
   grantTrophy(achievementId: string, autoPlace: boolean): TrophyPlacement;
 }
 
-/** gacha 조회. 요약의 `뽑은 횟수`가 쓴다. */
+/**
+ * gacha 조회. 뽑기는 아직 이 값들을 담은 테이블이 없어서 대역으로 채운다.
+ */
 export interface GachaPort {
-  drawCount(): number;
+  /**
+   * 누적 뽑기 횟수. 요약의 `뽑은 횟수`가 쓴다.
+   *
+   * `null` 은 **횟수를 저장하는 곳이 아직 없다**는 뜻이다. `0` 은 한 번도 뽑지 않았다는 실제
+   * 값이라 그 자리에 쓸 수 없다. 뽑기가 횟수를 저장하게 되면 `null` 갈래는 없어진다.
+   */
+  drawCount(): number | null;
   fusionCount(): number;
+  /** 뽑기 1회에 드는 토큰. 뽑기 가능 알림의 기준이다. */
+  drawCost(): number;
 }
 
 /** battle 조회. */

@@ -39,6 +39,7 @@ export * from './domain/state.ts';
 export * from './domain/settings/index.ts';
 export * from './domain/profile/index.ts';
 export * from './domain/panel/index.ts';
+export * from './domain/notification/gacha-ready.ts';
 export * from './domain/usage/tokens.ts';
 export * from './domain/usage/collector.ts';
 export * from './domain/usage/ccusage.ts';
@@ -55,6 +56,7 @@ export * from './view/field.ts';
 export * from './view/info.ts';
 export * from './view/settings.ts';
 export * from './view/achievement.ts';
+export * from './view/badges.ts';
 
 export * from './app/state.ts';
 export * from './app/handlers.ts';

@@ -1,6 +1,15 @@
 {
   "_comment": [
-    "기획서 7.2 표를 그대로 옮긴 업적 정의. 이 파일이 22개 업적의 단일 원본이다.",
+    "기획서 7.2 표에서 출발한 업적 정의. 이 파일이 22개 업적의 단일 원본이다.",
+    "token: 재화 보상이다. 재화의 단위는 토큰이고 뽑기 1회가 100,000이다. 기획서 7.2의 보상 값에",
+    "10,000을 곱한 수다 — 예전에는 보상 대상 토큰 10,000개를 재화 1로 줄여 지급했으므로, 같은",
+    "배수를 곱해야 사용량 보상과 업적 보상의 비율이 그대로 유지된다.",
+    "dex_15: 등록된 종이 15종보다 적은 동안에는 달성할 수 없다. 종이 늘면 그대로 열린다.",
+    "hidden.common_fusion_epic: id 는 릴리스 사이에 바꾸지 않는다. 조건만 현재 합성 규칙(같은 등급",
+    "10마리 → 한 단계 위)으로 달성할 수 있게 '합성으로 EPIC 펫 획득'으로 바꿨다.",
+    "usage.tokens_*: 기준은 누적 토큰(지금까지 지급된 재화의 합)이다. 요약 화면에 보이는 숫자가",
+    "목표에 닿으면 열린다. 예전 기준인 관측 토큰은 재화가 되지 않는 캐시 읽기가 대부분이라 같은",
+    "100만이 몇 분 만에 찼다. 목표값은 그대로 두었고, 누적 토큰 100만은 뽑기 10회 값이다.",
     "코드 분기 대신 설정 파일을 쓰는 이유(기획서 7.1): 밸런스 값을 바꾸는 데 로직 수정이",
     "필요 없고, 22개가 한 화면에 보여 기획서와 대조하기 쉽고, id는 릴리스 사이에 절대",
     "바뀌지 않아야 하는 값인데 한곳에 모여 있으면 지키기 쉽다.",
@@ -16,7 +25,7 @@
       "condition": "첫 펫 획득",
       "fact": "first_pet",
       "target": 1,
-      "coin": 10,
+      "token": 100000,
       "title": "초보 조련사",
       "trophy": true
     },
@@ -27,8 +36,7 @@
       "condition": "도감 5종",
       "fact": "dex_owned",
       "target": 5,
-      "coin": 30,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "collection.dex_15",
@@ -37,8 +45,7 @@
       "condition": "도감 15종",
       "fact": "dex_owned",
       "target": 15,
-      "coin": 80,
-      "tier": "silver"
+      "token": 800000
     },
     {
       "id": "collection.dex_complete",
@@ -47,8 +54,7 @@
       "condition": "현재 도감의 전체 종 보유",
       "fact": "dex_complete",
       "target": 1,
-      "coin": 300,
-      "tier": "gold",
+      "token": 3000000,
       "title": "도감 마스터",
       "trophy": true
     },
@@ -59,7 +65,7 @@
       "condition": "EPIC 펫 첫 획득",
       "fact": "first_epic",
       "target": 1,
-      "coin": 50,
+      "token": 500000,
       "title": "행운아"
     },
     {
@@ -69,8 +75,7 @@
       "condition": "합성 5회",
       "fact": "fusion_count",
       "target": 5,
-      "coin": 30,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "collection.fusion_50",
@@ -79,8 +84,7 @@
       "condition": "합성 50회",
       "fact": "fusion_count",
       "target": 50,
-      "coin": 120,
-      "tier": "silver",
+      "token": 1200000,
       "title": "심야의 연금술사"
     },
     {
@@ -90,7 +94,7 @@
       "condition": "한 펫이 Lv.5 달성",
       "fact": "max_pet_level",
       "target": 5,
-      "coin": 20
+      "token": 200000
     },
     {
       "id": "growth.level_10",
@@ -99,8 +103,7 @@
       "condition": "한 펫이 Lv.10 달성",
       "fact": "max_pet_level",
       "target": 10,
-      "coin": 40,
-      "tier": "bronze"
+      "token": 400000
     },
     {
       "id": "growth.level_20",
@@ -109,8 +112,7 @@
       "condition": "한 펫이 Lv.20 달성",
       "fact": "max_pet_level",
       "target": 20,
-      "coin": 100,
-      "tier": "silver"
+      "token": 1000000
     },
     {
       "id": "growth.max_level",
@@ -119,8 +121,7 @@
       "condition": "한 펫이 설정된 최고 레벨 달성",
       "fact": "max_level_reached",
       "target": 1,
-      "coin": 250,
-      "tier": "gold",
+      "token": 2500000,
       "title": "베테랑 조련사",
       "trophy": true
     },
@@ -131,7 +132,7 @@
       "condition": "첫 진화 성공",
       "fact": "evolution_count",
       "target": 1,
-      "coin": 60
+      "token": 600000
     },
     {
       "id": "battle.first_win",
@@ -140,7 +141,7 @@
       "condition": "전투 1승",
       "fact": "battle_wins",
       "target": 1,
-      "coin": 20
+      "token": 200000
     },
     {
       "id": "battle.win_50",
@@ -149,8 +150,7 @@
       "condition": "전투 50승",
       "fact": "battle_wins",
       "target": 50,
-      "coin": 80,
-      "tier": "bronze"
+      "token": 800000
     },
     {
       "id": "battle.win_500",
@@ -159,8 +159,7 @@
       "condition": "전투 500승",
       "fact": "battle_wins",
       "target": 500,
-      "coin": 300,
-      "tier": "gold",
+      "token": 3000000,
       "title": "백전노장",
       "trophy": true
     },
@@ -171,38 +170,34 @@
       "condition": "10연승",
       "fact": "max_streak",
       "target": 10,
-      "coin": 120,
-      "tier": "silver"
+      "token": 1200000
     },
     {
       "id": "usage.tokens_1m",
       "category": "usage",
       "name": "토큰 마일스톤 Ⅰ",
-      "condition": "관측 토큰 100만",
-      "fact": "observed_tokens",
+      "condition": "누적 토큰 100만",
+      "fact": "earned_tokens",
       "target": 1000000,
-      "coin": 20,
-      "tier": "bronze"
+      "token": 200000
     },
     {
       "id": "usage.tokens_10m",
       "category": "usage",
       "name": "토큰 마일스톤 Ⅱ",
-      "condition": "관측 토큰 1천만",
-      "fact": "observed_tokens",
+      "condition": "누적 토큰 1천만",
+      "fact": "earned_tokens",
       "target": 10000000,
-      "coin": 60,
-      "tier": "silver"
+      "token": 600000
     },
     {
       "id": "usage.tokens_100m",
       "category": "usage",
       "name": "토큰 마일스톤 Ⅲ",
-      "condition": "관측 토큰 1억",
-      "fact": "observed_tokens",
+      "condition": "누적 토큰 1억",
+      "fact": "earned_tokens",
       "target": 100000000,
-      "coin": 200,
-      "tier": "gold",
+      "token": 2000000,
       "title": "토큰 헤비유저"
     },
     {
@@ -212,17 +207,16 @@
       "condition": "활동 시간 1,440분",
       "fact": "activity_minutes",
       "target": 1440,
-      "coin": 30,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "hidden.three_tools_day",
       "category": "hidden",
       "name": "세 도구의 조련사",
-      "condition": "같은 로컬 날짜에 세 CLI 모두 관측 토큰 발생",
+      "condition": "같은 날에 세 CLI를 모두 사용",
       "fact": "three_tools_days",
       "target": 1,
-      "coin": 70,
+      "token": 700000,
       "title": "세 도구의 조련사",
       "hidden": true
     },
@@ -230,10 +224,10 @@
       "id": "hidden.common_fusion_epic",
       "category": "hidden",
       "name": "연금술의 기적",
-      "condition": "COMMON 펫 2마리 합성으로 EPIC 펫 획득",
-      "fact": "common_fusion_epic",
+      "condition": "합성으로 EPIC 펫 획득",
+      "fact": "fusion_epic",
       "target": 1,
-      "coin": 100,
+      "token": 1000000,
       "title": "기적의 연금술사",
       "hidden": true
     }

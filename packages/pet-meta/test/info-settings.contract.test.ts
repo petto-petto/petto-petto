@@ -8,10 +8,9 @@ import {
   AchievementCatalog,
   createMetaState,
   FixtureCollector,
-  DEX_SLOT_COUNT,
   GRASS_WEEKS,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryPetClient,
   type MetaState,
   MODEL_PREVIEW_COUNT,
@@ -42,7 +41,7 @@ class Harness {
   state: MetaState = createMetaState();
   catalog = AchievementCatalog.embedded();
   collector = FixtureCollector.withEmptySnapshots();
-  currency = new InMemoryCurrency();
+  tokens = new InMemoryTokenClient();
   collection = new InMemoryCollection();
   gacha = new StubGacha(12, 4);
   pets = new InMemoryPetClient();
@@ -50,11 +49,11 @@ class Harness {
   clock = new FixedClock(NOW);
 
   constructor() {
-    this.currency.setNow(this.clock.now());
+    this.tokens.setNow(this.clock.now());
   }
 
   run(): void {
-    runAggregation(this.state, this.collector, this.currency, this.clock);
+    runAggregation(this.state, this.collector, this.tokens, this.clock);
   }
 
   /** 기준점을 잡고, 날짜별로 사용량을 심는다. */
@@ -72,7 +71,7 @@ class Harness {
       this.catalog,
       today(),
       this.pets,
-      this.currency,
+      this.tokens,
       this.rules,
       this.gacha,
     );
@@ -97,18 +96,19 @@ test('INFO-001: 요약이 프로필·사용 가능 토큰과 함께한 기록 �
   // 정보 화면 단순화: `이 기기` 표기와 오늘 관측 토큰은 화면에서 뺐다.
   assert.equal('deviceLabel' in summary.profile, false);
   assert.equal('todayObservedTokens' in summary, false);
-  // 최근 코인은 1분마다 쌓이는 사용량 보상으로 채워져 뺐다. 코인 흐름은 `오늘 +N`이 보인다.
+  // 최근 원장 목록은 1분마다 쌓이는 사용량 보상으로 채워져 뺐다. 재화 흐름은 `오늘 +N`이 보인다.
   assert.equal('recentCoins' in summary, false);
 
-  // 함께한 기록 — 사용한 토큰 · 함께한 시간 · 뽑은 횟수 · 보유 펫 · 도감 · 업적
-  assert.equal(summary.totalObservedTokens, 40_000);
+  // 함께한 기록 — 누적 토큰 · 함께한 시간 · 뽑은 횟수 · 보유 펫 · 도감 · 업적
+  assert.equal(summary.totalEarnedTokens.value, 40_000);
   assert.equal(summary.drawCount.value, 12);
   assert.equal(summary.ownedPets.value, 3);
   assert.equal(summary.dexOwned.value, 3);
-  assert.equal(summary.dexTotal.value, DEX_SLOT_COUNT);
+  assert.equal(summary.dexTotal.value, 6);
   assert.equal(typeof summary.achievementsUnlocked, 'number');
 
-  assert.equal(summary.todayEarnedCoins.value, 4);
+  // 보상 대상 토큰 40,000이 그대로 재화가 된다.
+  assert.equal(summary.todayEarnedTokens.value, 40_000);
   assert.equal(summary.togetherMinutes, 1);
   assert.equal(summary.togetherLabel, '1분');
   assert.equal(summary.hasNoRecords, false);
@@ -121,7 +121,55 @@ test('INFO-001: 사용 가능 토큰이 재화 잔액을 그대로 보여준다'
   const summary = harness.summary();
 
   // 요약이 자체 계산하지 않고 재화 도메인이 소유한 잔액을 그대로 옮긴다.
-  assert.equal(summary.availableTokens.value, harness.currency.balance());
+  assert.equal(summary.availableTokens.value, harness.tokens.balance());
+});
+
+test('INFO-001: 누적 토큰은 사용 가능 토큰과 같은 기준이다 — 쌓은 만큼 같이 오른다', () => {
+  const harness = new Harness();
+  harness.run();
+  // 보상 대상 100,000 에 캐시 읽기 5,000,000 이 붙은 사용. 재화가 되는 것은 100,000 뿐이다.
+  harness.collector.accumulate(
+    'claude_code',
+    '2026-08-24',
+    'claude-opus-5',
+    tokenCounts(60_000, 40_000, 0, 5_000_000),
+  );
+  harness.run();
+
+  const summary = harness.summary();
+
+  assert.equal(summary.availableTokens.value, 100_000);
+  assert.equal(summary.totalEarnedTokens.value, 100_000, '사용 가능 토큰과 같은 숫자다');
+});
+
+test('INFO-001: 누적 토큰은 써도 줄지 않고 업적 보상도 포함한다', () => {
+  const harness = new Harness();
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 150_000]]);
+  harness.tokens.grantOnce('achievement:collection.first_pet', 100_000, '첫 만남');
+  harness.tokens.spend(100_000); // 뽑기 한 번
+
+  const summary = harness.summary();
+
+  assert.equal(summary.totalEarnedTokens.value, 250_000, '지금까지 쌓은 양');
+  assert.equal(summary.availableTokens.value, 150_000, '그중 아직 쓰지 않은 양');
+});
+
+test('INFO-001: 오늘 획득은 오늘 지급된 양만 더하고 소비와 어제 지급은 빼고 센다', () => {
+  const harness = new Harness();
+  // 어제 지급된 것. 로컬 자정 이전이라 오늘 합계에 들지 않는다.
+  harness.tokens.setNow(new Date('2026-08-23T12:00:00'));
+  harness.tokens.grantOnce('achievement:yesterday', 500_000, '어제 업적');
+  // 오늘 지급 두 건과 소비 한 건.
+  harness.tokens.setNow(new Date('2026-08-24T00:00:00'));
+  harness.tokens.grantOnce('usage:midnight', 30_000, '사용량 보상');
+  harness.tokens.setNow(new Date('2026-08-24T09:00:00'));
+  harness.tokens.grantOnce('achievement:today', 100_000, '첫 만남');
+  harness.tokens.spend(100_000);
+
+  const summary = harness.summary();
+
+  assert.equal(summary.todayEarnedTokens.value, 130_000, '자정 정각의 지급은 오늘 것이다');
+  assert.equal(summary.availableTokens.value, 530_000);
 });
 
 test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', () => {
@@ -129,12 +177,14 @@ test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', ()
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 7_000]]);
   const wizard = harness.pets.give('006');
   harness.pets.setActivePet(wizard.ownedPetId);
-  harness.currency.setQueryFailure(true);
+  harness.tokens.setQueryFailure(true);
 
   const summary = harness.summary();
 
   assert.ok(summary.availableTokens.error);
-  assert.equal(summary.totalObservedTokens, 7_000);
+  assert.ok(summary.todayEarnedTokens.error, '오늘 획득도 같은 원장에서 온다');
+  assert.ok(summary.totalEarnedTokens.error, '누적 토큰도 같은 원장에서 온다');
+  assert.equal(summary.togetherMinutes, 1, 'meta 가 소유한 수치는 그대로 보인다');
   assert.equal(summary.profile.activePet.value?.name, '별빛마법사');
 });
 
@@ -144,8 +194,34 @@ test('INFO-001: 기록이 없는 설치는 오류가 아니라 빈 상태다', (
 
   const summary = harness.summary();
   assert.equal(summary.hasNoRecords, true);
-  assert.equal(summary.totalObservedTokens, 0);
+  assert.equal(summary.totalEarnedTokens.value, 0);
   assert.equal(summary.ownedPets.error, undefined);
+});
+
+test('사용량 화면은 누적 토큰과 같은 기준이다 — 재화가 되지 않는 캐시 읽기를 세지 않는다', () => {
+  const harness = new Harness();
+  harness.run();
+  // 보상 대상 100,000 에 캐시 읽기 5,000,000 이 붙은 사용.
+  harness.collector.accumulate(
+    'claude_code',
+    '2026-08-24',
+    'claude-opus-5',
+    tokenCounts(60_000, 40_000, 0, 5_000_000),
+  );
+  harness.run();
+
+  const screen = usageScreen(harness.state, today(), 'all');
+
+  assert.equal(screen.periodTokens, 100_000);
+  assert.equal(screen.grassTokens, 100_000);
+  assert.equal(screen.tools.find((row) => row.provider === 'claude_code')?.tokens, 100_000);
+  assert.equal(screen.models[0]?.tokens, 100_000);
+  const todayCell = screen.grass
+    .flatMap((week) => week.cells)
+    .find((cell) => cell.date === today());
+  assert.equal(todayCell?.tokens, 100_000);
+  // 요약의 누적 토큰과 같은 숫자다. 업적 보상이 없으면 둘은 일치한다.
+  assert.equal(harness.summary().totalEarnedTokens.value, screen.periodTokens);
 });
 
 test('INFO-004: 잔디가 최근 12주 고정이고 0과 값을 구분한다', () => {
@@ -162,13 +238,13 @@ test('INFO-004: 잔디가 최근 12주 고정이고 0과 값을 구분한다', (
   const cells = screen.grass.flatMap((week) => week.cells);
   assert.equal(cells.length, 12 * 7, '12주 × 7일 = 84칸');
 
-  const used = cells.filter((cell) => cell.observed > 0);
+  const used = cells.filter((cell) => cell.tokens > 0);
   assert.equal(used.length, 3);
-  assert.ok(cells.every((cell) => (cell.observed === 0) === (cell.level === 0)));
+  assert.ok(cells.every((cell) => (cell.tokens === 0) === (cell.level === 0)));
   assert.ok(used.every((cell) => cell.level >= 1 && cell.level <= 4));
 
   const todayCell = cells.find((cell) => cell.date === '2026-08-24');
-  assert.equal(todayCell?.observed, 90_000);
+  assert.equal(todayCell?.tokens, 90_000);
   assert.equal(todayCell?.future, false);
   assert.ok(
     cells.some((cell) => cell.future),
@@ -186,9 +262,9 @@ test('INFO-004: 잔디는 기간 필터를 무시한다', () => {
   const all = usageScreen(harness.state, today(), 'all');
   const todayOnly = usageScreen(harness.state, today(), 'today');
 
-  assert.equal(all.grassObserved, todayOnly.grassObserved);
-  assert.equal(all.grassObserved, 80_000);
-  assert.equal(todayOnly.periodObserved, 10_000, '기간 필터는 집계에만 적용된다');
+  assert.equal(all.grassTokens, todayOnly.grassTokens);
+  assert.equal(all.grassTokens, 80_000);
+  assert.equal(todayOnly.periodTokens, 10_000, '기간 필터는 집계에만 적용된다');
 });
 
 test('INFO-005: 기간 필터가 기획서 5.2의 범위를 쓴다', () => {
@@ -202,7 +278,7 @@ test('INFO-005: 기간 필터가 기획서 5.2의 범위를 쓴다', () => {
   ]);
 
   const observedFor = (period: 'today' | 'week' | 'month' | 'all'): number =>
-    usageScreen(harness.state, today(), period).periodObserved;
+    usageScreen(harness.state, today(), period).periodTokens;
 
   assert.equal(observedFor('today'), 1);
   assert.equal(observedFor('week'), 11, '오늘을 포함한 7개 날짜');
@@ -230,7 +306,7 @@ test('INFO-006: 모델은 (도구, 원본 모델명)으로 식별되고 내림�
   assert.equal(screen.modelCount, 8);
   assert.ok(screen.modelCount > MODEL_PREVIEW_COUNT, '전체 보기가 의미 있는 상황');
 
-  const observed = screen.models.map((row) => row.observed);
+  const observed = screen.models.map((row) => row.tokens);
   assert.deepEqual(
     observed,
     [...observed].sort((a, b) => b - a),
@@ -250,7 +326,7 @@ test('INFO-006: 수집 중지된 소스도 과거 기록과 함께 목록에 남
   const screen = usageScreen(harness.state, today(), 'all');
   const codex = screen.tools.find((row) => row.provider === 'codex');
   assert.ok(codex, 'Codex 행이 남아 있어야 한다');
-  assert.equal(codex.observed, 5_000);
+  assert.equal(codex.tokens, 5_000);
   assert.equal(codex.paused, true);
   assert.equal(codex.statusLabel, '수집 중지');
 });
@@ -274,7 +350,7 @@ test('INFO-007: 펫 조회가 실패해도 meta가 소유한 수치는 보인다
   const summary = harness.summary();
   assert.ok(summary.profile.activePet.error);
   assert.ok(summary.ownedPets.error);
-  assert.equal(summary.totalObservedTokens, 7_000);
+  assert.equal(summary.totalEarnedTokens.value, 7_000);
 });
 
 test('INFO-008: 어느 화면에도 USD 비용이 존재하지 않는다', () => {

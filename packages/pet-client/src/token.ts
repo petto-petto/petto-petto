@@ -83,6 +83,13 @@ export interface TokenClient {
 
   /** 현재 사용할 수 있는 재화 잔액. 조회 실패는 예외다. */
   balance(): number;
+  /**
+   * `since`(ISO 8601, UTC) 이후에 **지급된** 재화의 합. 소비는 세지 않는다. 지급이 없으면 0.
+   *
+   * 기준 시각은 호출자가 정한다 — "오늘"이 어느 시간대의 자정인지는 화면이 안다. 정각에 지급된
+   * 것은 포함한다. 빈 문자열은 거부한다. 그대로 받으면 전체 합이 "오늘 얻은 양"으로 보인다.
+   */
+  earnedSince(since: string): number;
   /** 같은 키의 지급은 한 번만 기록한다. 새로 지급했으면 true. */
   grantOnce(key: string, amount: number, reason: string): boolean;
   /** 잔액이 부족하면 기록하지 않고 false. 성공하면 true. */

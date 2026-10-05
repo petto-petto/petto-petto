@@ -64,12 +64,14 @@ export function snapshotTotal(snapshot: SourceSnapshot): number {
  * 사용자에게 원본 로그 내용이나 내부 명령 출력을 보여주지 않기 위해, 오류는 자유 문자열이
  * 아니라 **분류된 값**이다.
  */
-export type CollectErrorKind = 'not_found' | 'unsupported_schema' | 'execution_failed';
+export type CollectErrorKind =
+  'not_found' | 'unsupported_schema' | 'execution_failed' | 'storage_failed';
 
 const COLLECT_MESSAGES: Record<CollectErrorKind, string> = {
   not_found: '기록을 찾을 수 없음',
   unsupported_schema: '앱 업데이트가 필요합니다',
   execution_failed: '집계 오류',
+  storage_failed: '사용량을 저장하지 못했어요',
 };
 
 export class CollectError extends Error {

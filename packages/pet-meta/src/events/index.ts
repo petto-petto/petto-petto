@@ -16,10 +16,15 @@
  * 포트를 필요로 하는 쪽이 소유하는 것과 같은 규칙이다.
  */
 
-import type { BattleResult, Coin, PetId, Provider, Rarity } from '@pet/core';
+import type { BattleResult, PetId, Provider, Rarity } from '@pet/core';
 
-/** 현재 이벤트 스키마 버전. 페이로드 모양이 바뀌면 올린다. */
-export const EVENT_SCHEMA_VERSION = 1;
+/**
+ * 현재 이벤트 스키마 버전. 페이로드 모양이 바뀌면 올린다.
+ *
+ * v2: `fusion.completed` 에서 `parentRarities` 를 뺐다. 재료 두 마리를 가정한 모양이었는데
+ * 실제 합성은 같은 등급 열 마리를 쓰고, 판정에는 결과 등급만 필요하다.
+ */
+export const EVENT_SCHEMA_VERSION = 2;
 
 declare const brand: unique symbol;
 type Brand<T, B extends string> = T & { readonly [brand]: B };
@@ -34,7 +39,6 @@ export const eventId = (value: string): EventId => value as EventId;
 export interface FusionCompleted {
   eventType: 'fusion.completed';
   fusionId: string;
-  parentRarities: readonly [Rarity, Rarity];
   resultPetId: PetId;
   resultRarity: Rarity;
 }
@@ -53,7 +57,7 @@ export interface UsageAggregated {
   provider: Provider;
   /** 이번 집계에서 늘어난 관측 토큰. */
   observedDelta: number;
-  /** 설치 이후 누적 관측 토큰. */
+  /** 앱이 켜져 있던 동안 쌓인 누적 관측 토큰. */
   observedTotal: number;
   /** 이번 집계가 활동 분을 새로 적립했는지. */
   activityMinuteAdded: boolean;
@@ -62,8 +66,8 @@ export interface UsageAggregated {
 export interface CurrencyBalanceChanged {
   eventType: 'currency.balance_changed';
   ledgerEntryId: string;
-  previousBalance: Coin;
-  balance: Coin;
+  previousBalance: number;
+  balance: number;
   reason: string;
 }
 

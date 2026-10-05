@@ -12,15 +12,16 @@ import assert from 'node:assert/strict';
 import { FixedClock, parseLocalDate, type LocalDate } from '@pet/core';
 import {
   AchievementCatalog,
+  createEventFacts,
   createMetaState,
-  DEX_SLOT_COUNT,
   evaluate,
   FixtureCollector,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryPetClient,
   isUnlocked,
   type MetaState,
+  observePets,
   runAggregation,
   STUB_GROWTH_RULES,
   StubGacha,
@@ -39,14 +40,14 @@ class Harness {
   state: MetaState = createMetaState();
   catalog = AchievementCatalog.embedded();
   collector = FixtureCollector.withEmptySnapshots();
-  currency = new InMemoryCurrency();
+  tokens = new InMemoryTokenClient();
   collection = new InMemoryCollection();
   pets = new InMemoryPetClient();
   rules = STUB_GROWTH_RULES;
   clock = new FixedClock(NOW);
 
   constructor() {
-    this.currency.setNow(this.clock.now());
+    this.tokens.setNow(this.clock.now());
   }
 
   summary() {
@@ -55,22 +56,14 @@ class Harness {
       this.catalog,
       today(),
       this.pets,
-      this.currency,
+      this.tokens,
       this.rules,
       new StubGacha(0, 0),
     );
   }
 
   evaluate() {
-    return evaluate(
-      this.state,
-      this.catalog,
-      this.currency,
-      this.collection,
-      this.pets,
-      this.rules,
-      this.clock,
-    );
+    return evaluate(this.state, this.catalog, this.tokens, this.pets, this.rules, this.clock);
   }
 
   unlocked(id: string): boolean {
@@ -129,6 +122,7 @@ test('INFO-007: 펫 조회가 실패하면 프로필만 오류고 나머지는 �
 
   assert.ok(summary.profile.activePet.error);
   assert.ok(summary.ownedPets.error);
+  assert.ok(summary.dexTotal.error, '등록된 종 수를 읽지 못하면 도감 칸도 오류다');
   // 재화는 펫과 무관하므로 그대로다.
   assert.equal(summary.availableTokens.error, undefined);
 });
@@ -171,7 +165,7 @@ test('INFO-001: 보유 펫과 도감은 PetClient 의 현재 보유에서 온다
 
   assert.equal(summary.ownedPets.value, 3, '마리 수');
   assert.equal(summary.dexOwned.value, 2, '종 수 — 같은 종 두 마리는 한 칸');
-  assert.equal(summary.dexTotal.value, DEX_SLOT_COUNT);
+  assert.equal(summary.dexTotal.value, 6, '도감 전체 칸은 등록된 종 수다');
 });
 
 /* ---------- 업적 ---------- */
@@ -199,15 +193,27 @@ test('ACH: 오랜 친구 Ⅲ 은 성장 규칙의 최고 레벨 도달로 열린
   assert.ok(harness.unlocked('growth.max_level'));
 });
 
-test('ACH: 도감 마스터는 도감 칸을 모두 채웠을 때만 열린다', () => {
+test('ACH: 도감 마스터는 등록된 종을 모두 보유했을 때만 열린다', () => {
   const harness = new Harness();
-  // 등록된 종은 여섯뿐이라 도감 칸(20)을 채울 수 없다.
-  for (const species of ['001', '002', '003', '004', '005', '006']) harness.pets.give(species);
+  for (const species of ['001', '002', '003', '004', '005']) harness.pets.give(species);
 
   harness.evaluate();
 
   assert.ok(harness.unlocked('collection.dex_5'), '수집가 Ⅰ');
-  assert.ok(!harness.unlocked('collection.dex_complete'), '6 / 20 은 완성이 아니다');
+  assert.ok(!harness.unlocked('collection.dex_complete'), '5 / 6 은 완성이 아니다');
+
+  harness.pets.give('006');
+  harness.evaluate();
+
+  assert.ok(harness.unlocked('collection.dex_complete'), '등록된 여섯 종을 모두 보유했다');
+});
+
+test('ACH: 등록된 종이 없으면 도감 마스터는 열리지 않는다', () => {
+  const facts = createEventFacts();
+
+  observePets(facts, [], 0, STUB_GROWTH_RULES);
+
+  assert.equal(facts.dexComplete, 0, '0 / 0 을 완성으로 보지 않는다');
 });
 
 test('7.1 · 9.4: 펫을 잃어도 진행률과 판정 사실은 줄지 않는다', () => {
@@ -229,14 +235,14 @@ test('7.1 · 9.4: 펫을 잃어도 진행률과 판정 사실은 줄지 않는�
 
 test('INFO-007: 펫 조회가 실패해도 사용량 업적 판정은 계속된다', () => {
   const harness = new Harness();
-  runAggregation(harness.state, harness.collector, harness.currency, harness.clock);
+  runAggregation(harness.state, harness.collector, harness.tokens, harness.clock);
   harness.collector.accumulate(
     'claude_code',
     '2026-08-24',
     'claude-opus-5',
     tokenCounts(1_200_000),
   );
-  runAggregation(harness.state, harness.collector, harness.currency, harness.clock);
+  runAggregation(harness.state, harness.collector, harness.tokens, harness.clock);
   harness.pets.setQueryFailure(true);
 
   harness.evaluate();

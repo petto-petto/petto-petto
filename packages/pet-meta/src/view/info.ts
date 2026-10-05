@@ -3,13 +3,19 @@
  * (`.harness/specs/features/2026-09-28-info-screen-simplify.md`)이 이 파일의 명세다.
  */
 
-import { localDateOf, type LocalDate } from '@pet/core';
+import type { LocalDate } from '@pet/core';
 
-import type { CurrencyPort, GachaPort, GrowthRules, OwnedPet, PetClient } from '../ports/index.ts';
+import {
+  LEDGER_BEGINNING,
+  type GachaPort,
+  type GrowthRules,
+  type OwnedPet,
+  type PetClient,
+  type TokenPort,
+} from '../ports/index.ts';
 import { unlockedCount } from '../domain/achievement/engine.ts';
-import { DEX_SLOT_COUNT } from '../domain/achievement/facts.ts';
 import type { AchievementCatalog } from '../domain/achievement/catalog.ts';
-import { observedTotal, type MetaState } from '../domain/state.ts';
+import type { MetaState } from '../domain/state.ts';
 import { failedField, fieldOf, okField, type Field } from './field.ts';
 
 /** 레벨 옆 EXP 진행. */
@@ -50,22 +56,37 @@ export interface SummaryScreen {
   /**
    * 지금 쓸 수 있는 재화. 화면에서 가장 강조되는 값이다.
    *
-   * 기획서의 코인 잔액을 사용자 표현으로는 `사용 가능 토큰` 이라 부른다 — 토큰 사용으로
-   * 얻은 것이므로 그 이름이 직관적이다. 저장과 계약에서는 계속 코인이다.
+   * 재화의 단위가 토큰이다. 뽑기·합성이 차감하는 것과 같은 원장의 잔액을 그대로 보여 준다.
    */
   availableTokens: Field<number>;
-  todayEarnedCoins: Field<number>;
+  /** 오늘 얻은 재화. 사용량 보상과 업적 보상의 합이다. */
+  todayEarnedTokens: Field<number>;
 
   /* 함께한 기록 — 요약을 펼쳤을 때만 보인다. */
-  totalObservedTokens: number;
-  /** 뽑은 횟수. gacha 도메인 것이라 실패할 수 있다(INFO-007). */
-  drawCount: Field<number>;
+  /**
+   * 누적 토큰. 지금까지 이 앱에서 쌓은 재화의 합이다.
+   *
+   * `사용 가능 토큰` 과 **같은 기준**이다 — 같은 원장에서 지급된 것을 전부 더한 값이고, 거기서
+   * 쓴 만큼을 뺀 것이 사용 가능 토큰이다. 그래서 한 번도 쓰지 않았다면 두 숫자가 같다.
+   *
+   * 예전에는 이 자리에 관측 토큰(캐시 읽기 포함)을 `사용한 토큰` 으로 보여 줬다. 재화가 되지
+   * 않는 캐시 읽기가 대부분이라 사용 가능 토큰보다 수십 배 컸고, 두 숫자가 왜 다른지 화면만
+   * 보고는 알 수 없었다.
+   */
+  totalEarnedTokens: Field<number>;
+  /**
+   * 뽑은 횟수. gacha 도메인 것이라 실패할 수 있다(INFO-007).
+   *
+   * `null` 은 횟수를 저장하는 곳이 아직 없다는 뜻이다. 화면은 숫자 대신 `—` 를 그린다.
+   */
+  drawCount: Field<number | null>;
   ownedPets: Field<number>;
   dexOwned: Field<number>;
+  /** 도감 전체 칸 수. 등록된 펫 종 수라서 펫 조회가 실패하면 이 칸도 실패한다. */
   dexTotal: Field<number>;
   togetherMinutes: number;
   togetherLabel: string;
-  /** 기획서 5.4: 설치 이후 기록이 아직 없는 상태. */
+  /** 기획서 5.4: 앱을 켜 둔 동안의 기록이 아직 하나도 없는 상태. */
   hasNoRecords: boolean;
   achievementsUnlocked: number;
   achievementsTotal: number;
@@ -80,20 +101,14 @@ export function formatTogether(minutes: number): string {
 }
 
 /**
- * 기획서 5.1: 오늘 발생한 **양수** 원장 항목의 합. 소비는 포함하지 않는다.
+ * 로컬 날짜의 자정을 UTC ISO 문자열로 바꾼다. `오늘 +N` 의 기준 시각이다.
  *
- * 여기에 계약상의 빈틈이 있다. 기획서 9.5가 재화 도메인에 요구하는 조회는 "최근 원장
- * 20건"이라서, 하루에 20건이 넘는 획득이 있으면 이 합계가 실제보다 작아진다. 프로토타입은
- * 넉넉한 개수를 요청해 우회하지만, 재화 소유자와 날짜 범위 조회를 합의하는 것이 옳다.
+ * 기획서 5.1: 오늘 획득은 오늘 발생한 **양수** 원장 항목의 합이고 소비는 포함하지 않는다.
+ * "오늘"은 사용자의 로컬 날짜인데 원장의 시각은 UTC 라서, 어느 순간부터가 오늘인지는 화면이
+ * 정해서 넘긴다.
  */
-function todayEarnedCoins(currency: CurrencyPort, today: LocalDate): Field<number> {
-  const LEDGER_SCAN_LIMIT = 500;
-  return fieldOf(() =>
-    currency
-      .recentLedger(LEDGER_SCAN_LIMIT)
-      .filter((entry) => localDateOf(new Date(entry.occurredAt)) === today && entry.delta > 0)
-      .reduce((sum, entry) => sum + entry.delta, 0),
-  );
+function startOfLocalDay(date: LocalDate): string {
+  return new Date(`${date}T00:00:00`).toISOString();
 }
 
 /** `PetClient` 의 개체를 프로필 카드로 바꾼다. */
@@ -120,7 +135,7 @@ export function summaryScreen(
   catalog: AchievementCatalog,
   today: LocalDate,
   pets: PetClient,
-  currency: CurrencyPort,
+  tokens: Pick<TokenPort, 'balance' | 'earnedSince'>,
   rules: GrowthRules,
   gacha: GachaPort,
 ): SummaryScreen {
@@ -134,14 +149,14 @@ export function summaryScreen(
         ? failedField<ActivePetCard | null>(active.error)
         : okField(active.value ? activePetCard(active.value, rules) : null),
     },
-    availableTokens: fieldOf(() => currency.balance()),
-    todayEarnedCoins: todayEarnedCoins(currency, today),
-    totalObservedTokens: observedTotal(state),
+    availableTokens: fieldOf(() => tokens.balance()),
+    todayEarnedTokens: fieldOf(() => tokens.earnedSince(startOfLocalDay(today))),
+    totalEarnedTokens: fieldOf(() => tokens.earnedSince(LEDGER_BEGINNING)),
     drawCount: fieldOf(() => gacha.drawCount()),
     ownedPets: fieldOf(() => pets.countOwnedPets()),
     // 현재 보유한 종 수다. 업적 판정은 따로 최고치를 기억하지만, 화면은 지금 상태를 보여준다.
     dexOwned: fieldOf(() => pets.countOwnedSpecies()),
-    dexTotal: okField(DEX_SLOT_COUNT),
+    dexTotal: fieldOf(() => pets.countSpecies()),
     togetherMinutes,
     togetherLabel: formatTogether(togetherMinutes),
     hasNoRecords: state.usageDaily.size === 0,

@@ -113,6 +113,10 @@ const tokens: TokenClient = new SqliteTokenClient(new TokenRepository(appDatabas
 | `statsByProvider()`    | 도구별 누적 목록. provider 오름차순             | 정보 화면      |
 | `totals()`             | 전체 누적 `{ observed, reward }`                | 정보 화면·재화 |
 | `recentHistory(limit)` | 최근 적재 내역. `entryId` 내림차순              | 진단·내역 화면 |
+| `earnedSince(since)`   | `since`(ISO 8601) 이후 지급된 재화의 합         | 정보 화면      |
+
+2026-10-05 추가: `earnedSince`. meta 의 `오늘 +N` 이 씁니다. 소비는 세지 않고, 기준 시각 정각의
+지급은 포함합니다.
 
 ## 적재하기
 
@@ -170,15 +174,9 @@ const { observed, reward } = tokens.totals();
 const { reward } = tokens.totals(); // 누적 보상 대상 토큰
 ```
 
-참고로 현재 `SqliteCurrencyPort.grantUsageTokens`는 집계 한 건씩 `Math.floor(reward / 10_000)`로 환산해서, **매번 나머지가 버려집니다.** 1분에 9,999 토큰을 쓰면 0코인이 적립되고 그 9,999개는 다음 집계로 이월되지 않습니다.
-
-`token_stats.reward`에 누적이 남으므로 이제 이월이 가능합니다.
-
-```text
-이번에 줄 코인 = floor(누적 reward / 10,000) − 이미 준 코인
-```
-
-이 변경은 재화 도메인의 정책이라 이번 작업에 포함하지 않았습니다.
+2026-10-05 변경: 환산이 없어졌습니다. 재화의 단위가 토큰이라 meta 가 집계한 증가분의 보상 대상
+토큰 수를 `grantOnce` 로 그대로 지급하고, 같은 증가분을 `recordUsage` 로 적재합니다. 예전의
+`Math.floor(reward / 10_000)` 환산과 그 때문에 버려지던 나머지는 더 이상 없습니다.
 
 ## 실패·빈 결과 처리
 
