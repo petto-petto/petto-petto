@@ -1,5 +1,6 @@
 /** Node composition entrypoint. Importing it never spawns a process or opens a database. */
 import type { PetClient } from '@pet/client';
+import type { GrowthReadClient } from '@pet/main-overlay/client';
 import type { RoomSelectionClient } from '@pet/room';
 import { readFileSync } from 'node:fs';
 import { FileBattleSpriteAdapter } from './platform/file-sprites.ts';
@@ -17,13 +18,14 @@ export type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './po
 export interface BattleRuntimeOptions {
   /** Optional owner-provided room selection; never changes room or common storage. */
   selection?: RoomSelectionClient;
+  growth?: GrowthReadClient;
   petAssetsDir: string;
   /** The growth owner supplies this curve; battle does not define pet growth. */
   levelXpCosts: readonly number[];
 }
 
 export function createBattleRuntime(
-  pets: Pick<PetClient, 'listSpecies' | 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>,
+  pets: Pick<PetClient, 'listSpecies' | 'getActivePet' | 'listOwnedPets'>,
   options: BattleRuntimeOptions,
 ): BattleRuntime {
   // Validate the owner catalog and configuration before creating the engine.
@@ -49,6 +51,7 @@ export function createBattleRuntime(
       },
       rules,
       options.selection,
+      options.growth,
     ),
     sprites,
   );
@@ -65,7 +68,7 @@ export function createBattleRuntime(
 }
 
 export function mountBattle(
-  pets: Pick<PetClient, 'listSpecies' | 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>,
+  pets: Pick<PetClient, 'listSpecies' | 'getActivePet' | 'listOwnedPets'>,
   ipc: BattleIpcRegistry,
   options: BattleRuntimeOptions & {
     isBattleSender(id: number): boolean;

@@ -35,7 +35,6 @@ function fixture(active: OwnedPet | null = pet) {
     {
       getActivePet: () => active,
       listOwnedPets: () => (active ? [active] : []),
-      readOwnedPetGrowth: () => new Map(),
     },
     {
       get(target, key) {
@@ -119,8 +118,7 @@ test('공통 조회 실패를 미보유로 바꾸지 않고 다음 정상 요청
       return pet;
     },
     listOwnedPets: () => [pet],
-    readOwnedPetGrowth: () => new Map(),
-  } as Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
+  } as Pick<PetClient, 'getActivePet' | 'listOwnedPets'>;
   const integration = new PetBattleIntegration(client, new DemoBattleGateway(), rules);
   await assert.rejects(integration.syncActivePet(), /read failed/);
   broken = false;

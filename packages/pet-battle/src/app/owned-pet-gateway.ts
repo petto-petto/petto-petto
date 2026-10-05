@@ -1,4 +1,5 @@
 import type { PetClient } from '@pet/client';
+import type { GrowthReadClient } from '@pet/main-overlay/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleResult, Rarity } from '../contracts.ts';
 import type { BattleGateway } from '../ports/battle-gateway.ts';
@@ -14,7 +15,7 @@ export interface BattleGrowthRules {
 
 /** Trusted PetClient snapshots are authoritative; renderer preview actions cannot grant XP. */
 export class OwnedPetBattleGateway implements BattleGateway {
-  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
+  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>;
   readonly #engine: BattleGateway;
   readonly #rules: BattleGrowthRules;
   readonly #room: RoomBattlePetAdapter | undefined;
@@ -23,15 +24,17 @@ export class OwnedPetBattleGateway implements BattleGateway {
   #spectators: string[] = [];
 
   constructor(
-    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>,
+    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>,
     engine: BattleGateway,
     rules: BattleGrowthRules,
     selection?: RoomSelectionClient,
+    growth?: GrowthReadClient,
   ) {
     this.#pets = pets;
     this.#engine = engine;
     this.#rules = rules;
-    this.#room = selection && new RoomBattlePetAdapter(selection, pets);
+    if (selection && !growth) throw new Error('전투 룸 선택에는 성장 조회 Port가 필요합니다');
+    this.#room = selection ? new RoomBattlePetAdapter(selection, pets, growth!) : undefined;
   }
 
   execute(command: BattleCommand): Promise<BattleResult> {

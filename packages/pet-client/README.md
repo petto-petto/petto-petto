@@ -31,12 +31,7 @@ desktop host에서는 이미 열린 공용 DB로 한 번 조립한 뒤 필요한
 import type { PetClient } from '@pet/client';
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { PetRepository } from './persistence/repositories/pet-repository.ts';
-import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
-
-const pets: PetClient = new SqlitePetClient(
-  new PetRepository(appDatabase),
-  new PetGrowthRepository(appDatabase),
-);
+const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
 // 각 기능의 생성자나 초기화 함수에 pets를 전달한다.
 ```
 
@@ -75,7 +70,6 @@ if (second) {
 - 모든 메서드는 동기식이다. 메서드와 반환 타입은 [src/index.ts](src/index.ts)에 있다.
 - `speciesId`는 종류 ID(`'003'`), `ownedPetId`는 한 마리의 UUID다.
 - `OwnedPet`은 종류 정보까지 결합한 결과다. 표시 이름은 `nickname ?? name`이다.
-- `readOwnedPetGrowth(ids)`는 성장 저장소의 정본을 지정된 개체 ID별로 읽는다. 결과에서 빠진 ID는 연결된 성장 기록이 없고, 읽기 실패는 예외로 전달된다.
 - `sprite`, `rarity`, `speciesId`와 `evolutionStage + 1`을 기존 에셋 경로 함수에 사용할 수 있다.
 - `listSpecies()`와 `listOwnedPets()`는 필터 생략 시 전체를 조회한다. `createOwnedPets([])`는 아무것도 생성하지 않고 `[]`를 반환한다.
 - `countOwnedSpecies()`와 `getHighestLevel()`은 현재 보유 기준이다. 과거 발견·역대 최고 기록이 아니다.

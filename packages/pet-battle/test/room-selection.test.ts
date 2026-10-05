@@ -18,9 +18,6 @@ function fixture() {
       if (failure) throw failure;
       return owned;
     },
-    readOwnedPetGrowth() {
-      return new Map();
-    },
   };
   const selection = {
     getSnapshot() {
@@ -43,6 +40,7 @@ function fixture() {
       levelXpCosts: Array(50).fill(10),
     },
     selection,
+    { readOwnedPetGrowth: () => new Map() },
   );
   return {
     client,

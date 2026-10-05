@@ -12,6 +12,7 @@
     { "path": "../../packages/pet-gacha" },
     { "path": "../../packages/pet-meta" },
     { "path": "../../packages/pet-room" },
-    { "path": "../../packages/pet-client" }
+    { "path": "../../packages/pet-client" },
+    { "path": "../../packages/pet-overlay" }
   ]
 }

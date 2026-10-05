@@ -281,6 +281,7 @@ test('열린 전투창 조회는 룸 선택과 진화 변경을 읽고 XP가 연
     new ElectronBattleEngine(),
     rules,
     new RoomSelectionAdapter(views),
+    { readOwnedPetGrowth: () => new Map() },
   );
 
   let result = await battle.syncActivePet();

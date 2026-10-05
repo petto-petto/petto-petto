@@ -8,8 +8,6 @@ async function fixture(t) {
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
   const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
-  const { PetGrowthRepository } =
-    await import('../dist/main/persistence/repositories/pet-growth-repository.js');
   const { CurrencyRepository } =
     await import('../dist/main/persistence/repositories/currency-repository.js');
   const { TokenRepository } =
@@ -27,10 +25,7 @@ async function fixture(t) {
     rmSync(directory, { recursive: true, force: true });
   });
   database.open();
-  const client = new SqlitePetClient(
-    new PetRepository(database),
-    new PetGrowthRepository(database),
-  );
+  const client = new SqlitePetClient(new PetRepository(database));
   const currency = new SqliteTokenClient(
     new TokenRepository(database),
     new CurrencyRepository(database),

@@ -10,6 +10,8 @@ async function fixture(t, { persistedGrowth = false } = {}) {
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
   const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
   const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
+  const { SqliteGrowthReadClient } =
+    await import('../dist/main/clients/sqlite-growth-read-client.js');
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
   const { PetGrowthRepository } =
     await import('../dist/main/persistence/repositories/pet-growth-repository.js');
@@ -23,9 +25,10 @@ async function fixture(t, { persistedGrowth = false } = {}) {
   });
   db.open();
   const growthRepository = new PetGrowthRepository(db);
-  const pets = new SqlitePetClient(new PetRepository(db), growthRepository);
+  const pets = new SqlitePetClient(new PetRepository(db));
   const roomPets = new PetClientRoomAdapter(pets);
   const options = {
+    growth: new SqliteGrowthReadClient(growthRepository),
     petAssetsDir: join(__dirname, '../renderer/assets/pets'),
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
       OVERLAY_GROWTH_RULES.requiredXp(i + 1),

@@ -1,4 +1,5 @@
 import type { PetClient } from '@pet/client';
+import type { GrowthReadClient } from '@pet/main-overlay/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleResult } from '../contracts.ts';
 import type { BattleGateway } from '../ports/battle-gateway.ts';
@@ -17,19 +18,20 @@ export interface GrowthXpNotification {
  * No database access, token conversion, pet creation, or growth writes happen here.
  */
 export class PetBattleIntegration implements BattleGateway {
-  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
+  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>;
   readonly #gateway: OwnedPetBattleGateway;
   readonly #selection: RoomSelectionClient | undefined;
 
   constructor(
-    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>,
+    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>,
     engine: BattleGateway,
     rules: BattleGrowthRules,
     selection?: RoomSelectionClient,
+    growth?: GrowthReadClient,
   ) {
     this.#pets = pets;
     this.#selection = selection;
-    this.#gateway = new OwnedPetBattleGateway(pets, engine, rules, selection);
+    this.#gateway = new OwnedPetBattleGateway(pets, engine, rules, selection, growth);
   }
 
   execute(command: BattleCommand): Promise<BattleResult> {

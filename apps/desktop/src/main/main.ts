@@ -22,6 +22,7 @@ import { mountBattle } from '@pet/battle/node';
 import type { PetClient, TokenClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
+import { SqliteGrowthReadClient } from './clients/sqlite-growth-read-client.ts';
 import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
 import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
@@ -310,7 +311,8 @@ app.whenReady().then(async () => {
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
-  const pets: PetClient = new SqlitePetClient(new PetRepository(database), growthRepository);
+  const pets: PetClient = new SqlitePetClient(new PetRepository(database));
+  const growth = new SqliteGrowthReadClient(growthRepository);
   const currencyRepository = new CurrencyRepository(database);
   const tokens: TokenClient = new SqliteTokenClient(
     new TokenRepository(database),
@@ -367,6 +369,7 @@ app.whenReady().then(async () => {
   const battleRoom = room;
   mountBattle(new PetClientRoomAdapter(pets), ipcMain, {
     selection: new RoomSelectionAdapter(() => battleRoom.scene().pets),
+    growth,
     petAssetsDir,
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
       OVERLAY_GROWTH_RULES.requiredXp(i + 1),

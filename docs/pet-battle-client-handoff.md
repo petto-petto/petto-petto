@@ -2,12 +2,12 @@
 
 ## 전투의 역할
 
-`RoomSelectionClient 선택 + PetClient 저장 성장 → 전투 Adapter → Electron 내부 TypeScript 엔진 → 화면`
+`RoomSelectionClient 선택 + PetClient 명부 + GrowthReadClient 저장 성장 → 전투 Adapter → Electron 내부 TypeScript 엔진 → 화면`
 
 기본 앱과 Electron 데모는 Cargo/Rust를 실행하지 않습니다. 상세 실행·폴더 안내는 [전투 패키지 README](../packages/pet-battle/README.md)를 따릅니다.
 
-- 공개 타입은 `@pet/client`에서 가져오고, 구현체는 호스트가 주입한다.
-- 현재 앱의 선택은 `RoomSelectionClient.getSnapshot()`에서, 실제 성장은 같은 개체의 `PetClient.listOwnedPets()`에서 읽는다. `selection`을 생략한 기존 소비자는 `getActivePet()`를 사용한다. 에셋 구성은 `listSpecies()`를 사용하며 공통 저장 명령은 호출하지 않는다.
+- 명부 타입은 `@pet/client`, 성장 조회 Port는 데이터 소유자인 `@pet/main-overlay/client`에서 가져오고 구현체는 호스트가 주입한다.
+- 현재 앱의 선택은 `RoomSelectionClient.getSnapshot()`, 명부는 `PetClient.listOwnedPets()`, 저장 성장은 `GrowthReadClient.readOwnedPetGrowth()`에서 같은 개체 ID로 읽는다. `selection`을 생략한 기존 소비자는 `getActivePet()`를 사용한다. 에셋 구성은 `listSpecies()`를 사용하며 공통 저장 명령은 호출하지 않는다.
 - 개체 ID·이름·등급·레벨·누적 XP·에셋·진화 단계를 읽는다. 이름은 별명이 있으면 별명을 쓴다.
 - 매 요청에 저장된 누적 XP를 동기화한다. 같은 성장 알림을 다시 받아도 XP를 더하지 않는다.
 - 활성 펫이 없으면 선택 안내를 표시한다. 조회 오류는 미보유로 위장하지 않고 호출자에게 전달한다.
@@ -19,7 +19,7 @@
 따라서 그 합계를 전투에서 XP로 바꾸면 성장 담당자의 환산·중복 방지 규칙과 충돌한다.
 
 토큰 수집·기록·통계·XP 환산·성장 저장은 해당 기능 담당자가 수행한다.
-전투는 그 결과가 저장된 `PetClient.totalXp`만 사용하며, SQL·Repository·마이그레이션·다른 패키지 내부 구현을 추가하지 않는다.
+전투는 성장 소유자가 저장한 누적 XP만 조회하며, SQL·Repository·마이그레이션·다른 패키지 내부 구현을 추가하지 않는다.
 
 ## 호스트 연결 예시
 
@@ -46,10 +46,12 @@ import { mountBattle } from '@pet/battle/node';
 import { RoomSelectionAdapter } from '@pet/room';
 
 // pets: 호스트에서 생성한 PetClient 구현체
+// growth: 호스트에서 생성한 GrowthReadClient 구현체
 // room: 기존 RoomState. 룸의 저장·조회 동작은 변경하지 않는다.
 // levelXpCosts: 성장 담당자가 제공한 레벨별 필요 XP 배열
 const closeBattle = mountBattle(pets, ipcMain, {
   selection: new RoomSelectionAdapter(() => room.scene().pets),
+  growth,
   petAssetsDir, // 앱이 소유한 공통 펫 원본 에셋 루트
   levelXpCosts,
   isBattleSender: (id) => getBattleWindow()?.webContents.id === id,
@@ -93,10 +95,10 @@ const closeBattle = mountBattle(pets, ipcMain, {
 
 ### 레벨 사이 XP와 HP 표시
 
-- 레벨 숫자가 바뀌지 않아도 `PetClient.totalXp`가 늘면 다음 상태 조회에서 HP가 감소한다. 전투 화면은 기존 약 80ms 조회 주기를 사용하며 IPC 지연·진행 중 요청에 따라 실제 반영 시점은 달라진다.
+- 레벨 숫자가 바뀌지 않아도 저장 성장의 `totalXp`가 늘면 다음 상태 조회에서 HP가 감소한다. 전투 화면은 기존 약 80ms 조회 주기를 사용하며 IPC 지연·진행 중 요청에 따라 실제 반영 시점은 달라진다.
 - HP 표시는 수신된 실제 값 사이를 0.7초 동안 부드럽게 보간한다. 다음 값을 예측하거나 토큰 잔여분을 임의 XP로 변환하지 않는다. 미리보기 HP가 선택되어 있으면 그것이 우선하므로 실제 XP 검증은 미리보기를 해제한 상태에서 한다.
-- **현재 연결 한계:** 오버레이 성장 저장은 `pet_profiles`, 공통 `PetClient` 조회는 `owned_pets`다. 오버레이의 `growth:save-all`만으로 공통 XP가 갱신되지는 않는다. 전투가 두 저장소를 직접 읽어 합치지 않는다.
-- 성장 담당자는 해당 `ownedPetId`에 대해 `PetClient.updateGrowth(ownedPetId, growth)`로 `level`, `totalXp`, `xpIntoLevel`, `evolutionStage`를 함께 저장해야 한다. 저장 성공 후 다음 전투 조회 또는 `syncActivePet()`으로 반영한다. 연결되기 전에는 오버레이의 XP 증가가 전투에 실시간 전달된다고 보장하지 않는다.
+- 호스트의 `SqliteGrowthReadClient`는 오버레이 성장 저장소의 커밋된 값을 `GrowthReadClient`로 노출한다. 전투는 다른 저장소를 직접 읽어 합치지 않는다.
+- 성장 담당자가 해당 `ownedPetId`의 값을 저장하면 다음 전투 조회 또는 `syncActivePet()`으로 반영한다. 연결되기 전에는 오버레이의 XP 증가가 전투에 실시간 전달된다고 보장하지 않는다.
 
 ## 검증
 

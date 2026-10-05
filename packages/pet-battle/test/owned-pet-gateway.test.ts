@@ -23,8 +23,7 @@ test('앱 전투 조회는 저장된 펫 XP를 동기화하고 원시 토큰·�
   const pets = {
     getActivePet: () => pet,
     listOwnedPets: () => [pet],
-    readOwnedPetGrowth: () => new Map(),
-  } satisfies Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
+  } satisfies Pick<PetClient, 'getActivePet' | 'listOwnedPets'>;
   const gateway = new battle.OwnedPetBattleGateway(
     pets,
     {

@@ -15,7 +15,11 @@
     "domain:build": "tsc -p tsconfig.json"
   },
   "exports": {
-    "./ui": "./dist/index.html"
+    "./ui": "./dist/index.html",
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
   },
   "dependencies": {
     "@fontsource/press-start-2p": "^5.3.0",

@@ -305,6 +305,7 @@ async function run() {
     { SqliteFileDatabase },
     { APP_MIGRATIONS },
     { SqlitePetClient },
+    { SqliteGrowthReadClient },
     { PetRepository },
     { PetGrowthRepository },
     { OVERLAY_GROWTH_RULES },
@@ -318,6 +319,7 @@ async function run() {
     desktop('persistence/sqlite-file.js'),
     desktop('persistence/migrations/index.js'),
     desktop('clients/sqlite-pet-client.js'),
+    desktop('clients/sqlite-growth-read-client.js'),
     desktop('persistence/repositories/pet-repository.js'),
     desktop('persistence/repositories/pet-growth-repository.js'),
     desktop('growth-rules.js'),
@@ -332,7 +334,8 @@ async function run() {
     migrations: APP_MIGRATIONS,
   });
   database.open();
-  const pets = new SqlitePetClient(new PetRepository(database), new PetGrowthRepository(database));
+  const pets = new SqlitePetClient(new PetRepository(database));
+  const growth = new SqliteGrowthReadClient(new PetGrowthRepository(database));
   const roomPets = new PetClientRoomAdapter(pets);
   const [mole, initialWizard] = pets.createOwnedPets(['003', '006']);
   const wizard = pets.updateGrowth(initialWizard.ownedPetId, {
@@ -367,6 +370,7 @@ async function run() {
   );
   mountRoom(room, { showRoom() {}, broadcast: host.broadcast });
   closeBattle = mountBattle(roomPets, ipcMain, {
+    growth,
     petAssetsDir: host.petAssetsDir,
     selection: new RoomSelectionAdapter(() => room.scene().pets),
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>

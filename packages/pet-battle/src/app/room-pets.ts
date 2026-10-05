@@ -1,4 +1,5 @@
 import type { OwnedPet, PetClient } from '@pet/client';
+import type { GrowthReadClient } from '@pet/main-overlay/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleState } from '../contracts.ts';
 
@@ -16,16 +17,19 @@ export function ownedGrowthPet(pet: OwnedPet): GrowthPet {
   };
 }
 
-/** Room owns selection; PetClient owns real growth. Battle only projects the two reads. */
+/** Room owns selection, PetClient owns the roster, and Overlay owns saved growth. */
 export class RoomBattlePetAdapter {
   readonly #selection: RoomSelectionClient;
-  readonly #growth: Pick<PetClient, 'listOwnedPets' | 'readOwnedPetGrowth'>;
+  readonly #pets: Pick<PetClient, 'listOwnedPets'>;
+  readonly #growth: GrowthReadClient;
 
   constructor(
     selection: RoomSelectionClient,
-    growth: Pick<PetClient, 'listOwnedPets' | 'readOwnedPetGrowth'>,
+    pets: Pick<PetClient, 'listOwnedPets'>,
+    growth: GrowthReadClient,
   ) {
     this.#selection = selection;
+    this.#pets = pets;
     this.#growth = growth;
   }
 
@@ -35,7 +39,7 @@ export class RoomBattlePetAdapter {
     growthStatus: Exclude<BattleState['growthStatus'], undefined>;
   } {
     const room = this.#selection.getSnapshot();
-    const owned = new Map(this.#growth.listOwnedPets().map((pet) => [pet.ownedPetId, pet]));
+    const owned = new Map(this.#pets.listOwnedPets().map((pet) => [pet.ownedPetId, pet]));
     const persisted = this.#growth.readOwnedPetGrowth(room.pets.map((pet) => pet.ownedPetId));
     const pets = room.pets.map((pet): GrowthPet => {
       const linked = owned.get(pet.ownedPetId);

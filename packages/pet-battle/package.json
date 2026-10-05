@@ -33,6 +33,7 @@
   "dependencies": {
     "@pet/client": "*",
     "@pet/core": "*",
+    "@pet/main-overlay": "*",
     "@pet/room": "*"
   },
   "scripts": {
