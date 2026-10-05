@@ -43,8 +43,9 @@ Product specification filenames use stable, content-focused names without date p
   explains adopted design concepts, canonical runtime sharing, and the evidence
   boundary.
 - [Feature contracts (`.harness/guides/feature-contracts-kr.html`)](guides/feature-contracts-kr.html)
-  is the Korean reading of `.harness/rules/feature-contracts.md`: the owning feature
-  publishes the Port, where each link lives, and the worked pet example.
+  is the Korean reading of `.harness/rules/feature-contracts.md`: the feature doing the
+  work declares the Port, reuses one that exists, mocks data no table holds yet, and the
+  worked `meta` example.
 - [Meta product overview (`.harness/guides/meta-product-overview.html`)](guides/meta-product-overview.html)
   gives teammates a short visual briefing on the approved information,
   settings, achievements, collection, and reward design.

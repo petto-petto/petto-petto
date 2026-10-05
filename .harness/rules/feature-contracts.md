@@ -1,7 +1,6 @@
 # Feature Contract Rules
 
-Read this rule before reading or writing data that another feature owns, or before
-exposing your own feature's data to others.
+Read this rule before reading or writing data that belongs to another domain.
 
 Feature packages own their internals. Only the seams between them are shared, and this
 rule governs the seams.
@@ -12,48 +11,55 @@ rule governs the seams.
 call site  →  Port  →  Port implementation  →  Repository  →  persistence layer
 ```
 
-**The owning feature declares the Port.** The feature that owns a table also publishes
-the interface for reading and writing it, ships the implementation, and writes the
-repository. A consumer imports the interface type, receives an instance, and calls it.
+**The feature doing the work declares the Port.** When your feature needs another
+domain's data, you declare the interface for what you read and write, and you write its
+implementation and repository over the tables `petto.sqlite` already declares. You do
+not hand the domain's author a request and wait for them to publish it.
 
-The owner knows its tables, its invariants, and what can safely change. A consumer that
-declares its own interface for someone else's data guesses at all three, and two
-consumers guessing differently split one table into two contracts.
+**Reuse before declaring.** If a Port for that domain already exists, import its type
+and call it. `PetClient` and `TokenClient` in `packages/pet-client/` are the existing
+ones. Narrow it with `Pick` when you need one method; add a method to it when it lacks
+one. A second interface over the same table is a second contract, and the two drift the
+first time one of them changes.
 
 Where each link lives:
 
-| Link | Home | Written by |
-|---|---|---|
-| Port interface and data types | the owner's contract package, e.g. `packages/pet-client/` | owner |
-| Implementation | `apps/desktop/src/main/clients/` — only the app reaches the database | owner |
-| Repository | `apps/desktop/src/main/persistence/repositories/` | owner |
-| Assembly | `apps/desktop/src/main/main.ts` builds the instance once and hands it out | owner |
-| Call site | the consumer's package, depending on the contract package for types only | consumer |
+| Link | Home |
+|---|---|
+| Port interface and data types | `packages/pet-client/` when more than one feature calls it; otherwise the calling package's `src/ports/` |
+| Implementation | `apps/desktop/src/main/clients/`, or an adapter beside `main.ts` for a Port one feature declared — only the app reaches the database |
+| Repository | `apps/desktop/src/main/persistence/repositories/` |
+| Assembly | `apps/desktop/src/main/main.ts` builds the instance once and hands it out |
+| Call site | the calling package, depending on the Port for types only |
 
-A consumer's package never imports another feature's implementation or the database
-driver. The contract package contains types only, so importing it opens no connection.
+A feature package never imports another feature's package or the database driver. A
+Port is types only, so importing it opens no connection.
 
 ## Rules
 
-- **One Port per owning domain.** Its methods cover what that domain's consumers need,
+- **One Port per domain.** Split by the domain the data belongs to — pet, token, gacha
+  — not by caller and not by table. Its methods cover what that domain's callers need,
   even when the domain spans several tables.
-- **Consumers bring requirements; owners decide the shape.** Tell the owner what you
-  read, where you show it, and how often. The owner turns that into methods.
-- **A Port implementation holds no rules.** It turns rows into the published types. A
+- **Read what the database declares.** A Port is built over tables and columns that
+  exist. Do not infer one domain's value from another domain's table: a count derived
+  from an unrelated ledger breaks when that ledger's keys or amounts change.
+- **A Port implementation holds no rules.** It turns rows into the Port's types. A
   calculation that would still be true without a database belongs in a domain package.
-- **Only the owning feature creates or alters its tables.** Need a column that does not
-  exist? Ask the owner. Do not add it under their migration scope — scopes collide and
-  the owner's next migration then fights yours.
-- **Never query another feature's table from a call site.** A raw query outside the
-  owner's Port spreads that schema through the codebase, and the owner cannot change it
-  without breaking code they cannot find.
+- **Only the owning feature creates or alters its tables.** Building a Port over
+  someone's table does not make the table yours. A column added under their migration
+  scope collides with their next migration.
+- **Never query a table from a call site.** A raw query outside a Port spreads that
+  schema through the codebase, and the table cannot change without breaking code nobody
+  can find.
 - **A read failure throws.** `null`, `[]` and `0` mean a real empty result — no active
   pet, no pets, nothing counted — and never stand in for “could not read”. A caller
   handed `0` for a failure renders the wrong thing with no way to detect it.
-- **Facts that exist only at one moment must be stored by the owner.** A table holding
-  current state cannot answer “was the best streak ever 10?” or “were both parents
-  COMMON at the time?”. That is a column request to the owner, not something a consumer
-  can derive.
+- **Mock what no table holds yet.** When the domain is still being built and the table
+  or column does not exist, declare the Port for what you need and inject a mock
+  implementation. A fact that exists only at one moment counts as missing too: a table
+  holding current state cannot answer “was the best streak ever 10?”. Replace the mock
+  with the SQLite implementation when the table lands; only the assembly changes. Name
+  the mock so that nobody reads its numbers as real.
 
 ## Persistence
 
@@ -64,37 +70,61 @@ Read it before adding a table.
 
 ## Worked example
 
-The pet domain is the reference. Its owner published everything; `meta` only calls it.
+`meta` needs three domains. Each one shows a different branch of the rule.
+
+**Pet — a Port exists, so reuse it.**
 
 ```ts
-// packages/pet-client/src/index.ts — owner. Types only, no driver.
-export interface PetClient {
-  getActivePet(): OwnedPet | null; // null = nothing selected, not a failure
-  countOwnedSpecies(): number;
+// packages/pet-meta — imports the existing type, receives the instance.
+import type { PetClient } from '@pet/client';
+
+const active = pets.getActivePet(); // null = nothing selected, not a failure
+```
+
+**Token — a Port exists, so narrow it to the methods you call and add the one it lacks.**
+
+```ts
+// packages/pet-meta/src/ports/index.ts — no new interface over the token tables.
+import type { TokenClient } from '@pet/client';
+
+export type TokenPort = Pick<
+  TokenClient,
+  'recordUsage' | 'grantOnce' | 'balance' | 'earnedSince'
+>;
+```
+
+```ts
+// packages/pet-client/src/token.ts — `meta` needed today's total, so the method went here.
+export interface TokenClient {
+  earnedSince(since: string): number;
   // …
 }
 ```
 
 ```ts
-// apps/desktop/src/main/clients/sqlite-pet-client.ts — owner. No rules, delegates.
-export class SqlitePetClient implements PetClient {
-  getActivePet(): OwnedPet | null {
-    return this.#repository.getActivePet();
-  }
+// apps/desktop/src/main/main.ts — the same instance gacha and combine spend from.
+const tokens: TokenClient = new SqliteTokenClient(
+  new TokenRepository(database),
+  currencyRepository,
+);
+```
+
+**Gacha — no table holds the draw count yet, so declare the Port and mock it.**
+
+```ts
+// packages/pet-meta/src/ports/index.ts — declared by the feature that needs it.
+export interface GachaPort {
+  drawCount(): number;
+  // …
 }
 ```
 
 ```ts
-// apps/desktop/src/main/main.ts — assembled once over the shared database.
-const pets: PetClient = new SqlitePetClient(new PetRepository(appDatabase));
+// packages/pet-meta/src/testing/fakes.ts — stands in until gacha stores its draws.
+export class StubGacha implements GachaPort {
+  /* … */
+}
 ```
 
-```ts
-// packages/pet-meta — consumer. Imports the type, receives the instance.
-import type { PetClient } from '@pet/client';
-
-const active = pets.getActivePet();
-```
-
-The procedure for adopting it, and what each method guarantees, is in the owner's
-handoff: [`docs/pet-client-handoff.md`](../../docs/pet-client-handoff.md).
+What each `PetClient` method guarantees is in
+[`docs/pet-client-handoff.md`](../../docs/pet-client-handoff.md).
