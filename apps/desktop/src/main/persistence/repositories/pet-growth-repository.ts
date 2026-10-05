@@ -28,6 +28,17 @@ export interface PetGrowthSnapshot {
   lastBaseXp: number;
 }
 
+/**
+ * 한 개체의 성장값. 명부 투영에 쓰는 레벨·진화 단계에 경험치를 더한 것이다.
+ *
+ * 경험치까지 담는 이유: `PetClient`의 `owned_pets`에도 같은 칸이 있고, meta 정보 패널의 프로필
+ * 카드가 그 칸을 읽는다. 레벨만 넘기면 카드의 경험치 바가 늘 0으로 보인다.
+ */
+export interface OwnedPetGrowth extends PetGrowth {
+  totalXp: number;
+  xpIntoLevel: number;
+}
+
 /** 개체 id → 성장 기록. */
 export type PetGrowthSnapshots = Record<string, PetGrowthSnapshot>;
 
@@ -96,7 +107,7 @@ export class PetGrowthRepository {
    *
    * 물려받을 것이 없는 개체는 명부(`PetClient`)가 말하는 레벨·진화 단계로 시작한다.
    */
-  adoptRoster(roster: readonly PetGrowthSeed[]): Map<string, PetGrowth> {
+  adoptRoster(roster: readonly PetGrowthSeed[]): Map<string, OwnedPetGrowth> {
     // 빈 명부로 이관을 끝났다고 적으면, 물려줄 개체가 나타나기도 전에 옛 종 행이 영구
     // 고아가 된다. 받을 사람이 없으면 아무것도 하지 않는다.
     if (roster.length === 0) return this.growth();
@@ -135,7 +146,7 @@ export class PetGrowthRepository {
    * 명부에 없는 개체의 행은 **회수 없이 사라진다.** 초기화의 뜻에 맞고, 지금은 이것이 고아
    * 행을 청소하는 유일한 경로이기도 하다.
    */
-  resetGrowth(roster: readonly PetGrowthSeed[]): Map<string, PetGrowth> {
+  resetGrowth(roster: readonly PetGrowthSeed[]): Map<string, OwnedPetGrowth> {
     this.#database.transaction(() => {
       this.#database.exec('DELETE FROM pet_profiles');
       for (const seed of roster) {
@@ -156,13 +167,15 @@ export class PetGrowthRepository {
       .run(seed.petKey, seed.displayName, seed.ownedPetId);
   }
 
-  /** 명부에 투영할 값만 추린 것. */
-  growth(): Map<string, PetGrowth> {
-    const growth = new Map<string, PetGrowth>();
+  /** 명부와 `owned_pets`에 투영할 값만 추린 것. */
+  growth(): Map<string, OwnedPetGrowth> {
+    const growth = new Map<string, OwnedPetGrowth>();
     for (const [ownedPetId, snapshot] of Object.entries(this.loadAll())) {
       growth.set(ownedPetId, {
         level: snapshot.pet.level,
         evolutionStage: evolutionStageOf(snapshot.pet.evolutionStage),
+        totalXp: snapshot.pet.totalXp,
+        xpIntoLevel: snapshot.pet.xpIntoLevel,
       });
     }
     return growth;

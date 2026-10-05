@@ -18,7 +18,7 @@
 
 import type { WebContents } from 'electron';
 
-import type { PetClient } from '@pet/client';
+import type { OwnedPet as PetClientOwnedPet, PetClient } from '@pet/client';
 import type { Clock } from '@pet/core';
 import {
   activeCandidate,
@@ -39,6 +39,7 @@ import {
 } from '@pet/room';
 
 import type { RoomCollectionPort } from './collection.ts';
+import type { OwnedPetGrowth } from './persistence/repositories/pet-growth-repository.ts';
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 room 이 할 수 없다. */
 export interface RoomHost {
@@ -80,17 +81,19 @@ export class RoomState {
   readonly port: RoomCollectionPort;
   readonly pets: PetClient;
   /**
-   * 성장 저장소의 현재 값. 레벨·진화 단계의 정본은 그쪽이고 `owned_pets`의 같은 칸은 갱신되지
-   * 않으므로, 명부를 다시 읽을 때마다 이 값을 투영해야 한다. 빠뜨리면 활성 펫을 바꾸는 순간
-   * 모든 펫이 Lv.1·1단계로 돌아간다.
+   * 성장 저장소의 현재 값. 레벨·경험치·진화 단계의 정본은 그쪽이다.
+   *
+   * 명부를 다시 읽을 때마다 이 값을 투영하고, `owned_pets`에도 같은 값을 적는다(`#syncPetClient`).
+   * 투영을 빠뜨리면 활성 펫을 바꾸는 순간 모든 펫이 Lv.1·1단계로 돌아가고, 적기를 빠뜨리면
+   * `owned_pets`를 읽는 meta 정보 패널이 Lv.1·EXP 0을 보여 준다.
    */
-  readonly growth: () => ReadonlyMap<string, PetGrowth>;
+  readonly growth: () => ReadonlyMap<string, OwnedPetGrowth>;
 
   constructor(
     clock: Clock,
     port: RoomCollectionPort,
     pets: PetClient,
-    growth: () => ReadonlyMap<string, PetGrowth>,
+    growth: () => ReadonlyMap<string, OwnedPetGrowth>,
   ) {
     this.clock = clock;
     this.port = port;
@@ -165,10 +168,11 @@ export class RoomState {
    * 없으면 브로드캐스트하지 않는다 — 성장 저장은 자주 일어나고, 매번 전 창을 깨울 이유가
    * 없다.
    */
-  applyGrowth(growth: ReadonlyMap<string, PetGrowth>, host: RoomHost): void {
+  applyGrowth(growth: ReadonlyMap<string, OwnedPetGrowth>, host: RoomHost): void {
     const before = this.activeView();
     this.#collection = withPetGrowth(this.#collection, growth);
     this.port.update(this.#collection);
+    this.#syncPetClient(this.pets.listOwnedPets(), growth);
 
     const after = this.activeView();
     if (!after || (after.level === before?.level && after.stage === before.stage)) return;
@@ -210,7 +214,8 @@ export class RoomState {
    * 안 뜨고, `PetClient`와 펫룸이 "활성 없음"을 서로 다르게 다루게 된다.
    */
   #load(): void {
-    let { collection, skipped } = collectionFromRecords(this.pets.listOwnedPets());
+    const records = this.pets.listOwnedPets();
+    let { collection, skipped } = collectionFromRecords(records);
     for (const record of skipped) {
       console.log(
         `[ROOM] 펫룸이 모르는 종이라 뺍니다 — ${record.speciesId} (${record.ownedPetId})`,
@@ -221,7 +226,46 @@ export class RoomState {
       this.pets.setActivePet(candidate);
       collection = { ...collection, activePetId: candidate };
     }
-    this.#collection = withPetGrowth(collection, this.growth());
+    const growth = this.growth();
+    this.#collection = withPetGrowth(collection, growth);
     this.port.update(this.#collection);
+    this.#syncPetClient(records, growth);
+  }
+
+  /**
+   * 성장 저장소의 값을 `owned_pets`에 적는다. 값이 같은 개체는 건너뛴다.
+   *
+   * 보유하지 않은 개체의 성장 기록(합성으로 사라진 재료 등)은 적을 곳이 없으므로 건너뛴다.
+   * 적기에 실패해도 던지지 않는다 — 이 값은 투영이라, 성장 저장이나 화면 갱신을 막을 이유가
+   * 없다. 다음 성장 저장에서 다시 시도된다.
+   */
+  #syncPetClient(
+    records: readonly PetClientOwnedPet[],
+    growth: ReadonlyMap<string, OwnedPetGrowth>,
+  ): void {
+    for (const record of records) {
+      const next = growth.get(record.ownedPetId);
+      if (
+        !next ||
+        (next.level === record.level &&
+          next.totalXp === record.totalXp &&
+          next.xpIntoLevel === record.xpIntoLevel &&
+          next.evolutionStage === record.evolutionStage)
+      ) {
+        continue;
+      }
+      try {
+        this.pets.updateGrowth(record.ownedPetId, {
+          level: next.level,
+          totalXp: next.totalXp,
+          xpIntoLevel: next.xpIntoLevel,
+          evolutionStage: next.evolutionStage,
+        });
+      } catch (error) {
+        console.log(
+          `[ROOM] 성장값을 보유 펫에 적지 못했습니다 — ${record.ownedPetId}: ${String(error)}`,
+        );
+      }
+    }
   }
 }

@@ -55,7 +55,7 @@ test('활성 펫이 없으면 첫 마리를 세우고 PetClient 에도 저장한
 test('활성 펫을 바꿔도 성장 저장소의 레벨·진화 단계가 유지된다', async (t) => {
   const { pets, growth, host, broadcasts, createRoom } = await fixture(t);
   const [mole, wizard] = pets.createOwnedPets(['003', '006']);
-  growth.set(wizard.ownedPetId, { level: 40, evolutionStage: 2 });
+  growth.set(wizard.ownedPetId, { level: 40, evolutionStage: 2, totalXp: 900, xpIntoLevel: 12 });
   const room = createRoom();
 
   const active = room.setActivePet(wizard.ownedPetId, host);
@@ -87,4 +87,29 @@ test('보유 펫이 바뀌면 열린 창에 새 명부를 알린다 — 합성�
     roster?.payload.map((view) => view.ownedPetId).sort(),
     [activeId, result.ownedPetId].sort(),
   );
+});
+
+test('성장 저장소의 레벨·경험치를 PetClient 에도 적는다 — meta 프로필 카드가 같은 값을 읽는다', async (t) => {
+  const { pets, growth, host, createRoom } = await fixture(t);
+  const [mole] = pets.createOwnedPets(['003']);
+  growth.set(mole.ownedPetId, { level: 20, evolutionStage: 1, totalXp: 480, xpIntoLevel: 7 });
+  // 보유하지 않은 개체의 성장 기록(옛 시드·합성 재료)은 적을 곳이 없다. 던지지 않고 건너뛴다.
+  growth.set('seed-006', { level: 25, evolutionStage: 2, totalXp: 999, xpIntoLevel: 1 });
+
+  const room = createRoom();
+
+  // 명부를 처음 읽을 때 이미 맞춘다. 앱을 켜자마자 정보 패널이 Lv.1 을 보여 주면 안 된다.
+  const started = pets.getActivePet();
+  assert.equal(started?.level, 20);
+  assert.equal(started?.xpIntoLevel, 7);
+  assert.equal(started?.totalXp, 480);
+  assert.equal(started?.evolutionStage, 1);
+
+  // 오버레이가 성장을 저장하면 같은 값이 따라간다.
+  growth.set(mole.ownedPetId, { level: 21, evolutionStage: 1, totalXp: 510, xpIntoLevel: 2 });
+  room.applyGrowth(growth, host);
+  const grown = pets.getActivePet();
+  assert.equal(grown?.level, 21);
+  assert.equal(grown?.xpIntoLevel, 2);
+  assert.equal(grown?.totalXp, 510);
 });
