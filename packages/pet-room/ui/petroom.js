@@ -55,7 +55,6 @@ const layersEl = document.getElementById('layers');
 const canvas = document.getElementById('pets');
 const ctx = canvas.getContext('2d');
 const emptyEl = document.getElementById('empty');
-const hintEl = document.getElementById('hint');
 const errorEl = document.getElementById('error');
 
 const detailEl = document.getElementById('detail');
@@ -529,6 +528,8 @@ canvas.addEventListener('click', (event) => {
   renderDetail();
 });
 
+document.querySelector('.window-close').addEventListener('click', () => window.close());
+
 // 뽑기·합성 화면으로 넘어간다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
 destinationsEl.addEventListener('click', (event) => {
   const button = event.target.closest('button[data-destination]');
@@ -665,9 +666,8 @@ async function applyBackground(background) {
 }
 
 async function loadPets(views) {
-  // 보유 펫이 없으면 장면 가운데에 뽑기 안내를 띄운다. 누를 펫이 없으니 상세 안내는 감춘다.
+  // 보유 펫이 없으면 장면 가운데에 뽑기 안내를 띄운다.
   emptyEl.hidden = views.length > 0;
-  hintEl.hidden = views.length === 0;
 
   room.views = new Map(views.map((view) => [view.ownedPetId, view]));
   room.activePetId = views.find((view) => view.isActive)?.ownedPetId ?? null;

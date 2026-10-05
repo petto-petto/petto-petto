@@ -75,6 +75,42 @@ body {
   display: none !important;
 }
 
+/*
+ * 창 버튼. 뽑기·합성 창(`@pet/gacha`·`@pet/combine`의 `.window-controls`)과 같은 자리·모양이다.
+ * 세 화면이 한 창처럼 갈아 끼워지므로 버튼이 같은 곳에 있어야 한다.
+ */
+.window-controls {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 100;
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.window-close {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid #3a2a1c;
+  background: #6b4a2e;
+  color: #f5ecd8;
+  font:
+    20px/1 ui-monospace,
+    monospace;
+  cursor: pointer;
+}
+
+.window-close:hover {
+  background: #762f35;
+}
+
+.window-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 #room {
   display: flex;
   flex-direction: column;
@@ -125,6 +161,16 @@ body {
   background: var(--wood-surface);
   border-top: 3px solid var(--wood-border);
   box-shadow: inset 0 3px 0 var(--wood-highlight);
+  /*
+   * 제목 표시줄이 없는 창이라 하단 패널의 빈 바탕을 끌어 창을 옮긴다. 장면은 펫 클릭을 받아야
+   * 하므로 끌기 영역으로 쓰지 않는다. 버튼과 상세 패널은 아래에서 되돌린다.
+   */
+  -webkit-app-region: drag;
+}
+
+#side button,
+#detail {
+  -webkit-app-region: no-drag;
 }
 
 #destinations {
@@ -135,21 +181,9 @@ body {
   gap: var(--space-2);
 }
 
-#hint {
-  grid-column: 1;
-  grid-row: 2;
-}
-
 #detail {
   grid-column: 2;
   grid-row: 1 / -1;
-}
-
-#hint {
-  margin: auto 0 0;
-  font-size: 10px;
-  line-height: 1.6;
-  color: var(--parchment-ring);
 }
 
 /*
@@ -270,11 +304,6 @@ body {
   margin: 0;
   font-family: var(--font-heading);
   font-size: 13px;
-}
-
-/* 상세가 열리면 안내 문구는 자리를 비켜 준다. */
-#detail:not([hidden]) ~ #hint {
-  display: none;
 }
 
 #detail-close {

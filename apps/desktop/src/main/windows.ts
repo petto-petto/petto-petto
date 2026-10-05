@@ -406,8 +406,9 @@ export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 /**
  * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
  *
- * 오버레이·패널과 달리 투명 프레임리스가 아니다. 펫룸은 오버레이가 아니라 들여다보는
- * 화면이라 창 크롬이 있어야 옮기고 닫을 수 있다.
+ * 뽑기·합성 창과 같은 프레임 없는 창이다. 세 화면이 같은 자리에서 갈아 끼워지므로 창 모양과
+ * 닫기 버튼 자리가 같아야 한 창처럼 보인다. 닫기는 화면 오른쪽 위 버튼이, 옮기기는 하단
+ * 패널의 빈 바탕이 맡는다(`petroom.css`).
  */
 export function showRoom(): BrowserWindow {
   if (roomWindow && !roomWindow.isDestroyed()) {
@@ -419,9 +420,10 @@ export function showRoom(): BrowserWindow {
   roomWindow = new BrowserWindow({
     width: ROOM_WIDTH,
     height: ROOM_HEIGHT,
+    useContentSize: true,
+    frame: false,
     // 배경이 정수 배율만 허용하므로 임의 크기 조절을 막는다.
     resizable: false,
-    useContentSize: true,
     title: '펫룸',
     backgroundColor: '#10231A',
     webPreferences: {
@@ -447,8 +449,8 @@ export function showRoom(): BrowserWindow {
  * 사용자에게는 같은 창에서 화면이 바뀌는 것처럼 보여야 한다. 한 창에서 `loadFile`로 갈아
  * 끼우지 않는 이유: 뽑기·합성은 전용 preload 를 쓰고 IPC 도 자기 창에서 온 요청만 받는데,
  * preload 는 창을 만들 때 정해져 바꿀 수 없다. 그래서 창은 바꾸되 이전 화면이 있던 자리에
- * 띄운다. 펫룸만 제목 표시줄이 있으므로 창 위치가 아니라 **내용 영역**을 맞춘다. 크기는
- * 셋 다 640x420이다.
+ * 띄운다. 크기는 셋 다 640x420이고 모두 프레임 없는 창이다. 창 위치가 아니라 **내용 영역**을
+ * 맞추는 것은 어느 한쪽에 프레임이 다시 생겨도 화면이 어긋나지 않게 하려는 것이다.
  */
 function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
   if (from.isDestroyed() || from === next) return;
