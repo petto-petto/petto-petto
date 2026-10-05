@@ -38,7 +38,7 @@ export type SourceRunResult =
   /** 첫 정상 스캔. 기준점만 저장하고 아무것도 적립하지 않았다(COLLECT-002). */
   | { kind: 'baseline_captured' }
   /** 증가분을 반영했다. */
-  | { kind: 'applied'; observedDelta: number; rewardTokens: number }
+  | { kind: 'applied'; observedDelta: number; rewardTokens: number; growthTokenDelta: number }
   /** 기준점과 누적값이 같다. 새 사용이 없었다. */
   | { kind: 'no_change' }
   /** 이미 처리한 증가분이다(COLLECT-004). */
@@ -160,6 +160,7 @@ function runProviders(
           aggregationId: key,
           provider,
           observedDelta: outcome.result.observedDelta,
+          growthTokenDelta: outcome.result.growthTokenDelta,
           observedTotal: totalObserved(state),
           activityMinuteAdded: false,
         }),
@@ -304,9 +305,11 @@ function runSingleSource(
   // 4단계: 사용량 저장.
   let observedDelta = 0;
   let reward = 0;
+  let growthTokenDelta = 0;
   for (const [key, counts] of delta) {
     observedDelta += observed(counts);
     reward += rewardTokens(counts);
+    growthTokenDelta += counts.input + counts.output;
     const { date, rawModel } = splitRowKey(key);
     const target = usageKey(provider, date, rawModel);
     const existing = state.usageDaily.get(target);
@@ -324,7 +327,7 @@ function runSingleSource(
 
   return {
     provider,
-    result: { kind: 'applied', observedDelta, rewardTokens: reward },
+    result: { kind: 'applied', observedDelta, rewardTokens: reward, growthTokenDelta },
     appliedDedupeKey: dedupeKey,
     currencyError: undefined,
   };

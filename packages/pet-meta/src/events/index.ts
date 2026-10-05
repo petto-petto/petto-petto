@@ -53,6 +53,8 @@ export interface UsageAggregated {
   provider: Provider;
   /** 이번 집계에서 늘어난 관측 토큰. */
   observedDelta: number;
+  /** 성장 엔진이 XP 환산에 사용하는 input + output 토큰. 캐시 토큰은 포함하지 않는다. */
+  growthTokenDelta: number;
   /** 설치 이후 누적 관측 토큰. */
   observedTotal: number;
   /** 이번 집계가 활동 분을 새로 적립했는지. */

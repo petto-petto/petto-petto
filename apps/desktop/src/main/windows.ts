@@ -60,6 +60,8 @@ let roomWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
+let growthUsageReadyWebContentsId: number | undefined;
+const pendingGrowthUsage: unknown[] = [];
 const battleWindowClosedListeners = new Set<() => void>();
 
 export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
@@ -83,9 +85,31 @@ export function subscribeBattleWindowClosed(listener: () => void): () => void {
  * 정확히 그렇게 깨진다 — 그래서 목록을 사람이 관리하지 않는다.
  */
 export function broadcast(channel: string, payload: unknown): void {
+  if (channel === 'growth:usage') {
+    const overlay = overlayWindow;
+    if (
+      overlay &&
+      !overlay.isDestroyed() &&
+      !overlay.webContents.isDestroyed() &&
+      overlay.webContents.id === growthUsageReadyWebContentsId
+    ) {
+      overlay.webContents.send(channel, payload);
+    } else {
+      pendingGrowthUsage.push(payload);
+    }
+    return;
+  }
+
   for (const window of BrowserWindow.getAllWindows()) {
     if (!window.isDestroyed()) window.webContents.send(channel, payload);
   }
+}
+
+/** Growth notifications wait until the overlay has installed its listener. */
+export function markGrowthUsageReady(sender: WebContents): void {
+  if (!overlayWindow || overlayWindow.isDestroyed() || overlayWindow.webContents !== sender) return;
+  growthUsageReadyWebContentsId = sender.id;
+  for (const payload of pendingGrowthUsage.splice(0)) sender.send('growth:usage', payload);
 }
 
 function commonOptions() {

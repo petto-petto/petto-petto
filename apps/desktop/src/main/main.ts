@@ -9,7 +9,12 @@ import { systemClock } from '@pet/core';
 import { createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
-import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
+import {
+  FixtureCollector,
+  MetaAppState,
+  type AggregationRun,
+  type UsageCollector,
+} from '@pet/meta';
 import { PetClientRoomAdapter, RoomSelectionAdapter, type StoredRoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
@@ -49,6 +54,7 @@ import {
   createPanelWindow,
   endOverlayDrag,
   focusOverlayWindow,
+  markGrowthUsageReady,
   getBattleWindow,
   petAssetsDir,
   moveOverlayDrag,
@@ -111,6 +117,7 @@ async function aggregateTick(roomHost: RoomHost): Promise<void> {
   try {
     const { run, outcome } = await state.aggregate();
     state.persist();
+    broadcastGrowthUsage(run);
     broadcast('usage:aggregated', {
       activityMinuteAdded: run.activityMinuteAdded,
       bubble: undefined,
@@ -119,6 +126,18 @@ async function aggregateTick(roomHost: RoomHost): Promise<void> {
   } catch (error) {
     // 한 번의 실패로 주기가 끊기면 안 된다. 다음 예약은 `finally`가 한다.
     console.log(`[USAGE] 주기 집계 실패 — ${String(error)}`);
+  }
+}
+
+/** Forward newly committed input/output usage to the growth owner with its stable id. */
+function broadcastGrowthUsage(run: AggregationRun): void {
+  for (const event of run.events) {
+    if (event.payload.eventType !== 'usage.aggregated' || event.payload.growthTokenDelta <= 0)
+      continue;
+    broadcast('growth:usage', {
+      eventId: event.eventId,
+      tokens: event.payload.growthTokenDelta,
+    });
   }
 }
 
@@ -139,6 +158,7 @@ function isOverlayPointer(value: unknown): value is OverlayPointer {
 }
 
 function mountOverlayWindowIpc(): void {
+  ipcMain.on('growth:ready', (event) => markGrowthUsageReady(event.sender));
   ipcMain.on('overlay:set-interactive', (_event, interactive: unknown) => {
     setOverlayInteractive(interactive === true);
   });
@@ -380,9 +400,10 @@ app.whenReady().then(async () => {
   // 데모 모드에서는 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
   // 실제 수집기로 두 번 돌리면 ccusage 를 한 번 더 실행할 뿐이라 데모일 때만 다시 돈다.
   try {
-    await state.aggregate();
-    if (state.seedDemoUsage()) await state.aggregate();
+    const runs = [(await state.aggregate()).run];
+    if (state.seedDemoUsage()) runs.push((await state.aggregate()).run);
     state.persist();
+    for (const run of runs) broadcastGrowthUsage(run);
   } catch (error) {
     // 시작 집계가 실패해도 앱과 1분 주기는 살아 있어야 한다. 다음 주기가 다시 시도한다.
     console.log(`[USAGE] 시작 집계 실패 — ${String(error)}`);

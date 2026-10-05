@@ -169,6 +169,14 @@ function report(
 
   // 말풍선은 펫 창이 그린다. 패널이 아니라 펫이 알림 표면이기 때문이다(기획서 6.3).
   host.broadcast('usage:aggregated', { activityMinuteAdded: tick.activityMinuteAdded, bubble });
+  for (const event of run.events) {
+    if (event.payload.eventType !== 'usage.aggregated' || event.payload.growthTokenDelta <= 0)
+      continue;
+    host.broadcast('growth:usage', {
+      eventId: event.eventId,
+      tokens: event.payload.growthTokenDelta,
+    });
+  }
   return tick;
 }
 

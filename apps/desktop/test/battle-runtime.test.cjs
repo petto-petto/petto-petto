@@ -123,6 +123,41 @@ test('펫룸 개체 ID로 성장 정본 XP를 읽고 저장 변경을 열린 전
   );
 });
 
+test('집계 토큰은 기존 성장 엔진을 거쳐 저장되고 전투 HP·다음 단계에 반영된다', async (t) => {
+  const f = await fixture(t, { persistedGrowth: true });
+  const room = await roomFixture();
+  const { RoomSelectionAdapter } = await import('@pet/room');
+  const { GrowthController } =
+    await import('../../../packages/pet-overlay/src/growth/controller.js');
+  f.growthRepository.adoptRoster(room.state.growthSeeds());
+  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
+  const initial = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
+  assert.equal(initial.state.activePet.syncedTotalXp, 0);
+  assert.equal(initial.state.enemyHpRatio, 1);
+  assert.equal(initial.state.activePet.stage, 1);
+
+  const profiles = f.growthRepository.loadAll();
+  const profile = profiles['seed-006'];
+  const growth = new GrowthController(profile.pet, {
+    tokenBank: profile.tokenBank,
+    lastBaseXp: profile.lastBaseXp,
+  });
+  const notification = { tokens: 105_000, timestamp: 0, eventId: 'usage:codex:0->105000' };
+  assert.equal(growth.applyNow(notification).gained, 21);
+  assert.equal(growth.applyNow(notification).gained, 0, '중복 집계 이벤트는 한 번만 반영한다');
+  f.growthRepository.saveAll({
+    ...profiles,
+    'seed-006': { ...profile, ...growth.snapshot() },
+  });
+
+  const updated = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(updated.state.activePet.syncedTotalXp, 21);
+  assert.equal(updated.state.activePet.stage, 2);
+  assert.equal(updated.state.growthStatus, 'LINKED');
+  assert.equal(updated.state.overlay?.nextStage, 2);
+  assert.ok(updated.events.some((event) => event.type === 'ENEMY_DEFEATED'));
+});
+
 test('읽기 Adapter는 같은 종의 선택·저장 XP를 실제 Rust에 전달하고 소유 데이터에 쓰지 않는다', async (t) => {
   const f = await fixture(t);
   const [first, second] = f.pets.createOwnedPets(['003', '003']);

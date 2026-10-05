@@ -3,6 +3,7 @@ import { GrowthController } from './controller.js';
 import { createPet, requiredXp } from './engine.js';
 import { TOKENS_PER_XP } from './constants.js';
 import { loadAll, saveAll, clearAll } from './storage.js';
+import { onGrowthUsage } from '../platform/bridge.js';
 
 let seq = 0;
 
@@ -17,6 +18,7 @@ export function useGrowth(activePet) {
   const controllers = useRef(new Map());
   const petKeys = useRef(new Map()); // 개체 id → 종 key. 스프라이트와 저장에 쓴다.
   const savedRef = useRef({}); // 비동기 DB 로드 후 개체별 스냅샷을 채운다.
+  const pendingUsageRef = useRef([]); // 성장 저장소를 읽는 동안 도착한 집계 증가분.
   const activeRef = useRef(activePet);
   // 활성 펫이 아직 안 정해진 순간에도 화면이 그려져야 한다. 저장되지 않는다 — `persist` 가
   // controllers 맵만 훑기 때문에 여기 쌓인 값은 디스크에 닿지 않는다. 훅 인스턴스마다
@@ -118,17 +120,30 @@ export function useGrowth(activePet) {
     setMood((m) => (m === 'bored' ? 'normal' : m));
   }, []);
 
-  // 수동 시연·향후 외부 연동이 호출하는 경험치 반영 진입점.
+  // 수집된 input/output 토큰과 디버그 버튼이 함께 쓰는 경험치 반영 진입점.
   const ingestTokens = useCallback(
-    (tokens) => {
+    (tokens, eventId) => {
       if (!hydrated) return;
-      const res = getCtrl(activeRef.current).applyNow({ tokens, timestamp: Date.now() });
+      const res = getCtrl(activeRef.current).applyNow({ tokens, timestamp: Date.now(), eventId });
       setSession({ toNext: res.toNext });
       handleResult(res);
       persist();
     },
     [getCtrl, handleResult, hydrated, persist],
   );
+
+  const receiveUsage = useCallback(
+    ({ tokens, eventId }) => {
+      if (!hydrated || activeId === null) {
+        pendingUsageRef.current.push({ tokens, eventId });
+        return;
+      }
+      ingestTokens(tokens, eventId);
+    },
+    [activeId, hydrated, ingestTokens],
+  );
+
+  useEffect(() => onGrowthUsage(receiveUsage), [receiveUsage]);
 
   const addBattleXp = useCallback(
     (amount) => {
@@ -201,6 +216,12 @@ export function useGrowth(activePet) {
     setMood('normal');
     lastXpAt.current = Date.now();
   }, [activeId, getCtrl]);
+
+  useEffect(() => {
+    if (!hydrated || activeId === null || pendingUsageRef.current.length === 0) return;
+    const pending = pendingUsageRef.current.splice(0);
+    for (const event of pending) ingestTokens(event.tokens, event.eventId);
+  }, [activeId, hydrated, ingestTokens]);
 
   // 오래 아무 경험치도 안 들어오면(대화/hook 없음) 심심해함(bored)
   useEffect(() => {
