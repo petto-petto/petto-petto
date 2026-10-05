@@ -252,3 +252,74 @@ test('같은 레벨의 저장 XP도 Electron 엔진 HP를 줄이고 표시 HP는
     );
   }
 });
+
+test('열린 전투창 조회는 룸 선택과 진화 변경을 읽고 XP가 연결되지 않아도 외형 단계를 반영한다', async () => {
+  const { PetBattleIntegration, ElectronBattleEngine } = await import('../dist/index.js');
+  const { RoomSelectionAdapter, roomPetViews, seedCollection, withActivePet, withPetGrowth } =
+    await import('@pet/room');
+  let collection = seedCollection();
+  const views = () => roomPetViews(collection);
+  const owned = views().map((pet) => ({
+    ownedPetId: pet.ownedPetId,
+    speciesId: pet.petId,
+    name: pet.name,
+    nickname: null,
+    rarity: pet.rarity,
+    sprite: pet.slug,
+    level: pet.level,
+    totalXp: 0,
+    xpIntoLevel: 0,
+    evolutionStage: pet.stage - 1,
+    isActive: pet.isActive,
+  }));
+  const pets = {
+    getActivePet: () => null,
+    listOwnedPets: () => owned,
+  };
+  const battle = new PetBattleIntegration(
+    pets,
+    new ElectronBattleEngine(),
+    rules,
+    new RoomSelectionAdapter(views),
+  );
+
+  let result = await battle.syncActivePet();
+  assert.equal(result.state.activePet.petId, 'seed-006');
+  assert.equal(result.state.activePet.evolutionStage, 0);
+  assert.equal(result.state.growthStatus, 'LINKED');
+
+  collection = withActivePet(collection, 'seed-001');
+  result = await battle.syncActivePet();
+  assert.equal(result.state.activePet.petId, 'seed-001');
+  assert.equal(result.state.activePet.evolutionStage, 0);
+
+  collection = withActivePet(collection, 'seed-006');
+  result = await battle.syncActivePet();
+  assert.equal(result.state.activePet.petId, 'seed-006');
+  assert.equal(result.state.activePet.syncedTotalXp, 0);
+
+  const wizardIndex = owned.findIndex((pet) => pet.ownedPetId === 'seed-006');
+  owned[wizardIndex] = {
+    ...owned[wizardIndex],
+    level: 2,
+    totalXp: 20,
+    xpIntoLevel: 10,
+    evolutionStage: 1,
+  };
+  result = await battle.syncActivePet();
+  assert.equal(result.state.activePet.syncedTotalXp, 20);
+  assert.equal(result.state.activePet.evolutionStage, 1);
+  assert.ok(result.state.enemyHpRatio < 1);
+
+  collection = withPetGrowth(collection, new Map([['seed-006', { level: 30, evolutionStage: 2 }]]));
+  owned.splice(
+    owned.findIndex((pet) => pet.ownedPetId === 'seed-006'),
+    1,
+  );
+  result = await battle.syncActivePet();
+  assert.equal(result.state.activePet.petId, 'seed-006');
+  assert.equal(result.state.activePet.evolutionStage, 2);
+  assert.equal(result.state.activePet.level, 30);
+  assert.equal(result.state.growthStatus, 'UNLINKED');
+  assert.equal(result.state.activePet.syncedTotalXp, null);
+});
