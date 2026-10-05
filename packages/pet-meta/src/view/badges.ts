@@ -512,7 +512,13 @@ const BADGES: Readonly<Record<string, BadgePixels>> = {
  * 보상 종류의 아이콘. 8×8 이고 배지와 같은 팔레트, 같은 배율로 그린다.
  *
  * 보상 셋이 전부 같은 네모 칩이면 무엇이 토큰이고 무엇이 칭호인지 글자를 읽어야 안다. 종류마다
- * 그림을 달리해 한눈에 갈리게 한다 — 토큰은 동전, 칭호는 리본, 트로피는 잔이다.
+ * 그림을 달리해 한눈에 갈리게 한다 — 토큰은 금색 동전, 칭호는 초록 깃발, 트로피는 잔이다.
+ *
+ * 칭호를 금색 리본 장식으로 그렸더니 동전과 같은 금색 동그라미로 보여 둘이 헷갈렸다. 그래서
+ * 칭호는 모양(세로로 긴 깃발)과 색(초록)을 모두 달리했고, 금색은 쓰지 않는다.
+ *
+ * 토큰 아이콘은 업적 보상뿐 아니라 정보 화면의 토큰 숫자 옆에도 그린다. 같은 그림이 같은 것을
+ * 가리키게 하려는 것이다.
  */
 export const REWARD_ICONS: Readonly<Record<'token' | 'title' | 'trophy', BadgePixels>> = {
   // 토큰 — 동전
@@ -526,15 +532,15 @@ export const REWARD_ICONS: Readonly<Record<'token' | 'title' | 'trophy', BadgePi
     '.khhhhk.',
     '..kkkk..',
   ],
-  // 칭호 — 리본 장식
+  // 칭호 — 가로대에 건 초록 깃발
   title: [
-    '..kkkk..',
-    '.khhhhk.',
-    'khyyyyhk',
-    'khywyyhk',
-    'khyyyyhk',
-    '.khhhhk.',
-    '.kok.kok',
+    'kbbbbbbk',
+    '.kllllk.',
+    '.klwllk.',
+    '.kllllk.',
+    '.kllggk.',
+    '.klgggk.',
+    '.kgkkgk.',
     '.kk..kk.',
   ],
   // 트로피 — 잔
@@ -549,6 +555,17 @@ export const REWARD_ICONS: Readonly<Record<'token' | 'title' | 'trophy', BadgePi
     '.kkkkkk.',
   ],
 };
+
+/** 화면이 한 번 받아 두고 쓰는 그림 — 팔레트와 종류 아이콘. 줄마다 달라지지 않는 것들이다. */
+export interface UiIcons {
+  palette: Readonly<Record<string, string>>;
+  rewards: typeof REWARD_ICONS;
+}
+
+/** 화면 공용 아이콘. 정보 탭과 업적 탭이 같은 그림을 쓰도록 한곳에서 내려보낸다. */
+export function uiIcons(): UiIcons {
+  return { palette: BADGE_PALETTE, rewards: REWARD_ICONS };
+}
 
 /** 이 업적의 배지. 자기 배지가 없으면 기본 배지다. */
 export function badgeFor(achievementId: string): BadgePixels {

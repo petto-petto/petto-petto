@@ -20,13 +20,7 @@ import {
   unlockedCount,
 } from '../domain/achievement/engine.ts';
 import { isUnlocked } from '../domain/achievement/progress.ts';
-import {
-  BADGE_PALETTE,
-  MYSTERY_BADGE,
-  REWARD_ICONS,
-  badgeFor,
-  type BadgePixels,
-} from './badges.ts';
+import { MYSTERY_BADGE, badgeFor, type BadgePixels } from './badges.ts';
 import type { MetaState } from '../domain/state.ts';
 
 /** 잠긴 히든 업적에 쓰는 마스크. 기획서 7.1이 지정한 문자열이다. */
@@ -100,10 +94,6 @@ export interface AchievementScreen {
   equippedTitle: string | undefined;
   /** 받지 않은 보상이 남은 업적 수. 필터와 무관하게 전체에서 센다. */
   claimableCount: number;
-  /** 배지의 글자 → 색. 줄마다 싣지 않고 화면에 한 번만 보낸다. */
-  badgePalette: Readonly<Record<string, string>>;
-  /** 보상 종류 → 아이콘. 배지와 같은 팔레트로 그린다. */
-  rewardIcons: typeof REWARD_ICONS;
   /** 현재 적용된 카테고리 필터. `undefined`면 전체다. */
   filter: Category | undefined;
 }
@@ -211,8 +201,6 @@ export function achievementScreen(
     })),
     equippedTitle: state.profile.equippedTitle,
     claimableCount: claimableRewards(state).length,
-    badgePalette: BADGE_PALETTE,
-    rewardIcons: REWARD_ICONS,
     filter,
   };
 }

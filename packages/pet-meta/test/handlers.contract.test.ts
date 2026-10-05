@@ -24,6 +24,7 @@ import {
   STUB_GROWTH_RULES,
   tokenCounts,
   type TickReport,
+  uiIcons,
 } from '@pet/meta';
 
 /** 어떤 소스에 `refresh` 를 요청했는지 기록한다. 실제 수집기가 ccusage 를 돌리는 자리다. */
@@ -60,6 +61,15 @@ function handlers() {
   );
   return { state, map: metaHandlers(state, noopHost) };
 }
+
+test('UI: 아이콘 채널이 화면 공용 아이콘을 돌려준다', () => {
+  const { map } = handlers();
+  const icons = map['ui:icons'];
+  assert.ok(icons, 'ui:icons 채널이 있어야 한다');
+
+  // 정보 탭과 업적 탭이 같은 동전 그림을 쓴다. 한곳에서 내려보낸다.
+  assert.deepEqual(icons(), uiIcons());
+});
 
 test('SET: 알림 세 가지를 모두 끄고 켤 수 있다', () => {
   const { state, map } = handlers();

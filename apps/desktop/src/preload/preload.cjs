@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('petApi', {
   settingsView: () => ipcRenderer.invoke('settings:view'),
   achievementsView: (category) => ipcRenderer.invoke('achievements:view', category),
   claimAchievement: (achievementId) => ipcRenderer.invoke('achievements:claim', achievementId),
+  uiIcons: () => ipcRenderer.invoke('ui:icons'),
   overlayPet: () => ipcRenderer.invoke('pet:overlay'),
 
   // 수집

@@ -122,6 +122,32 @@ function bar(ratio) {
   ]);
 }
 
+/**
+ * 화면 공용 그림 — 팔레트와 종류 아이콘(동전 · 깃발 · 잔).
+ *
+ * 줄마다 달라지지 않으므로 한 번만 받아 둔다. 받기 전에 그리면 색이 없는 그림이 나오므로 모든
+ * 렌더가 `iconsReady` 를 기다린다.
+ */
+let icons = { palette: {}, rewards: {} };
+const iconsReady = api.uiIcons().then((loaded) => {
+  icons = loaded;
+});
+
+/**
+ * 토큰을 뜻하는 동전. 토큰 숫자 옆에는 어디서나 이 그림을 둔다 — 업적 보상의 동전과 정보 화면의
+ * 숫자가 같은 것임이 그림으로 읽힌다. `large` 는 화면에서 가장 강조되는 값에 쓰는 3배 크기다.
+ */
+function tokenIcon(large = false) {
+  const canvas = badgeCanvas(icons.rewards.token ?? []);
+  canvas.setAttribute('class', large ? 'token-icon large' : 'token-icon');
+  return canvas;
+}
+
+/** 동전과 숫자를 한 덩어리로 묶는다. 줄이 바뀌어도 둘이 떨어지지 않는다. */
+function withToken(node, large = false) {
+  return el('span', { class: 'with-token' }, [tokenIcon(large), node]);
+}
+
 /** 잠긴 배지의 색 농도. 원래 색의 절반을 칸 바탕에 섞는다. */
 const LOCKED_BADGE_ALPHA = 0.5;
 
@@ -132,7 +158,8 @@ const LOCKED_BADGE_ALPHA = 0.5;
  * 한다. 예전에는 잠긴 배지를 나무색으로만 칠했는데, 처음 쓰는 사용자는 전부 잠겨 있어서 목록이
  * 온통 갈색이었다. 달성은 색의 선명함에 더해 금색 띠와 달성 시각으로 구분된다.
  */
-function badgeCanvas(rows, palette, unlocked) {
+function badgeCanvas(rows, unlocked = true) {
+  const palette = icons.palette;
   const size = rows.length;
   const canvas = el('canvas', { attrs: { width: size, height: size, 'aria-hidden': 'true' } });
   const context = canvas.getContext('2d');
@@ -269,6 +296,7 @@ function render() {
 async function renderNow() {
   content.classList.remove('no-scroll');
   try {
+    await iconsReady;
     if (ui.screen === 'info') {
       if (ui.subtab === 'summary') return await renderSummary();
       return await renderUsage();
@@ -401,17 +429,21 @@ async function renderSummary() {
     el('div', { class: 'hero-figure' }, [
       data.availableTokens.error
         ? el('span', { class: 'hero-value error', text: '⚠ 조회 실패' })
-        : el('span', {
-            class: 'hero-value',
-            text: compact(data.availableTokens.value),
-            title: `${num(data.availableTokens.value)} 토큰`,
-          }),
-      el('span', {
-        class: 'hero-sub',
-        text: data.todayEarnedTokens.error
-          ? '오늘 조회 실패'
-          : `오늘 +${num(data.todayEarnedTokens.value)}`,
-      }),
+        : withToken(
+            el('span', {
+              class: 'hero-value',
+              text: compact(data.availableTokens.value),
+              title: `${num(data.availableTokens.value)} 토큰`,
+            }),
+            true,
+          ),
+      data.todayEarnedTokens.error
+        ? el('span', { class: 'hero-sub', text: '오늘 조회 실패' })
+        : el('span', { class: 'hero-sub with-token' }, [
+            el('span', { text: '오늘' }),
+            tokenIcon(),
+            el('span', { text: `+${num(data.todayEarnedTokens.value)}` }),
+          ]),
     ]),
     // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
     data.hasNoRecords
@@ -431,7 +463,15 @@ async function renderSummary() {
     el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
     el('div', { class: 'stat-grid record-grid' }, [
       // 사용 가능 토큰과 같은 원장의 값이다. 지금까지 쌓은 양이고, 써도 줄지 않는다.
-      stat('누적 토큰', fieldValue(data.totalEarnedTokens, compact)),
+      stat(
+        '누적 토큰',
+        data.totalEarnedTokens.error
+          ? fieldValue(data.totalEarnedTokens)
+          : el('div', { class: 'value with-token' }, [
+              tokenIcon(),
+              el('span', { text: compact(data.totalEarnedTokens.value) }),
+            ]),
+      ),
       stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
       stat(
         '뽑은 횟수',
@@ -500,11 +540,14 @@ async function renderUsage() {
   const usageCard = el('div', { class: 'card' }, [
     el('div', { class: 'card-label', text: '쌓인 토큰' }),
     el('div', { class: 'usage-headline' }, [
-      el('span', {
-        class: 'usage-total',
-        text: compact(data.periodTokens),
-        title: `${num(data.periodTokens)} 토큰`,
-      }),
+      withToken(
+        el('span', {
+          class: 'usage-total',
+          text: compact(data.periodTokens),
+          title: `${num(data.periodTokens)} 토큰`,
+        }),
+        true,
+      ),
       filters,
     ]),
     ...(data.tools.length
@@ -903,7 +946,7 @@ async function renderAchievements() {
               // 그림은 장식이다. 상태는 색에만 기대지 않도록 글자로도 준다.
               title: row.unlocked ? '달성' : row.masked ? '히든' : '잠김',
             },
-            [badgeCanvas(row.badge, data.badgePalette, row.unlocked)],
+            [badgeCanvas(row.badge, row.unlocked)],
           ),
           el('div', { class: 'body' }, [
             el('div', { class: 'title-line' }, [
@@ -931,7 +974,7 @@ async function renderAchievements() {
           ]),
           // 보상은 줄의 오른쪽 위다. 달성하면 그 아래에서 직접 받는다.
           el('div', { class: 'reward-col', attrs: { 'aria-label': '보상' } }, [
-            ...row.rewards.map((reward) => rewardItem(reward, data)),
+            ...row.rewards.map((reward) => rewardItem(reward)),
             rewardAction(row),
           ]),
         ],
@@ -943,13 +986,14 @@ async function renderAchievements() {
 }
 
 /**
- * 보상 하나. 종류마다 모양이 다르다 — 토큰은 동전과 굵은 숫자, 칭호는 리본 띠, 트로피는 잔과 글자.
+ * 보상 하나. 종류마다 모양이 다르다 — 토큰은 동전과 굵은 숫자, 칭호는 깃발과 리본 띠, 트로피는 잔과
+ * 글자.
  *
  * 전부 같은 네모 칩이던 때에는 무엇이 토큰이고 무엇이 칭호인지 글자를 읽어야 알았다. 아이콘이
  * 종류를 말해 주므로 글자에는 값만 둔다. 뜻이 온전한 문구는 `title` 과 `aria-label` 에 있다.
  */
-function rewardItem(reward, data) {
-  const icon = data.rewardIcons[reward.kind];
+function rewardItem(reward) {
+  const icon = icons.rewards[reward.kind];
   return el(
     'div',
     {
@@ -957,10 +1001,7 @@ function rewardItem(reward, data) {
       title: reward.description,
       attrs: { 'aria-label': reward.description },
     },
-    [
-      icon ? badgeCanvas(icon, data.badgePalette, true) : null,
-      el('span', { class: 'text', text: reward.label }),
-    ],
+    [icon ? badgeCanvas(icon) : null, el('span', { class: 'text', text: reward.label })],
   );
 }
 

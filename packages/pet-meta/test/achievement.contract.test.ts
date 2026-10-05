@@ -36,6 +36,7 @@ import {
   runAggregation,
   STUB_GROWTH_RULES,
   tokenCounts,
+  uiIcons,
 } from '@pet/meta';
 
 const NOW = '2026-08-24T14:37:12+09:00';
@@ -327,7 +328,6 @@ test('가려진 히든 업적은 자기 배지 대신 물음표를 내보내고,
   const locked = screen.rows.find((row) => row.id === 'battle.win_50');
   assert.equal(locked?.unlocked, false);
   assert.deepEqual(locked?.badge, badgeFor('battle.win_50'));
-  assert.deepEqual(screen.badgePalette, BADGE_PALETTE);
 });
 
 test('배지를 아직 그리지 않은 업적은 기본 배지로 보인다', () => {
@@ -574,11 +574,15 @@ test('보상은 종류를 달고 나간다 — 화면이 토큰 · 칭호 · 트
   assert.deepEqual(screen.rows.find((row) => row.id === 'collection.dex_5')?.rewards, [
     { kind: 'token', label: '300,000', description: '토큰 300,000' },
   ]);
+});
 
-  // 종류마다 8×8 아이콘이 있고 배지와 같은 팔레트를 쓴다.
-  assert.deepEqual(Object.keys(screen.rewardIcons).sort(), ['title', 'token', 'trophy']);
+test('화면 공용 아이콘 — 종류마다 8×8 이고, 칭호는 토큰과 헷갈리지 않게 금색을 쓰지 않는다', () => {
+  const icons = uiIcons();
+  assert.deepEqual(icons.palette, BADGE_PALETTE, '배지와 같은 팔레트를 쓴다');
+  assert.deepEqual(Object.keys(icons.rewards).sort(), ['title', 'token', 'trophy']);
+
   const drawings = new Set<string>();
-  for (const icon of Object.values(screen.rewardIcons)) {
+  for (const icon of Object.values(icons.rewards)) {
     assert.equal(icon.length, 8);
     for (const line of icon) {
       assert.equal(line.length, 8);
@@ -587,6 +591,10 @@ test('보상은 종류를 달고 나간다 — 화면이 토큰 · 칭호 · 트
     drawings.add(icon.join('\n'));
   }
   assert.equal(drawings.size, 3, '세 아이콘이 서로 다르다');
+
+  // 토큰은 금색 동전이다. 칭호까지 금색 동그라미면 둘이 같은 것으로 읽힌다.
+  assert.ok(icons.rewards.token.join('').includes('y'), '토큰은 금색이다');
+  assert.ok(!icons.rewards.title.join('').includes('y'), '칭호는 금색을 쓰지 않는다');
 });
 
 test('업적 화면은 줄마다 보상 상태를 알려 주고 받을 보상 수를 센다', () => {

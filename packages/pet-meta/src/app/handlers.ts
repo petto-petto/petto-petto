@@ -30,6 +30,7 @@ import {
   settingsScreen,
   summaryScreen,
   tokenCounts,
+  uiIcons,
   usageScreen,
   type AggregationRun,
   type EvaluationOutcome,
@@ -256,6 +257,9 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     }
     return achievementScreen(state.meta, state.catalog, state.achievementFilter);
   });
+
+  // 팔레트와 종류 아이콘. 줄마다 달라지지 않으므로 화면이 한 번 받아 두고 쓴다.
+  handle('ui:icons', () => uiIcons());
 
   // 달성한 업적의 보상을 받는다. 판정은 보상을 지급하지 않으므로 재화가 들어오는 길은 이것뿐이다.
   handle('achievements:claim', (achievementId) => {

@@ -443,10 +443,11 @@ main.no-scroll {
   font-size: 10px;
 }
 
-/* 값과 `오늘 +N`을 같은 기준선에 두고 양끝으로 벌린다. */
+/* 값과 `오늘 +N`을 한 줄에 두고 양끝으로 벌린다. */
 .hero-figure {
   display: flex;
-  align-items: baseline;
+  /* 값 옆에 동전이 붙어 기준선이 아니라 가운데로 맞춘다. 그림에는 글자의 기준선이 없다. */
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
   margin-top: var(--space-2);
@@ -470,6 +471,28 @@ main.no-scroll {
 .hero-sub {
   color: var(--light-text);
   font-size: 10px;
+}
+
+/*
+ * 토큰 동전. 8px 그림을 정수 배율로만 키운다 — 보통은 2배, 가장 강조되는 값 옆은 3배다.
+ * 숫자와 한 덩어리로 묶어 세로 가운데를 맞춘다.
+ */
+.token-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  image-rendering: pixelated;
+}
+
+.token-icon.large {
+  width: 24px;
+  height: 24px;
+}
+
+.with-token {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
 }
 
 /* ---------- EXP ---------- */
