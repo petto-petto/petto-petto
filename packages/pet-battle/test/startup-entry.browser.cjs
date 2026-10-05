@@ -80,7 +80,7 @@ const fixture = `(() => {
     level: 45, sprite: 'star_wizard', evolutionStage: 1, stage: 19,
     intervalXp: 0, battleMode: 'PAUSED' };
   const state = { activePet: pet, roster: [pet], spectatorPetIds: [],
-    enemyHpRatio: 0.6, enemyColor: 'RAINBOW', background: 'STARLIGHT_SHRINE', overlay: null,
+    enemyHpRatio: 0.6, enemyColor: 'PURPLE', background: 'CRYSTAL_RUINS', overlay: null,
     preview: { displayOpacity: 1, menu: 'CLOSED', petAction: null, enemyAction: null,
       enemyPhase: 'VISIBLE', enemySize: null, enemyColor: null, enemyHpRatio: null,
       petAssetRarity: null, attackEffectRarity: null, reducedMotion: true } };
@@ -255,7 +255,7 @@ async function main() {
     assertLoading(pending);
     await evaluate('window.__entryFixture.resolve()');
     await waitFor(
-      "document.querySelector('#stage-label').textContent === 'COLOR 8/8 · SIZE 1/3' && !document.querySelector('#pet').hidden",
+      "document.querySelector('#stage-label').textContent === 'COLOR 7/8 · SIZE 1/3' && !document.querySelector('#pet').hidden",
       'selected host state',
     );
     await evaluate(
@@ -292,7 +292,7 @@ async function main() {
     await screenshot('host-retrying');
     await evaluate('window.__entryFixture.resolve()');
     await waitFor(
-      "document.querySelector('#stage-label').textContent === 'COLOR 8/8 · SIZE 1/3' && document.querySelector('#battle-notice').hidden",
+      "document.querySelector('#stage-label').textContent === 'COLOR 7/8 · SIZE 1/3' && document.querySelector('#battle-notice').hidden",
       'retry recovery',
     );
     await evaluate(

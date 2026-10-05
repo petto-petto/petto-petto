@@ -126,7 +126,11 @@ test('상단에는 스테이지·HP만 남기고 모션 버튼과 전용 공간�
   assert.doesNotMatch(header, /모션|<button/);
   assert.doesNotMatch(html, /data-action="REDUCED_MOTION"/);
   assert.doesNotMatch(css, /\.motion-toggle/);
-  assert.match(css, /\.battle-hud\s*\{[^}]*grid-template-columns:\s*62px 1fr;/s);
+  assert.match(
+    css,
+    /\.battle-hud\s*\{[^}]*grid-template-columns:\s*max-content minmax\(0, 1fr\);/s,
+  );
+  assert.match(css, /#stage-label\s*\{[^}]*white-space:\s*nowrap;/s);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
