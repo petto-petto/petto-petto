@@ -14,7 +14,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 /**
  * 메인이 렌더러로 보내는 이벤트 채널. 이 목록 밖은 구독할 수 없다.
  *
- * `room:*` 두 개는 **모든 창**이 받는다. 활성 펫을 바꾼 창 자신도 예외가 아니다 —
+ * `room:*` 채널은 **모든 창**이 받는다. 활성 펫을 바꾼 창 자신도 예외가 아니다 —
  * 화면 갱신은 오직 이 push 를 받고 나서 한다(`src/main/room.ts` 참조).
  */
 const EVENT_CHANNELS = [
@@ -22,6 +22,7 @@ const EVENT_CHANNELS = [
   'usage:aggregated',
   'room:activePetChanged',
   'room:backgroundChanged',
+  'room:rosterChanged',
 ];
 
 contextBridge.exposeInMainWorld('petApi', {
@@ -107,15 +108,24 @@ contextBridge.exposeInMainWorld('overlay', {
    * 활성 펫은 오버레이가 정하지 않는다.
    *
    * 예전에는 오버레이가 자기 활성 펫 키를 따로 저장해서, 펫룸에서 "오버레이로 지정"을 눌러도
-   * 오버레이 창이 바뀌지 않았다. 이제 명부(`room-state.json`)가 단일 정본이고 오버레이는
+   * 오버레이 창이 바뀌지 않았다. 이제 명부(`PetClient`의 보유 펫)가 단일 정본이고 오버레이는
    * 펫룸과 **같은 채널**을 쓴다.
    */
   roomScene: () => ipcRenderer.invoke('room:scene'),
   setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
+  /** 개발용: 펫룸 배경을 계절·시간대로 고정한다. `season` 이 `null` 이면 지금 시각으로 돌아간다. */
+  previewRoomBackground: (season, phase) =>
+    ipcRenderer.invoke('room:previewBackground', season, phase),
   onActivePetChanged: (listener) => {
     const wrapped = (_event, view) => listener(view);
     ipcRenderer.on('room:activePetChanged', wrapped);
     return () => ipcRenderer.removeListener('room:activePetChanged', wrapped);
+  },
+
+  onRosterChanged: (listener) => {
+    const wrapped = (_event, views) => listener(views);
+    ipcRenderer.on('room:rosterChanged', wrapped);
+    return () => ipcRenderer.removeListener('room:rosterChanged', wrapped);
   },
 
   onMenuClose: (listener) => {

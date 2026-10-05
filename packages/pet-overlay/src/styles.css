@@ -523,6 +523,20 @@ body,
   background: #6d3fd6;
   box-shadow: 0 0 8px rgba(138, 92, 246, 0.7);
 }
+.dev-room-bg select {
+  flex: 1 1 30%;
+  min-width: 0;
+  padding: 6px;
+  font-size: 11px;
+  /* 패널의 양피지·나무 크롬에 맞춘다. 기본 위젯은 도트 화면에서 튄다. */
+  color: var(--ink);
+  background: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  border-radius: 0;
+}
+.dev-room-bg button {
+  flex: 0 0 auto;
+}
 .dev-note {
   color: #94a3b8;
   font-size: 10px;

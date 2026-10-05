@@ -115,8 +115,8 @@ export type TrophyPlacement = 'room' | 'storage';
  * 보유 수·도감은 `PetClient` 로 옮겨 여기서 뺐다.
  */
 export interface CollectionPort {
-  /** room 의 `pet:overlay` 채널 전용. meta 화면은 쓰지 않는다. */
-  overlayPet(): PetSummary;
+  /** room 의 `pet:overlay` 채널 전용. meta 화면은 쓰지 않는다. 보유 펫이 없으면 `null`이다. */
+  overlayPet(): PetSummary | null;
   /** `autoPlace`가 참이면 룸의 첫 빈자리를 시도하고, 실패하면 보관함으로 보낸다. */
   grantTrophy(achievementId: string, autoPlace: boolean): TrophyPlacement;
 }

@@ -100,10 +100,12 @@ async function uiHarness(t, { failLoad = false, failDraw = false } = {}) {
   const { registerGachaIpc } = await import('../dist/main/ipc/gacha.js');
   const handlers = new Map();
   const allowed = {};
+  let petsChanged = 0;
   registerGachaIpc(
     { handle: (channel, fn) => handlers.set(channel, fn) },
     gacha,
     (event) => event === allowed,
+    () => petsChanged++,
   );
   let bridge;
   let loadFails = failLoad;
@@ -198,11 +200,20 @@ async function uiHarness(t, { failLoad = false, failDraw = false } = {}) {
     },
   });
   const settle = () => new Promise((resolve) => setImmediate(resolve));
-  return { client, database, element, settle, handlers, allowed, draws: () => draws };
+  return {
+    client,
+    database,
+    element,
+    settle,
+    handlers,
+    allowed,
+    draws: () => draws,
+    petsChanged: () => petsChanged,
+  };
 }
 
 test('뽑기 화면은 preload와 main을 거쳐 저장하고 연속 클릭을 한 요청으로 막는다', async (t) => {
-  const { client, element, settle, draws } = await uiHarness(t);
+  const { client, element, settle, draws, petsChanged } = await uiHarness(t);
   assert.equal(element('draw-one').disabled, true);
   await settle();
   assert.equal(element('owned-count').textContent, '0');
@@ -213,6 +224,8 @@ test('뽑기 화면은 preload와 main을 거쳐 저장하고 연속 클릭을 �
   await settle();
   assert.equal(draws(), 1);
   assert.equal(client.countOwnedPets(), 10);
+  // 보유 펫이 바뀌었으니 펫룸·오버레이가 다시 읽도록 한 번 알린다.
+  assert.equal(petsChanged(), 1);
   assert.equal(element('owned-count').textContent, '10');
   assert.equal(element('token-balance').textContent, '9,000,000');
   element('skip-button').listeners.click();

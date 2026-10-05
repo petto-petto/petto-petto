@@ -63,7 +63,7 @@ interface SpeciesProfileRow {
  *
  * ## 이 저장소가 정본인 것
  *
- * 레벨·경험치·진화 횟수. 명부(`room-state.json`)에 같은 값이 있지만 그쪽은 **투영**이고,
+ * 레벨·경험치·진화 횟수. 명부(`PetClient`)에 같은 값이 있지만 그쪽은 **투영**이고,
  * 쓰기는 여기서 시작해 한 방향으로만 흐른다(`@pet/room`의 `withPetGrowth` 참조).
  *
  * ## 개체 단위인 이유
@@ -94,9 +94,7 @@ export class PetGrowthRepository {
    * 첫 실행에서는 종 단위였던 옛 행을 **명부 순서대로 종별 한 마리씩** 물려준다. 어느 개체가
    * 그 종의 성장을 이어받을지는 임의 선택이 아니라 명부의 순서로 정해 재현 가능하게 둔다.
    *
-   * 물려받을 것이 없는 개체는 명부가 말하는 레벨·진화 단계로 시작한다 — 시드 명부가 stage
-   * 1·2·3을 모두 내도록 짜여 있어서(`seedCollection`), 0으로 깔면 펫룸이 stage1 한 종류로
-   * 납작해진다.
+   * 물려받을 것이 없는 개체는 명부(`PetClient`)가 말하는 레벨·진화 단계로 시작한다.
    */
   adoptRoster(roster: readonly PetGrowthSeed[]): Map<string, PetGrowth> {
     // 빈 명부로 이관을 끝났다고 적으면, 물려줄 개체가 나타나기도 전에 옛 종 행이 영구

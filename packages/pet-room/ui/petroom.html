@@ -36,14 +36,16 @@
       <canvas id="pets"></canvas>
     </div>
 
+    <!-- 보유 펫이 없을 때만 보인다. 펫은 뽑기·합성으로만 생긴다. -->
+    <p id="empty" class="pixel-panel" hidden>
+      아직 함께하는 펫이 없어요.<br />✨ 펫 뽑기로 첫 친구를 만나 보세요.
+    </p>
+
     <!-- 오류는 잘린 장면이 아니라 보이는 영역에 붙는다. -->
     <p id="error" class="pixel-panel" hidden></p>
   </div>
 
   <aside id="side">
-    <h1 id="title">🌲 펫룸</h1>
-    <p id="phase"></p>
-
     <!--
       뽑기·합성으로 건너가는 길. 펫룸 창이 그 화면으로 바뀐다 — 창을 다루는 일은 main 이
       한다(`room:navigate`).
@@ -59,57 +61,21 @@
         <button id="detail-close" type="button" aria-label="상세 닫기">✕</button>
       </div>
 
-      <!--
-        180px 하단 패널에는 세로로 쌓을 높이가 없다. 이름 아래를 좌우로 갈라 왼쪽에 등급·
-        레벨·XP, 오른쪽에 안내와 버튼을 둔다. 격자로 행을 걸치면 걸친 항목이 행 높이를
-        부풀려(실측: 레벨 한 줄이 78px) 오히려 넘친다.
-      -->
+      <!-- 180px 하단 패널에는 세로로 쌓을 높이가 없다. 이름 아래를 좌우로 갈라 왼쪽에 등급·
+        레벨, 오른쪽에 버튼을 둔다. -->
       <div id="detail-body">
         <div id="detail-info">
           <span id="detail-grade" class="grade-badge"></span>
           <p id="detail-level"></p>
-
-          <div class="xp-row">
-            <div class="xp-bar"><div id="detail-xp" class="xp-bar__fill"></div></div>
-            <span id="detail-xp-label" class="xp-label"></span>
-          </div>
         </div>
 
         <div id="detail-actions">
-          <p id="detail-note"></p>
           <button id="detail-activate" class="pixel-button" type="button"></button>
         </div>
       </div>
     </div>
 
     <p id="hint">펫을 누르면 상세가 열립니다.</p>
-
-    <!--
-      계절·시간대 미리보기.
-
-      배경 16장을 실제 날짜가 오기를 기다리지 않고 확인하기 위한 것이다. 고르면
-      그 장면에 고정되고, "지금"을 누르면 시각을 따르는 원래 동작으로 돌아간다.
-      고정된 동안에는 main이 보내는 배경 교체 push를 무시한다(`petroom.js` 참조).
-    -->
-    <div id="preview" class="pixel-panel">
-      <label for="preview-season">계절</label>
-      <select id="preview-season">
-        <option value="spring">봄</option>
-        <option value="summer">여름</option>
-        <option value="autumn">가을</option>
-        <option value="winter">겨울</option>
-      </select>
-
-      <label for="preview-phase">시간</label>
-      <select id="preview-phase">
-        <option value="dawn">새벽</option>
-        <option value="day">낮</option>
-        <option value="dusk">노을</option>
-        <option value="night">밤</option>
-      </select>
-
-      <button id="preview-now" class="pixel-button" type="button">지금</button>
-    </div>
   </aside>
 </div>
 

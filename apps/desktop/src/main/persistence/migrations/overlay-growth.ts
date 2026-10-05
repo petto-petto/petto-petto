@@ -39,7 +39,7 @@ export const OVERLAY_GROWTH_MIGRATIONS: readonly SqliteMigration[] = [
      * 시드가 종별 한 마리라 드러나지 않지만, 가챠가 붙는 순간 사용자가 키운 펫이 서로를
      * 덮어쓴다.
      *
-     * 같은 이유로 `overlay.active-pet-key`를 지운다. 활성 펫의 정본은 명부(`room-state.json`)
+     * 같은 이유로 `overlay.active-pet-key`를 지운다. 활성 펫의 정본은 명부(지금은 `PetClient`의 `owned_pets`)
      * 하나이고, 오버레이가 자기 활성 펫을 따로 들고 있어서 펫룸에서 지정한 펫이 오버레이에
      * 반영되지 않았다.
      *

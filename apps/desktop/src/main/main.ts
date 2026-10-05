@@ -10,7 +10,6 @@ import { createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
 import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
-import type { StoredRoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
 import type { PetClient, TokenClient } from '@pet/client';
@@ -26,8 +25,7 @@ import { CurrencyRepository } from './persistence/repositories/currency-reposito
 import { TokenRepository } from './persistence/repositories/token-repository.ts';
 import { mountMeta } from './mount.ts';
 import { CcusageCollector, resolveCcusageBinary } from './usage/ccusage-collector.ts';
-import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
-import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
+import { RoomState, mountRoom, type RoomHost } from './room.ts';
 import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
@@ -283,7 +281,6 @@ app.setName('tamagotchi-pet');
 app.whenReady().then(async () => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
-  const roomStore = new JsonFileStore<StoredRoomSnapshot>(directory, ROOM_FILE_NAME);
   const databasePath = join(directory, 'petto.sqlite');
   const database = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
   appDatabase = database;
@@ -303,10 +300,8 @@ app.whenReady().then(async () => {
   growthRepository.migrateLegacyData();
   console.log(`[STORE] 저장 위치 ${databasePath}`);
 
-  // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
-  // 아래 `pets` 에서 온다.
-  const ownedPets = loadRoomCollection(roomStore);
-  const collection = new RoomCollectionPort(ownedPets);
+  // 트로피 배치와 `pet:overlay` 가 쓰는 어댑터. 명부는 아래 `RoomState` 가 밀어 넣는다.
+  const collection = new RoomCollectionPort();
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
   const pets: PetClient = new SqlitePetClient(new PetRepository(database));
   const currencyRepository = new CurrencyRepository(database);
@@ -315,15 +310,28 @@ app.whenReady().then(async () => {
     currencyRepository,
   );
   const featureTransaction = <T>(work: () => T): T => database.transaction(work);
+  // 뽑기·합성이 보유 펫을 바꾸면 펫룸 명부를 다시 읽고, 새 개체에 성장 행을 붙인다.
+  // 이미 저장된 뽑기·합성 결과를 실패로 돌려보내면 안 되므로 여기서 던지지 않는다.
+  const petsChanged = (): void => {
+    if (!room) return;
+    try {
+      room.reload(roomHost);
+      room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
+    } catch (error) {
+      console.log(`[ROOM] 바뀐 보유 펫을 펫룸에 반영하지 못했습니다 — ${String(error)}`);
+    }
+  };
   registerGachaIpc(
     ipcMain,
     createPersistentGacha(pets, tokens, featureTransaction),
     (event) => isGachaWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    petsChanged,
   );
   registerCombineIpc(
     ipcMain,
     createPersistentCombine(pets, tokens, featureTransaction),
     (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    petsChanged,
   );
   // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
   // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
@@ -338,7 +346,7 @@ app.whenReady().then(async () => {
     OVERLAY_GROWTH_RULES,
     createUsageCollector(),
   );
-  room = new RoomState(roomStore, systemClock, collection, ownedPets);
+  room = new RoomState(systemClock, collection, pets, () => growthRepository.growth());
 
   // 명부의 개체가 모두 성장 행을 갖게 하고, 그 값을 명부에 투영한다. 이게 없으면 프로필은
   // 명부의 레벨을, 오버레이는 성장 저장소의 레벨을 말해 두 화면이 갈라진다.
@@ -430,7 +438,6 @@ app.on('before-quit', (event) => {
   void (state?.idle() ?? Promise.resolve()).finally(() => {
     try {
       state?.persist();
-      room?.persist();
       appDatabase?.close();
     } finally {
       // 정리는 끝났다. `app.quit()`을 다시 부르면 미뤄 둔 종료 요청이 되살아나지 않는 경우가

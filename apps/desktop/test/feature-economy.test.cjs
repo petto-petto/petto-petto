@@ -268,10 +268,12 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   const combine = createPersistentCombine(pets, currency, transaction, () => 0);
   const handlers = new Map();
   const allowed = {};
+  let petsChanged = 0;
   registerCombineIpc(
     { handle: (channel, handler) => handlers.set(channel, handler) },
     combine,
     (event) => event === allowed,
+    () => petsChanged++,
   );
   assert.equal(handlers.get('combine:load')({}).ok, false);
   assert.equal(handlers.get('combine:combine')({}, 'common', []).ok, false);
@@ -350,6 +352,8 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(currency.balance(), 9_970_000);
   assert.equal(pets.countOwnedPets(), 1);
+  // 보유 펫이 바뀌었으니 펫룸·오버레이가 다시 읽도록 한 번 알린다.
+  assert.equal(petsChanged, 1);
   assert.equal(
     materials.every(
       (pet) => !pets.listOwnedPets().some((owned) => owned.ownedPetId === pet.ownedPetId),
