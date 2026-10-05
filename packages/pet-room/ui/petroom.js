@@ -736,7 +736,7 @@ window.addEventListener('focus', () => refreshDexBadge());
 // 도감의 `펫룸에서 보기`. 이미 열려 있던 펫룸이면 main 이 이 이벤트로 알린다.
 api.on('room:focusPet', (ownedPetId) => focusPet(ownedPetId));
 
-/** 그 개체의 상세를 연다. 명부에 없으면(그사이 합성됨) 아무것도 고르지 않는다. */
+/** 그 개체를 클릭한 것처럼 상세를 연다. 명부에 없으면(그사이 합성됨) 아무것도 고르지 않는다. */
 function focusPet(ownedPetId) {
   if (!ownedPetId || !room.views.has(ownedPetId)) return;
   room.selectedPetId = ownedPetId;
@@ -768,7 +768,9 @@ window.addEventListener('load', async () => {
     const scene = await api.roomScene();
     await applyBackground(scene.background);
     await loadPets(scene.pets);
-    focusPet(new URLSearchParams(window.location.search).get('focus'));
+    // 처음 열면 상세를 바로 보여 준다. 도감의 `펫룸에서 보기`로 왔으면 그 개체를, 아니면 지금
+    // 오버레이에 떠 있는 활성 펫을 클릭한 것과 같게 연다. 보유 펫이 없으면 아무것도 고르지 않는다.
+    focusPet(new URLSearchParams(window.location.search).get('focus') ?? room.activePetId);
 
     api.debugLog(
       `[PETROOM] ${scene.background.id}(${scene.background.phase}) · ` +
