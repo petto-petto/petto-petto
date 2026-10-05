@@ -13,7 +13,7 @@ app.whenReady().then(async () => {
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
   try {
-    await window.loadFile(path.join(__dirname, '../ui/index.html'));
+    await window.loadFile(path.join(__dirname, '../dist/ui/index.html'));
     assert.equal(
       await window.webContents.executeJavaScript(
         `Boolean(document.querySelector('button.window-close[type="button"][aria-label="전투 창 닫기"]'))`,

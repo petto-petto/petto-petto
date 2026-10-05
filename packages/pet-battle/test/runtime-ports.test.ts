@@ -6,10 +6,12 @@ import { test, type TestContext } from 'node:test';
 import { pathToFileURL } from 'node:url';
 import type { PetSpecies } from '@pet/client';
 import type { BattleCommand, BattlePet, BattleResult } from '../src/contracts.ts';
-import { BATTLE_CHANNELS } from '../src/app/handlers.ts';
-import { FileBattleSpriteAdapter } from '../src/adapters/file-sprites.ts';
-import { SpriteBattleGateway, type BattlePetSprites } from '../src/app/sprite-gateway.ts';
-import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/app/ipc.ts';
+import { BATTLE_CHANNELS } from '../src/platform/handlers.ts';
+import { FileBattleSpriteAdapter } from '../src/platform/file-sprites.ts';
+import { SpriteBattleGateway } from '../src/app/sprite-gateway.ts';
+import type { BattlePetSprites } from '../src/ports/sprites.ts';
+import { mountBattleIpc } from '../src/platform/ipc.ts';
+import type { BattleIpcRegistry, BattleRuntime } from '../src/ports/runtime.ts';
 
 const command: BattleCommand = { type: 'GET_STATE', nowMs: 1234 };
 const species: PetSpecies = {

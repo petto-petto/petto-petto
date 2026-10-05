@@ -1,9 +1,10 @@
 import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
-import type { BattleCommand, BattleGateway, BattleResult, Rarity } from '../contracts.ts';
-import { assertBattleClientCommand } from '../app/client-policy.ts';
+import type { BattleCommand, BattleResult, Rarity } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
+import { assertBattleClientCommand } from './client-policy.ts';
 import { selectRandomPetSpectators } from '../view/scene.ts';
-import { ownedGrowthPet, RoomBattlePetAdapter } from '../adapters/room-pets.ts';
+import { ownedGrowthPet, RoomBattlePetAdapter } from './room-pets.ts';
 
 export interface BattleGrowthRules {
   levelXpCosts: number[];

@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import type { OwnedPet } from '@pet/client';
 import { roomPetViews, seedCollection, withActivePet } from '@pet/room';
 import { PetBattleIntegration, type BattleCommand, type BattleGateway } from '../src/index.ts';
-import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
+import { DemoBattleGateway } from '../src/testing/demo-gateway.ts';
 
 function fixture() {
   let collection = seedCollection();

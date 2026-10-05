@@ -52,7 +52,7 @@ async function checkPositionContinuity(cdp, evaluate, waitFor, screenshot) {
       Date.now = () => window.__positionNow;
       Math.random = () => 0.25;
       window.__positionVersion = 0;
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
         const result = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });
         result.state.spectatorPetIds = [];
         result.state.preview.enemySize = 'SMALL';

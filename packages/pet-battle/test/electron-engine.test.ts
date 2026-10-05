@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ElectronBattleEngine } from '../src/domain/engine.ts';
+import { ElectronBattleEngine } from '../src/app/battle-engine.ts';
 import type { BattleCommand, Rarity } from '../src/contracts.ts';
 import { progression } from '../src/domain/growth.ts';
 

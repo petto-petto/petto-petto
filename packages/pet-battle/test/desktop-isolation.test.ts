@@ -12,10 +12,48 @@ test('앱과 전투 패키지는 Electron 실행 경로만 제공한다', () => 
   assert.equal(battle.scripts['build:rust'], undefined);
   assert.equal(battle.scripts['test:rust'], undefined);
   assert.doesNotMatch(JSON.stringify(battle.scripts), /cargo|sidecar|client-rust/);
-  for (const removed of ['rust', 'src/runtime', 'src/ipc', 'src/integration']) {
+  for (const removed of [
+    'rust',
+    'assets',
+    'src/runtime',
+    'src/ipc',
+    'src/integration',
+    'src/adapters',
+    'src/controller',
+  ]) {
     assert.equal(existsSync(new URL('../' + removed, import.meta.url)), false, removed);
   }
   assert.doesNotMatch(battle.scripts.demo, /cargo|build:rust/);
+  assert.deepEqual(battle.exports['./ui'], {
+    types: './ui/index.html',
+    default: './dist/ui/index.html',
+  });
+  assert.equal(battle.exports['./assets/*'], './dist/ui/assets/*');
+  assert.match(battle.scripts['build:ui'], /scripts\/build-ui\.mjs/);
+  assert.match(root.scripts.build, /build:ui.*@pet\/battle/);
+  assert.ok(
+    existsSync(new URL('../ui/assets/backgrounds/v2/mushroom-forest.png', import.meta.url)),
+  );
+  assert.ok(existsSync(new URL('../src/testing/demo-gateway.ts', import.meta.url)));
+  assert.ok(
+    existsSync(
+      new URL('../ui/art/backgrounds/generated/bg_201_mushroom_forest/scene.json', import.meta.url),
+    ),
+  );
+  assert.ok(existsSync(new URL('../ui/art/enemies/rainbow-muted-preview.html', import.meta.url)));
+  assert.equal(
+    existsSync(new URL('../ui/assets/source/enemies/shadow-slime-idle-v2.png', import.meta.url)),
+    false,
+  );
+  assert.equal(
+    existsSync(
+      new URL(
+        '../ui/assets/backgrounds/generated/bg_201_mushroom_forest/scene.json',
+        import.meta.url,
+      ),
+    ),
+    false,
+  );
 });
 
 test('앱은 읽기 Adapter를 전투에만 주입하고 펫룸 JSON 경로는 유지한다', () => {

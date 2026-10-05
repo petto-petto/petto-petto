@@ -1,16 +1,12 @@
-import type { BattleCommand, BattleGateway } from '../contracts.ts';
+import type { BattleCommand } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
+import type { BattleHandlers, BattleHost } from '../ports/runtime.ts';
 
 export const BATTLE_CHANNELS = {
   command: 'battle:command',
   state: 'battle:state',
   stateChanged: 'battle:state-changed',
 } as const;
-
-export interface BattleHost {
-  broadcast(channel: string, payload: unknown): void;
-}
-
-export type BattleHandlers = Record<string, (...args: unknown[]) => unknown>;
 
 function commandFrom(value: unknown): BattleCommand {
   if (typeof value !== 'object' || value === null || !('type' in value)) {

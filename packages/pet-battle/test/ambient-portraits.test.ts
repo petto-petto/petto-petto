@@ -146,7 +146,7 @@ test('적 7색·3표정은 크기 프리뷰와 무관하게 현재 표정의 얼
     for (const face of ['steady', 'worried', 'exhausted']) {
       const asset = `assets/enemies/v2/${color}-${face}.png`;
       const expected = face === 'exhausted' ? [7, 14, 24, 12] : [7, 12, 23, 14];
-      const image = await readFile(new URL(`../${asset}`, import.meta.url));
+      const image = await readFile(new URL(`../ui/${asset}`, import.meta.url));
       assert.equal(image.readUInt32BE(20), 32);
       for (const size of [56, 64, 80]) {
         const source = `${asset}?previewSize=${size}#portrait`;

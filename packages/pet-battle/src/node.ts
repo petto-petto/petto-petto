@@ -2,25 +2,17 @@
 import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import { readFileSync } from 'node:fs';
-import { FileBattleSpriteAdapter } from './adapters/file-sprites.ts';
+import { FileBattleSpriteAdapter } from './platform/file-sprites.ts';
 import { PetBattleIntegration } from './app/pet-client.ts';
 import type { BattleGrowthRules } from './app/owned-pet-gateway.ts';
 import { SpriteBattleGateway } from './app/sprite-gateway.ts';
-import {
-  mountBattleIpc,
-  type BattleIpcRegistry,
-  type BattleLifecyclePort,
-  type BattleRuntime,
-} from './app/ipc.ts';
-import { ElectronBattleEngine } from './domain/engine.ts';
+import { mountBattleIpc } from './platform/ipc.ts';
+import type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
+import { ElectronBattleEngine } from './app/battle-engine.ts';
 
-export { FileBattleSpriteAdapter } from './adapters/file-sprites.ts';
-export {
-  mountBattleIpc,
-  type BattleIpcRegistry,
-  type BattleLifecyclePort,
-  type BattleRuntime,
-} from './app/ipc.ts';
+export { FileBattleSpriteAdapter } from './platform/file-sprites.ts';
+export { mountBattleIpc } from './platform/ipc.ts';
+export type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
 
 export interface BattleRuntimeOptions {
   /** Optional owner-provided room selection; never changes room or common storage. */

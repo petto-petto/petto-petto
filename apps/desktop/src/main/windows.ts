@@ -44,10 +44,7 @@ const combineUiDir = join(
 );
 const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
 const overlayUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/main-overlay/ui'))));
-const battleUiDir = join(
-  dirname(fileURLToPath(import.meta.resolve('@pet/battle/package.json'))),
-  'ui',
-);
+const battleUiDir = dirname(fileURLToPath(import.meta.resolve('@pet/battle/ui')));
 
 /**
  * 정적 에셋의 루트.

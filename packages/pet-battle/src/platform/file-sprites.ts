@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { BattlePet } from '../contracts.ts';
-import type { BattlePetSprites, BattleSpritePort } from '../app/sprite-gateway.ts';
+import type { BattlePetSprites, BattleSpritePort } from '../ports/sprites.ts';
 
 /** Reads original shared assets at a host-injected root; never copies or modifies them. */
 export class FileBattleSpriteAdapter implements BattleSpritePort {

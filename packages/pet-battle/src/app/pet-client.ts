@@ -1,6 +1,7 @@
 import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
-import type { BattleCommand, BattleGateway, BattleResult } from '../contracts.ts';
+import type { BattleCommand, BattleResult } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
 import { OwnedPetBattleGateway, type BattleGrowthRules } from './owned-pet-gateway.ts';
 
 export interface GrowthXpNotification {

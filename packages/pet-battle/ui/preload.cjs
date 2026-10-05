@@ -4,7 +4,7 @@ const { pathToFileURL } = require('node:url');
 const { contextBridge } = require('electron');
 
 const client = import(
-  pathToFileURL(path.join(__dirname, '..', 'dist', 'domain', 'engine.js')).href
+  pathToFileURL(path.join(__dirname, '..', 'app', 'battle-engine.js')).href
 ).then(async ({ ElectronBattleEngine }) => {
   const engine = new ElectronBattleEngine();
   // Explicit demo-only roster; the real host always uses owner snapshots.

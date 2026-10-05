@@ -6,7 +6,7 @@ import {
   shouldStartEnemyHitReaction,
   visibleEnemyStage,
 } from '../view/scene.ts';
-import { DemoBattleGateway } from './demo-gateway.ts';
+import { DemoBattleGateway } from '../testing/demo-gateway.ts';
 import { battleLayout, menuPositions, projectPetOffset } from '../view/layout.ts';
 import { peekingSpectators } from '../view/peeking-spectators.ts';
 import { AmbientLogsView } from './ambient-logs.ts';
@@ -158,7 +158,7 @@ function required<T extends Element>(selector: string): T {
 
 function assetUrl(path: string): string {
   if (path.startsWith('file:')) return new URL(path).href;
-  return new URL(`../${path}`, document.baseURI).href;
+  return new URL(path, document.baseURI).href;
 }
 
 function nowMs(): number {

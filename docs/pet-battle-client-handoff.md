@@ -4,7 +4,7 @@
 
 `RoomSelectionClient 선택 + PetClient 저장 성장 → 전투 Adapter → Electron 내부 TypeScript 엔진 → 화면`
 
-2026-10-04부터 기본 앱·Electron 데모는 Cargo/Rust를 실행하지 않습니다. [전환 설계·검증](electron-engine-migration.md)을 따릅니다. 현재 실행·폴더 구조는 [패키지 안내](../README.md)를 따릅니다.
+기본 앱과 Electron 데모는 Cargo/Rust를 실행하지 않습니다. 상세 실행·폴더 안내는 [전투 패키지 README](../packages/pet-battle/README.md)를 따릅니다.
 
 - 공개 타입은 `@pet/client`에서 가져오고, 구현체는 호스트가 주입한다.
 - 현재 앱의 선택은 `RoomSelectionClient.getSnapshot()`에서, 실제 성장은 같은 개체의 `PetClient.listOwnedPets()`에서 읽는다. `selection`을 생략한 기존 소비자는 `getActivePet()`를 사용한다. 에셋 구성은 `listSpecies()`를 사용하며 공통 저장 명령은 호출하지 않는다.
@@ -81,7 +81,7 @@ const closeBattle = mountBattle(pets, ipcMain, {
 
 ## 전투 진행과 화면
 
-- 내부 TypeScript 엔진은 주입된 성장 곡선과 모든 등급 공통 `[2, 2, 3]` 레벨 상당 XP 구간으로 HP·스테이지를 계산한다. 각 색의 소·중·대를 거쳐 Lv.50에 21단계를 정복한다. 상세 표는 `battle-system.md`를 따른다.
+- 내부 TypeScript 엔진은 주입된 성장 곡선과 모든 등급 공통 `[2, 2, 3]` 레벨 상당 XP 구간으로 HP·스테이지를 계산한다. 각 색의 소·중·대를 거쳐 Lv.50에 21단계를 정복한다. 전투 단계는 [하네스 전투 명세](../.harness/specs/features/2026-09-30-battle-integration.md)를 따른다.
 - 최초 조회·재연결은 현재 진행도로 복원한다. 과거 정복 연출을 재생하지 않는다.
 - 실행 중 정복은 HP 0 → 처치 연출 → 다음 적·배경 자동 전환이다. 클릭은 선택적인 처치 연출 생략이다.
 - 독립 Electron demo도 동일 내부 엔진에 데모 명부만 명시적으로 주입한다. 일반 `npm start`와 demo 모두 Cargo를 호출하지 않는다.

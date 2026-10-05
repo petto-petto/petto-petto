@@ -1,13 +1,13 @@
 import type {
   BattleCommand,
   BattleEvent,
-  BattleGateway,
   BattleResult,
   BattleState,
   EnemyColor,
   EnemyPreviewSize,
   Rarity,
 } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
 import { backgroundForEnemy, enemySizeForStage, visibleEnemyStage } from '../view/scene.ts';
 import { restingMotion, sampleCombatMotion } from '../view/motion.ts';
 

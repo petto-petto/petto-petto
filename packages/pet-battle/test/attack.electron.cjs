@@ -144,6 +144,24 @@ async function verifyStopped(window) {
 }
 
 async function verifyAttack(window, label) {
+  const decodedAssets = `['#battle-background', '#enemy-image', '#pet-sheet'].every(selector => {
+    const image = document.querySelector(selector);
+    return image?.complete && image.naturalWidth > 0;
+  })`;
+  try {
+    await waitFor(window, decodedAssets, 'background, enemy and pet assets decoded');
+  } catch (error) {
+    const diagnostics = await evaluate(
+      window,
+      `({url: location.href, notice: document.querySelector('#battle-notice')?.textContent,
+        images: ['#battle-background', '#enemy-image', '#pet-sheet'].map(selector => {
+          const image = document.querySelector(selector);
+          return {selector, src: image?.src, complete: image?.complete,
+            naturalWidth: image?.naturalWidth, naturalHeight: image?.naturalHeight};
+        })})`,
+    );
+    throw new Error(`${error.message}: ${JSON.stringify(diagnostics)}`);
+  }
   await waitForImpact(window);
   await petAction(window, 'STOP');
   await waitFor(
@@ -454,14 +472,14 @@ async function run() {
     frame: false,
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, '../ui/preload.cjs'),
+      preload: path.join(__dirname, '../dist/ui/preload.cjs'),
       contextIsolation: true,
       sandbox: false,
       nodeIntegration: false,
     },
   });
   await within(
-    standalone.loadFile(path.join(__dirname, '../ui/index.html')),
+    standalone.loadFile(path.join(__dirname, '../dist/ui/index.html')),
     'standalone document load',
   );
   standalone.show();

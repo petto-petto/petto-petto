@@ -25,14 +25,14 @@ function sharedSpriteCases() {
           sprites: {
             idle: {
               asset: path
-                .relative(battleRoot, file.replace('.json', '.png'))
+                .relative(path.join(battleRoot, 'ui'), file.replace('.json', '.png'))
                 .split(path.sep)
                 .join('/'),
               frameCount: idle.frameCount,
             },
             attack: {
               asset: path
-                .relative(battleRoot, attackFile.replace('.json', '.png'))
+                .relative(path.join(battleRoot, 'ui'), attackFile.replace('.json', '.png'))
                 .split(path.sep)
                 .join('/'),
               frameCount: attack.frameCount,
@@ -131,7 +131,7 @@ async function checkSpriteOverlap(cdp, evaluate, waitFor, screenshot) {
     source: `(() => {
       if (location.hostname !== '127.0.0.1') throw new Error('Fixture requires isolated HTTP');
       Date.now = () => Math.floor(performance.timeOrigin + performance.now());
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
         const result = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });
         const state = result.state;
         state.activePet.battleMode = 'PAUSED';

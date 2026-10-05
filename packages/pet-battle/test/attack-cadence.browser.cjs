@@ -8,7 +8,7 @@ async function checkAttackCadence(cdp, evaluate, waitFor) {
       if (location.protocol !== 'http:') throw new Error('Fixture requires isolated HTTP');
       window.__cadenceNow = 100000;
       Date.now = () => window.__cadenceNow;
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
         const result = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });
         window.__cadenceFixture = result.state;
       });

@@ -1,30 +1,13 @@
-import { BATTLE_CHANNELS } from '../app/handlers.ts';
+import { BATTLE_CHANNELS } from './handlers.ts';
 import { assertBattleClientCommand } from '../app/client-policy.ts';
 import type { BattleClient } from '../client.ts';
-import type { BattleCommand, BattleResult } from '../contracts.ts';
-
-export interface BattleRuntime extends BattleClient {
-  close(): void;
-}
-
-/** The host owns app/window events; battle owns what they mean for its runtime. */
-export interface BattleLifecyclePort {
-  onQuit(listener: () => void): () => void;
-  onWindowClosed(listener: () => void): () => void;
-}
+import type { BattleCommand } from '../contracts.ts';
+import type { BattleResult } from '../contracts.ts';
+import type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from '../ports/runtime.ts';
 
 interface PendingRuntime {
   controller: AbortController;
   ready: Promise<BattleRuntime>;
-}
-
-/** Minimal registry port. Electron owns the concrete IPC and trusted window identity. */
-export interface BattleIpcRegistry {
-  handle(
-    channel: string,
-    handler: (event: { sender: { id: number } }, command: BattleCommand) => Promise<BattleResult>,
-  ): void;
-  removeHandler(channel: string): void;
 }
 
 export function mountBattleIpc(

@@ -85,5 +85,5 @@ Approved (2026-10-04 기준)
 
 ## Related implementation plan
 
-- [Client 경계와 연동 검증](../../../packages/pet-battle/docs/2026-09-30-client-isolation-work.md)
-- [Electron 엔진 전환과 검증](../../../packages/pet-battle/docs/electron-engine-migration.md)
+- [실행 구조와 폴더 안내](../../../packages/pet-battle/README.md)
+- [PetClient 연결 계약](../../../docs/pet-battle-client-handoff.md)

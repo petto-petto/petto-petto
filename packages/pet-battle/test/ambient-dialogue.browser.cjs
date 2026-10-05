@@ -18,7 +18,7 @@ function sharedPortraits() {
           const metadata = JSON.parse(readFileSync(metadataFile, 'utf8'));
           sprites[action] = {
             asset: path
-              .relative(battleRoot, metadataFile.replace('.json', '.png'))
+              .relative(path.join(battleRoot, 'ui'), metadataFile.replace('.json', '.png'))
               .split(path.sep)
               .join('/'),
             frameCount: metadata.frameCount,
@@ -277,7 +277,7 @@ async function checkAmbientDialogue(cdp, evaluate, waitFor, screenshot) {
       Date.now = () => window.__ambientNow;
       Math.random = () => window.__ambientRandom;
       const ready = Promise.all([
-        import('/packages/pet-battle/dist/ui/demo-gateway.js'),
+        import('/packages/pet-battle/dist/testing/demo-gateway.js'),
         import('/packages/pet-battle/dist/view/ambient-logs.js'),
       ]).then(async ([{ DemoBattleGateway }, { AMBIENT_MESSAGES }]) => {
         const { state } = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });

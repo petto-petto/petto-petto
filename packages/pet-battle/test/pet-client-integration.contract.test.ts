@@ -7,7 +7,7 @@ import {
   type BattleGateway,
   type BattleGrowthRules,
 } from '../src/index.ts';
-import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
+import { DemoBattleGateway } from '../src/testing/demo-gateway.ts';
 
 const pet: OwnedPet = {
   ownedPetId: 'owned-001',

@@ -19,7 +19,7 @@ app.whenReady().then(async () => {
   const settle = () => evaluate(`new Promise(resolve => setTimeout(resolve, 180))`);
   const artifacts = await fs.mkdtemp(path.join(os.tmpdir(), 'battle-peeking-'));
   try {
-    await window.loadFile(path.join(__dirname, '../ui/index.html'));
+    await window.loadFile(path.join(__dirname, '../dist/ui/index.html'));
     await settle();
     await click('STOP');
     await settle();

@@ -930,7 +930,7 @@ async function checkHpMotion(cdp, evaluate, waitFor, click, menu, screenshot) {
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
       if (location.hostname !== '127.0.0.1') throw new Error('Fixture requires isolated HTTP');
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(({ DemoBattleGateway }) => new DemoBattleGateway());
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(({ DemoBattleGateway }) => new DemoBattleGateway());
       window.__hpFixture = { enemyHpRatio: 1 };
       window.petBattle = { execute: async (command) => {
         const gateway = await ready;
@@ -1057,13 +1057,13 @@ async function checkHpMotion(cdp, evaluate, waitFor, click, menu, screenshot) {
       );
       const metadata = JSON.parse(await readFile(`${file}.json`, 'utf8'));
       sprites[action] = {
-        asset: path.relative(allowedRoot, `${file}.png`).split(path.sep).join('/'),
+        asset: `/${path.relative(repository, `${file}.png`).split(path.sep).join('/')}`,
         frameCount: metadata.frameCount,
       };
     }
     evolutionSprites.push(sprites);
   }
-  await evaluate(`Promise.all(${JSON.stringify(evolutionSprites.map((sprites) => `/${path.relative(repository, path.resolve(allowedRoot, sprites.idle.asset)).split(path.sep).join('/')}`))}.map(source => new Promise((resolve, reject) => {
+  await evaluate(`Promise.all(${JSON.stringify(evolutionSprites.map((sprites) => sprites.idle.asset))}.map(source => new Promise((resolve, reject) => {
     const image = new Image(); image.onload = () => resolve(true); image.onerror = () => reject(new Error('Evolution fixture asset missing')); image.src = source;
   })))`);
   await evaluate(`(() => {
@@ -1268,7 +1268,7 @@ async function checkIdentityAndSlam(cdp, evaluate, waitFor) {
   await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
       if (location.hostname !== '127.0.0.1') throw new Error('Fixture requires isolated HTTP');
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
         const result = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });
         window.__arenaFixture = result.state;
       });
@@ -1515,7 +1515,7 @@ async function main() {
       mobile: false,
     });
     await cdp.send('Page.navigate', {
-      url: `http://127.0.0.1:${server.address().port}/packages/pet-battle/ui/index.html`,
+      url: `http://127.0.0.1:${server.address().port}/packages/pet-battle/dist/ui/index.html`,
     });
     await waitFor(
       "document.querySelector('#pet-sheet')?.complete && document.querySelector('#pet-sheet').naturalWidth > 0 && document.querySelector('#battle-overlay')?.dataset.arenaPhase",

@@ -1,64 +1,44 @@
 # @pet/battle
 
-펫룸에서 선택한 펫을 표시하고 저장된 XP로 전투 진행도를 계산하는 Electron feature 패키지다.
-전투는 펫·성장 데이터를 읽기만 하며, 선택·XP·재화 저장은 각 소유 기능이 담당한다.
+펫룸에서 선택한 펫을 표시하고 저장된 XP로 전투 진행도를 계산하는 Electron feature 패키지다. 전투는 펫·성장 데이터를 읽기만 하며 선택·XP·재화 저장은 각 소유 기능이 담당한다.
 
-## 구조
+## 폴더 역할
 
-하네스의 feature 내부 책임 분리와 기존 패키지 구조를 따른다.
+| 위치                                   | 책임                                                                 |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `src/domain`                           | XP 진행·전투 단계 같은 순수 규칙                                     |
+| `src/app`                              | 전투 명령 흐름과 조회 Client 조립                                    |
+| `src/ports`                            | 전투가 요구하는 경계 인터페이스                                      |
+| `src/platform`                         | 파일 조회·IPC 등 기술 구현                                           |
+| `src/view`                             | DOM과 무관한 장면·모션·배치 계산                                     |
+| `src/ui`                               | TypeScript 화면 로직                                                 |
+| `src/testing`                          | 독립 화면 미리보기용 가짜 Client                                     |
+| `ui/`                                  | HTML·CSS·preload·창 설정 원본                                        |
+| `ui/assets/{enemies,backgrounds,pets}` | 실행 화면에서 읽는 전투 이미지 원본                                  |
+| `ui/art/{enemies,backgrounds}`         | 적 비교 시안과 배경 생성 원본·중간 파일. 실행 빌드에서 제외          |
+| `dist/`                                | TypeScript 컴파일 및 `ui/` 실행 파일의 빌드 출력. 직접 편집하지 않음 |
+| `test/`                                | 단위·계약·통합·브라우저·Electron 검증                                |
 
-```text
-packages/pet-battle/
-├── src/
-│   ├── domain/       # 전투 엔진·XP 진행 계산
-│   ├── app/          # 조회 연동·명령 정책·IPC와 수명 조립
-│   ├── adapters/     # 룸 스냅샷·파일 이미지 변환
-│   ├── view/         # 화면 모델·카메라·교전 모션 계산
-│   ├── ui/           # 타입 검사되는 DOM controller
-│   ├── client.ts     # 소비자용 읽기·화면 명령 계약
-│   ├── contracts.ts  # 전투 상태·명령·결과 타입
-│   ├── index.ts      # 기능 공개 진입점
-│   └── node.ts       # 호스트 의존성을 받아 내부 엔진 조립
-├── ui/               # HTML·CSS·preload·단독 Electron 실행
-├── assets/           # 실제 사용하는 전투 적·배경과 생성 원본
-├── test/             # 단위·계약·통합·화면 검증
-├── docs/             # 기능 명세·연동 안내·과거 작업 기록
-├── battle-rules.json # 연동 설정
-├── package.json
-└── tsconfig.json
-```
+전투 전용 실행 이미지는 `ui/assets`에서 관리하고 빌드 시 `dist/ui/assets`로 복사한다. `ui/art` 제작 자료는 앱에서 읽지 않는다. 공통 펫 스프라이트는 `apps/desktop/renderer/assets/pets`가 단일 원본이며 호스트가 경로를 주입한다.
 
-`dist/`와 `tsconfig.tsbuildinfo`는 빌드 산출물이며 커밋하지 않는다.
-`src/ui`는 TypeScript로 빌드되는 화면 로직, `ui`는 Electron이 직접 여는 화면 파일이다.
-공통 펫 이미지는 호스트가 제공하며, 전투 전용 적·배경만 이 패키지의 assets에 둔다.
+다른 feature 패키지와 같이 별도 패키지 `docs/`는 두지 않는다. 기능 명세는 [하네스 전투 명세](../../.harness/specs/features/2026-09-30-battle-integration.md), 실행과 폴더 안내는 이 README, Client 연결 계약은 [전투 Client handoff](../../docs/pet-battle-client-handoff.md)에 둔다. 이전 구현 과정의 날짜별 작업 기록은 현재 실행 안내로 취급하지 않는다.
 
-## 실행과 검증
+## 실행
+
+루트 `npm start`가 UI 정적 파일과 TypeScript를 모두 빌드해 Electron에서 `dist/ui/index.html`을 연다. 단독 데모는 명시적인 데모 명부를 사용하고 실제 앱 저장소에 연결하지 않는다.
 
 ```bash
 npm run build --workspace @pet/battle
+npm run demo --workspace @pet/battle
 npm run test --workspace @pet/battle
 npm run test:integration --workspace @pet/battle
 npm run test:electron --workspace @pet/battle
-npm run demo --workspace @pet/battle
 ```
-
-실제 앱은 루트의 `npm start`로 실행한다. 앱·데모·통합 검증 모두 TypeScript 엔진을 사용한다.
-Rust 엔진, Cargo 빌드, 별도 엔진 프로세스와 바이너리 경로 옵션은 제공하지 않는다.
-단독 데모는 명시적인 데모 명부를 사용하며 실제 앱의 저장소와 분리된다.
 
 ## 앱 연결
 
-- `@pet/battle/client`는 소비자용 BattleClient 타입을 제공한다.
-- `@pet/battle/node`의 mountBattle에 PetClient·룸 선택 조회·성장 곡선·이미지 경로·전투창 식별 및 종료 신호를 주입한다.
-- 전투창은 `ui/host-preload.cjs`를 사용하며 sandbox와 발신자 검증을 유지한다.
-- 성장 정보가 없는 개체는 외형·모션만 표시하고 연결 대기를 안내한다. 다른 개체의 XP를 사용하지 않는다.
-- 전투창 기본 크기는 640×420, 최소 크기는 360×180이다. 창을 다시 열면 STOP·투명도 설정을 유지한다.
-
-## 문서
-
-- [전투 규칙](docs/battle-system.md)
-- [화면 동작](docs/battle-ui.md)
-- [외부 Client 연결](docs/token-growth-integration.md)
-- [패키지 구조 정리와 검증](docs/package-structure.md)
-
-날짜가 붙은 문서와 엔진 전환 기록은 당시 구현의 작업 이력이다. 현재 실행 방법과 구조는 이 README를 따른다.
+- `@pet/battle/client`은 소비자가 호출하는 읽기·화면 명령 Client다.
+- `@pet/battle/node`의 `mountBattle`에 PetClient, 룸 선택 Client, 성장 곡선, 이미지 경로, 창 식별 및 종료 신호를 주입한다.
+- 전투 UI는 `@pet/battle/ui`로 공개한다. Electron 창은 sandbox preload와 context isolation을 사용한다.
+- 전투는 누적 XP를 읽어 적·단계·HP를 복원하고 XP를 쓰지 않는다. 성장 Client가 연결되지 않은 개체는 외형·모션과 연결 대기를 표시하며 다른 개체의 XP를 가져오지 않는다.
+- 전투창은 기본 640×420, 최소 360×180이며 크기 조절을 지원한다. 창을 다시 열면 STOP·투명도 설정을 유지한다.

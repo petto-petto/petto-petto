@@ -64,7 +64,7 @@ test('첫 상태 전에도 달빛 전투 배경과 로딩 안내를 표시하고
   const html = await readFile(new URL('index.html', UI_ROOT), 'utf8');
   const background = html.match(/<img\b[^>]*id="battle-background"[^>]*>/)?.[0];
   assert.ok(background);
-  assert.match(background, /src="\.\.\/assets\/backgrounds\/v2\/mushroom-forest\.png"/);
+  assert.match(background, /src="assets\/backgrounds\/v2\/mushroom-forest\.png"/);
   const notice = html.match(/<p\b[^>]*id="battle-notice"[^>]*>([^<]*)<\/p>/);
   assert.ok(notice);
   assert.doesNotMatch(notice[0], /\bhidden\b/);

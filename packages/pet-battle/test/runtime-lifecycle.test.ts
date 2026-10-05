@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { test } from 'node:test';
 import type { BattleCommand, BattleResult } from '../src/contracts.ts';
-import { mountBattleIpc, type BattleIpcRegistry, type BattleRuntime } from '../src/app/ipc.ts';
+import { mountBattleIpc } from '../src/platform/ipc.ts';
+import type { BattleIpcRegistry, BattleRuntime } from '../src/ports/runtime.ts';
 
 const command: BattleCommand = { type: 'GET_STATE', nowMs: 100 };
 const response = { marker: 'ready runtime' } as unknown as BattleResult;

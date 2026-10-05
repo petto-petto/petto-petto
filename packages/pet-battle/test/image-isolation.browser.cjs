@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 async function checkImageIsolation(cdp, evaluate, waitFor) {
   const fixture = await cdp.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js').then(async ({ DemoBattleGateway }) => {
         const { state } = await new DemoBattleGateway().execute({ type: 'GET_STATE', nowMs: Date.now() });
         state.activePet.battleMode = 'PAUSED';
         state.spectatorPetIds = [];

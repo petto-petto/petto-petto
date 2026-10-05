@@ -331,7 +331,7 @@ test('scene은 v2 에셋만 선택하고 제거된 v1 에셋은 존재하지 않
   const colors = ['red', 'orange', 'yellow', 'green', 'blue', 'purple', 'rainbow'];
   const faces = ['steady', 'worried', 'exhausted'];
   const backgrounds = ['mushroom-forest', 'crystal-ruins', 'starlight-shrine'];
-  const assetRoot = new URL('../assets/', import.meta.url);
+  const assetRoot = new URL('../ui/assets/', import.meta.url);
   const paths = [
     ...colors.flatMap((color) => faces.map((face) => `enemies/v2/${color}-${face}.png`)),
     ...backgrounds.map((background) => `backgrounds/v2/${background}.png`),
@@ -352,8 +352,8 @@ test('scene은 v2 에셋만 선택하고 제거된 v1 에셋은 존재하지 않
   ]);
 });
 
-test('v2 전투 배경은 background-generator scene 소스를 함께 보관한다', async () => {
-  const assetRoot = new URL('../assets/', import.meta.url);
+test('배경 생성 scene은 런타임 에셋과 분리된 아트 폴더에 보관한다', async () => {
+  const assetRoot = new URL('../ui/art/', import.meta.url);
   const generatedSources = [
     'backgrounds/generated/bg_201_mushroom_forest/scene.json',
     'backgrounds/generated/bg_202_crystal_ruins/scene.json',

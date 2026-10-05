@@ -148,6 +148,4 @@ export interface BattleResult {
   events: BattleEvent[];
 }
 
-export interface BattleGateway {
-  execute(command: BattleCommand): Promise<BattleResult>;
-}
+export type { BattleGateway } from './ports/battle-gateway.ts';

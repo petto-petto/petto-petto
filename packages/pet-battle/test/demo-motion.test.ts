@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
+import { DemoBattleGateway } from '../src/testing/demo-gateway.ts';
 import { deriveBattleScene } from '../src/view/scene.ts';
 import { sampleCombatMotion } from '../src/view/motion.ts';
 

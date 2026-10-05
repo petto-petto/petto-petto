@@ -1,17 +1,6 @@
-import type {
-  BattleCommand,
-  BattleGateway,
-  BattlePet,
-  BattleResult,
-  BattleState,
-} from '../contracts.ts';
-
-export type BattlePetSprites = NonNullable<BattleState['petSprites']>[string];
-
-/** Battle presentation output, not a replacement for the owner's PetClient. */
-export interface BattleSpritePort {
-  resolve(pet: BattlePet): BattlePetSprites;
-}
+import type { BattleCommand, BattlePet, BattleResult, BattleState } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
+import type { BattlePetSprites, BattleSpritePort } from '../ports/sprites.ts';
 
 export class SpriteBattleGateway implements BattleGateway {
   readonly #engine: BattleGateway;

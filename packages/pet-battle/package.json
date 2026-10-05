@@ -17,8 +17,15 @@
       "types": "./dist/node.d.ts",
       "default": "./dist/node.js"
     },
-    "./ui/*": "./ui/*",
-    "./assets/*": "./assets/*",
+    "./ui": {
+      "types": "./ui/index.html",
+      "default": "./dist/ui/index.html"
+    },
+    "./ui/*": {
+      "types": "./ui/*",
+      "default": "./dist/ui/*"
+    },
+    "./assets/*": "./dist/ui/assets/*",
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
@@ -29,8 +36,9 @@
     "@pet/room": "*"
   },
   "scripts": {
-    "build": "tsc --build tsconfig.json",
-    "demo": "npm run build && electron ui/demo-main.cjs",
+    "build": "tsc --build tsconfig.json && npm run build:ui",
+    "build:ui": "node scripts/build-ui.mjs",
+    "demo": "npm run build && electron dist/ui/demo-main.cjs",
     "test": "node --test \"test/**/*.test.ts\"",
     "test:integration": "npm run build && node --test test/client-engine.integration.cjs",
     "test:electron": "npm run build && node test/run-electron-smoke.cjs"

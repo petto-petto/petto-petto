@@ -7,10 +7,11 @@
  */
 
 export * from './contracts.ts';
-export { ElectronBattleEngine } from './domain/engine.ts';
+export { ElectronBattleEngine } from './app/battle-engine.ts';
 export type { BattleClient, BattleClientCommand } from './client.ts';
 export * from './view/scene.ts';
-export * from './app/handlers.ts';
+export * from './platform/handlers.ts';
+export * from './ports/index.ts';
 export * from './app/pet-client.ts';
 export * from './app/owned-pet-gateway.ts';
 export * from './app/sprite-gateway.ts';

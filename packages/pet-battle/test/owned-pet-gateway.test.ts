@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { PetClient } from '@pet/client';
 import * as battle from '../src/index.ts';
-import { DemoBattleGateway } from '../src/ui/demo-gateway.ts';
+import { DemoBattleGateway } from '../src/testing/demo-gateway.ts';
 
 test('앱 전투 조회는 저장된 펫 XP를 동기화하고 원시 토큰·임의 XP 명령은 받지 않는다', async () => {
   const commands: battle.BattleCommand[] = [];

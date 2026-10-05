@@ -30,7 +30,7 @@ app.whenReady().then(async () => {
     }];
   }))`);
   try {
-    await window.loadFile(path.join(__dirname, '../ui/index.html'));
+    await window.loadFile(path.join(__dirname, '../dist/ui/index.html'));
     // Test-only clock/visibility control. Production renderer has no debug switches.
     await evaluate(`window.logNow = Date.now(); Date.now = () => window.logNow;
       window.logPageHidden = false;

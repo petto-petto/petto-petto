@@ -1,16 +1,15 @@
 import type {
   BattleCommand,
   BattleEvent,
-  BattleGateway,
   BattlePet,
   BattlePreviewState,
   BattleResult,
   BattleOverlayState,
-  Rarity,
 } from '../contracts.ts';
+import type { BattleGateway } from '../ports/battle-gateway.ts';
+import { enemyHpRatio, legacyGrowthTarget, progression } from '../domain/battle.ts';
 import { sampleCombatMotion } from '../view/motion.ts';
 import { backgroundForEnemy, enemyColorForStage, enemySizeForStage } from '../view/scene.ts';
-import { progression } from './growth.ts';
 
 type Sync = Extract<BattleCommand, { type: 'SYNC_OWNED_PETS' }>;
 interface Progress extends BattlePet {
@@ -26,7 +25,6 @@ interface Transition {
 const rarities = ['COMMON', 'RARE', 'EPIC'] as const;
 const colors = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'RAINBOW'] as const;
 const sizes = ['SMALL', 'MEDIUM', 'LARGE'] as const;
-const legacyTargets: Record<Rarity, number> = { COMMON: 120, RARE: 100, EPIC: 80 };
 function next<T>(values: readonly T[], current: T): T {
   return values[(values.indexOf(current) + 1) % values.length]!;
 }
@@ -67,8 +65,7 @@ export class ElectronBattleEngine implements BattleGateway {
   }
   #hp(pet = this.#pet()): number {
     if (!pet) return 1;
-    const target = pet.target ?? legacyTargets[pet.rarity];
-    return 1 - Math.min(pet.intervalXp, target) / target;
+    return enemyHpRatio(pet.intervalXp, pet.target, pet.rarity);
   }
   #reset(preserveOpacity: boolean): void {
     const { displayOpacity, reducedMotion } = this.#preview;
@@ -225,7 +222,7 @@ export class ElectronBattleEngine implements BattleGateway {
         integer(command.amount, 'growth XP');
         const pet = this.#pets.find((pet) => pet.petId === command.petId);
         if (!pet) break;
-        const target = legacyTargets[pet.rarity];
+        const target = legacyGrowthTarget(pet.rarity);
         const total = pet.intervalXp + command.amount;
         integer(total, 'growth XP');
         const conquered = Math.floor(total / target);

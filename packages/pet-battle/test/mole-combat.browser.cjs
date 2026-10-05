@@ -17,7 +17,7 @@ function moleSprites(stage) {
       return [
         action,
         {
-          asset: path.relative(root, `${stem}.png`).split(path.sep).join('/'),
+          asset: path.relative(path.join(root, 'ui'), `${stem}.png`).split(path.sep).join('/'),
           frameCount: metadata.frameCount,
         },
       ];
@@ -209,7 +209,7 @@ async function checkMoleCombat(cdp, evaluate, waitFor, screenshot) {
       window.__moleOptions = { species: 'mole_digger', evolution: 0, running: false,
         reduced: false, fallback: false, id: 'mole-fixture-1' };
       const sprites = ${JSON.stringify(sprites)};
-      const ready = import('/packages/pet-battle/dist/ui/demo-gateway.js')
+      const ready = import('/packages/pet-battle/dist/testing/demo-gateway.js')
         .then(({ DemoBattleGateway }) => new DemoBattleGateway());
       window.petBattle = { execute: async command => {
         const gateway = await ready;
