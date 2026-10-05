@@ -11,10 +11,11 @@
   "scripts": {
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "postinstall": "node scripts/rebuild-native.mjs",
+    "postinstall": "node scripts/rebuild-native.mjs && node scripts/fetch-fonts.mjs",
+    "fonts:fetch": "node scripts/fetch-fonts.mjs",
     "typecheck": "tsc --build && tsc -p tsconfig.test.json",
     "test": "tsc --build && node --experimental-strip-types --test \"packages/*/test/**/*.test.ts\"",
-    "build": "npm run build --workspace @pet/main-overlay && npm run build:ui --workspace @pet/battle && tsc --build",
+    "build": "node scripts/fetch-fonts.mjs && npm run build --workspace @pet/main-overlay && npm run build:ui --workspace @pet/battle && tsc --build",
     "token:grant": "tsc --build && electron apps/desktop/dist/main/admin/grant-tokens-cli.js",
     "start": "npm run build && electron apps/desktop/dist/main/main.js"
   },

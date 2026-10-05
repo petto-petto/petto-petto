@@ -35,9 +35,11 @@ export function observed(counts: TokenCounts): number {
 /**
  * 기획서 8.5의 "보상 대상 토큰".
  *
- * 관측 토큰과 **다른 값**이어야 한다는 것이 계약의 핵심이다. 여기서는 캐시 읽기를
- * 제외하는 단순 정책을 쓴다. 최종 환산 비율은 재화 도메인이 소유하므로
- * (`CurrencyPort.grantUsageTokens`) meta는 코인 값을 계산하지 않는다.
+ * 관측 토큰과 **다른 값**이어야 한다는 것이 계약의 핵심이다. 캐시 읽기를 제외한다 — 캐시
+ * 읽기는 같은 맥락을 다시 읽을 때마다 쌓여서 관측 토큰의 대부분을 차지하고, 그대로 보상하면
+ * 새로 일한 양이 아니라 대화 길이를 보상하게 된다.
+ *
+ * 이 값이 **그대로** 재화가 된다. 재화의 단위가 토큰이라 환산 비율이 없다.
  */
 export function rewardTokens(counts: TokenCounts): number {
   return counts.input + counts.output + counts.cacheCreate;

@@ -1,10 +1,31 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { RoomSelectionAdapter } from '@pet/room';
-import { roomPetViews, seedCollection, withActivePet } from '../src/domain/pet.ts';
+import { collectionFromRecords, roomPetViews, withActivePet } from '../src/domain/pet.ts';
+
+function sampleCollection() {
+  return collectionFromRecords([
+    {
+      ownedPetId: 'seed-001',
+      speciesId: '003',
+      level: 3,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: false,
+    },
+    {
+      ownedPetId: 'seed-006',
+      speciesId: '006',
+      level: 16,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: true,
+    },
+  ]).collection;
+}
 
 test('selection adapter reads the live room snapshot without requiring a store or writer', () => {
-  let collection = seedCollection();
+  let collection = sampleCollection();
   const source = () => roomPetViews(collection);
   const reader = new RoomSelectionAdapter(source);
   assert.equal(reader.getSnapshot().activePetId, 'seed-006');
@@ -18,9 +39,9 @@ test('selection adapter reads the live room snapshot without requiring a store o
 });
 
 test('selection adapter distinguishes no selection, empty roster, and read errors', () => {
-  const views = roomPetViews(seedCollection()).map((pet) => ({ ...pet, isActive: false }));
+  const views = roomPetViews(sampleCollection()).map((pet) => ({ ...pet, isActive: false }));
   assert.equal(new RoomSelectionAdapter(() => views).getSnapshot().activePetId, null);
-  assert.equal(new RoomSelectionAdapter(() => views).getSnapshot().pets.length, 6);
+  assert.equal(new RoomSelectionAdapter(() => views).getSnapshot().pets.length, 2);
   assert.deepEqual(new RoomSelectionAdapter(() => []).getSnapshot(), {
     pets: [],
     activePetId: null,
@@ -36,14 +57,14 @@ test('selection adapter distinguishes no selection, empty roster, and read error
 });
 
 test('selection adapter snapshots do not expose mutable room view objects', () => {
-  const views = roomPetViews(seedCollection());
+  const views = roomPetViews(sampleCollection());
   const snapshot = new RoomSelectionAdapter(() => views).getSnapshot();
   assert.notEqual(snapshot.pets, views);
   assert.notEqual(snapshot.pets[0], views[0]);
 });
 
 test('selection adapter rejects duplicate identities and multiple active pets', () => {
-  const views = roomPetViews(seedCollection());
+  const views = roomPetViews(sampleCollection());
   const first = views[0]!;
   assert.throws(() => new RoomSelectionAdapter(() => [first, first]).getSnapshot(), /중복/);
   assert.throws(

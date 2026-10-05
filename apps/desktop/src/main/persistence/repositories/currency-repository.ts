@@ -110,6 +110,22 @@ export class CurrencyRepository {
     return row?.balance ?? 0;
   }
 
+  /**
+   * `since` 이후에 지급된 양의 합. 소비(음수)는 세지 않는다.
+   *
+   * `occurred_at` 은 전부 `toISOString()` 이 쓴 UTC 문자열이라 사전순 비교가 곧 시간순이다.
+   */
+  earnedSince(since: string): number {
+    const row = this.#database
+      .prepare<[string], { earned: number }>(
+        `SELECT COALESCE(SUM(delta), 0) AS earned
+         FROM currency_ledger
+         WHERE delta > 0 AND occurred_at >= ?`,
+      )
+      .get(since);
+    return row?.earned ?? 0;
+  }
+
   totals(): CurrencyTotalsRow {
     const row = this.#database
       .prepare<[], { earned: number; spent: number }>(

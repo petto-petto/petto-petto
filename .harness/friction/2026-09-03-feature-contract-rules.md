@@ -245,3 +245,92 @@ Remaining gaps:
   under this rule it waits for one.
 - `meta` still declares `CollectionPort` (trophy placement and room's `pet:overlay` channel). Trophy
   has no owner domain either.
+
+
+---
+
+# 2026-10-05 — 작업하는 쪽이 Port 를 선언하고, 있으면 재사용하고, 없는 데이터는 Mock
+
+## Evidence
+
+- Request, verbatim: “진행방식에서 담당자에게 요청하는 것이 아니라, 다른 도메인을 사용한다고 하면
+  Sqlite(DB)에 선언된 값을 사용해서 도메인 단위만 나누어서 Port, Client를 각각 사용하는 사람이
+  구현하면 됩니다.” Then: “하네스 Port/Client 부분은 모두 작업하는 사람이 선언해서 사용하는 걸로
+  해주세요. 있으면 재사용하고 그리고 현재 없는 DB는 다른 도메인의 DB는 아직 개발중인 것 같습니다.
+  Mock으로 하고 이후에 변경해주세요.”
+- Friction that prompted it: while listing the data `meta` must integrate, the agent followed the
+  rule and proposed handing four domains (gacha, combine, battle, room) a requirements request and
+  waiting. The requester corrected that plan in the next message.
+- The rule said “The owning feature declares the Port” and “Consumers bring requirements; owners
+  decide the shape.”
+- Baseline: `bash .harness/tests/verify-contract.sh` exited 0 with that wording in place.
+
+## Root cause
+
+Stale guidance. The 2026-09-17 wording was the decision at the time; the decision moved. It is not a
+missing instruction — the rule answered the question, with the answer the team no longer wants.
+
+## Pruning
+
+- Canonical owner unchanged: `.harness/rules/feature-contracts.md`.
+- Removed “Consumers bring requirements; owners decide the shape.” It only makes sense when the
+  owner publishes.
+- Folded “Facts that exist only at one moment must be stored by the owner” into the new mock rule.
+  The observation survives (a current-state table cannot answer history); the instruction to file a
+  column request does not.
+- Dropped the “Written by” column from the chain table. Every row would now say the same thing.
+- Kept: one Port per domain, no rules in an implementation, only the owner alters its tables, no
+  raw query from a call site, a read failure throws.
+- Added “Read what the database declares.” The requester's wording was “Sqlite(DB)에 선언된 값을
+  사용해서”. Without it the mock rule has a loophole: deriving a missing value from another
+  domain's table instead of mocking it. **Assumption recorded for the requester:** this reads the
+  request as forbidding such derivation (for example, counting gacha draws from `gacha:` keys in
+  the currency ledger). If derivation is acceptable, this rule line should go.
+- Removed the contract assertion that forbade “The consumer builds the whole chain.” It pinned the
+  2026-09-09 wording as retired; the direction it forbade is the rule again.
+- The Korean guide was rewritten as the reading of the new rule and adds no instruction of its own.
+
+## Approval
+
+Given by the requester on 2026-10-05 in the request above.
+
+## RED
+
+```bash
+bash .harness/tests/verify-contract.sh
+```
+
+```text
+FAIL: feature-contracts.md must state that the feature doing the work declares the Port
+FAIL: feature-contracts.md must tell the worker to reuse an existing Port before declaring one
+FAIL: feature-contracts.md must tell the worker to mock data that has no table yet
+FAIL: feature-contracts.md must not keep the retired owner-declared Port rule
+```
+
+## GREEN
+
+The same command after the rewrite: no `FAIL` lines, exit code 0.
+
+## Contract verification
+
+`bash .harness/tests/verify-contract.sh` ends with `Contract verification passed.` and exits 0.
+
+## CHANGELOG.md
+
+Recorded under `## Unreleased` / `### Changed`. Changed canonical files:
+`.harness/rules/feature-contracts.md`, `.harness/guides/feature-contracts-kr.html`,
+`.harness/README.md`, `.harness/tests/verify-contract.sh`.
+
+## Completion
+
+The check fails if the owner-declared wording returns or if the reuse or mock rule is removed.
+
+Remaining gaps:
+
+- Resolved later on 2026-10-05 at the requester's instruction (“네 TokenClient로 합쳐주세요”):
+  `meta` declared `CurrencyPort` over `currency_ledger` while `TokenClient` already exposed
+  `balance` and `grantOnce` over the same table. `CurrencyPort` and its adapter are gone; `meta`
+  narrows `TokenClient`, and the one missing read went into `TokenClient` as `earnedSince`. The
+  rule's token example was updated to that code.
+- `GachaPort` (draw count), the fusion and battle facts, and trophy placement are still mocks. They
+  wait for tables in those domains, as the mock rule intends.

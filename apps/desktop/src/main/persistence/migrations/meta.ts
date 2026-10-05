@@ -129,4 +129,39 @@ export const META_MIGRATIONS: readonly SqliteMigration[] = [
       `);
     },
   },
+  {
+    scope: 'meta',
+    version: 2,
+    /**
+     * 재화를 코인이라 부르던 것을 없앤다. 재화의 단위는 토큰이다.
+     *
+     * v1 의 열 설명에는 `coin` 이 남는다 — 위에 적었듯 배포한 migration 의 주석은 고치지 않는다.
+     * 지금 쓰는 값은 다음과 같다.
+     *
+     * - `meta_achievement_reward.kind`: token(토큰) | title(칭호) | trophy(트로피)
+     * - `meta_achievement_fact.fact_key`: firstPet | firstEpic | dexOwned | dexComplete |
+     *   fusionCount | fusionEpic | maxPetLevel | maxLevelReached | evolutionCount | battleWins |
+     *   maxStreak | earnedTokens
+     *
+     * 지급 결과 문구(`코인 10`)도 함께 옮긴다. 업적 화면이 이 값을 그대로 보여 주기 때문이다.
+     * 금액은 건드리지 않는다 — 이미 지급된 양은 원장에 적힌 그대로다.
+     *
+     * 사실 두 개를 지운다. `dexTotal` 은 도감 칸 수를 상수로 들고 있던 값이고 이제 등록된 종
+     * 수를 매번 읽는다. `commonFusionEpic` 은 "커먼 두 마리로 에픽"이라는, 실제 합성 규칙으로는
+     * 일어날 수 없는 사실이었다. 저장소는 스냅샷에 없는 행을 스스로 지우지 못하므로(이전
+     * 확정본과의 차이만 쓴다) 여기서 지운다.
+     */
+    name: 'rename coin rewards to token and drop retired facts',
+    up(database) {
+      database.exec(`
+        UPDATE meta_achievement_reward
+           SET detail = '토큰 ' || substr(detail, 4)
+         WHERE kind = 'coin' AND detail LIKE '코인 %';
+
+        UPDATE meta_achievement_reward SET kind = 'token' WHERE kind = 'coin';
+
+        DELETE FROM meta_achievement_fact WHERE fact_key IN ('dexTotal', 'commonFusionEpic');
+      `);
+    },
+  },
 ];

@@ -61,7 +61,7 @@ test('재화가 닫고 다시 열어도 남는다', async () => {
   const second = await openRepository(directory);
   try {
     // 이 테스트가 존재하는 이유: 예전 구현은 인메모리라 여기서 0이 나왔고, meta 는 멱등
-    // 키를 자기 스냅샷에 남겨 다시 지급하지도 않았다. 코인이 영구히 사라지는 상태였다.
+    // 키를 자기 스냅샷에 남겨 다시 지급하지도 않았다. 재화가 영구히 사라지는 상태였다.
     assert.equal(second.repository.balance(), 30);
     assert.deepEqual(second.repository.totals(), { earned: 42, spent: 12, balance: 30 });
     assert.equal(second.repository.recent(10).length, 2);

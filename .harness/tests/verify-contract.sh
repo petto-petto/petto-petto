@@ -364,16 +364,25 @@ for instruction in \
   assert_contains AGENTS.md "$instruction" "AGENTS.md is missing required guidance: $instruction"
 done
 
-# 2026-09-09 팀이 Event 창구를 버리고 테이블 단위 Port 하나로 좁혔고, 2026-09-17 Port 인터페이스를
-# 가진 쪽에 두기로 했다(선례: packages/pet-client). 규칙이 옛 모델로 돌아가면 팀원이 쓰지 않기로
-# 한 구조를 만들게 된다.
+# 2026-09-09 팀이 Event 창구를 버리고 Port 하나로 좁혔다. Port 를 누가 선언하는지는 2026-09-17 에
+# "가진 쪽"으로 정했다가 2026-10-05 에 "작업하는 쪽이 선언하고, 이미 있으면 재사용하고, 아직 표가
+# 없는 데이터는 Mock 으로 둔다"로 바꿨다. 규칙이 옛 모델로 돌아가면 팀원이 담당자를 기다리거나 남의
+# 표를 만들게 된다.
 assert_contains .harness/rules/feature-contracts.md \
-  'The owning feature declares the Port.' \
-  'feature-contracts.md must state that the feature owning the data declares the Port interface'
+  'The feature doing the work declares the Port.' \
+  'feature-contracts.md must state that the feature doing the work declares the Port'
+
+assert_contains .harness/rules/feature-contracts.md \
+  'Reuse before declaring.' \
+  'feature-contracts.md must tell the worker to reuse an existing Port before declaring one'
+
+assert_contains .harness/rules/feature-contracts.md \
+  'Mock what no table holds yet.' \
+  'feature-contracts.md must tell the worker to mock data that has no table yet'
 
 assert_not_contains .harness/rules/feature-contracts.md \
-  'The consumer builds the whole chain.' \
-  'feature-contracts.md must not keep the retired consumer-owned Port rule'
+  'The owning feature declares the Port.' \
+  'feature-contracts.md must not keep the retired owner-declared Port rule'
 
 assert_not_contains .harness/rules/feature-contracts.md \
   'a fact, announced' \

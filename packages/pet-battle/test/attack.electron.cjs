@@ -310,10 +310,9 @@ async function run() {
     { PetGrowthRepository },
     { OVERLAY_GROWTH_RULES },
     { mountBattle },
-    { PetClientRoomAdapter, RoomSelectionAdapter, seedCollection, toSnapshot },
-    { RoomState, loadRoomCollection, mountRoom },
+    { PetClientRoomAdapter, RoomSelectionAdapter },
+    { RoomState, mountRoom },
     { RoomCollectionPort },
-    { JsonFileStore, ROOM_FILE_NAME },
   ] = await Promise.all([
     desktop('windows.js'),
     desktop('persistence/sqlite-file.js'),
@@ -327,7 +326,6 @@ async function run() {
     import('@pet/room'),
     desktop('room.js'),
     desktop('collection.js'),
-    desktop('store.js'),
   ]);
   database = new SqliteFileDatabase({
     filePath: path.join(directory, 'petto.sqlite'),
@@ -335,7 +333,8 @@ async function run() {
   });
   database.open();
   const pets = new SqlitePetClient(new PetRepository(database));
-  const growth = new SqliteGrowthReadClient(new PetGrowthRepository(database));
+  const growthRepository = new PetGrowthRepository(database);
+  const growth = new SqliteGrowthReadClient(growthRepository);
   const roomPets = new PetClientRoomAdapter(pets);
   const [mole, initialWizard] = pets.createOwnedPets(['003', '006']);
   const wizard = pets.updateGrowth(initialWizard.ownedPetId, {
@@ -345,30 +344,21 @@ async function run() {
     evolutionStage: 1,
   });
   pets.setActivePet(mole.ownedPetId);
-  const sharedBefore = pets.listOwnedPets();
-  const roomStore = new JsonFileStore(directory, ROOM_FILE_NAME);
-  const seeded = seedCollection();
-  roomStore.save(
-    toSnapshot({
-      ...seeded,
-      pets: [
-        ...seeded.pets,
-        ...[mole, wizard].map((pet) => ({
-          id: pet.ownedPetId,
-          speciesPetId: pet.speciesId,
-          level: pet.level,
-        })),
-      ],
-    }),
+  const room = new RoomState({ now: () => new Date() }, new RoomCollectionPort(), pets, () =>
+    growthRepository.growth(),
   );
-  const roomCollection = loadRoomCollection(roomStore);
-  const room = new RoomState(
-    roomStore,
-    { now: () => new Date() },
-    new RoomCollectionPort(roomCollection),
-    roomCollection,
-  );
-  mountRoom(room, { showRoom() {}, broadcast: host.broadcast });
+  const roomHost = { showRoom() {}, navigate() {}, broadcast: host.broadcast };
+  growthRepository.adoptRoster(room.growthSeeds());
+  const profiles = growthRepository.loadAll();
+  Object.assign(profiles[wizard.ownedPetId].pet, {
+    level: wizard.level,
+    totalXp: wizard.totalXp,
+    xpIntoLevel: wizard.xpIntoLevel,
+    evolutionStage: wizard.evolutionStage,
+  });
+  growthRepository.saveAll(profiles);
+  room.applyGrowth(growthRepository.growth(), roomHost);
+  mountRoom(room, roomHost);
   closeBattle = mountBattle(roomPets, ipcMain, {
     growth,
     petAssetsDir: host.petAssetsDir,
@@ -400,8 +390,8 @@ async function run() {
     },
   });
   await within(overlay.loadURL('about:blank'), 'overlay document load');
-  await evaluate(overlay, 'window.petApi.setActivePet("seed-001")');
-  assert.equal(roomStore.load().activePetId, 'seed-001');
+  await evaluate(overlay, `window.petApi.setActivePet(${JSON.stringify(mole.ownedPetId)})`);
+  assert.equal(pets.getActivePet().ownedPetId, mole.ownedPetId);
   await evaluate(overlay, 'window.overlay.openBattle()');
   const battle = host.getBattleWindow();
   assert.ok(battle, 'overlay.openBattle must create the real host window');
@@ -417,32 +407,14 @@ async function run() {
   ]);
   await waitFor(battle, '!document.hidden', 'host battle window shown');
   assert.deepEqual(battle.getContentSize(), [640, 420]);
-  await verifyRoomPet(battle, room.activeView());
-  await evaluate(overlay, 'window.petApi.setActivePet("seed-006")');
-  await verifyRoomPet(battle, room.activeView());
-  await capturePreview(battle, 'unlinked-room-wizard');
-  assert.equal(host.getBattleWindow(), battle, 'JSON room selection updates the running window');
-  assert.deepEqual(battle.getContentSize(), [640, 420]);
-  const unlinkedBeforeMotion = await state(battle);
-  await verifyAttack(battle, 'JSON room selection → unlinked real assets');
-  const unlinkedAfterMotion = await state(battle);
-  assert.equal(unlinkedAfterMotion.growthStatus, 'UNLINKED');
-  assert.equal(unlinkedAfterMotion.activePet.stage, unlinkedBeforeMotion.activePet.stage);
-  assert.equal(unlinkedAfterMotion.enemyHpRatio, unlinkedBeforeMotion.enemyHpRatio);
-  assert.deepEqual(pets.listOwnedPets(), sharedBefore);
-  assert.equal(roomStore.load().activePetId, 'seed-006');
-  console.log(
-    'PASS JSON room IPC selection / live unlinked sprites / no fabricated XP / unchanged size',
-  );
-
-  await evaluate(overlay, `window.petApi.setActivePet(${JSON.stringify(mole.ownedPetId)})`);
   await verifyPet(battle, mole);
   await evaluate(overlay, `window.petApi.setActivePet(${JSON.stringify(wizard.ownedPetId)})`);
   await verifyPet(battle, wizard);
   await capturePreview(battle, 'linked-room-wizard');
   assert.equal(host.getBattleWindow(), battle, 'linked room selection updates the running window');
-  assert.equal(pets.getActivePet().ownedPetId, mole.ownedPetId);
-  const selectedRoomSnapshot = roomStore.load();
+  assert.equal(pets.getActivePet().ownedPetId, wizard.ownedPetId);
+  const sharedBefore = pets.listOwnedPets();
+  const selectedRoomSnapshot = room.scene();
   await assert.rejects(
     command(battle, { type: 'GROWTH_XP_ADDED', petId: wizard.ownedPetId, amount: 99999, nowMs: 0 }),
     /허용하지/,
@@ -455,7 +427,7 @@ async function run() {
     'battle controls must not grant owner XP',
   );
   assert.deepEqual(pets.listOwnedPets(), sharedBefore);
-  assert.deepEqual(roomStore.load(), selectedRoomSnapshot);
+  assert.deepEqual(room.scene(), selectedRoomSnapshot);
   await closeFromUi(battle, 'host battle');
   assert.equal(overlay.isDestroyed(), false);
   assert.equal(host.getBattleWindow(), undefined);

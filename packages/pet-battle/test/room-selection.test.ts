@@ -1,12 +1,29 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { OwnedPet } from '@pet/client';
-import { roomPetViews, seedCollection, withActivePet } from '@pet/room';
+import { collectionFromRecords, roomPetViews, withActivePet } from '@pet/room';
 import { PetBattleIntegration, type BattleCommand, type BattleGateway } from '../src/index.ts';
 import { DemoBattleGateway } from '../src/testing/demo-gateway.ts';
 
 function fixture() {
-  let collection = seedCollection();
+  let collection = collectionFromRecords([
+    {
+      ownedPetId: 'seed-001',
+      speciesId: '003',
+      level: 3,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: false,
+    },
+    {
+      ownedPetId: 'seed-006',
+      speciesId: '006',
+      level: 16,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: true,
+    },
+  ]).collection;
   let owned: OwnedPet[] = [];
   let failure: Error | undefined;
   const commands: BattleCommand[] = [];

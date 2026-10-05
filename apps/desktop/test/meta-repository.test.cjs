@@ -38,7 +38,7 @@ const counts = (input) => ({ input, output: input / 2, cacheCreate: 0, cacheRead
 /** 모든 표에 한 줄 이상이 들어간 스냅샷. 빠진 표가 있으면 그 표의 왕복을 검증하지 못한다. */
 function sample() {
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     sources: [
       {
         provider: 'claude_code',
@@ -85,15 +85,15 @@ function sample() {
       firstPet: 1,
       firstEpic: 0,
       dexOwned: 2,
-      dexTotal: 20,
       dexComplete: 0,
       fusionCount: 0,
-      commonFusionEpic: 0,
+      fusionEpic: 0,
       maxPetLevel: 21,
       maxLevelReached: 0,
       evolutionCount: 1,
       battleWins: 3,
       maxStreak: 2,
+      earnedTokens: 47_572,
     },
     progress: [
       {
@@ -107,7 +107,7 @@ function sample() {
       {
         achievementId: 'collection.first_pet',
         rewardKey: 'achievement:collection.first_pet',
-        kind: 'coin',
+        kind: 'token',
         status: 'done',
         attempts: 1,
         lastError: null,
@@ -331,6 +331,76 @@ test('옮긴 뒤 이름을 바꾸기 전에 꺼졌다면 다시 옮기지 않는
     assert.equal(existsSync(`${legacyPath}.migrated`), true);
   } finally {
     opened.database.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('meta v2 migration 은 코인 보상을 토큰으로 옮기고 쓰지 않는 사실을 지운다', async () => {
+  const directory = temporaryDirectory('coin-to-token');
+  const m = await modules();
+  const filePath = join(directory, 'petto.sqlite');
+  const isMetaV2 = (migration) => migration.scope === 'meta' && migration.version === 2;
+
+  // 재화를 코인이라 부르던 시절의 DB 를 만든다 — meta v2 만 빼고 적용한다.
+  const before = new m.SqliteFileDatabase({
+    filePath,
+    migrations: m.APP_MIGRATIONS.filter((migration) => !isMetaV2(migration)),
+  });
+  before.open();
+  try {
+    const reward = before.prepare(
+      `INSERT INTO meta_achievement_reward
+         (achievement_id, reward_key, kind, status, attempts, last_error, detail)
+       VALUES (?, ?, ?, ?, 1, NULL, ?)`,
+    );
+    reward.run('usage.tokens_1m', 'achievement:usage.tokens_1m', 'coin', 'done', '코인 20');
+    reward.run('usage.tokens_10m', 'achievement:usage.tokens_10m', 'coin', 'pending', null);
+    reward.run(
+      'collection.first_pet',
+      'achievement-title:collection.first_pet',
+      'title',
+      'done',
+      '초보 조련사',
+    );
+    const fact = before.prepare(
+      'INSERT INTO meta_achievement_fact (fact_key, fact_value) VALUES (?, ?)',
+    );
+    fact.run('dexTotal', 20);
+    fact.run('commonFusionEpic', 1);
+    fact.run('fusionCount', 4);
+  } finally {
+    before.close();
+  }
+
+  const after = new m.SqliteFileDatabase({ filePath, migrations: m.APP_MIGRATIONS });
+  after.open();
+  try {
+    assert.deepEqual(
+      after
+        .prepare(
+          'SELECT reward_key AS rewardKey, kind, detail FROM meta_achievement_reward ORDER BY rowid',
+        )
+        .all(),
+      [
+        { rewardKey: 'achievement:usage.tokens_1m', kind: 'token', detail: '토큰 20' },
+        { rewardKey: 'achievement:usage.tokens_10m', kind: 'token', detail: null },
+        {
+          rewardKey: 'achievement-title:collection.first_pet',
+          kind: 'title',
+          detail: '초보 조련사',
+        },
+      ],
+      '종류와 문구만 바뀌고 멱등 키는 그대로다',
+    );
+    assert.deepEqual(
+      after
+        .prepare('SELECT fact_key AS factKey, fact_value AS factValue FROM meta_achievement_fact')
+        .all(),
+      [{ factKey: 'fusionCount', factValue: 4 }],
+      '지금도 쓰는 사실은 남는다',
+    );
+  } finally {
+    after.close();
     rmSync(directory, { recursive: true, force: true });
   }
 });

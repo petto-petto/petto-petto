@@ -122,6 +122,62 @@ function bar(ratio) {
   ]);
 }
 
+/**
+ * 화면 공용 그림 — 팔레트와 종류 아이콘(동전 · 깃발 · 잔).
+ *
+ * 줄마다 달라지지 않으므로 한 번만 받아 둔다. 받기 전에 그리면 색이 없는 그림이 나오므로 모든
+ * 렌더가 `iconsReady` 를 기다린다.
+ */
+let icons = { palette: {}, rewards: {} };
+const iconsReady = api.uiIcons().then((loaded) => {
+  icons = loaded;
+});
+
+/**
+ * 토큰을 뜻하는 동전. 토큰 숫자 옆에는 어디서나 이 그림을 둔다 — 업적 보상의 동전과 정보 화면의
+ * 숫자가 같은 것임이 그림으로 읽힌다. `large` 는 화면에서 가장 강조되는 값에 쓰는 3배 크기다.
+ */
+function tokenIcon(large = false) {
+  const canvas = badgeCanvas(icons.rewards.token ?? []);
+  canvas.setAttribute('class', large ? 'token-icon large' : 'token-icon');
+  return canvas;
+}
+
+/** 동전과 숫자를 한 덩어리로 묶는다. 줄이 바뀌어도 둘이 떨어지지 않는다. */
+function withToken(node, large = false) {
+  return el('span', { class: 'with-token' }, [tokenIcon(large), node]);
+}
+
+/** 잠긴 배지의 색 농도. 원래 색의 절반을 칸 바탕에 섞는다. */
+const LOCKED_BADGE_ALPHA = 0.5;
+
+/**
+ * 업적 배지를 그린다. 16×16 픽셀 그림을 캔버스에 1:1 로 찍고, 크기는 CSS 가 정수 배율로 키운다.
+ *
+ * 달성한 업적은 팔레트 색 그대로다. 잠긴 업적도 **자기 색**으로 그리되 절반만 올려 바탕에 묻히게
+ * 한다. 예전에는 잠긴 배지를 나무색으로만 칠했는데, 처음 쓰는 사용자는 전부 잠겨 있어서 목록이
+ * 온통 갈색이었다. 달성은 색의 선명함에 더해 금색 띠와 달성 시각으로 구분된다.
+ */
+function badgeCanvas(rows, unlocked = true) {
+  const palette = icons.palette;
+  const size = rows.length;
+  const canvas = el('canvas', { attrs: { width: size, height: size, 'aria-hidden': 'true' } });
+  const context = canvas.getContext('2d');
+  if (!context) return canvas;
+  context.imageSmoothingEnabled = false;
+  context.globalAlpha = unlocked ? 1 : LOCKED_BADGE_ALPHA;
+
+  rows.forEach((line, y) => {
+    for (let x = 0; x < line.length; x += 1) {
+      const pixel = line[x];
+      if (pixel === '.') continue;
+      context.fillStyle = palette[pixel];
+      context.fillRect(x, y, 1, 1);
+    }
+  });
+  return canvas;
+}
+
 /* ---------- 화면 상태 ---------- */
 
 const SUBTABS = {
@@ -240,6 +296,7 @@ function render() {
 async function renderNow() {
   content.classList.remove('no-scroll');
   try {
+    await iconsReady;
     if (ui.screen === 'info') {
       if (ui.subtab === 'summary') return await renderSummary();
       return await renderUsage();
@@ -372,21 +429,28 @@ async function renderSummary() {
     el('div', { class: 'hero-figure' }, [
       data.availableTokens.error
         ? el('span', { class: 'hero-value error', text: '⚠ 조회 실패' })
-        : el('span', {
-            class: 'hero-value',
-            text: compact(data.availableTokens.value),
-            title: `${num(data.availableTokens.value)} 토큰`,
-          }),
-      el('span', {
-        class: 'hero-sub',
-        text: data.todayEarnedCoins.error
-          ? '오늘 조회 실패'
-          : `오늘 +${num(data.todayEarnedCoins.value)}`,
-      }),
+        : withToken(
+            el('span', {
+              class: 'hero-value',
+              text: compact(data.availableTokens.value),
+              title: `${num(data.availableTokens.value)} 토큰`,
+            }),
+            true,
+          ),
+      data.todayEarnedTokens.error
+        ? el('span', { class: 'hero-sub', text: '오늘 조회 실패' })
+        : el('span', { class: 'hero-sub with-token' }, [
+            el('span', { text: '오늘' }),
+            tokenIcon(),
+            el('span', { text: `+${num(data.todayEarnedTokens.value)}` }),
+          ]),
     ]),
     // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
     data.hasNoRecords
-      ? el('div', { class: 'card-note', text: '설치 이후 기록이 아직 없습니다' })
+      ? el('div', {
+          class: 'card-note',
+          text: '아직 기록이 없습니다. 앱을 켜 둔 동안 쓴 토큰만 쌓여요',
+        })
       : null,
   ]);
 
@@ -398,13 +462,29 @@ async function renderSummary() {
   const records = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
     el('div', { class: 'stat-grid record-grid' }, [
-      stat('사용한 토큰', el('div', { class: 'value', text: compact(data.totalObservedTokens) })),
+      // 사용 가능 토큰과 같은 원장의 값이다. 지금까지 쌓은 양이고, 써도 줄지 않는다.
+      stat(
+        '누적 토큰',
+        data.totalEarnedTokens.error
+          ? fieldValue(data.totalEarnedTokens)
+          : el('div', { class: 'value with-token' }, [
+              tokenIcon(),
+              el('span', { text: compact(data.totalEarnedTokens.value) }),
+            ]),
+      ),
       stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
-      stat('뽑은 횟수', fieldValue(data.drawCount)),
+      stat(
+        '뽑은 횟수',
+        // 뽑기가 아직 횟수를 저장하지 않는다. 0 은 실제 값이라 쓰지 않고 모른다고 그린다.
+        !data.drawCount.error && data.drawCount.value === null
+          ? el('div', { class: 'value', text: '—', title: '뽑기 횟수는 아직 기록되지 않아요' })
+          : fieldValue(data.drawCount),
+      ),
       stat('보유 펫', fieldValue(data.ownedPets)),
       stat(
         '도감',
-        data.dexOwned.error
+        // 전체 칸 수도 펫 조회에서 온다. 둘 중 하나라도 못 읽으면 `3/undefined` 를 그리지 않는다.
+        data.dexOwned.error || data.dexTotal.error
           ? el('div', { class: 'value error', text: '⚠ 조회 실패' })
           : el('div', {
               class: 'value small',
@@ -458,13 +538,16 @@ async function renderUsage() {
 
   // 비율(%)은 숫자로 쓰지 않는다. 막대가 보여준다.
   const usageCard = el('div', { class: 'card' }, [
-    el('div', { class: 'card-label', text: '사용한 토큰' }),
+    el('div', { class: 'card-label', text: '쌓인 토큰' }),
     el('div', { class: 'usage-headline' }, [
-      el('span', {
-        class: 'usage-total',
-        text: compact(data.periodObserved),
-        title: `${num(data.periodObserved)} 토큰`,
-      }),
+      withToken(
+        el('span', {
+          class: 'usage-total',
+          text: compact(data.periodTokens),
+          title: `${num(data.periodTokens)} 토큰`,
+        }),
+        true,
+      ),
       filters,
     ]),
     ...(data.tools.length
@@ -473,7 +556,7 @@ async function renderUsage() {
             el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name' }, [bar(row.sharePercent / 100)]),
             row.paused ? el('span', { class: 'status paused', text: row.statusLabel }) : null,
-            el('span', { class: 'num', text: compact(row.observed) }),
+            el('span', { class: 'num', text: compact(row.tokens) }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
@@ -499,7 +582,7 @@ async function renderUsage() {
           el('div', { class: 'row model-row' }, [
             el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name', text: row.rawModel, title: row.rawModel }),
-            el('span', { class: 'num', text: compact(row.observed) }),
+            el('span', { class: 'num', text: compact(row.tokens) }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
@@ -532,14 +615,14 @@ async function renderUsage() {
           week.cells.map((cell) =>
             el('div', {
               class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
-              title: cell.future ? cell.date : `${cell.date} · ${num(cell.observed)} 토큰`,
+              title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
               // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
               attrs: cell.future
                 ? {}
                 : {
                     tabindex: '0',
                     role: 'img',
-                    'aria-label': `${cell.date} ${num(cell.observed)} 토큰`,
+                    'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
                   },
             }),
           ),
@@ -754,7 +837,7 @@ async function renderSettings() {
       el('div', {
         class: 'mono-small',
         attrs: { style: 'margin-top:6px' },
-        text: '후원은 게임 내 코인·칭호·트로피와 연결되지 않습니다',
+        text: '후원은 게임 내 토큰·칭호·트로피와 연결되지 않습니다',
       }),
     ]),
     el('div', { class: 'card' }, [
@@ -805,6 +888,13 @@ async function renderAchievements() {
       el('span', { text: `${data.unlocked} / ${data.total} · ${data.completionPercent}%` }),
     ]),
     bar(data.total ? data.unlocked / data.total : 0),
+    // 다른 필터 탭에 남은 보상도 놓치지 않게 전체 기준으로 센다.
+    data.claimableCount > 0
+      ? el('div', { class: 'claim-note' }, [
+          // 금색 칩 — 지금 받을 수 있는 보상이 있다는 표시다.
+          el('span', { class: 'chip', text: `받을 보상 ${data.claimableCount}개` }),
+        ])
+      : null,
   ]);
 
   const titleCard = el('div', { class: 'card' }, [
@@ -849,26 +939,43 @@ async function renderAchievements() {
           class: `ach${row.unlocked ? ' unlocked' : ''}${row.masked ? ' masked' : ''}`,
         },
         [
-          el('div', { class: 'medal', text: row.unlocked ? '🏅' : row.masked ? '?' : '🔒' }),
+          el(
+            'div',
+            {
+              class: 'medal',
+              // 그림은 장식이다. 상태는 색에만 기대지 않도록 글자로도 준다.
+              title: row.unlocked ? '달성' : row.masked ? '히든' : '잠김',
+            },
+            [badgeCanvas(row.badge, row.unlocked)],
+          ),
           el('div', { class: 'body' }, [
             el('div', { class: 'title-line' }, [
               el('span', { class: 'name', text: row.name }),
-              row.tier ? el('span', { class: `tier ${row.tier}`, text: row.tier }) : null,
-              el('span', { class: 'chip plain', text: row.categoryLabel }),
-              row.rewardPending ? el('span', { class: 'pending', text: '보상 처리 중' }) : null,
+              // 분류는 상자에 넣지 않는다. 보상과 같은 모양이면 무엇이 무엇인지 섞여 보인다.
+              el('span', { class: 'category', text: row.categoryLabel }),
             ]),
             el('div', { class: 'cond', text: row.condition }),
-            el(
-              'div',
-              { class: 'rewards' },
-              row.rewards.map((reward) => el('span', { class: 'chip plain', text: reward })),
-            ),
+            // 조건 바로 아래에 진행률을 둔다. "무엇을 얼마나 했나"가 한 덩어리로 읽힌다.
             row.masked
               ? null
-              : el('div', { class: 'progress-line' }, [
-                  bar(row.target ? row.progress / row.target : 0),
-                  el('span', { class: 'num', text: row.progressLabel }),
-                ]),
+              : row.unlockedAtLabel
+                ? // 달성한 업적은 막대 대신 언제 달성했는지를 적는다. 꽉 찬 막대는 알려 주는 것이 없다.
+                  el('div', {
+                    class: 'achieved',
+                    text: `✓ ${row.progressLabel} ${row.unlockedAtLabel}`,
+                  })
+                : el('div', { class: 'progress-line' }, [
+                    bar(row.target ? row.progress / row.target : 0),
+                    el('span', { class: 'num', text: row.progressLabel }),
+                  ]),
+            row.rewardError
+              ? el('div', { class: 'pending', text: `⚠ 받지 못했어요 — ${row.rewardError}` })
+              : null,
+          ]),
+          // 보상은 줄의 오른쪽 위다. 달성하면 그 아래에서 직접 받는다.
+          el('div', { class: 'reward-col', attrs: { 'aria-label': '보상' } }, [
+            ...row.rewards.map((reward) => rewardItem(reward)),
+            rewardAction(row),
           ]),
         ],
       ),
@@ -876,6 +983,59 @@ async function renderAchievements() {
   );
 
   commit(generation, filters, header, titleCard, list);
+}
+
+/**
+ * 보상 하나. 종류마다 모양이 다르다 — 토큰은 동전과 굵은 숫자, 칭호는 깃발과 리본 띠, 트로피는 잔과
+ * 글자.
+ *
+ * 전부 같은 네모 칩이던 때에는 무엇이 토큰이고 무엇이 칭호인지 글자를 읽어야 알았다. 아이콘이
+ * 종류를 말해 주므로 글자에는 값만 둔다. 뜻이 온전한 문구는 `title` 과 `aria-label` 에 있다.
+ */
+function rewardItem(reward) {
+  const icon = icons.rewards[reward.kind];
+  return el(
+    'div',
+    {
+      class: `reward ${reward.kind}`,
+      title: reward.description,
+      attrs: { 'aria-label': reward.description },
+    },
+    [icon ? badgeCanvas(icon) : null, el('span', { class: 'text', text: reward.label })],
+  );
+}
+
+/**
+ * 업적 줄의 보상 아래. 달성했으면 `보상 받기` 버튼, 받았으면 받았다는 표시다.
+ *
+ * 버튼은 누르는 동안 잠근다. 지급은 멱등이라 두 번 눌러도 한 번만 들어오지만, 응답을 기다리는
+ * 사이에 같은 요청을 또 보낼 이유가 없다.
+ */
+function rewardAction(row) {
+  if (row.rewardState === 'claimed') {
+    return el('span', { class: 'reward-done', text: '✓ 받음' });
+  }
+  if (row.rewardState !== 'claimable') return null;
+
+  const button = el('button', {
+    class: 'tiny-button claim-button',
+    text: row.rewardError ? '다시 받기' : '보상 받기',
+    attrs: { 'aria-label': `${row.name} 보상 받기` },
+    on: {
+      click: async () => {
+        button.disabled = true;
+        try {
+          const outcome = await api.claimAchievement(row.id);
+          if (outcome.claimed) flash(`${row.name} 보상을 받았어요`);
+          else flash(outcome.error ?? '보상을 받지 못했어요', true);
+        } catch (error) {
+          flash(String(error?.message ?? error), true);
+        }
+        render();
+      },
+    },
+  });
+  return button;
 }
 
 /* ---------- 시연 (프로토타입 전용) ---------- */
@@ -911,7 +1071,7 @@ function renderDemo() {
         text: '합성 · 전투는 아직 테이블이 없어 손으로 발행합니다. 펫 업적은 펫 DB 로 열립니다',
       }),
       el('div', { class: 'link-list', attrs: { style: 'margin-top:6px' } }, [
-        demoButton('커먼2→에픽 합성', () => api.demoEvent('fusion_miracle')),
+        demoButton('합성으로 EPIC 획득', () => api.demoEvent('fusion_miracle')),
         demoButton('전투 승리', () => api.demoEvent('battle_win')),
       ]),
     ]),
@@ -1027,11 +1187,10 @@ async function selftestInfoLayout() {
   const stats = [...content.querySelectorAll('.record-grid .stat .label')].map(
     (node) => node.textContent,
   );
-  const coins = Boolean(content.querySelector('.recent-coins'));
   await report(
-    stats.join(',') === '사용한 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적' && !coins,
-    `요약 펼침        함께한 기록 ${stats.length}칸 · 최근 코인 없음`,
-    `요약 펼침 칸 ${stats.join(',')}, 최근 코인 ${coins}`,
+    stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
+    `요약 펼침        함께한 기록 ${stats.length}칸`,
+    `요약 펼침 칸 ${stats.join(',')}`,
   );
 
   await clickExpand();

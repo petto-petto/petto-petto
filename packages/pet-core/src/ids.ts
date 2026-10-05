@@ -40,9 +40,6 @@ export const providerName = (provider: Provider): string => PROVIDER_NAMES[provi
 export const isProvider = (value: string): value is Provider =>
   (PROVIDERS as readonly string[]).includes(value);
 
-/** 코인. 소비는 음수로 표현한다. */
-export type Coin = number;
-
 /**
  * 로컬 날짜 `YYYY-MM-DD`.
  *

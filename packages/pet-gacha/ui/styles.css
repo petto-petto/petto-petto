@@ -1,6 +1,6 @@
 :root {
   color-scheme: dark;
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   color: #f5ecd8;
   background: #10231a;
   font-synthesis: none;
@@ -25,11 +25,18 @@
   --epic-dark: #6c37a0;
 }
 
-.window-close {
+/* 뒤로가기와 닫기를 오른쪽 위 한 줄에 둔다. */
+.window-controls {
   position: fixed;
   top: 10px;
   right: 10px;
   z-index: 100;
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.window-close {
   width: 28px;
   height: 28px;
   padding: 0;
@@ -37,8 +44,8 @@
   background: #6b4a2e;
   color: #f5ecd8;
   font:
-    20px/1 ui-monospace,
-    monospace;
+    20px/1 'Isamanru',
+    sans-serif;
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
@@ -48,6 +55,29 @@
 }
 
 .window-close:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
+}
+
+/* 이 창을 닫고 그 자리에 펫룸을 띄운다. */
+.window-back {
+  height: 28px;
+  padding: 0 8px;
+  border: 2px solid #3a2a1c;
+  background: #6b4a2e;
+  color: #f5ecd8;
+  font:
+    700 12px/1 'Isamanru',
+    sans-serif;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.window-back:hover {
+  background: #8a6340;
+}
+
+.window-back:focus-visible {
   outline: 2px solid #ffd166;
   outline-offset: 2px;
 }
@@ -78,8 +108,6 @@ body {
 }
 
 body {
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
   background: var(--forest-deep);
 }
 
@@ -156,7 +184,8 @@ button:focus-visible {
   align-items: center;
   gap: 8px;
   color: var(--paper);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 13px;
 }
 
@@ -181,21 +210,24 @@ button:focus-visible {
 .reveal-kicker {
   margin: 0;
   color: var(--gold);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 10px;
   letter-spacing: 0.12em;
 }
 
 .title-block h1 {
   margin: 4px 0 0;
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 16px;
 }
 
 .token-box {
   position: absolute;
   top: 10px;
-  right: 48px;
+  /* 오른쪽 위 창 버튼 묶음(10 + 95px)과 6px 띄운다. */
+  right: 111px;
   z-index: 6;
   -webkit-app-region: drag;
   justify-self: end;
@@ -256,7 +288,8 @@ button:focus-visible {
 
 .stage-copy h2 {
   margin: 6px 0 0;
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 12px;
 }
 
@@ -1006,7 +1039,8 @@ button:focus-visible {
 }
 
 .draw-button span {
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 13px;
 }
 
@@ -1060,7 +1094,8 @@ button:focus-visible {
 .modal-heading h2,
 .reveal-content h2 {
   margin: 6px 0 0;
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 16px;
 }
 
@@ -1090,7 +1125,8 @@ button:focus-visible {
   border-bottom: 2px solid var(--wood-border);
   color: var(--paper);
   background: var(--common-dark);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 11px;
 }
 
@@ -1252,7 +1288,8 @@ button:focus-visible {
   border: 2px solid var(--common);
   color: var(--paper);
   background: var(--common-dark);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 10px;
 }
 

@@ -19,8 +19,11 @@ import {
 import { type DomainEvent } from '../events/index.ts';
 import {
   AchievementCatalog,
+  beginSession,
+  claimRewards,
   FixtureCollector,
   evaluate,
+  gachaReadyTransition,
   loadState,
   recordEvent,
   runAggregationFor,
@@ -29,18 +32,33 @@ import {
   sourceOf,
   type AggregationRun,
   type Category,
+  type ClaimOutcome,
   type EvaluationOutcome,
   type MetaState,
   type MetaStore,
   type SponsorLinks,
   type UsageCollector,
 } from '../index.ts';
-import { createMetaState, type CurrencyPort } from '../index.ts';
+import { createMetaState } from '../index.ts';
 import { RecordingEventBus, StubGacha } from '../testing/fakes.ts';
-import type { CollectionPort, GrowthRules, PetClient } from '../ports/index.ts';
+import type {
+  CollectionPort,
+  GachaPort,
+  GrowthRules,
+  PetClient,
+  TokenPort,
+} from '../ports/index.ts';
 
 /** 데모 사용량 생성 시드. 고정해 두면 데모 화면이 실행마다 같다. */
 const DEMO_SEED = 20_260_824;
+
+/** 한 번의 집계와 판정이 낸 것. */
+export interface AggregationResult {
+  run: AggregationRun;
+  outcome: EvaluationOutcome;
+  /** 이번 집계에서 뽑기 1회가 불가에서 가능으로 바뀌었는가(기획서 6.3). */
+  gachaReady: boolean;
+}
 
 export class MetaAppState {
   /** meta 도메인 상태. 메모리에서 돌고, 변경 뒤에 로컬 파일로 저장된다. */
@@ -56,13 +74,16 @@ export class MetaAppState {
    */
   readonly collector: UsageCollector;
   /**
-   * 재화 구현. 앱이 넣어준다.
+   * 토큰 — 사용량 원장과 재화. 앱이 공통 `TokenClient` 를 넣어준다.
    *
-   * 예전에는 여기서 `new InMemoryCurrency()`를 직접 만들었다. 인메모리라 앱을 끌 때마다
+   * 뽑기·합성이 차감하는 것과 같은 인스턴스다. meta 는 여기에 수집한 증가분을 적재하고, 사용량
+   * 보상과 업적 보상을 지급하고, 잔액을 읽는다.
+   *
+   * 예전에는 여기서 인메모리 재화 대역을 직접 만들었다. 인메모리라 앱을 끌 때마다
    * 잔액이 0으로 돌아갔고, 멱등 키는 이 패키지의 스냅샷에 남아 다시 지급되지도 않았다 —
-   * 코인이 영구히 사라졌다. 저장 수명이 다른 두 곳에 나뉘어 있던 탓이다.
+   * 재화가 영구히 사라졌다. 저장 수명이 다른 두 곳에 나뉘어 있던 탓이다.
    */
-  readonly currency: CurrencyPort;
+  readonly tokens: TokenPort;
   /**
    * 보유 펫 조회. **대역이 아니라 앱이 주입한 실제 구현이다.**
    *
@@ -83,10 +104,19 @@ export class MetaAppState {
   /** 레벨 곡선. 성장 도메인 것이라 앱이 넣어준다. */
   readonly growthRules: GrowthRules;
   /**
-   * 뽑기 조회. 아직 gacha 도메인이 실제 횟수를 주지 않아 대역이다 — 요약의 `뽑은 횟수`가
-   * 항상 12 로 보인다. gacha 연결 때 앱이 주입하도록 바꾼다.
+   * 뽑기 조회. 뽑기는 횟수와 비용을 담은 테이블이 아직 없어서 대역이다.
+   *
+   * 횟수는 지어내지 않는다(`null` → 화면의 `—`). 예전에는 대역이 12 를 돌려줘서 누구에게나
+   * `뽑은 횟수 12` 가 실제 값처럼 보였다. 비용은 뽑기 구현이 차감하는 값과 같은 100,000 이다.
+   * 뽑기가 이 값들을 저장하면 앱이 실제 구현을 주입하도록 바꾼다.
    */
-  readonly gacha = new StubGacha(12, 4);
+  readonly gacha: GachaPort = new StubGacha(null, 0);
+  /**
+   * 직전 집계에서 뽑기 1회를 할 수 있었는가. 뽑기 가능 알림(기획서 6.3)의 "직전 상태"다.
+   *
+   * 저장하지 않는다. 앱을 다시 켜면 처음 보는 상태가 되고, 처음 본 상태는 알리지 않는다.
+   */
+  #gachaAffordable: boolean | undefined = undefined;
   readonly bus = new RecordingEventBus();
   readonly clock: Clock = systemClock;
   /**
@@ -113,13 +143,16 @@ export class MetaAppState {
    *
    * 읽기에 실패해도 앱은 뜬다. 저장 파일 하나 때문에 사용자가 앱을 아예 못 쓰는 것보다,
    * 새로 시작하고 그 사실을 알리는 편이 낫다.
+   *
+   * 이 객체 하나가 앱 실행 한 번이다. 만들 때 새 실행을 시작해서(`beginSession`), 앱이 꺼져
+   * 있던 동안의 사용이 첫 집계에서 적립되지 않게 한다.
    */
   constructor(
     store: MetaStore,
     dataLocation: string,
     version: string,
     collection: CollectionPort,
-    currency: CurrencyPort,
+    tokens: TokenPort,
     pets: PetClient,
     growthRules: GrowthRules,
     collector: UsageCollector,
@@ -128,7 +161,7 @@ export class MetaAppState {
     this.dataLocation = dataLocation;
     this.version = version;
     this.collection = collection;
-    this.currency = currency;
+    this.tokens = tokens;
     this.pets = pets;
     this.growthRules = growthRules;
     this.collector = collector;
@@ -142,6 +175,7 @@ export class MetaAppState {
 
     this.isFreshInstall = restored === undefined;
     this.meta = restored ?? createMetaState();
+    beginSession(this.meta);
   }
 
   today(): LocalDate {
@@ -183,12 +217,12 @@ export class MetaAppState {
    * 수집기를 먼저 새로 읽고(`refresh`), 그 뒤의 집계는 동기로 끝난다. 집계 도중에는
    * `await`가 없으므로 두 요청이 겹쳐도 기준점을 번갈아 고치지 않는다.
    */
-  async aggregate(): Promise<{ run: AggregationRun; outcome: EvaluationOutcome }> {
+  async aggregate(): Promise<AggregationResult> {
     return this.#collectAndRun(PROVIDERS);
   }
 
   /** 카드별 수동 재스캔. 소스를 켜고 끌 때도 그 소스 하나만 이 경로로 다시 본다. */
-  async rescan(provider: Provider): Promise<{ run: AggregationRun; outcome: EvaluationOutcome }> {
+  async rescan(provider: Provider): Promise<AggregationResult> {
     return this.#collectAndRun([provider]);
   }
 
@@ -199,50 +233,73 @@ export class MetaAppState {
    * 않았으므로 뺀다 — 켠 쪽의 요청이 곧 자기 소스를 새로 읽어 기준점을 잡는다. 꺼진 소스는
    * 실행하지 않고 `수집 중지` 상태만 남긴다(8.4).
    */
-  #collectAndRun(
-    providers: readonly Provider[],
-  ): Promise<{ run: AggregationRun; outcome: EvaluationOutcome }> {
+  #collectAndRun(providers: readonly Provider[]): Promise<AggregationResult> {
     const task = this.#collectAndRunNow(providers);
     this.#running.add(task);
     void task.finally(() => this.#running.delete(task)).catch(() => {});
     return task;
   }
 
-  async #collectAndRunNow(
-    providers: readonly Provider[],
-  ): Promise<{ run: AggregationRun; outcome: EvaluationOutcome }> {
+  async #collectAndRunNow(providers: readonly Provider[]): Promise<AggregationResult> {
     const targets = this.#enabled(providers);
     await this.collector.refresh(targets);
     const ready = providers.filter(
       (provider) => targets.includes(provider) || !sourceOf(this.meta, provider).enabled,
     );
-    const run = runAggregationFor(this.meta, this.collector, this.currency, this.clock, ready);
+    const run = runAggregationFor(this.meta, this.collector, this.tokens, this.clock, ready);
     for (const event of run.events) this.bus.publish(event);
     const outcome = evaluate(
       this.meta,
       this.catalog,
-      this.currency,
-      this.collection,
+      this.tokens,
       this.pets,
       this.growthRules,
       this.clock,
     );
-    return { run, outcome };
+    // 사용량 보상과 업적 보상이 모두 지급된 뒤의 잔액으로 본다.
+    return { run, outcome, gachaReady: this.#observeGachaReady() };
+  }
+
+  /**
+   * 잔액이 뽑기 비용 미만에서 이상으로 넘어갔는지 본다(기획서 6.3).
+   *
+   * 알림이 꺼져 있어도 상태는 전진시킨다. 표시 여부는 호출자가 정하고, 억제된 알림은 나중에
+   * 재생하지 않는다 — 상태를 멈춰 두면 알림을 켜는 순간 지나간 일이 뒤늦게 튀어나온다.
+   *
+   * 잔액이나 비용을 읽지 못하면 상태를 그대로 둔다. 다음 집계가 같은 직전 상태에서 이어서
+   * 판단하므로 읽지 못한 동안의 변화를 놓치지 않는다.
+   *
+   * 집계 사이에 뽑기로 잔액이 내려갔다가 같은 주기 안에 다시 올라오면 그 왕복은 보이지 않는다.
+   * 뽑기의 차감을 meta 가 알 방법이 없어서다. 1분 주기에서는 드물어 그대로 둔다.
+   */
+  #observeGachaReady(): boolean {
+    let balance: number;
+    let drawCost: number;
+    try {
+      balance = this.tokens.balance();
+      drawCost = this.gacha.drawCost();
+    } catch {
+      return false;
+    }
+    const transition = gachaReadyTransition(this.#gachaAffordable, balance, drawCost);
+    this.#gachaAffordable = transition.affordable;
+    return transition.notify;
+  }
+
+  /**
+   * 달성한 업적의 보상을 받는다. 사용자가 업적 칸의 `보상 받기` 를 눌렀을 때 부른다.
+   *
+   * 판정(`evaluate`)은 보상을 지급하지 않는다. 재화·칭호·트로피가 들어오는 곳은 여기뿐이다.
+   */
+  claimRewards(achievementId: string): ClaimOutcome {
+    return claimRewards(this.meta, this.catalog, this.tokens, this.collection, achievementId);
   }
 
   /** 이벤트 하나를 받아 업적을 판정한다. 데모의 시연 버튼이 쓴다. */
   ingestEvent(event: DomainEvent): EvaluationOutcome {
     this.bus.publish(event);
     recordEvent(this.meta, event);
-    return evaluate(
-      this.meta,
-      this.catalog,
-      this.currency,
-      this.collection,
-      this.pets,
-      this.growthRules,
-      this.clock,
-    );
+    return evaluate(this.meta, this.catalog, this.tokens, this.pets, this.growthRules, this.clock);
   }
 
   /**

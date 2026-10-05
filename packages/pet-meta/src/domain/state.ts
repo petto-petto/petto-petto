@@ -118,7 +118,7 @@ export function createSourceState(provider: Provider): SourceState {
 /** meta 도메인 상태 전체. */
 export interface MetaState {
   sources: Map<Provider, SourceState>;
-  /** 기획서 10장의 `usage_daily`. 설치 이후 증가분만 쌓인다. */
+  /** 기획서 10장의 `usage_daily`. 앱이 켜져 있던 동안의 증가분만 쌓인다. */
   usageDaily: Map<UsageKey, TokenCounts>;
   /**
    * 기획서 10장의 `activity_minute`.
@@ -186,7 +186,7 @@ export function needsFirstRunCollectTab(state: MetaState): boolean {
   return [...state.sources.values()].every((source) => !source.everConnected);
 }
 
-/** 설치 이후 누적 관측 토큰. */
+/** 앱이 켜져 있던 동안 쌓인 누적 관측 토큰. */
 export function observedTotal(state: MetaState): number {
   let total = 0;
   for (const counts of state.usageDaily.values()) total += observed(counts);
@@ -213,7 +213,6 @@ function threeToolsDays(state: MetaState): number {
 /** 사용량에서 파생하는 사실(기획서 9.4). */
 export function usageFacts(state: MetaState): UsageFacts {
   return {
-    observedTokens: observedTotal(state),
     activityMinutes: state.activityMinutes.size,
     threeToolsDays: threeToolsDays(state),
   };

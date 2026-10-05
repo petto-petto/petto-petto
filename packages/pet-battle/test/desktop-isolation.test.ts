@@ -56,18 +56,14 @@ test('앱과 전투 패키지는 Electron 실행 경로만 제공한다', () => 
   );
 });
 
-test('앱은 읽기 Adapter를 전투에만 주입하고 펫룸 JSON 경로는 유지한다', () => {
+test('앱은 소유자의 선택·성장 조회 Adapter를 전투에 주입한다', () => {
   const main = read('../../../apps/desktop/src/main/main.ts');
-  assert.match(main, /new RoomCollectionPort\(ownedPets\)/);
-  assert.match(main, /new RoomState\(roomStore, systemClock, collection, ownedPets\)/);
   assert.match(main, /mountBattle\(new PetClientRoomAdapter\(pets\), ipcMain/);
+  assert.match(main, /new SqliteGrowthReadClient\(growthRepository\)/);
   assert.match(main, /const battleRoom = room;/);
   assert.match(main, /selection: new RoomSelectionAdapter\(\(\) => battleRoom.scene\(\).pets\)/);
-  for (const file of ['room.ts', 'collection.ts']) {
-    assert.doesNotMatch(
-      read('../../../apps/desktop/src/main/' + file),
-      /RoomPetClient|selectActivePet|@pet\/client/,
-    );
+  for (const file of ['room.ts', 'room-state.ts', 'collection.ts']) {
+    assert.doesNotMatch(read('../../../apps/desktop/src/main/' + file), /@pet\/battle|mountBattle/);
   }
 });
 

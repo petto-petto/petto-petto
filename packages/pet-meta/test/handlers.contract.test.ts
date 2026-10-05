@@ -15,7 +15,7 @@ import {
   emptySnapshot,
   FixtureCollector,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryMetaStore,
   InMemoryPetClient,
   MetaAppState,
@@ -24,6 +24,7 @@ import {
   STUB_GROWTH_RULES,
   tokenCounts,
   type TickReport,
+  uiIcons,
 } from '@pet/meta';
 
 /** 어떤 소스에 `refresh` 를 요청했는지 기록한다. 실제 수집기가 ccusage 를 돌리는 자리다. */
@@ -53,13 +54,22 @@ function handlers() {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     FixtureCollector.withEmptySnapshots(),
   );
   return { state, map: metaHandlers(state, noopHost) };
 }
+
+test('UI: 아이콘 채널이 화면 공용 아이콘을 돌려준다', () => {
+  const { map } = handlers();
+  const icons = map['ui:icons'];
+  assert.ok(icons, 'ui:icons 채널이 있어야 한다');
+
+  // 정보 탭과 업적 탭이 같은 동전 그림을 쓴다. 한곳에서 내려보낸다.
+  assert.deepEqual(icons(), uiIcons());
+});
 
 test('SET: 알림 세 가지를 모두 끄고 켤 수 있다', () => {
   const { state, map } = handlers();
@@ -97,7 +107,7 @@ test('INFO: 활성 펫이 있으면 초상화 채널이 진화 단계를 넘긴�
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     pets,
     STUB_GROWTH_RULES,
     FixtureCollector.withEmptySnapshots(),
@@ -124,7 +134,7 @@ function collectHandlers(host: MetaHost = noopHost) {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     collector,
@@ -184,7 +194,7 @@ test('COLLECT-003: 갱신은 refresh 가 끝난 뒤의 스냅샷으로 증가분
   collector.accumulate('claude_code', '2026-09-27', 'claude-opus-5', tokenCounts(1_000));
   const report = (await now()) as TickReport;
 
-  assert.ok(report.sourceNotes.includes('claude_code: 관측 토큰 +1000'));
+  assert.ok(report.sourceNotes.includes('claude_code: 토큰 +1000'));
   assert.equal(state.meta.sources.get('claude_code')?.status, 'connected');
 });
 
@@ -217,7 +227,7 @@ test('데모 사용량 채널은 실제 수집기에서 오류로 거절한다',
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     {
@@ -274,7 +284,7 @@ function gatedHandlers() {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     collector,
@@ -349,6 +359,88 @@ test('종료: idle() 은 진행 중인 집계가 끝나야 풀린다 — 그 전
   assert.equal(idle, true);
 });
 
+test('ACH: 보상 받기 채널이 그 업적의 보상을 지급하고 화면에 알린다', async () => {
+  const pets = new InMemoryPetClient();
+  const tokens = new InMemoryTokenClient();
+  const store = new InMemoryMetaStore();
+  const broadcasts: string[] = [];
+  const state = new MetaAppState(
+    store,
+    '~/Library/…',
+    '0.1.0',
+    new InMemoryCollection(),
+    tokens,
+    pets,
+    STUB_GROWTH_RULES,
+    FixtureCollector.withEmptySnapshots(),
+  );
+  const map = metaHandlers(state, {
+    ...noopHost,
+    broadcast: (channel) => broadcasts.push(channel),
+  });
+  const claim = map['achievements:claim'];
+  assert.ok(claim, 'achievements:claim 채널이 있어야 한다');
+
+  pets.give('003');
+  await state.aggregate();
+  assert.equal(tokens.balance(), 0, '달성만으로는 지급되지 않는다');
+
+  assert.deepEqual(claim('collection.first_pet'), { claimed: true, error: undefined });
+  assert.equal(tokens.balance(), 100_000);
+  assert.equal(state.meta.profile.equippedTitle, '초보 조련사');
+  assert.ok(broadcasts.includes('usage:aggregated'), '열려 있는 화면이 잔액을 다시 그린다');
+  assert.equal(
+    store.load()?.rewards.every((record) => record.status === 'done'),
+    true,
+    '받은 기록이 저장된다',
+  );
+
+  // 렌더러가 보낸 값은 믿지 않는다.
+  assert.throws(() => claim(undefined), /업적/);
+  assert.deepEqual(claim('battle.win_50'), {
+    claimed: false,
+    error: '아직 달성하지 않은 업적이에요',
+  });
+});
+
+test('앱을 다시 켜면 꺼져 있던 동안의 사용은 적립하지 않는다', async () => {
+  // 같은 저장소와 같은 도구 기록을 두 번의 앱 실행이 이어서 본다.
+  const store = new InMemoryMetaStore();
+  const tokens = new InMemoryTokenClient();
+  const collector = FixtureCollector.withEmptySnapshots();
+  const launch = () =>
+    new MetaAppState(
+      store,
+      '~/Library/…',
+      '0.1.0',
+      new InMemoryCollection(),
+      tokens,
+      new InMemoryPetClient(),
+      STUB_GROWTH_RULES,
+      collector,
+    );
+
+  const first = launch();
+  await first.aggregate();
+  collector.accumulate('claude_code', '2026-09-27', 'claude-opus-5', tokenCounts(50_000));
+  await first.aggregate();
+  first.persist();
+  assert.equal(tokens.balance(), 50_000);
+
+  // 앱을 끈 사이에 80,000 을 썼다.
+  collector.accumulate('claude_code', '2026-09-28', 'claude-opus-5', tokenCounts(80_000));
+
+  const second = launch();
+  assert.equal(second.isFreshInstall, false);
+  await second.aggregate();
+  assert.equal(tokens.balance(), 50_000, '앱 시작 집계는 기준점만 잡는다');
+  assert.equal(tokens.entries.length, 1);
+
+  collector.accumulate('claude_code', '2026-09-28', 'claude-opus-5', tokenCounts(20_000));
+  await second.aggregate();
+  assert.equal(tokens.balance(), 70_000, '켜진 뒤에 쓴 것만 쌓인다');
+});
+
 test('데모 시드는 실제 수집기에서 아무것도 하지 않고 그 사실을 알린다', () => {
   const store = () => new InMemoryMetaStore();
   const make = (collector: ConstructorParameters<typeof MetaAppState>[7]) =>
@@ -357,7 +449,7 @@ test('데모 시드는 실제 수집기에서 아무것도 하지 않고 그 사
       '~/Library/…',
       '0.1.0',
       new InMemoryCollection(),
-      new InMemoryCurrency(),
+      new InMemoryTokenClient(),
       new InMemoryPetClient(),
       STUB_GROWTH_RULES,
       collector,

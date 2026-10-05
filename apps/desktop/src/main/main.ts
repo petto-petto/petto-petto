@@ -12,10 +12,11 @@ import { createPersistentCombine } from '@pet/combine';
 import {
   FixtureCollector,
   MetaAppState,
+  tickBubble,
   type AggregationRun,
   type UsageCollector,
 } from '@pet/meta';
-import { PetClientRoomAdapter, RoomSelectionAdapter, type StoredRoomSnapshot } from '@pet/room';
+import { PetClientRoomAdapter, RoomSelectionAdapter } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
 import { mountBattle } from '@pet/battle/node';
@@ -24,7 +25,6 @@ import type { PetClient, TokenClient } from '@pet/client';
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { SqliteGrowthReadClient } from './clients/sqlite-growth-read-client.ts';
 import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
-import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
 import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
 import { MetaRepository } from './persistence/repositories/meta-repository.ts';
@@ -33,8 +33,7 @@ import { CurrencyRepository } from './persistence/repositories/currency-reposito
 import { TokenRepository } from './persistence/repositories/token-repository.ts';
 import { mountMeta } from './mount.ts';
 import { CcusageCollector, resolveCcusageBinary } from './usage/ccusage-collector.ts';
-import { RoomState, loadRoomCollection, mountRoom, type RoomHost } from './room.ts';
-import { JsonFileStore, ROOM_FILE_NAME } from './store.ts';
+import { RoomState, mountRoom, type RoomHost } from './room.ts';
 import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
@@ -50,6 +49,7 @@ import {
   createCombineWindow,
   createGachaWindow,
   isGachaWebContents,
+  isRoomWebContents,
   isCombineWebContents,
   createPanelWindow,
   endOverlayDrag,
@@ -58,6 +58,8 @@ import {
   getBattleWindow,
   petAssetsDir,
   moveOverlayDrag,
+  replaceRoomWith,
+  returnToRoom,
   setOverlayInteractive,
   showPanel,
   showRoom,
@@ -115,12 +117,14 @@ async function aggregateTick(roomHost: RoomHost): Promise<void> {
   room?.refreshBackground(roomHost);
   if (!state || quitting) return;
   try {
-    const { run, outcome } = await state.aggregate();
+    const { run, outcome, gachaReady } = await state.aggregate();
     state.persist();
     broadcastGrowthUsage(run);
+    // 주기 집계에서도 펫이 할 말을 보낸다. 재화는 주로 여기서 쌓이므로, 뽑기 가능 알림이 나갈
+    // 자리도 여기다. 알림 설정과 오버레이 숨김은 `tickBubble` 이 본다.
     broadcast('usage:aggregated', {
       activityMinuteAdded: run.activityMinuteAdded,
-      bubble: undefined,
+      bubble: tickBubble(state, outcome, gachaReady),
       newlyUnlocked: outcome.newlyUnlocked,
     });
   } catch (error) {
@@ -174,14 +178,33 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
+  // 뽑기·합성 화면의 "펫룸" 버튼. 그 두 창에서 온 요청만 받는다.
+  ipcMain.handle('window:backToRoom', (event) => {
+    if (!isGachaWebContents(event.sender) && !isCombineWebContents(event.sender)) return;
+    const from = BrowserWindow.fromWebContents(event.sender);
+    if (from) returnToRoom(from);
+  });
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = {
   showRoom,
-  // `createGachaWindow`는 창을 돌려주지만 room 은 창을 알 필요가 없다.
-  showGacha: () => {
-    createGachaWindow();
+  // room 은 어느 화면으로 갈지만 말하고, 창을 갈아 끼우는 일은 앱이 한다.
+  navigate: (destination, sender) => {
+    // 펫룸 창의 버튼만 이 길을 쓴다. 다른 창이 부르면 펫룸 없이 뽑기·합성 창만 열린다.
+    if (!isRoomWebContents(sender)) return;
+    switch (destination) {
+      case 'gacha':
+        replaceRoomWith(createGachaWindow());
+        return;
+      case 'combine':
+        replaceRoomWith(createCombineWindow());
+        return;
+      default: {
+        const unreachable: never = destination;
+        throw new Error(`이동할 수 없는 화면입니다: ${String(unreachable)}`);
+      }
+    }
   },
   broadcast,
 };
@@ -286,7 +309,6 @@ app.setName('tamagotchi-pet');
 app.whenReady().then(async () => {
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
-  const roomStore = new JsonFileStore<StoredRoomSnapshot>(directory, ROOM_FILE_NAME);
   const databasePath = join(directory, 'petto.sqlite');
   const database = new SqliteFileDatabase({ filePath: databasePath, migrations: APP_MIGRATIONS });
   appDatabase = database;
@@ -306,10 +328,8 @@ app.whenReady().then(async () => {
   growthRepository.migrateLegacyData();
   console.log(`[STORE] 저장 위치 ${databasePath}`);
 
-  // room 의 JSON 명부는 이제 트로피 배치와 room 자신의 화면만 쓴다. meta 의 펫 데이터는
-  // 아래 `pets` 에서 온다.
-  const ownedPets = loadRoomCollection(roomStore);
-  const collection = new RoomCollectionPort(ownedPets);
+  // 트로피 배치와 `pet:overlay` 가 쓰는 어댑터. 명부는 아래 `RoomState` 가 밀어 넣는다.
+  const collection = new RoomCollectionPort();
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
   const pets: PetClient = new SqlitePetClient(new PetRepository(database));
   const growth = new SqliteGrowthReadClient(growthRepository);
@@ -319,30 +339,42 @@ app.whenReady().then(async () => {
     currencyRepository,
   );
   const featureTransaction = <T>(work: () => T): T => database.transaction(work);
+  // 뽑기·합성이 보유 펫을 바꾸면 펫룸 명부를 다시 읽고, 새 개체에 성장 행을 붙인다.
+  // 이미 저장된 뽑기·합성 결과를 실패로 돌려보내면 안 되므로 여기서 던지지 않는다.
+  const petsChanged = (): void => {
+    if (!room) return;
+    try {
+      room.reload(roomHost);
+      room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
+    } catch (error) {
+      console.log(`[ROOM] 바뀐 보유 펫을 펫룸에 반영하지 못했습니다 — ${String(error)}`);
+    }
+  };
   registerGachaIpc(
     ipcMain,
     createPersistentGacha(pets, tokens, featureTransaction),
     (event) => isGachaWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    petsChanged,
   );
   registerCombineIpc(
     ipcMain,
     createPersistentCombine(pets, tokens, featureTransaction),
     (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    petsChanged,
   );
-  // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
-  // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
-  const currency = new SqliteCurrencyPort(currencyRepository, systemClock);
   state = new MetaAppState(
     store,
     databasePath,
     app.getVersion(),
     collection,
-    currency,
+    // 사용량 적재도 재화 지급도 뽑기·합성과 같은 `TokenClient` 로 한다. 재화가 공통 SQLite 에
+    // 남으므로 앱을 꺼도 잔액이 유지된다.
+    tokens,
     pets,
     OVERLAY_GROWTH_RULES,
     createUsageCollector(),
   );
-  room = new RoomState(roomStore, systemClock, collection, ownedPets);
+  room = new RoomState(systemClock, collection, pets, () => growthRepository.growth());
 
   // 명부의 개체가 모두 성장 행을 갖게 하고, 그 값을 명부에 투영한다. 이게 없으면 프로필은
   // 명부의 레벨을, 오버레이는 성장 저장소의 레벨을 말해 두 화면이 갈라진다.
@@ -397,7 +429,8 @@ app.whenReady().then(async () => {
   if (shouldOpenGachaPrototype()) createGachaWindow();
   if (shouldOpenCombinePrototype()) createCombineWindow();
 
-  // 앱 시작 집계. 기획서 8.2에 따라 이 스캔은 기준점만 만들고 아무것도 적립하지 않는다.
+  // 앱 시작 집계. 이 스캔은 이번 실행의 기준점만 만들고 아무것도 적립하지 않는다. 앱이 꺼져 있던
+  // 동안의 사용은 세지 않는다 — `MetaAppState` 가 만들어질 때 지난 실행의 기준점을 비운다.
   // 데모 모드에서는 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
   // 실제 수집기로 두 번 돌리면 ccusage 를 한 번 더 실행할 뿐이라 데모일 때만 다시 돈다.
   try {
@@ -454,7 +487,6 @@ app.on('before-quit', (event) => {
   void (state?.idle() ?? Promise.resolve()).finally(() => {
     try {
       state?.persist();
-      room?.persist();
       appDatabase?.close();
     } finally {
       // 정리는 끝났다. `app.quit()`을 다시 부르면 미뤄 둔 종료 요청이 되살아나지 않는 경우가

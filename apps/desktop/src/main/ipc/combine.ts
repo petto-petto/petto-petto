@@ -6,6 +6,8 @@ export function registerCombineIpc(
   ipc: Pick<IpcMain, 'handle'>,
   combine: PersistentCombine,
   isCombineWindow: (event: IpcMainInvokeEvent) => boolean,
+  /** 보유 펫이 바뀐 뒤 부른다. 펫룸·오버레이가 새 명부를 읽게 하는 것은 앱의 일이다. */
+  petsChanged: () => void,
 ): void {
   function respond<T>(event: IpcMainInvokeEvent, work: () => T): CombineResponse<T> {
     if (!isCombineWindow(event)) return { ok: false, message: '합성 창에서만 사용할 수 있습니다.' };
@@ -33,7 +35,9 @@ export function registerCombineIpc(
       ) {
         throw new CombineActionError('selection');
       }
-      return combine.combine(grade, ids, requestId);
+      const result = combine.combine(grade, ids, requestId);
+      petsChanged();
+      return result;
     }),
   );
 }

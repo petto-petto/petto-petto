@@ -30,13 +30,6 @@ export const categoryName = (category: Category): string => CATEGORY_NAMES[categ
 export const isCategory = (value: string): value is Category =>
   (CATEGORIES as readonly string[]).includes(value);
 
-/** 단계형 업적의 티어. */
-export type Tier = 'bronze' | 'silver' | 'gold';
-
-const TIER_NAMES: Record<Tier, string> = { bronze: '브론즈', silver: '실버', gold: '골드' };
-
-export const tierName = (tier: Tier): string => TIER_NAMES[tier];
-
 /**
  * 업적 하나의 정의. 기획서 10장의 `achievement_definition`.
  *
@@ -54,21 +47,25 @@ export interface AchievementDefinition {
   fact: string;
   /** 사실이 이 값 이상이면 달성이다. */
   target: number;
-  tier?: Tier;
-  coin: number;
+  /** 재화 보상. 단위는 토큰이고, 뽑기·합성이 차감하는 것과 같은 원장에 그대로 지급된다. */
+  token: number;
   title?: string;
   trophy?: boolean;
   /** 기획서 7.1: 히든은 달성 전까지 이름·조건·진행률·보상을 모두 가린다. */
   hidden?: boolean;
 }
 
-/** 코인 보상의 멱등 키(기획서 9.5). */
-export const coinRewardKey = (definition: AchievementDefinition): string =>
+/** 토큰 보상의 멱등 키(기획서 9.5). */
+export const tokenRewardKey = (definition: AchievementDefinition): string =>
   `achievement:${definition.id}`;
 
 /** 기획서 7.4: `첫 만남` 트로피만 룸의 첫 빈자리에 자동 배치한다. */
 export const autoPlacesTrophy = (definition: AchievementDefinition): boolean =>
   definition.id === 'collection.first_pet';
+
+/** 보상 문구에 쓰는 토큰 수. 십만 단위가 기본이라 자릿수 구분 없이는 읽기 어렵다. */
+export const tokenRewardLabel = (amount: number): string =>
+  `토큰 ${amount.toLocaleString('ko-KR')}`;
 
 export class CatalogError extends Error {
   override readonly name = 'CatalogError';

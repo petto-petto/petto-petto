@@ -1,7 +1,7 @@
 /**
  * 업적 진행·해제 상태와 보상 기록.
  *
- * 기획서 7.5의 핵심 결정: **해제 상태와 보상 완료 상태를 분리한다.** 코인 지급이
+ * 기획서 7.5의 핵심 결정: **해제 상태와 보상 완료 상태를 분리한다.** 재화 지급이
  * 실패했다고 업적을 다시 잠그면 사용자는 달성했던 업적이 사라지는 것을 본다. 대신
  * 해제는 그대로 두고 보상만 미완료로 남겨 재시도한다.
  */
@@ -26,11 +26,11 @@ export function raiseProgress(entry: AchievementProgress, value: number): void {
   entry.progress = Math.max(entry.progress, value);
 }
 
-/** 보상 종류. 기획서 7.2는 코인·칭호·트로피 셋을 정의한다. */
-export type RewardKind = 'coin' | 'title' | 'trophy';
+/** 보상 종류. 재화(토큰)·칭호·트로피 셋이다. */
+export type RewardKind = 'token' | 'title' | 'trophy';
 
 const REWARD_NAMES: Record<RewardKind, string> = {
-  coin: '코인',
+  token: '토큰',
   title: '칭호',
   trophy: '트로피',
 };
@@ -43,7 +43,7 @@ export type RewardStatus = 'pending' | 'done';
 /** 기획서 10장의 `achievement_reward`. */
 export interface RewardRecord {
   achievementId: string;
-  /** 멱등 키. 코인은 `achievement:<id>`다(기획서 9.5). */
+  /** 멱등 키. 토큰은 `achievement:<id>`다(기획서 9.5). */
   rewardKey: string;
   kind: RewardKind;
   status: RewardStatus;

@@ -44,6 +44,33 @@ test('TokenClient는 신규 지급을 한 번만 기록하고 잔액보다 많�
   assert.throws(() => currency.spend(-1, '뽑기'));
 });
 
+test('earnedSince는 기준 시각부터 지급된 양만 더하고 소비는 세지 않는다', async (t) => {
+  const { database } = await fixture(t);
+  const { CurrencyRepository } =
+    await import('../dist/main/persistence/repositories/currency-repository.js');
+  const { TokenRepository } =
+    await import('../dist/main/persistence/repositories/token-repository.js');
+  const { SqliteTokenClient } = await import('../dist/main/clients/sqlite-token-client.js');
+  let now = '2026-10-04T14:59:59.999Z';
+  const tokens = new SqliteTokenClient(
+    new TokenRepository(database),
+    new CurrencyRepository(database),
+    () => now,
+  );
+
+  tokens.grantOnce('reward:before', 500, '기준 시각 직전');
+  now = '2026-10-04T15:00:00.000Z';
+  tokens.grantOnce('reward:boundary', 300, '기준 시각 정각');
+  now = '2026-10-05T03:00:00.000Z';
+  tokens.grantOnce('reward:after', 200, '기준 시각 이후');
+  assert.equal(tokens.spend(100, '펫 뽑기'), true);
+
+  assert.equal(tokens.earnedSince('2026-10-04T15:00:00.000Z'), 500, '정각 포함, 소비 제외');
+  assert.equal(tokens.earnedSince('2026-10-06T00:00:00.000Z'), 0, '지급이 없으면 0');
+  assert.equal(tokens.balance(), 900);
+  assert.throws(() => tokens.earnedSince(' '), '기준 시각이 비면 전체 합으로 오해된다');
+});
+
 test('새 저장소는 자동 재화 없이 시작하고 재시작해도 0을 유지한다', async (t) => {
   const { database, currency } = await fixture(t);
   const tokenModule = await import('../dist/main/clients/sqlite-token-client.js');
@@ -268,10 +295,12 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   const combine = createPersistentCombine(pets, currency, transaction, () => 0);
   const handlers = new Map();
   const allowed = {};
+  let petsChanged = 0;
   registerCombineIpc(
     { handle: (channel, handler) => handlers.set(channel, handler) },
     combine,
     (event) => event === allowed,
+    () => petsChanged++,
   );
   assert.equal(handlers.get('combine:load')({}).ok, false);
   assert.equal(handlers.get('combine:combine')({}, 'common', []).ok, false);
@@ -350,6 +379,8 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(currency.balance(), 9_970_000);
   assert.equal(pets.countOwnedPets(), 1);
+  // 보유 펫이 바뀌었으니 펫룸·오버레이가 다시 읽도록 한 번 알린다.
+  assert.equal(petsChanged, 1);
   assert.equal(
     materials.every(
       (pet) => !pets.listOwnedPets().some((owned) => owned.ownedPetId === pet.ownedPetId),

@@ -16,7 +16,7 @@ import {
   defaultLogLocation,
   factSnapshot,
   FixtureCollector,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   type MetaState,
   observedTotal,
   rescanSource,
@@ -33,19 +33,19 @@ const NOW = '2026-08-24T14:37:12+09:00';
 class Harness {
   state: MetaState;
   collector: FixtureCollector;
-  currency: InMemoryCurrency;
+  tokens: InMemoryTokenClient;
   clock: FixedClock;
 
   constructor() {
     this.collector = FixtureCollector.withEmptySnapshots();
     this.clock = new FixedClock(NOW);
-    this.currency = new InMemoryCurrency();
-    this.currency.setNow(this.clock.now());
+    this.tokens = new InMemoryTokenClient();
+    this.tokens.setNow(this.clock.now());
     this.state = createMetaState();
   }
 
   runFull(): AggregationRun {
-    return runAggregation(this.state, this.collector, this.currency, this.clock);
+    return runAggregation(this.state, this.collector, this.tokens, this.clock);
   }
 
   run(): SourceRunResult[] {
@@ -53,7 +53,7 @@ class Harness {
   }
 
   runFor(provider: Provider): SourceRunResult {
-    const run = rescanSource(this.state, this.collector, this.currency, this.clock, provider);
+    const run = rescanSource(this.state, this.collector, this.tokens, this.clock, provider);
     const outcome = run.outcomes[0];
     assert.ok(outcome, '소스 하나의 결과가 있어야 한다');
     return outcome.result;
@@ -70,7 +70,7 @@ class Harness {
 const tokens = (input: number, output = 0, cacheCreate = 0, cacheRead = 0) =>
   tokenCounts(input, output, cacheCreate, cacheRead);
 
-test('COLLECT-002: 첫 정상 스캔이 통계·코인·활동 시간·업적을 증가시키지 않는다', () => {
+test('COLLECT-002: 첫 정상 스캔이 통계·재화·활동 시간·업적을 증가시키지 않는다', () => {
   const harness = new Harness();
   // 설치 전에 이미 쌓여 있던 대량의 기록.
   harness.collector.accumulate('claude_code', '2026-05-01', 'claude-opus-5', tokens(9_000_000));
@@ -80,8 +80,9 @@ test('COLLECT-002: 첫 정상 스캔이 통계·코인·활동 시간·업적을
   assert.deepEqual(Harness.resultFor(results, 'claude_code'), { kind: 'baseline_captured' });
   assert.equal(observedTotal(harness.state), 0, '설치 전 기록은 통계에 잡히지 않는다');
   assert.equal(harness.state.activityMinutes.size, 0, '활동 시간도 늘지 않는다');
-  assert.equal(harness.currency.grantedKeyCount, 0, '코인도 지급되지 않는다');
-  assert.equal(factSnapshot(harness.state).observed_tokens, 0, '업적 사실도 0이어야 한다');
+  assert.equal(harness.tokens.grantedKeyCount, 0, '재화도 지급되지 않는다');
+  assert.equal(harness.tokens.entries.length, 0, '토큰 원장에도 적재되지 않는다');
+  assert.equal(factSnapshot(harness.state).earned_tokens, 0, '업적 사실도 0이어야 한다');
 });
 
 test('COLLECT-003: 재스캔이 주기 집계와 같은 수집 경계를 쓴다', () => {
@@ -117,13 +118,13 @@ test('COLLECT-004: 집계를 반복해도 각 값이 한 번만 변한다', () =
   harness.run();
   const observedAfterFirst = observedTotal(harness.state);
   const minutesAfterFirst = harness.state.activityMinutes.size;
-  const grantsAfterFirst = harness.currency.grantedKeyCount;
+  const grantsAfterFirst = harness.tokens.grantedKeyCount;
 
   for (let index = 0; index < 4; index += 1) harness.run();
 
   assert.equal(observedTotal(harness.state), observedAfterFirst);
   assert.equal(harness.state.activityMinutes.size, minutesAfterFirst);
-  assert.equal(harness.currency.grantedKeyCount, grantsAfterFirst);
+  assert.equal(harness.tokens.grantedKeyCount, grantsAfterFirst);
 });
 
 test('COLLECT-004: 기준점 갱신 직전에 죽어도 같은 증가분을 두 번 세지 않는다', () => {
@@ -208,13 +209,99 @@ test('COLLECT-006: 관측 토큰과 보상 대상 토큰이 각자의 계약값�
   // 정보는 관측 토큰을 쓴다.
   assert.equal(observedTotal(harness.state), 2_000_000);
 
-  // 코인은 보상 대상 토큰에서 나온다. 대역의 환산 비율은 10,000 토큰당 1코인이므로
-  // 관측 토큰 기준이면 200, 보상 대상 기준이면 100이다.
+  // 재화는 보상 대상 토큰 수 그대로 지급된다. 관측 토큰 기준이면 2,000,000이 된다.
   assert.equal(
-    harness.currency.grantedAmount('claude_code:0->2000000'),
-    100,
-    '코인 환산에 관측 토큰이 아니라 보상 대상 토큰이 쓰여야 한다',
+    harness.tokens.grantedAmount('claude_code:0->2000000'),
+    1_000_000,
+    '재화 지급에 관측 토큰이 아니라 보상 대상 토큰이 그대로 쓰여야 한다',
   );
+});
+
+test('COLLECT-006: 보상 대상 토큰이 0인 증가분은 재화를 지급하지 않는다', () => {
+  const harness = new Harness();
+  harness.run();
+  // 캐시 읽기만 늘었다. 관측 토큰은 늘지만 보상 대상 토큰은 0이다.
+  harness.collector.accumulate(
+    'claude_code',
+    '2026-08-24',
+    'claude-opus-5',
+    tokens(0, 0, 0, 5_000),
+  );
+
+  const result = Harness.resultFor(harness.run(), 'claude_code');
+
+  assert.deepEqual(result, { kind: 'applied', observedDelta: 5_000, rewardTokens: 0 });
+  assert.equal(harness.tokens.grantedKeyCount, 0, '0짜리 원장 항목을 만들지 않는다');
+  assert.equal(harness.tokens.entries.length, 1, '사용량 자체는 토큰 원장에 남는다');
+});
+
+test('TOKEN: 증가분이 토큰 원장에 관측·보상 대상 토큰으로 한 번만 적재된다', () => {
+  const harness = new Harness();
+  harness.run();
+  harness.collector.accumulate(
+    'claude_code',
+    '2026-08-24',
+    'claude-opus-5',
+    tokens(500_000, 200_000, 300_000, 1_000_000),
+  );
+
+  harness.run();
+  // 같은 누적값으로 다시 집계해도 새 증가분이 아니다.
+  harness.run();
+
+  assert.deepEqual(harness.tokens.entries, [
+    {
+      provider: 'claude_code',
+      observed: 2_000_000,
+      reward: 1_000_000,
+      dedupeKey: 'claude_code:0->2000000',
+      occurredAt: harness.clock.now().toISOString(),
+    },
+  ]);
+});
+
+test('TOKEN: 토큰 원장 적재가 실패하면 증가분을 반영하지 않고 다음 집계에서 다시 시도한다', () => {
+  const harness = new Harness();
+  harness.run();
+  harness.collector.accumulate('codex', '2026-08-24', 'gpt-5.4-codex', tokens(3_000, 1_000));
+  harness.tokens.failNextRecord();
+
+  const failed = Harness.resultFor(harness.run(), 'codex');
+
+  assert.equal(failed.kind, 'failed');
+  assert.equal(sourceOf(harness.state, 'codex').status, 'error');
+  assert.equal(observedTotal(harness.state), 0, '적재하지 못한 증가분은 통계에도 넣지 않는다');
+  assert.equal(harness.tokens.grantedKeyCount, 0, '재화도 지급하지 않는다');
+  assert.equal(harness.state.activityMinutes.size, 0);
+
+  const retried = Harness.resultFor(harness.run(), 'codex');
+
+  assert.deepEqual(retried, { kind: 'applied', observedDelta: 4_000, rewardTokens: 4_000 });
+  assert.equal(observedTotal(harness.state), 4_000);
+  assert.equal(harness.tokens.entries.length, 1, '한 번만 적재된다');
+  assert.equal(harness.tokens.grantedAmount('codex:0->4000'), 4_000);
+  assert.equal(sourceOf(harness.state, 'codex').status, 'connected');
+});
+
+test('TOKEN: 이미 적재된 증가분이 다시 와도 통계에는 반영하고 원장은 두 배가 되지 않는다', () => {
+  // 원장에는 적재됐는데 meta 상태를 저장하기 전에 앱이 꺼진 경우다. 다시 켜면 같은 기준점에서
+  // 같은 증가분을 다시 계산한다.
+  const harness = new Harness();
+  harness.run();
+  harness.collector.accumulate('codex', '2026-08-24', 'gpt-5.4-codex', tokens(3_000, 1_000));
+  harness.tokens.recordUsage({
+    provider: 'codex',
+    observed: 4_000,
+    reward: 4_000,
+    dedupeKey: 'codex:0->4000',
+    occurredAt: harness.clock.now().toISOString(),
+  });
+
+  const result = Harness.resultFor(harness.run(), 'codex');
+
+  assert.equal(result.kind, 'applied');
+  assert.equal(observedTotal(harness.state), 4_000);
+  assert.equal(harness.tokens.entries.length, 1);
 });
 
 test('COLLECT-007: 같은 로컬 분에 세 소스가 증가해도 활동 시간은 1분만 증가한다', () => {
@@ -358,24 +445,24 @@ test('실패한 재화 지급은 같은 멱등 키로 재시도된다', () => {
     'claude-opus-5',
     tokens(500_000, 500_000),
   );
-  harness.currency.failNextGrant();
+  harness.tokens.failNextGrant();
 
   const run = harness.runFull();
   assert.ok(
     run.outcomes.some((outcome) => outcome.currencyError !== undefined),
     '지급 실패가 결과에 드러나야 한다',
   );
-  assert.equal(harness.currency.grantedKeyCount, 0);
+  assert.equal(harness.tokens.grantedKeyCount, 0);
   assert.equal(harness.state.pendingUsageGrants.size, 1, '실패한 지급은 재시도 대기로 남는다');
   assert.equal(observedTotal(harness.state), 1_000_000, '사용량 자체는 이미 반영됐다');
 
   harness.clock.advanceSeconds(60);
   harness.run();
-  assert.equal(harness.currency.grantedKeyCount, 1);
+  assert.equal(harness.tokens.grantedKeyCount, 1);
   assert.equal(harness.state.pendingUsageGrants.size, 0);
 
   harness.run();
-  assert.equal(harness.currency.grantedKeyCount, 1, '한 번 더 돌려도 중복 지급되지 않는다');
+  assert.equal(harness.tokens.grantedKeyCount, 1, '한 번 더 돌려도 중복 지급되지 않는다');
 });
 
 test('증가분마다 자기 멱등 키로 지급받는다', () => {
@@ -391,7 +478,7 @@ test('증가분마다 자기 멱등 키로 지급받는다', () => {
     harness.clock.advanceSeconds(60);
     harness.run();
     assert.equal(
-      harness.currency.grantedKeyCount,
+      harness.tokens.grantedKeyCount,
       index + 1,
       `${index + 1}번째 증가분이 자기 멱등 키로 지급받지 못했다`,
     );

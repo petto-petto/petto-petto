@@ -16,11 +16,16 @@ body,
   height: 100%;
   background: transparent !important;
   overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif;
+  font-family: 'Isamanru', sans-serif;
+}
+/* 버튼·선택 상자는 브라우저 기본값이 시스템 폰트라 상속을 명시한다. */
+button,
+select {
+  font-family: inherit;
 }
 .px {
-  font-family: 'Press Start 2P', monospace;
-  -webkit-font-smoothing: none;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
 }
 
 /* 브라우저 미리보기 전용 어두운 배경 (Electron 투명 창엔 미적용) */
@@ -127,7 +132,7 @@ body,
 }
 .pet-name {
   margin-top: 6px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Segoe UI', sans-serif;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.3px;
@@ -416,7 +421,8 @@ body,
 }
 .levelup-banner {
   top: -150px;
-  font-family: 'Press Start 2P', monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 22px;
   color: #fff;
   text-shadow:
@@ -434,7 +440,8 @@ body,
 }
 .evolve-banner {
   top: -150px;
-  font-family: 'Press Start 2P', monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 18px;
   color: #fff;
   text-shadow:
@@ -476,6 +483,12 @@ body,
 .dev-body {
   margin-top: 6px;
   width: 252px;
+  /*
+   * 오버레이 창은 높이가 고정(520px)이다. 보유 펫 버튼이 늘면 패널이 창 밖으로 잘리므로, 창 안에
+   * 남는 높이(위 여백 12 + 토글 34 + 간격 6 + 아래 여백 12)까지만 쓰고 나머지는 스크롤한다.
+   */
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   background: rgba(14, 16, 26, 0.97);
   color: #e5e7eb;
   border-radius: 11px;
@@ -523,6 +536,20 @@ body,
   background: #6d3fd6;
   box-shadow: 0 0 8px rgba(138, 92, 246, 0.7);
 }
+.dev-room-bg select {
+  flex: 1 1 30%;
+  min-width: 0;
+  padding: 6px;
+  font-size: 11px;
+  /* 패널의 양피지·나무 크롬에 맞춘다. 기본 위젯은 도트 화면에서 튄다. */
+  color: var(--ink);
+  background: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  border-radius: 0;
+}
+.dev-room-bg button {
+  flex: 0 0 auto;
+}
 .dev-note {
   color: #94a3b8;
   font-size: 10px;
@@ -562,14 +589,13 @@ body,
 html,
 body,
 #root {
-  font-family: Galmuri9, ui-monospace, monospace;
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
+  font-family: 'Isamanru', sans-serif;
 }
 .px,
 .panel-title,
 .dev-title {
-  font-family: Galmuri11, 'Press Start 2P', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
 }
 
 .pet-level {
@@ -601,7 +627,7 @@ body,
   margin-top: 8px;
   padding: 4px 8px;
   color: var(--ink);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0;
@@ -623,7 +649,7 @@ body,
 .toast {
   padding: 4px 8px;
   color: var(--ink);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 11px;
   font-weight: 700;
   background: var(--parchment);
@@ -715,7 +741,8 @@ button:focus-visible {
 .evolve-banner {
   padding: 8px 10px;
   color: var(--ink);
-  font-family: Galmuri11, 'Press Start 2P', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 16px;
   background: var(--parchment);
   border: 3px solid var(--wood-dark);
@@ -731,7 +758,7 @@ button:focus-visible {
 .fx-sub {
   margin-top: 6px;
   color: #725127;
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
   text-shadow: none;
 }
@@ -837,7 +864,7 @@ button:focus-visible {
 .pet-exp-value {
   min-width: 28px;
   color: var(--cream);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
   text-shadow: 1px 1px 0 var(--outline);
 }
@@ -849,7 +876,8 @@ button:focus-visible {
   justify-content: center;
   gap: 5px;
   color: var(--cream);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 13px;
   background: var(--wood);
   border: 2px solid var(--wood-dark);
@@ -868,7 +896,8 @@ button:focus-visible {
 }
 .panel-title {
   color: var(--ink);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 15px;
 }
 .panel-body {
@@ -919,7 +948,7 @@ button:focus-visible {
   justify-content: center;
   gap: 6px;
   color: var(--cream);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   background: var(--wood);
   border: 2px solid var(--wood-dark);
@@ -968,7 +997,7 @@ button:focus-visible {
 }
 .hmenu-label {
   color: var(--cream);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
 }
 .hmenu-dot {
@@ -1004,14 +1033,16 @@ button:focus-visible {
 .fx-kicker {
   padding: 2px 5px;
   color: var(--cream);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 10px;
   line-height: 1;
   background: var(--wood-dark);
 }
 .fx-title {
   margin-top: 6px;
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 16px;
   line-height: 1.15;
 }
@@ -1036,13 +1067,15 @@ button:focus-visible {
 }
 .pet-level span {
   color: var(--cream);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 10px;
   letter-spacing: 1px;
 }
 .pet-level strong {
   color: var(--gold);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 15px;
   line-height: 1;
 }
@@ -1080,7 +1113,7 @@ button:focus-visible {
   margin-top: 8px;
   padding: 0;
   color: var(--cream);
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 15px;
   font-weight: 700;
   background: transparent;
@@ -1100,7 +1133,7 @@ button:focus-visible {
 .toast {
   padding: 4px 12px;
   color: #fff;
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   font-weight: 800;
   background: transparent;
@@ -1122,7 +1155,8 @@ button:focus-visible {
   min-width: 0;
   padding: 0;
   color: #fff;
-  font-family: Galmuri11, 'Press Start 2P', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 22px;
   background: transparent;
   border: 0;
@@ -1139,7 +1173,8 @@ button:focus-visible {
   min-width: 0;
   padding: 0;
   color: #fff;
-  font-family: Galmuri11, 'Press Start 2P', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   font-size: 18px;
   background: transparent;
   border: 0;
@@ -1152,7 +1187,7 @@ button:focus-visible {
 .fx-sub {
   margin-top: 8px;
   color: var(--gold);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
   text-shadow: 0 0 8px var(--gold);
 }

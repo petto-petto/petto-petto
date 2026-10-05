@@ -18,6 +18,7 @@ import { domainEvent, eventId, type EventPayload } from '../events/index.ts';
 import {
   CollectError,
   FixtureCollector,
+  GACHA_READY_BUBBLE,
   achievementScreen,
   bubbleMessage,
   equipTitle,
@@ -29,6 +30,7 @@ import {
   settingsScreen,
   summaryScreen,
   tokenCounts,
+  uiIcons,
   usageScreen,
   type AggregationRun,
   type EvaluationOutcome,
@@ -36,7 +38,7 @@ import {
   type PetSummary,
 } from '../index.ts';
 
-import type { MetaAppState } from './state.ts';
+import type { AggregationResult, MetaAppState } from './state.ts';
 
 /**
  * meta가 앱 껍데기에 요구하는 것.
@@ -115,10 +117,11 @@ function describe(run: AggregationRun): string[] {
     let detail: string;
     switch (outcome.result.kind) {
       case 'baseline_captured':
-        detail = '기준점을 잡았어요 (설치 전 기록은 제외)';
+        detail = '기준점을 잡았어요 (앱을 켜기 전 기록은 제외)';
         break;
       case 'applied':
-        detail = `관측 토큰 +${outcome.result.observedDelta}`;
+        // 화면의 다른 숫자와 같은 기준 — 재화로 쌓인 양을 말한다.
+        detail = `토큰 +${outcome.result.rewardTokens}`;
         break;
       case 'no_change':
         detail = '변화 없음';
@@ -148,16 +151,36 @@ function failuresOf(run: AggregationRun): string[] {
   );
 }
 
+/**
+ * 한 번의 집계 뒤에 펫이 할 말. 할 말이 없으면 `undefined`.
+ *
+ * 기획서 6.3 / ACH-008: 오버레이가 숨겨졌거나 해당 알림이 꺼져 있으면 말풍선을 표시하지 않는다.
+ * 판정과 보상은 이미 끝났으므로 여기서 억제하는 것은 표시뿐이고, 억제한 것은 나중에 재생하지
+ * 않는다.
+ *
+ * 업적 달성과 뽑기 가능이 같은 집계에서 함께 일어나면 한 말풍선에 이어 붙인다. 업적 보상이 곧
+ * 뽑기 비용을 넘기는 경우가 흔해서(`첫 만남`), 하나만 고르면 다른 하나는 영영 표시되지 않는다.
+ */
+export function tickBubble(
+  state: MetaAppState,
+  outcome: EvaluationOutcome,
+  gachaReady: boolean,
+): string | undefined {
+  const settings = state.meta.settings;
+  if (!settings.overlayVisible) return undefined;
+  const parts = [
+    settings.notifyAchievement ? bubbleMessage(outcome, state.catalog) : undefined,
+    gachaReady && settings.notifyGachaReady ? GACHA_READY_BUBBLE : undefined,
+  ].filter((part) => part !== undefined);
+  return parts.length === 0 ? undefined : parts.join(' · ');
+}
+
 function report(
   state: MetaAppState,
   host: MetaHost,
-  run: AggregationRun,
-  outcome: EvaluationOutcome,
+  { run, outcome, gachaReady }: AggregationResult,
 ): TickReport {
-  // 기획서 6.3 / ACH-008: 오버레이가 숨겨졌거나 알림이 꺼져 있으면 말풍선을 표시하지
-  // 않는다. 판정과 보상은 이미 끝났으므로 여기서 억제하는 것은 표시뿐이다.
-  const allowed = state.meta.settings.notifyAchievement && state.meta.settings.overlayVisible;
-  const bubble = allowed ? bubbleMessage(outcome, state.catalog) : undefined;
+  const bubble = tickBubble(state, outcome, gachaReady);
 
   const tick: TickReport = {
     activityMinuteAdded: run.activityMinuteAdded,
@@ -200,7 +223,7 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       state.catalog,
       state.today(),
       state.pets,
-      state.currency,
+      state.tokens,
       state.growthRules,
       state.gacha,
     ),
@@ -243,6 +266,19 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     return achievementScreen(state.meta, state.catalog, state.achievementFilter);
   });
 
+  // 팔레트와 종류 아이콘. 줄마다 달라지지 않으므로 화면이 한 번 받아 두고 쓴다.
+  handle('ui:icons', () => uiIcons());
+
+  // 달성한 업적의 보상을 받는다. 판정은 보상을 지급하지 않으므로 재화가 들어오는 길은 이것뿐이다.
+  handle('achievements:claim', (achievementId) => {
+    if (typeof achievementId !== 'string') throw new Error('업적을 알 수 없습니다');
+    const outcome = state.claimRewards(achievementId);
+    state.persist();
+    // 잔액과 누적 토큰이 바뀌었다. 열려 있는 다른 화면도 다시 그리게 한다.
+    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble: undefined });
+    return outcome;
+  });
+
   handle('pet:overlay', () => state.collection.overlayPet());
 
   /* ---------- 수집 ---------- */
@@ -252,22 +288,22 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
   handle('collect:toggle', async (provider, enabled) => {
     const target = providerFromKey(provider);
     setSourceEnabled(state.meta, state.clock, target, enabled === true);
-    const { run, outcome } = await state.rescan(target);
+    const result = await state.rescan(target);
     state.persist();
-    return report(state, host, run, outcome);
+    return report(state, host, result);
   });
 
   handle('collect:rescan', async (provider) => {
-    const { run, outcome } = await state.rescan(providerFromKey(provider));
+    const result = await state.rescan(providerFromKey(provider));
     state.persist();
-    return report(state, host, run, outcome);
+    return report(state, host, result);
   });
 
   // 사용량 화면의 `갱신` 버튼. 1분 주기와 같은 경로다(COLLECT-003).
   handle('collect:now', async () => {
-    const { run, outcome } = await state.aggregate();
+    const result = await state.aggregate();
     state.persist();
-    return report(state, host, run, outcome);
+    return report(state, host, result);
   });
 
   /* ---------- 설정 ---------- */
@@ -369,7 +405,6 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
         payload = {
           eventType: 'fusion.completed',
           fusionId: `fusion-${unique}`,
-          parentRarities: ['COMMON', 'COMMON'],
           resultPetId: petId(`pet-${unique}`),
           resultRarity: 'EPIC',
         };
@@ -417,9 +452,9 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
       model,
       tokenCounts(120_000, 60_000, 90_000, 230_000),
     );
-    const { run, outcome } = await state.aggregate();
+    const result = await state.aggregate();
     state.persist();
-    return report(state, host, run, outcome);
+    return report(state, host, result);
   });
 
   handle('demo:fail-next-reward', () => {
@@ -427,15 +462,15 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
      * 데모 전용 표면이다. 포트에 넣지 않은 이유: 실제 재화 구현이 "다음 지급을 실패시키는"
      * 기능을 가질 이유가 없다. 대역이 가진 기능일 때만 부른다.
      */
-    const currency: unknown = state.currency;
-    if (hasFailNextGrant(currency)) currency.failNextGrant();
+    const tokens: unknown = state.tokens;
+    if (hasFailNextGrant(tokens)) tokens.failNextGrant();
   });
 
   handle('demo:break-source', async (provider) => {
     demoCollector(state).setError(providerFromKey(provider), new CollectError('execution_failed'));
-    const { run, outcome } = await state.aggregate();
+    const result = await state.aggregate();
     state.persist();
-    return report(state, host, run, outcome);
+    return report(state, host, result);
   });
 
   return handlers;

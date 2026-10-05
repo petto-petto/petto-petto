@@ -48,6 +48,14 @@ export function roomScene() {
 export function setActivePet(ownedPetId) {
   return api?.setActivePet?.(ownedPetId) ?? Promise.resolve();
 }
+/** 개발용: 펫룸 배경을 계절·시간대로 고정한다. `season` 이 `null` 이면 지금 시각으로 돌아간다. */
+export function previewRoomBackground(season, phase) {
+  return api?.previewRoomBackground?.(season, phase) ?? Promise.resolve();
+}
+export function onRosterChanged(cb) {
+  if (api?.onRosterChanged) return api.onRosterChanged(cb);
+  return () => {};
+}
 export function onActivePetChanged(cb) {
   if (api?.onActivePetChanged) return api.onActivePetChanged(cb);
   return () => {};

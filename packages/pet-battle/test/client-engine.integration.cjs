@@ -255,9 +255,31 @@ test('같은 레벨의 저장 XP도 Electron 엔진 HP를 줄이고 표시 HP는
 
 test('열린 전투창 조회는 룸 선택과 진화 변경을 읽고 XP가 연결되지 않아도 외형 단계를 반영한다', async () => {
   const { PetBattleIntegration, ElectronBattleEngine } = await import('../dist/index.js');
-  const { RoomSelectionAdapter, roomPetViews, seedCollection, withActivePet, withPetGrowth } =
-    await import('@pet/room');
-  let collection = seedCollection();
+  const {
+    RoomSelectionAdapter,
+    roomPetViews,
+    collectionFromRecords,
+    withActivePet,
+    withPetGrowth,
+  } = await import('@pet/room');
+  let collection = collectionFromRecords([
+    {
+      ownedPetId: 'seed-001',
+      speciesId: '003',
+      level: 3,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: false,
+    },
+    {
+      ownedPetId: 'seed-006',
+      speciesId: '006',
+      level: 16,
+      evolutionStage: 0,
+      nickname: null,
+      isActive: true,
+    },
+  ]).collection;
   const views = () => roomPetViews(collection);
   const owned = views().map((pet) => ({
     ownedPetId: pet.ownedPetId,

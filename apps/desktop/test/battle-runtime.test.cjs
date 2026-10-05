@@ -4,9 +4,8 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { fileURLToPath } = require('node:url');
 const test = require('node:test');
-const { roomFixture } = require('./room-battle-selection.test.cjs');
 
-async function fixture(t, { persistedGrowth = false } = {}) {
+async function fixture(t, species = ['003', '006']) {
   const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
   const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
   const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
@@ -15,8 +14,10 @@ async function fixture(t, { persistedGrowth = false } = {}) {
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
   const { PetGrowthRepository } =
     await import('../dist/main/persistence/repositories/pet-growth-repository.js');
+  const { RoomState } = await import('../dist/main/room-state.js');
+  const { RoomCollectionPort } = await import('../dist/main/collection.js');
   const { createBattleRuntime, mountBattle } = await import('@pet/battle/node');
-  const { PetClientRoomAdapter } = await import('@pet/room');
+  const { PetClientRoomAdapter, RoomSelectionAdapter } = await import('@pet/room');
   const { OVERLAY_GROWTH_RULES } = await import('../dist/main/growth-rules.js');
   const directory = mkdtempSync(join(tmpdir(), 'petto-battle-selection-'));
   const db = new SqliteFileDatabase({
@@ -24,10 +25,22 @@ async function fixture(t, { persistedGrowth = false } = {}) {
     migrations: APP_MIGRATIONS,
   });
   db.open();
-  const growthRepository = new PetGrowthRepository(db);
   const pets = new SqlitePetClient(new PetRepository(db));
-  const roomPets = new PetClientRoomAdapter(pets);
+  const owned = pets.createOwnedPets(species);
+  if (owned[0]) pets.setActivePet(owned[0].ownedPetId);
+  const growthRepository = new PetGrowthRepository(db);
+  const host = { showRoom() {}, navigate() {}, broadcast() {} };
+  const createRoom = () =>
+    new RoomState(
+      { now: () => new Date('2026-10-05T12:00:00') },
+      new RoomCollectionPort(),
+      pets,
+      () => growthRepository.growth(),
+    );
+  let room = createRoom();
+  room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), host);
   const options = {
+    selection: new RoomSelectionAdapter(() => room.scene().pets),
     growth: new SqliteGrowthReadClient(growthRepository),
     petAssetsDir: join(__dirname, '../renderer/assets/pets'),
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
@@ -36,221 +49,140 @@ async function fixture(t, { persistedGrowth = false } = {}) {
   };
   const engines = [];
   t.after(() => {
-    engines.forEach((e) => e.close());
+    engines.forEach((engine) => engine.close());
     db.close();
     rmSync(directory, { recursive: true, force: true });
   });
   return {
     db,
     pets,
+    owned,
     growthRepository,
-    roomPets,
     options,
+    host,
     mountBattle,
-    connect(selection) {
-      const engine = createBattleRuntime(roomPets, { ...options, selection });
+    get room() {
+      return room;
+    },
+    connect() {
+      const engine = createBattleRuntime(new PetClientRoomAdapter(pets), options);
       engines.push(engine);
       return engine;
+    },
+    saveGrowth(id, values) {
+      const profiles = growthRepository.loadAll();
+      Object.assign(profiles[id].pet, values);
+      growthRepository.saveAll(profiles);
+      room.applyGrowth(growthRepository.growth(), host);
+    },
+    restart() {
+      db.close();
+      db.open();
+      room = createRoom();
     },
   };
 }
 
-test('공통 SQLite 소유자 선택 → 읽기 Adapter → Rust 전투 이미지와 재시작 유지', async (t) => {
-  const f = await fixture(t);
-  const { deriveBattleScene } = await import('@pet/battle');
-  const [mole, wizard, squirrel] = f.pets.createOwnedPets(['003', '006', '001']);
-  f.pets.updateGrowth(wizard.ownedPetId, {
-    level: 25,
-    totalXp: 384,
-    xpIntoLevel: 0,
-    evolutionStage: 1,
-  });
-  f.pets.setActivePet(mole.ownedPetId);
+test('공통 명부가 비어 있으면 펫룸과 전투 모두 비어 있고 데모 개체를 만들지 않는다', async (t) => {
+  const f = await fixture(t, []);
+  const result = await f.connect().execute({ type: 'GET_STATE', nowMs: 0 });
+  assert.deepEqual(f.room.scene().pets, []);
+  assert.equal(result.state.activePet, null);
+  assert.deepEqual(result.state.roster, []);
+  assert.deepEqual(f.pets.listOwnedPets(), []);
+});
+
+test('같은 종의 두 개체도 룸의 공통 활성 선택과 개체별 성장만 전투에 연결한다', async (t) => {
+  const f = await fixture(t, ['003', '003']);
+  const [first, second] = f.owned;
+  f.saveGrowth(second.ownedPetId, { totalXp: 1, xpIntoLevel: 1 });
   const engine = f.connect();
   let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, mole.ownedPetId);
-  f.pets.setActivePet(wizard.ownedPetId);
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, wizard.ownedPetId);
-  assert.equal(result.state.activePet.level, 25);
+  assert.equal(result.state.activePet.petId, first.ownedPetId);
+  assert.equal(result.state.activePet.syncedTotalXp, 0);
+  f.room.setActivePet(second.ownedPetId, f.host);
+  const before = f.pets.listOwnedPets();
+  result = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(f.pets.getActivePet().ownedPetId, second.ownedPetId);
+  assert.equal(result.state.activePet.petId, second.ownedPetId);
+  assert.equal(result.state.activePet.syncedTotalXp, 1);
+  assert.equal(result.state.growthStatus, 'LINKED');
+  assert.ok(result.state.enemyHpRatio < 1);
+  assert.deepEqual(f.pets.listOwnedPets(), before, '전투 조회는 소유자 데이터에 쓰지 않는다');
+});
+
+test('열린 전투는 저장 XP와 진화 변경을 반영하고 중복 조회로 XP를 가산하지 않는다', async (t) => {
+  const f = await fixture(t);
+  const id = f.owned[0].ownedPetId;
+  const engine = f.connect();
+  await engine.execute({ type: 'GET_STATE', nowMs: 0 });
+  f.saveGrowth(id, { totalXp: 1, xpIntoLevel: 1 });
+  let result = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(result.state.activePet.level, 1);
+  assert.equal(result.state.activePet.syncedTotalXp, 1);
+  assert.ok(result.state.enemyHpRatio < 1);
+  assert.equal(result.events.filter((event) => event.type === 'XP_APPLIED').length, 1);
+  result = await engine.execute({ type: 'GET_STATE', nowMs: 2 });
+  assert.deepEqual(result.events, []);
+  f.saveGrowth(id, { level: 25, totalXp: 384, xpIntoLevel: 0, evolutionStage: 1 });
+  result = await engine.execute({ type: 'GET_STATE', nowMs: 3 });
   assert.equal(result.state.activePet.evolutionStage, 1);
-  assert.match(deriveBattleScene(result.state).petAsset, /star_wizard\/stage2\/pet_006_s2_/);
+  const { deriveBattleScene } = await import('@pet/battle');
+  assert.match(deriveBattleScene(result.state).petAsset, /mole_digger\/stage2\/pet_003_s2_/);
   for (const sprite of Object.values(result.state.petSprites)) {
     for (const sheet of Object.values(sprite)) accessSync(fileURLToPath(sheet.asset));
   }
-  await engine.execute({ type: 'CYCLE_PET_ASSET' });
-  f.pets.setActivePet(squirrel.ownedPetId);
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.rarity, 'EPIC');
-  assert.match(deriveBattleScene(result.state).petAsset, /acorn_squirrel\/stage1\/pet_001_s1_/);
-  f.db.close();
-  f.db.open();
-  result = await f.connect().execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, squirrel.ownedPetId);
-  assert.equal(f.pets.getOwnedPet(wizard.ownedPetId).totalXp, 384);
+  assert.equal(f.pets.getOwnedPet(id).totalXp, 384);
 });
 
-test('펫룸 개체 ID로 성장 정본 XP를 읽고 저장 변경을 열린 전투에 반영한다', async (t) => {
-  const f = await fixture(t, { persistedGrowth: true });
-  const room = await roomFixture();
-  const { RoomSelectionAdapter } = await import('@pet/room');
-  f.growthRepository.adoptRoster(room.state.growthSeeds());
-  const seeded = f.growthRepository.loadAll();
-  const initialXp = seeded['seed-006'].pet.totalXp;
-  const initial = seeded['seed-006'].pet;
-  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
-
-  let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, 'seed-006');
-  assert.equal(result.state.activePet.syncedTotalXp, initialXp);
-  assert.equal(result.state.growthStatus, 'LINKED');
-  assert.deepEqual(f.pets.listOwnedPets(), [], 'growth lookup must not create PetClient records');
-
-  const next = f.growthRepository.loadAll();
-  next['seed-006'].pet.totalXp = initialXp + 1;
-  next['seed-006'].pet.evolutionStage = 2;
-  f.growthRepository.saveAll(next);
-
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
-  assert.equal(result.state.activePet.syncedTotalXp, initialXp + 1);
-  assert.equal(result.state.activePet.evolutionStage, 2);
-  assert.ok(result.state.enemyHpRatio < 1);
-  assert.equal(result.events.filter((event) => event.type === 'XP_APPLIED').length, 1);
-  assert.deepEqual(f.pets.listOwnedPets(), []);
-  assert.equal(
-    initial.totalXp,
-    initialXp,
-    'repository snapshots returned to callers are independent',
-  );
-});
-
-test('집계 토큰은 기존 성장 엔진을 거쳐 저장되고 전투 HP·다음 단계에 반영된다', async (t) => {
-  const f = await fixture(t, { persistedGrowth: true });
-  const room = await roomFixture();
-  const { RoomSelectionAdapter } = await import('@pet/room');
+test('집계 사용량은 성장 엔진에 한 번 저장되고 전투 HP·다음 적에 반영된다', async (t) => {
+  const f = await fixture(t);
+  const id = f.owned[0].ownedPetId;
   const { GrowthController } =
     await import('../../../packages/pet-overlay/src/growth/controller.js');
-  f.growthRepository.adoptRoster(room.state.growthSeeds());
-  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
+  const engine = f.connect();
   const initial = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(initial.state.activePet.syncedTotalXp, 0);
   assert.equal(initial.state.enemyHpRatio, 1);
-  assert.equal(initial.state.activePet.stage, 1);
-
   const profiles = f.growthRepository.loadAll();
-  const profile = profiles['seed-006'];
+  const profile = profiles[id];
   const growth = new GrowthController(profile.pet, {
     tokenBank: profile.tokenBank,
     lastBaseXp: profile.lastBaseXp,
   });
   const notification = { tokens: 105_000, timestamp: 0, eventId: 'usage:codex:0->105000' };
   assert.equal(growth.applyNow(notification).gained, 21);
-  assert.equal(growth.applyNow(notification).gained, 0, '중복 집계 이벤트는 한 번만 반영한다');
-  f.growthRepository.saveAll({
-    ...profiles,
-    'seed-006': { ...profile, ...growth.snapshot() },
-  });
-
-  const updated = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
-  assert.equal(updated.state.activePet.syncedTotalXp, 21);
-  assert.equal(updated.state.activePet.stage, 2);
-  assert.equal(updated.state.growthStatus, 'LINKED');
-  assert.equal(updated.state.overlay?.nextStage, 2);
-  assert.ok(updated.events.some((event) => event.type === 'ENEMY_DEFEATED'));
+  assert.equal(growth.applyNow(notification).gained, 0);
+  f.growthRepository.saveAll({ ...profiles, [id]: { ...profile, ...growth.snapshot() } });
+  f.room.applyGrowth(f.growthRepository.growth(), f.host);
+  const result = await engine.execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(result.state.activePet.syncedTotalXp, 21);
+  assert.equal(result.state.activePet.stage, 2);
+  assert.equal(result.state.overlay?.nextStage, 2);
+  assert.ok(result.events.some((event) => event.type === 'ENEMY_DEFEATED'));
+  assert.equal(f.pets.getOwnedPet(id).totalXp, 21);
 });
 
-test('읽기 Adapter는 같은 종의 선택·저장 XP를 실제 Rust에 전달하고 소유 데이터에 쓰지 않는다', async (t) => {
+test('DB 재연결은 룸 선택·성장·진행도를 복원하고 과거 정복을 재생하지 않는다', async (t) => {
   const f = await fixture(t);
-  const [first, second] = f.pets.createOwnedPets(['003', '003']);
-  f.pets.setActivePet(second.ownedPetId);
-  const engine = f.connect();
-  let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, second.ownedPetId);
-  assert.equal(result.state.enemyHpRatio, 1);
-
-  f.pets.updateGrowth(second.ownedPetId, {
-    level: 1,
-    totalXp: 1,
-    xpIntoLevel: 1,
-    evolutionStage: 0,
-  });
-  const saved = f.pets.listOwnedPets();
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.syncedTotalXp, 1);
-  assert.ok(result.state.enemyHpRatio < 1);
-  assert.equal(result.events.filter((event) => event.type === 'XP_APPLIED').length, 1);
-  assert.deepEqual(f.pets.listOwnedPets(), saved);
-
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.deepEqual(result.events, []);
-  f.pets.setActivePet(first.ownedPetId);
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, first.ownedPetId);
-  assert.equal(result.state.activePet.syncedTotalXp, 0);
-  assert.equal(result.state.enemyHpRatio, 1);
-  assert.equal(f.pets.getOwnedPet(second.ownedPetId).totalXp, 1);
+  const wizard = f.owned[1];
+  f.saveGrowth(wizard.ownedPetId, { level: 25, totalXp: 384, xpIntoLevel: 0, evolutionStage: 1 });
+  f.room.setActivePet(wizard.ownedPetId, f.host);
+  const before = await f.connect().execute({ type: 'GET_STATE', nowMs: 0 });
+  f.restart();
+  const after = await f.connect().execute({ type: 'GET_STATE', nowMs: 1 });
+  assert.equal(after.state.activePet.petId, wizard.ownedPetId);
+  assert.equal(after.state.activePet.syncedTotalXp, 384);
+  assert.equal(after.state.activePet.evolutionStage, 1);
+  assert.equal(after.state.activePet.stage, before.state.activePet.stage);
+  assert.equal(after.state.enemyHpRatio, before.state.enemyHpRatio);
+  assert.ok(!after.events.some((event) => ['XP_APPLIED', 'ENEMY_DEFEATED'].includes(event.type)));
 });
 
-test('[selection 미주입] 레거시 펫룸 JSON 선택은 공통 활성 개체·명부·XP와 실행 중 전투를 바꾸지 않는다', async (t) => {
-  const f = await fixture(t);
-  const [, wizard] = f.pets.createOwnedPets(['003', '006']);
-  f.pets.updateGrowth(wizard.ownedPetId, {
-    level: 25,
-    totalXp: 384,
-    xpIntoLevel: 0,
-    evolutionStage: 1,
-  });
-  f.pets.setActivePet(wizard.ownedPetId);
-  const ownerBefore = f.pets.listOwnedPets();
-  const activeBefore = f.pets.getActivePet();
-  const engine = f.connect();
-  const battleBefore = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  const room = await roomFixture();
-
-  room.state.setActivePet('seed-001', room.host);
-
-  assert.equal(room.state.activeView().ownedPetId, 'seed-001');
-  assert.equal(room.snapshots[0].activePetId, 'seed-001');
-  assert.equal(room.saved(), 1, 'only the legacy JSON selection is saved');
-  assert.deepEqual(f.pets.getActivePet(), activeBefore);
-  assert.deepEqual(f.pets.listOwnedPets(), ownerBefore);
-  assert.deepEqual(f.roomPets.getActivePet(), activeBefore);
-  const battleAfter = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(battleAfter.state.activePet.petId, wizard.ownedPetId);
-  assert.equal(battleAfter.state.activePet.syncedTotalXp, 384);
-  assert.deepEqual(battleAfter.state.roster, battleBefore.state.roster);
-  assert.equal(battleAfter.state.enemyHpRatio, battleBefore.state.enemyHpRatio);
-  assert.deepEqual(battleAfter.events, []);
-  assert.deepEqual(f.pets.listOwnedPets(), ownerBefore);
-});
-
-test('[selection 미주입] 공통 명부가 비어 있으면 레거시 JSON 펫을 선택해도 전투는 빈 상태를 유지한다', async (t) => {
-  const f = await fixture(t);
-  const room = await roomFixture();
-  const engine = f.connect();
-  const before = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(before.state.activePet, null);
-  assert.deepEqual(before.state.roster, []);
-
-  room.state.setActivePet('seed-001', room.host);
-
-  assert.equal(room.state.activeView().ownedPetId, 'seed-001');
-  assert.equal(room.snapshots[0].activePetId, 'seed-001');
-  assert.equal(room.saved(), 1);
-  assert.equal(f.pets.getActivePet(), null);
-  assert.deepEqual(f.pets.listOwnedPets(), []);
-  const after = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(after.state.activePet, null);
-  assert.deepEqual(after.state.roster, []);
-  assert.deepEqual(after.events, []);
-  assert.equal(f.pets.countOwnedPets(), 0);
-});
-
-test('공통 미보유 상태는 데모가 아니며 IPC는 전투창만 허용한다', async (t) => {
+test('전투 IPC는 다른 창과 성장 쓰기 명령을 거절하고 저장 데이터를 보존한다', async (t) => {
   const f = await fixture(t);
   const handlers = new Map();
   const close = f.mountBattle(
-    f.roomPets,
+    new (await import('@pet/room')).PetClientRoomAdapter(f.pets),
     {
       handle: (name, handler) => handlers.set(name, handler),
       removeHandler: (name) => handlers.delete(name),
@@ -258,152 +190,26 @@ test('공통 미보유 상태는 데모가 아니며 IPC는 전투창만 허용�
     { ...f.options, isBattleSender: (id) => id === 7 },
   );
   t.after(close);
+  const before = f.pets.listOwnedPets();
+  const growthBefore = f.growthRepository.loadAll();
   const handler = handlers.get('battle:command');
   assert.throws(() => handler({ sender: { id: 8 } }, { type: 'GET_STATE', nowMs: 0 }), /전투 창/);
-  const result = await handler({ sender: { id: 7 } }, { type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet, null);
-  assert.deepEqual(result.state.roster, []);
   await assert.rejects(
-    handler({ sender: { id: 7 } }, { type: 'GROWTH_XP_ADDED', petId: 'x', amount: 999, nowMs: 0 }),
+    handler(
+      { sender: { id: 7 } },
+      {
+        type: 'GROWTH_XP_ADDED',
+        petId: f.owned[0].ownedPetId,
+        amount: 999,
+        nowMs: 0,
+      },
+    ),
     /허용하지/,
   );
+  const result = await handler({ sender: { id: 7 } }, { type: 'GET_STATE', nowMs: 0 });
+  assert.equal(result.state.activePet.petId, f.owned[0].ownedPetId);
+  assert.deepEqual(f.pets.listOwnedPets(), before);
+  assert.deepEqual(f.growthRepository.loadAll(), growthBefore);
   close();
   assert.equal(handlers.size, 0);
-});
-
-test('JSON 룸 선택 Client는 열린 Rust 전투와 재연결에 실제 선택 외형을 전달하고 공통 저장을 바꾸지 않는다', async (t) => {
-  const f = await fixture(t);
-  const { RoomSelectionAdapter } = await import('@pet/room');
-  const { deriveBattleScene } = await import('@pet/battle');
-  const [sharedWizard] = f.pets.createOwnedPets(['006']);
-  f.pets.updateGrowth(sharedWizard.ownedPetId, {
-    level: 25,
-    totalXp: 384,
-    xpIntoLevel: 0,
-    evolutionStage: 1,
-  });
-  f.pets.setActivePet(sharedWizard.ownedPetId);
-  const ownerBefore = f.pets.listOwnedPets();
-  const room = await roomFixture();
-  const selection = new RoomSelectionAdapter(() => room.state.scene().pets);
-  const engine = f.connect(selection);
-  let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, 'seed-006');
-  assert.equal(result.state.growthStatus, 'UNLINKED');
-  assert.equal(room.saved(), 0, 'reading battle must not persist room selection');
-
-  room.handlers.get('room:setActivePet')({}, 'seed-001');
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, 'seed-001');
-  assert.equal(result.state.activePet.displayName, '두더지');
-  assert.equal(result.state.activePet.level, 3);
-  assert.equal(result.state.activePet.evolutionStage, 0);
-  assert.equal(result.state.growthStatus, 'UNLINKED');
-  assert.match(deriveBattleScene(result.state).petAsset, /mole_digger\/stage1\/pet_003_s1_/);
-
-  room.handlers.get('room:setActivePet')({}, 'seed-006');
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, 'seed-006');
-  assert.equal(
-    result.state.activePet.level,
-    16,
-    'a different PetClient identity must not lend its growth',
-  );
-  assert.equal(result.state.activePet.evolutionStage, 0);
-  assert.equal(result.state.growthStatus, 'UNLINKED');
-  assert.match(deriveBattleScene(result.state).petAsset, /star_wizard\/stage1\/pet_006_s1_/);
-  for (const sprite of Object.values(result.state.petSprites)) {
-    for (const sheet of Object.values(sprite)) accessSync(fileURLToPath(sheet.asset));
-  }
-  const beforeMotion = {
-    stage: result.state.activePet.stage,
-    hp: result.state.enemyHpRatio,
-  };
-  for (const command of [
-    { type: 'SET_BATTLE_RUNNING', running: true },
-    { type: 'PREVIEW_PET', action: 'ATTACK', nowMs: 0 },
-    { type: 'GET_STATE', nowMs: 0 },
-  ]) {
-    result = await engine.execute(command);
-    assert.equal(result.state.activePet.stage, beforeMotion.stage);
-    assert.equal(result.state.enemyHpRatio, beforeMotion.hp);
-    assert.equal(
-      result.events.some((event) => ['XP_APPLIED', 'ENEMY_DEFEATED'].includes(event.type)),
-      false,
-    );
-  }
-  assert.deepEqual(f.pets.listOwnedPets(), ownerBefore);
-  assert.equal(f.pets.getActivePet().ownedPetId, sharedWizard.ownedPetId);
-  assert.equal(room.saved(), 2, 'only two explicit room selections persist JSON');
-  const restartedRoom = await roomFixture(room.snapshots.at(-1));
-  const restarted = await f
-    .connect(new RoomSelectionAdapter(() => restartedRoom.state.scene().pets))
-    .execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(restarted.state.activePet.petId, 'seed-006');
-  assert.equal(restarted.state.growthStatus, 'UNLINKED');
-  assert.deepEqual(f.pets.listOwnedPets(), ownerBefore);
-});
-
-test('공통 보유 명부가 비어도 JSON 룸 선택 펫은 실제 Rust 외형으로 표시한다', async (t) => {
-  const f = await fixture(t);
-  const { RoomSelectionAdapter } = await import('@pet/room');
-  const { deriveBattleScene } = await import('@pet/battle');
-  const room = await roomFixture();
-  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
-  const before = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(before.state.activePet.petId, 'seed-006');
-  assert.equal(before.state.growthStatus, 'UNLINKED');
-  assert.equal(before.state.roster.length, 6);
-
-  room.handlers.get('room:setActivePet')({}, 'seed-001');
-  const after = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(after.state.activePet.petId, 'seed-001');
-  assert.equal(after.state.growthStatus, 'UNLINKED');
-  assert.match(deriveBattleScene(after.state).petAsset, /mole_digger\/stage1\/pet_003_s1_/);
-  assert.equal(f.pets.getActivePet(), null);
-  assert.deepEqual(f.pets.listOwnedPets(), []);
-  assert.equal(room.saved(), 1);
-});
-
-test('정확히 같은 룸 개체만 공통 저장 XP를 연결하고 같은 종의 다른 활성 개체는 선택하지 않는다', async (t) => {
-  const f = await fixture(t);
-  const { RoomSelectionAdapter } = await import('@pet/room');
-  const [first, second] = f.pets.createOwnedPets(['003', '003']);
-  f.pets.setActivePet(first.ownedPetId);
-  const room = await roomFixture({
-    version: 1,
-    pets: [first, second].map((pet) => ({
-      id: pet.ownedPetId,
-      speciesPetId: pet.speciesId,
-      level: 25,
-    })),
-    activePetId: first.ownedPetId,
-  });
-  const engine = f.connect(new RoomSelectionAdapter(() => room.state.scene().pets));
-  let result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, first.ownedPetId);
-  assert.equal(result.state.growthStatus, 'LINKED');
-  room.handlers.get('room:setActivePet')({}, second.ownedPetId);
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, second.ownedPetId);
-  assert.equal(result.state.activePet.level, 1, 'linked growth comes from the full common record');
-  assert.equal(result.state.activePet.evolutionStage, 0);
-  assert.equal(result.state.enemyHpRatio, 1);
-  assert.equal(f.pets.getActivePet().ownedPetId, first.ownedPetId);
-
-  f.pets.updateGrowth(second.ownedPetId, {
-    level: 1,
-    totalXp: 1,
-    xpIntoLevel: 1,
-    evolutionStage: 0,
-  });
-  const saved = f.pets.listOwnedPets();
-  result = await engine.execute({ type: 'GET_STATE', nowMs: 0 });
-  assert.equal(result.state.activePet.petId, second.ownedPetId);
-  assert.equal(result.state.activePet.syncedTotalXp, 1);
-  assert.equal(result.state.growthStatus, 'LINKED');
-  assert.ok(result.state.enemyHpRatio < 1);
-  assert.equal(result.events.filter((event) => event.type === 'XP_APPLIED').length, 1);
-  assert.deepEqual(f.pets.listOwnedPets(), saved);
-  assert.equal(room.saved(), 1);
 });
