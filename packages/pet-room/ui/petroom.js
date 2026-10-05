@@ -64,8 +64,6 @@ const detailLevel = document.getElementById('detail-level');
 const detailActivate = document.getElementById('detail-activate');
 const detailClose = document.getElementById('detail-close');
 
-const GRADE_LABEL = { COMMON: '커먼', RARE: '레어', EPIC: '에픽' };
-
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 /** 창 하나가 들고 있는 전부. 활성 펫만은 여기서 정하지 않는다(파일 머리말 참조). */
@@ -495,7 +493,8 @@ function renderDetail() {
   detailGrade.replaceChildren();
   const gem = document.createElement('span');
   gem.className = 'grade-badge__gem';
-  detailGrade.append(gem, document.createTextNode(GRADE_LABEL[view.rarity] ?? view.rarity));
+  // 등급은 COMMON·RARE·EPIC 영문 대문자로 쓴다(design.md §2).
+  detailGrade.append(gem, document.createTextNode(view.rarity));
 
   detailLevel.textContent = `Lv.${view.level} · ${view.stage}단계`;
 

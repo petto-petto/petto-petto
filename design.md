@@ -40,6 +40,7 @@ petto-petto is a pixel UI inspired by a small pet space deep in a dark forest. P
 | Error | `#F08A8A` | `#762F35` |
 | Disabled | `#999999` | `#555555` |
 
+- Write rarity names in uppercase English everywhere users can see them: `COMMON`, `RARE`, `EPIC`. Never transliterate or translate them (no "커먼", "레어", "에픽", "일반", "희귀"). This applies to badges, buttons, achievement text, toasts, and demo or debug labels alike, so the same grade reads the same on every screen.
 - Use rarity colors only to communicate rarity: rarity badges, inner borders of collection slots, and pet rarity icons.
 - Reserve gold for the current selection, achievements, and rewards that require immediate attention.
 - Never distinguish warnings or errors by color alone; pair color with an icon or text.
