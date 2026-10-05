@@ -246,7 +246,7 @@ function render(next: BattleState, previous?: BattleState): void {
   enemySlam.hidden = !hasPet;
   defeatBurst.hidden = !hasPet;
   const hpText = `${Math.round(scene.enemyHpRatio * 100)}%`;
-  const stageText = `COLOR ${scene.enemyColorStage}/8 · SIZE ${scene.enemySizeStage}/3`;
+  const stageText = `STAGE ${scene.enemyColorStage}-${scene.enemySizeStage}`;
   if (hpLabel.textContent !== hpText) hpLabel.textContent = hpText;
   if (stageLabel.textContent !== stageText) stageLabel.textContent = stageText;
   opacity.value = String(Math.round(scene.displayOpacity * 100));

@@ -122,6 +122,7 @@ test('상단에는 스테이지·HP만 남기고 모션 버튼과 전용 공간�
   const header = html.match(/<header class="battle-hud">([\s\S]*?)<\/header>/)?.[1];
   assert.ok(header);
   assert.match(header, /id="stage-label"/);
+  assert.match(header, /id="stage-label" hidden>STAGE 1-1</);
   assert.match(header, /id="enemy-hp-fill"/);
   assert.doesNotMatch(header, /모션|<button/);
   assert.doesNotMatch(html, /data-action="REDUCED_MOTION"/);
