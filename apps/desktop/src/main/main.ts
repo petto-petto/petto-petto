@@ -319,6 +319,9 @@ function buildAppMenu(current: MetaAppState): void {
 app.setName('tamagotchi-pet');
 
 app.whenReady().then(async () => {
+  // 패키징하지 않고 `electron`으로 띄우면 Dock 에 Electron 기본 아이콘이 뜬다. 앱 아이콘은
+  // `tools/app-icon.py`가 만든다. Dock 이 없는 플랫폼에서는 `app.dock`이 없다.
+  app.dock?.setIcon(join(appRoot, 'resources', 'icon.png'));
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
   const databasePath = join(directory, 'petto.sqlite');
