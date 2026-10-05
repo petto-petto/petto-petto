@@ -13,7 +13,6 @@ async function fixture(t, { persistedGrowth = false } = {}) {
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
   const { PetGrowthRepository } =
     await import('../dist/main/persistence/repositories/pet-growth-repository.js');
-  const { createBattleGrowthReader } = await import('../dist/main/clients/battle-growth-reader.js');
   const { createBattleRuntime, mountBattle } = await import('@pet/battle/node');
   const { PetClientRoomAdapter } = await import('@pet/room');
   const { OVERLAY_GROWTH_RULES } = await import('../dist/main/growth-rules.js');
@@ -23,12 +22,11 @@ async function fixture(t, { persistedGrowth = false } = {}) {
     migrations: APP_MIGRATIONS,
   });
   db.open();
-  const pets = new SqlitePetClient(new PetRepository(db));
   const growthRepository = new PetGrowthRepository(db);
+  const pets = new SqlitePetClient(new PetRepository(db), growthRepository);
   const roomPets = new PetClientRoomAdapter(pets);
   const options = {
     petAssetsDir: join(__dirname, '../renderer/assets/pets'),
-    ...(persistedGrowth && { growthReader: createBattleGrowthReader(growthRepository) }),
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
       OVERLAY_GROWTH_RULES.requiredXp(i + 1),
     ),

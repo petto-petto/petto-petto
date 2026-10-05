@@ -1291,9 +1291,15 @@ async function checkIdentityAndSlam(cdp, evaluate, waitFor) {
   );
   const spectatorChecks = [];
   for (const stage of [1, 4, 22, 1]) {
-    await evaluate(`window.__arenaFixture.activePet.stage = ${stage}`);
+    const color = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'INDIGO', 'PURPLE', 'RAINBOW'][
+      Math.floor((stage - 1) / 3) % 8
+    ];
+    await evaluate(
+      `window.__arenaFixture.activePet.stage = ${stage}; window.__arenaFixture.enemyColor = '${color}'`,
+    );
+    const label = `COLOR ${(Math.floor((stage - 1) / 3) % 8) + 1}/8 · SIZE ${((stage - 1) % 3) + 1}/3`;
     await waitFor(
-      `document.querySelector('#stage-label').textContent === 'STAGE ${stage}'`,
+      `document.querySelector('#stage-label').textContent === '${label}'`,
       'stage refresh without defeated enemy spectators',
     );
     const observed = await evaluate(`({

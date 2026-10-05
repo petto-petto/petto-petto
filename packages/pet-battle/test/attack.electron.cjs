@@ -306,6 +306,7 @@ async function run() {
     { APP_MIGRATIONS },
     { SqlitePetClient },
     { PetRepository },
+    { PetGrowthRepository },
     { OVERLAY_GROWTH_RULES },
     { mountBattle },
     { PetClientRoomAdapter, RoomSelectionAdapter, seedCollection, toSnapshot },
@@ -318,6 +319,7 @@ async function run() {
     desktop('persistence/migrations/index.js'),
     desktop('clients/sqlite-pet-client.js'),
     desktop('persistence/repositories/pet-repository.js'),
+    desktop('persistence/repositories/pet-growth-repository.js'),
     desktop('growth-rules.js'),
     import('@pet/battle/node'),
     import('@pet/room'),
@@ -330,7 +332,7 @@ async function run() {
     migrations: APP_MIGRATIONS,
   });
   database.open();
-  const pets = new SqlitePetClient(new PetRepository(database));
+  const pets = new SqlitePetClient(new PetRepository(database), new PetGrowthRepository(database));
   const roomPets = new PetClientRoomAdapter(pets);
   const [mole, initialWizard] = pets.createOwnedPets(['003', '006']);
   const wizard = pets.updateGrowth(initialWizard.ownedPetId, {

@@ -27,6 +27,13 @@ export interface OwnedPet extends PetSpecies, PetGrowth {
   isActive: boolean;
 }
 
+/** 저장된 성장 정본. 읽기 결과에 없는 ID는 아직 성장 기록이 연결되지 않은 개체다. */
+export interface OwnedPetGrowthSnapshot {
+  level: number;
+  totalXp: number;
+  evolutionStage: PetGrowth['evolutionStage'];
+}
+
 /**
  * 소비 기능에 주입하는 공통 펫 API. SQLite/Electron에 의존하지 않는다.
  * 저장·조회 실패와 없는 개체에 대한 명령은 예외를 던진다.
@@ -36,6 +43,8 @@ export interface PetClient {
   listSpecies(rarity?: Rarity): PetSpecies[];
   countSpecies(rarity?: Rarity): number;
   listOwnedPets(speciesId?: string): OwnedPet[];
+  /** 지정한 보유 개체들의 저장 성장값을 읽는다. 조회 실패는 예외로 전달한다. */
+  readOwnedPetGrowth(ownedPetIds: readonly string[]): ReadonlyMap<string, OwnedPetGrowthSnapshot>;
   getOwnedPet(ownedPetId: string): OwnedPet;
   countOwnedPets(): number;
   /** 현재 보유 종류 수. 과거 발견 수가 아니다. */

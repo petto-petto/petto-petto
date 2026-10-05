@@ -1,7 +1,6 @@
 import type { OwnedPet, PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleState } from '../contracts.ts';
-import type { BattleGrowthReader } from '../ports/growth.ts';
 
 type GrowthPet = Extract<BattleCommand, { type: 'SYNC_OWNED_PETS' }>['pets'][number];
 
@@ -20,17 +19,14 @@ export function ownedGrowthPet(pet: OwnedPet): GrowthPet {
 /** Room owns selection; PetClient owns real growth. Battle only projects the two reads. */
 export class RoomBattlePetAdapter {
   readonly #selection: RoomSelectionClient;
-  readonly #growth: Pick<PetClient, 'listOwnedPets'>;
-  readonly #persistedGrowth: BattleGrowthReader | undefined;
+  readonly #growth: Pick<PetClient, 'listOwnedPets' | 'readOwnedPetGrowth'>;
 
   constructor(
     selection: RoomSelectionClient,
-    growth: Pick<PetClient, 'listOwnedPets'>,
-    persistedGrowth?: BattleGrowthReader,
+    growth: Pick<PetClient, 'listOwnedPets' | 'readOwnedPetGrowth'>,
   ) {
     this.#selection = selection;
     this.#growth = growth;
-    this.#persistedGrowth = persistedGrowth;
   }
 
   getSnapshot(): {
@@ -40,9 +36,7 @@ export class RoomBattlePetAdapter {
   } {
     const room = this.#selection.getSnapshot();
     const owned = new Map(this.#growth.listOwnedPets().map((pet) => [pet.ownedPetId, pet]));
-    const persisted =
-      this.#persistedGrowth?.readOwnedPetGrowth(room.pets.map((pet) => pet.ownedPetId)) ??
-      new Map();
+    const persisted = this.#growth.readOwnedPetGrowth(room.pets.map((pet) => pet.ownedPetId));
     const pets = room.pets.map((pet): GrowthPet => {
       const linked = owned.get(pet.ownedPetId);
       const saved = persisted.get(pet.ownedPetId);

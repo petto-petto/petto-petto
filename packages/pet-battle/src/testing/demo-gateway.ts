@@ -17,6 +17,7 @@ const COLORS: readonly EnemyColor[] = [
   'YELLOW',
   'GREEN',
   'BLUE',
+  'INDIGO',
   'PURPLE',
   'RAINBOW',
 ];

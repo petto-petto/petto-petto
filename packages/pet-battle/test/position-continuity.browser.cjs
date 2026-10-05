@@ -177,7 +177,7 @@ async function checkPositionContinuity(cdp, evaluate, waitFor, screenshot) {
       () => {
         assertUnmoved(restored, stageAfter, 'stage/background', ['x']);
         assert.notEqual(restored.background, stageAfter.background, 'background truly changed');
-        assert.equal(stageAfter.stage, 'STAGE 10');
+        assert.equal(stageAfter.stage, 'COLOR 4/8 · SIZE 1/3');
         assertContained(stageAfter, 640, 420);
       },
       stageAfter,

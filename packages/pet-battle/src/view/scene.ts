@@ -28,7 +28,10 @@ export interface BattleScene {
   petIdleAsset: string;
   petAttackAsset: string;
   enemyAsset: string;
+  enemyHueShiftDegrees: number;
   backgroundAsset: string;
+  enemyColorStage: number;
+  enemySizeStage: number;
   enemyHpRatio: number;
   enemyFace: EnemyFace;
   enemyHeight: number;
@@ -45,6 +48,7 @@ const COLOR_SEQUENCE: readonly EnemyColor[] = [
   'YELLOW',
   'GREEN',
   'BLUE',
+  'INDIGO',
   'PURPLE',
   'RAINBOW',
 ];
@@ -81,6 +85,14 @@ export function enemyColorForStage(stage: number): EnemyColor {
 export function enemySizeForStage(stage: number): EnemyPreviewSize {
   const normalized = Math.max(1, Math.trunc(stage));
   return SIZE_SEQUENCE[(normalized - 1) % SIZE_SEQUENCE.length] ?? 'SMALL';
+}
+
+export function enemyColorStageForColor(color: EnemyColor): number {
+  return COLOR_SEQUENCE.indexOf(color) + 1;
+}
+
+export function enemySizeStageForSize(size: EnemyPreviewSize): number {
+  return SIZE_SEQUENCE.indexOf(size) + 1;
 }
 
 /** The active pet has already advanced while its defeated enemy is still on screen. */
@@ -121,6 +133,7 @@ export function backgroundForEnemy(color: EnemyColor): BackgroundTheme {
       return 'MUSHROOM_FOREST';
     case 'GREEN':
     case 'BLUE':
+    case 'INDIGO':
     case 'PURPLE':
       return 'CRYSTAL_RUINS';
     case 'RAINBOW':
@@ -204,8 +217,11 @@ export function deriveBattleScene(state: BattleState, arenaAttacking?: boolean):
     petAsset,
     petIdleAsset,
     petAttackAsset,
-    enemyAsset: `assets/enemies/v2/${enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
+    enemyAsset: `assets/enemies/v2/${enemyColor === 'INDIGO' ? 'purple' : enemyColor.toLowerCase()}-${face.toLowerCase()}.png`,
+    enemyHueShiftDegrees: enemyColor === 'INDIGO' ? -30 : 0,
     backgroundAsset: `assets/backgrounds/v2/${BACKGROUND_SLUG[background]}.png`,
+    enemyColorStage: enemyColorStageForColor(enemyColor),
+    enemySizeStage: enemySizeStageForSize(enemySize),
     enemyHpRatio: hpRatio,
     enemyFace: face,
     enemyHeight: ENEMY_HEIGHT[enemySize],

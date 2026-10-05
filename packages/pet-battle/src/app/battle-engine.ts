@@ -23,7 +23,7 @@ interface Transition {
   nextStage: number;
 }
 const rarities = ['COMMON', 'RARE', 'EPIC'] as const;
-const colors = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'RAINBOW'] as const;
+const colors = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'INDIGO', 'PURPLE', 'RAINBOW'] as const;
 const sizes = ['SMALL', 'MEDIUM', 'LARGE'] as const;
 function next<T>(values: readonly T[], current: T): T {
   return values[(values.indexOf(current) + 1) % values.length]!;

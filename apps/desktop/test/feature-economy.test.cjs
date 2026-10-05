@@ -13,6 +13,8 @@ async function fixture(t) {
   const { TokenRepository } =
     await import('../dist/main/persistence/repositories/token-repository.js');
   const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
+  const { PetGrowthRepository } =
+    await import('../dist/main/persistence/repositories/pet-growth-repository.js');
   const { SqliteTokenClient } = await import('../dist/main/clients/sqlite-token-client.js');
   const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
   const directory = mkdtempSync(join(tmpdir(), 'petto-feature-economy-'));
@@ -29,7 +31,7 @@ async function fixture(t) {
     new TokenRepository(database),
     new CurrencyRepository(database),
   );
-  const pets = new SqlitePetClient(new PetRepository(database));
+  const pets = new SqlitePetClient(new PetRepository(database), new PetGrowthRepository(database));
   return { database, currency, pets, transaction: (work) => database.transaction(work) };
 }
 

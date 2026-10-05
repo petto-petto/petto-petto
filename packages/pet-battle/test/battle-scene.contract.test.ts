@@ -6,6 +6,8 @@ import {
   deriveBattleScene,
   defeatedEnemyColors,
   enemyColorForStage,
+  enemyColorStageForColor,
+  enemySizeStageForSize,
   visibleEnemyStage,
   selectRandomPetSpectators,
   shouldStartEnemyHitReaction,
@@ -109,13 +111,35 @@ test('처치한 적이 없으면 비우고, 있으면 최근 처치 적 최대 3
   assert.deepEqual(defeatedEnemyColors(6), ['ORANGE', 'ORANGE', 'RED']);
 });
 
-test('색마다 소·중·대를 거친 뒤 다음 색으로 넘어가고 21단계 뒤 반복한다', () => {
-  const colors = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'RAINBOW'];
-  for (let stage = 1; stage <= 43; stage += 1) {
-    assert.equal(enemyColorForStage(stage), colors[Math.floor((stage - 1) / 3) % 7]);
-    const scene = deriveBattleScene(state({ activePet: { ...state().activePet!, stage } }));
+test('색마다 소·중·대를 거친 뒤 다음 색으로 넘어가고 24단계 뒤 반복한다', () => {
+  const colors = [
+    'RED',
+    'ORANGE',
+    'YELLOW',
+    'GREEN',
+    'BLUE',
+    'INDIGO',
+    'PURPLE',
+    'RAINBOW',
+  ] as const;
+  for (let stage = 1; stage <= 49; stage += 1) {
+    const color = colors[Math.floor((stage - 1) / 3) % 8]!;
+    assert.equal(enemyColorForStage(stage), color);
+    const scene = deriveBattleScene(
+      state({ activePet: { ...state().activePet!, stage }, enemyColor: color }),
+    );
     assert.equal(scene.enemyHeight, [56, 64, 80][(stage - 1) % 3]);
+    assert.equal(scene.enemyColorStage, (Math.floor((stage - 1) / 3) % 8) + 1);
+    assert.equal(scene.enemySizeStage, ((stage - 1) % 3) + 1);
   }
+
+  assert.equal(enemyColorStageForColor('RAINBOW'), 8);
+  assert.equal(enemySizeStageForSize('LARGE'), 3);
+  const indigo = deriveBattleScene(
+    state({ activePet: { ...state().activePet!, stage: 16 }, enemyColor: 'INDIGO' }),
+  );
+  assert.match(indigo.enemyAsset, /v2\/purple-steady\.png$/);
+  assert.equal(indigo.enemyHueShiftDegrees, -30);
 
   const rainbow = deriveBattleScene(
     state({ enemyColor: 'RAINBOW', background: 'STARLIGHT_SHRINE' }),

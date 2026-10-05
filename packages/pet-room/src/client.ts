@@ -34,7 +34,10 @@ export class RoomSelectionAdapter implements RoomSelectionClient {
  * 공통 펫 소유자가 공개한 조회 계약의 부분집합.
  * 펫룸 JSON 선택·저장을 연결하거나 성장 값을 추정하지 않는다.
  */
-export type RoomPetReadClient = Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'listSpecies'>;
+export type RoomPetReadClient = Pick<
+  PetClient,
+  'getActivePet' | 'listOwnedPets' | 'listSpecies' | 'readOwnedPetGrowth'
+>;
 
 /** 공통 활성 펫·성장 스냅샷을 그대로 전달하는 읽기 전용 Adapter. */
 export class PetClientRoomAdapter implements RoomPetReadClient {
@@ -54,5 +57,9 @@ export class PetClientRoomAdapter implements RoomPetReadClient {
 
   listSpecies(rarity?: Rarity): PetSpecies[] {
     return this.#pets.listSpecies(rarity);
+  }
+
+  readOwnedPetGrowth(ownedPetIds: readonly string[]) {
+    return this.#pets.readOwnedPetGrowth(ownedPetIds);
   }
 }

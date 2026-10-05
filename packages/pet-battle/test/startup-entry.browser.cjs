@@ -255,7 +255,7 @@ async function main() {
     assertLoading(pending);
     await evaluate('window.__entryFixture.resolve()');
     await waitFor(
-      "document.querySelector('#stage-label').textContent === 'STAGE 19' && !document.querySelector('#pet').hidden",
+      "document.querySelector('#stage-label').textContent === 'COLOR 8/8 · SIZE 1/3' && !document.querySelector('#pet').hidden",
       'selected host state',
     );
     await evaluate(
@@ -292,7 +292,7 @@ async function main() {
     await screenshot('host-retrying');
     await evaluate('window.__entryFixture.resolve()');
     await waitFor(
-      "document.querySelector('#stage-label').textContent === 'STAGE 19' && document.querySelector('#battle-notice').hidden",
+      "document.querySelector('#stage-label').textContent === 'COLOR 8/8 · SIZE 1/3' && document.querySelector('#battle-notice').hidden",
       'retry recovery',
     );
     await evaluate(

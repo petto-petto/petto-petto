@@ -20,10 +20,11 @@ test('앱 전투 조회는 저장된 펫 XP를 동기화하고 원시 토큰·�
     evolutionStage: 0,
     isActive: true,
   } as const;
-  const pets = { getActivePet: () => pet, listOwnedPets: () => [pet] } satisfies Pick<
-    PetClient,
-    'getActivePet' | 'listOwnedPets'
-  >;
+  const pets = {
+    getActivePet: () => pet,
+    listOwnedPets: () => [pet],
+    readOwnedPetGrowth: () => new Map(),
+  } satisfies Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
   const gateway = new battle.OwnedPetBattleGateway(
     pets,
     {

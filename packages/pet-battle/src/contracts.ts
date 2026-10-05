@@ -3,7 +3,8 @@ import type { Rarity } from '@pet/core';
 export type { Rarity } from '@pet/core';
 
 export type BattleMode = 'FIGHTING' | 'PAUSED';
-export type EnemyColor = 'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'PURPLE' | 'RAINBOW';
+export type EnemyColor =
+  'RED' | 'ORANGE' | 'YELLOW' | 'GREEN' | 'BLUE' | 'INDIGO' | 'PURPLE' | 'RAINBOW';
 export type BackgroundTheme = 'MUSHROOM_FOREST' | 'CRYSTAL_RUINS' | 'STARLIGHT_SHRINE';
 export type PreviewMenu = 'CLOSED' | 'PET' | 'ENEMY';
 export type PetPreviewAction = 'ATTACK' | 'GROWTH';

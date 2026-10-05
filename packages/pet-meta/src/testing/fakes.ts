@@ -318,6 +318,19 @@ export class InMemoryPetClient implements PetClient {
     return this.#pets.filter((pet) => speciesId === undefined || pet.speciesId === speciesId);
   }
 
+  readOwnedPetGrowth(ownedPetIds: readonly string[]) {
+    this.#guard();
+    const requested = new Set(ownedPetIds);
+    return new Map(
+      this.#pets
+        .filter((pet) => requested.has(pet.ownedPetId))
+        .map((pet) => [
+          pet.ownedPetId,
+          { level: pet.level, totalXp: pet.totalXp, evolutionStage: pet.evolutionStage },
+        ]),
+    );
+  }
+
   getOwnedPet(ownedPetId: string): OwnedPet {
     this.#guard();
     const pet = this.#pets.find((candidate) => candidate.ownedPetId === ownedPetId);

@@ -147,7 +147,7 @@ test('every enemy boundary and truncated/extended curves match original growth c
         assert.ok(Math.abs(result.state.enemyHpRatio - (1 - within / target)) < 1e-6);
         assert.equal(
           result.state.enemyColor,
-          ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'PURPLE', 'RAINBOW'][
+          ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'INDIGO', 'PURPLE', 'RAINBOW'][
             Math.floor((stage - 1) / 3)
           ],
         );

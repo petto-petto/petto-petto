@@ -2,7 +2,6 @@ import type { PetClient } from '@pet/client';
 import type { RoomSelectionClient } from '@pet/room';
 import type { BattleCommand, BattleResult, Rarity } from '../contracts.ts';
 import type { BattleGateway } from '../ports/battle-gateway.ts';
-import type { BattleGrowthReader } from '../ports/growth.ts';
 import { assertBattleClientCommand } from './client-policy.ts';
 import { selectRandomPetSpectators } from '../view/scene.ts';
 import { ownedGrowthPet, RoomBattlePetAdapter } from './room-pets.ts';
@@ -15,7 +14,7 @@ export interface BattleGrowthRules {
 
 /** Trusted PetClient snapshots are authoritative; renderer preview actions cannot grant XP. */
 export class OwnedPetBattleGateway implements BattleGateway {
-  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>;
+  readonly #pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>;
   readonly #engine: BattleGateway;
   readonly #rules: BattleGrowthRules;
   readonly #room: RoomBattlePetAdapter | undefined;
@@ -24,16 +23,15 @@ export class OwnedPetBattleGateway implements BattleGateway {
   #spectators: string[] = [];
 
   constructor(
-    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets'>,
+    pets: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'readOwnedPetGrowth'>,
     engine: BattleGateway,
     rules: BattleGrowthRules,
     selection?: RoomSelectionClient,
-    growthReader?: BattleGrowthReader,
   ) {
     this.#pets = pets;
     this.#engine = engine;
     this.#rules = rules;
-    this.#room = selection && new RoomBattlePetAdapter(selection, pets, growthReader);
+    this.#room = selection && new RoomBattlePetAdapter(selection, pets);
   }
 
   execute(command: BattleCommand): Promise<BattleResult> {

@@ -24,6 +24,21 @@ function fixture() {
     ],
     getActivePet: () => owned,
     listOwnedPets: () => [owned],
+    readOwnedPetGrowth: (ownedPetIds: readonly string[]) =>
+      new Map(
+        ownedPetIds.includes(owned.ownedPetId)
+          ? [
+              [
+                owned.ownedPetId,
+                {
+                  level: owned.level,
+                  totalXp: owned.totalXp,
+                  evolutionStage: owned.evolutionStage,
+                },
+              ],
+            ]
+          : [],
+      ),
   };
   const options = {
     petAssetsDir: fileURLToPath(

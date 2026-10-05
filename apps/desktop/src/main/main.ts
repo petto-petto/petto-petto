@@ -39,7 +39,6 @@ import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
-import { createBattleGrowthReader } from './clients/battle-growth-reader.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
 import {
   applyOverlayVisibility,
@@ -311,7 +310,7 @@ app.whenReady().then(async () => {
   const ownedPets = loadRoomCollection(roomStore);
   const collection = new RoomCollectionPort(ownedPets);
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
-  const pets: PetClient = new SqlitePetClient(new PetRepository(database));
+  const pets: PetClient = new SqlitePetClient(new PetRepository(database), growthRepository);
   const currencyRepository = new CurrencyRepository(database);
   const tokens: TokenClient = new SqliteTokenClient(
     new TokenRepository(database),
@@ -368,7 +367,6 @@ app.whenReady().then(async () => {
   const battleRoom = room;
   mountBattle(new PetClientRoomAdapter(pets), ipcMain, {
     selection: new RoomSelectionAdapter(() => battleRoom.scene().pets),
-    growthReader: createBattleGrowthReader(growthRepository),
     petAssetsDir,
     levelXpCosts: Array.from({ length: OVERLAY_GROWTH_RULES.maxLevel }, (_, i) =>
       OVERLAY_GROWTH_RULES.requiredXp(i + 1),

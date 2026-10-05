@@ -18,6 +18,9 @@ function fixture() {
       if (failure) throw failure;
       return owned;
     },
+    readOwnedPetGrowth() {
+      return new Map();
+    },
   };
   const selection = {
     getSnapshot() {

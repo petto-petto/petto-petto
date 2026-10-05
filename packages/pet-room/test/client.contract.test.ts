@@ -29,6 +29,15 @@ function fixture(): {
     listSpecies: unused,
     countSpecies: unused,
     listOwnedPets: () => pets.map((pet) => ({ ...pet })),
+    readOwnedPetGrowth: (ownedPetIds) =>
+      new Map(
+        pets
+          .filter((pet) => ownedPetIds.includes(pet.ownedPetId))
+          .map((pet) => [
+            pet.ownedPetId,
+            { level: pet.level, totalXp: pet.totalXp, evolutionStage: pet.evolutionStage },
+          ]),
+      ),
     getOwnedPet: unused,
     countOwnedPets: unused,
     countOwnedSpecies: unused,
@@ -55,6 +64,7 @@ test('room read adapter accepts a source with only owner read capabilities', () 
     getActivePet: () => null,
     listOwnedPets: () => [],
     listSpecies: () => [],
+    readOwnedPetGrowth: () => new Map(),
   };
   const reader = new PetClientRoomAdapter(source);
 
@@ -81,7 +91,10 @@ test('room read client preserves full growth and duplicate-species identities wi
   const before = structuredClone(pets);
   client.setActivePet = () => assert.fail('reading must not change the owner selection');
 
-  const ownerRead: Pick<PetClient, 'getActivePet' | 'listOwnedPets' | 'listSpecies'> = reader;
+  const ownerRead: Pick<
+    PetClient,
+    'getActivePet' | 'listOwnedPets' | 'listSpecies' | 'readOwnedPetGrowth'
+  > = reader;
   const publishedRead: RoomPetReadClient = ownerRead;
   assert.deepEqual(publishedRead.listOwnedPets(), before);
   assert.deepEqual(publishedRead.getActivePet(), before[0]);
@@ -159,7 +172,12 @@ test('room read client forwards catalog rarity filters and returns the owner spe
   assert.deepEqual(filters, [undefined, 'COMMON', 'RARE', 'EPIC']);
 });
 
-for (const method of ['getActivePet', 'listOwnedPets', 'listSpecies'] as const) {
+for (const method of [
+  'getActivePet',
+  'listOwnedPets',
+  'listSpecies',
+  'readOwnedPetGrowth',
+] as const) {
   test(`room read client propagates ${method} errors instead of empty results`, () => {
     const { pets, client, reader } = fixture();
     const before = structuredClone(pets);
@@ -168,10 +186,11 @@ for (const method of ['getActivePet', 'listOwnedPets', 'listSpecies'] as const) 
       throw failure;
     };
 
-    assert.throws(
-      () => reader[method](),
-      (error) => error === failure,
-    );
+    const read =
+      method === 'readOwnedPetGrowth'
+        ? () => reader.readOwnedPetGrowth(['owned-0'])
+        : () => reader[method]();
+    assert.throws(read, (error) => error === failure);
     assert.deepEqual(pets, before);
   });
 }

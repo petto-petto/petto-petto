@@ -232,6 +232,8 @@ function render(next: BattleState, previous?: BattleState): void {
   setImageSource(background, assetUrl(scene.backgroundAsset));
   petGrounding.setSource(hasPet ? assetUrl(scene.petIdleAsset) : null);
   setImageSource(enemyImage, assetUrl(scene.enemyAsset));
+  enemyImage.style.filter =
+    scene.enemyHueShiftDegrees === 0 ? '' : `hue-rotate(${scene.enemyHueShiftDegrees}deg)`;
   void battleImages.preload(hasPet ? assetUrl(scene.petAttackAsset) : null);
   enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
   environment.style.opacity = String(scene.displayOpacity);
@@ -244,7 +246,7 @@ function render(next: BattleState, previous?: BattleState): void {
   enemySlam.hidden = !hasPet;
   defeatBurst.hidden = !hasPet;
   const hpText = `${Math.round(scene.enemyHpRatio * 100)}%`;
-  const stageText = `STAGE ${next.activePet?.stage ?? '—'}`;
+  const stageText = `COLOR ${scene.enemyColorStage}/8 · SIZE ${scene.enemySizeStage}/3`;
   if (hpLabel.textContent !== hpText) hpLabel.textContent = hpText;
   if (stageLabel.textContent !== stageText) stageLabel.textContent = stageText;
   opacity.value = String(Math.round(scene.displayOpacity * 100));
