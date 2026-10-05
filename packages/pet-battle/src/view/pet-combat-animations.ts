@@ -12,9 +12,13 @@ export type PetCombatPhase =
   | 'DIVE'
   | 'RETURN'
   | 'RESURFACE'
-  | 'SETTLE';
+  | 'SETTLE'
+  | 'ROOT_WINDUP'
+  | 'ROOT_STRIKE'
+  | 'ROOT_RETRACT'
+  | 'LEAF_SETTLE';
 export interface PetCombatAnimation {
-  readonly id: 'default' | 'mole';
+  readonly id: 'default' | 'mole' | 'sprout';
   readonly durationMs: number;
   readonly recoveryAt: number;
   readonly beats: readonly (readonly [number, number])[];
@@ -29,6 +33,10 @@ export interface PetCombatPose {
   hand: 'LEFT' | null;
   handSwing: number;
   impact: boolean;
+  rootReach: number;
+  leafBurst: number;
+  bodyDip: number;
+  spriteProgress: number;
 }
 
 const DEFAULT: PetCombatAnimation = {
@@ -57,7 +65,23 @@ const MOLE: PetCombatAnimation = {
     [2160, 2320],
   ],
 };
-const PROFILES: Readonly<Record<string, PetCombatAnimation>> = { mole_digger: MOLE };
+const SPROUT: PetCombatAnimation = {
+  id: 'sprout',
+  durationMs: 1000,
+  recoveryAt: 550,
+  beats: [
+    [0, 200],
+    [200, 250],
+    [250, 390],
+    [390, 550],
+    [550, 780],
+    [780, 1000],
+  ],
+};
+const PROFILES: Readonly<Record<string, PetCombatAnimation>> = {
+  mole_digger: MOLE,
+  sprout_treant: SPROUT,
+};
 
 /** Species IDs from PetClient, never a nickname, owned ID or rarity. */
 export function petCombatAnimation(species?: string): PetCombatAnimation {
@@ -103,8 +127,27 @@ export function petCombatPose(
     hand: null,
     handSwing: 0,
     impact: false,
+    rootReach: 0,
+    leafBurst: 0,
+    bodyDip: 0,
+    spriteProgress: 0,
   };
   if (t >= profile.durationMs) return pose;
+  if (profile.id === 'sprout') {
+    pose.phase =
+      t < 200 ? 'ROOT_WINDUP' : t < 550 ? 'ROOT_STRIKE' : t < 780 ? 'ROOT_RETRACT' : 'LEAF_SETTLE';
+    // Same contact window as the common attack; roots and leaves never grant XP.
+    pose.impact = t >= 250 && t < 390;
+    if (!reducedMotion) {
+      pose.rootReach = smooth(t, 200, 250) * (1 - smooth(t, 550, 780));
+      pose.leafBurst = t >= 250 ? 1 - smooth(t, 250, 550) : 0;
+      pose.bodyDip =
+        smooth(t, 0, 200) * (1 - smooth(t, 250, 550)) -
+        Math.sin(Math.PI * smooth(t, 780, 1000)) * 0.5;
+      pose.spriteProgress = smooth(t, 0, 550) * (1 - smooth(t, 650, 1000));
+    }
+    return pose;
+  }
   if (profile.id === 'default') {
     pose.phase = t < 550 ? 'STRIKE' : 'RECOVER';
     pose.impact = t >= 250 && t < 390;
@@ -158,6 +201,63 @@ export function petCombatPose(
     pose.hand = pose.impact ? 'LEFT' : null;
   }
   return pose;
+}
+
+export interface SproutPixel {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color: string;
+}
+
+/** Integer pixel stamps on the visible ground lane. Evolution only enriches the art. */
+export function sproutRootPixels(
+  pose: PetCombatPose,
+  start: Point,
+  target: Point,
+  evolution: number,
+  pixelSize: number,
+): SproutPixel[] {
+  if (pose.id !== 'sprout' || pose.rootReach <= 0) return [];
+  const unit = Math.max(1, Math.round(pixelSize));
+  const stage = evolution === 1 || evolution === 2 ? evolution : 0;
+  const pixels: SproutPixel[] = [];
+  const stamp = (x: number, y: number, width: number, height: number, color: string) => {
+    pixels.push({
+      x: Math.round(x / unit) * unit,
+      y: Math.round(y / unit) * unit,
+      width: width * unit,
+      height: height * unit,
+      color,
+    });
+  };
+  const distance = Math.hypot(target.x - start.x, target.y - start.y);
+  const count = Math.max(1, Math.ceil(distance / unit));
+  const reach = Math.floor(count * pose.rootReach);
+  for (let i = 0; i <= reach; i++) {
+    const p = i / count;
+    const x = start.x + (target.x - start.x) * p;
+    const y = start.y + (target.y - start.y) * p + Math.sin(p * Math.PI * 4) * unit;
+    stamp(x, y - unit, 3, 3, '#2c2438');
+    stamp(x, y - unit, 2, 2, '#8b6a4a');
+    stamp(x, y - unit, 1, 1, '#a5763f');
+    if (stage > 0 && i > 0 && i % Math.max(4, Math.floor(count / (stage + 2))) === 0) {
+      stamp(x, y - 3 * unit, 1, 3, '#2c2438');
+      stamp(x + unit, y - 2 * unit, 1, 2, '#8b6a4a');
+    }
+  }
+  if (pose.leafBurst > 0) {
+    const flight = 1 - pose.leafBurst;
+    for (let i = 0; i < 2 + stage * 2; i++) {
+      const direction = i % 2 === 0 ? -1 : 1;
+      const x = target.x + direction * (2 + flight * (5 + i)) * unit;
+      const y = target.y - (2 + Math.sin(Math.PI * flight) * (5 + i)) * unit;
+      stamp(x, y, 3, 2, '#2c2438');
+      stamp(x, y, 2, 1, '#6fb03a');
+    }
+  }
+  return pixels;
 }
 
 function smooth(time: number, start: number, end: number): number {

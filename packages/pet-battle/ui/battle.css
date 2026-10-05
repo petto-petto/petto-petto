@@ -515,6 +515,28 @@ img:not([src]) {
 .pet-body-clip {
   display: contents;
 }
+
+.sprout-roots {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 6;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+[data-pet-animation='sprout'] .pet-body-clip {
+  display: block;
+  position: absolute;
+  inset: 0;
+  transform: translateY(var(--sprout-dip, 0px));
+}
+
+[data-pet-animation='sprout'] .combat-effects .slash,
+[data-pet-animation='sprout'] .combat-effects .speed-line {
+  display: none;
+}
 .mole-soil,
 .mole-native-sprite {
   display: none;

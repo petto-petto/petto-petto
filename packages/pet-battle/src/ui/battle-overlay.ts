@@ -18,6 +18,7 @@ import { combatContactDistance, separateCombatants } from '../view/footwork.ts';
 import { HpBarMotion, type HpBarFrame } from '../view/hp-bar-motion.ts';
 import { petCombatAnimation, petCombatDecorations } from '../view/pet-combat-animations.ts';
 import { MoleSprite } from './mole-sprite.ts';
+import { SproutRoots } from './sprout-roots.ts';
 
 declare global {
   interface Window {
@@ -48,6 +49,7 @@ const petSheet = required<HTMLImageElement>('#pet-sheet');
 const moleCanvas = required<HTMLCanvasElement>('.mole-native-sprite');
 const moleSprite = new MoleSprite(moleCanvas);
 const moleSoil = required<HTMLElement>('.mole-soil');
+const sproutRoots = new SproutRoots(required<HTMLCanvasElement>('.sprout-roots'));
 const petViewport = required<HTMLElement>('.pet-viewport');
 const enemy = required<HTMLElement>('#enemy');
 const enemyImage = required<HTMLImageElement>('#enemy-image');
@@ -183,7 +185,7 @@ async function execute(command: BattleClientCommand, message?: string): Promise<
       if (
         ((command.type === 'PREVIEW_PET' && command.action === 'ATTACK') ||
           command.type === 'CYCLE_ATTACK_EFFECT') &&
-        petCombatAnimation(deriveBattleScene(state).petCombatSpecies).id === 'mole'
+        petCombatAnimation(deriveBattleScene(state).petCombatSpecies).id !== 'default'
       )
         manualAttack = ++previewSequence;
     }
@@ -381,7 +383,7 @@ function placeActor(
 
 function paintArena(next: BattleState): void {
   const base = deriveBattleScene(next, false);
-  const customAnimation = petCombatAnimation(base.petCombatSpecies).id === 'mole';
+  const customAnimation = petCombatAnimation(base.petCombatSpecies).id !== 'default';
   const reducedMotion = next.preview.reducedMotion || reducedMotionPreference.matches;
   const key = next.activePet
     ? `${next.activePet.petId}:${visibleEnemyStage(next)}:${currentTheme(next)}:${base.petIdleAsset}`
@@ -512,6 +514,20 @@ function paintArena(next: BattleState): void {
   );
   root.dataset['petAnimation'] = frame.petAnimation.id;
   root.dataset['molePhase'] = frame.petAnimation.phase;
+  root.dataset['petCombatPhase'] = frame.petAnimation.phase;
+  pet.style.setProperty(
+    '--sprout-dip',
+    `${Math.round(frame.petAnimation.bodyDip * 2) * Math.max(1, Math.round(layout.petSize / 32))}px`,
+  );
+  sproutRoots.paint(
+    frame.petAnimation,
+    { x: petX + layout.petSize * 0.6, y: petY - 3 },
+    { x: enemyX + layout.enemyFrameSize * 0.3, y: enemyY - 3 },
+    next.activePet?.evolutionStage ?? 0,
+    layout.petSize / 32,
+    layout.width,
+    layout.height,
+  );
   const decorations = petCombatDecorations(frame.petAnimation, layout.petSize);
   pet.style.setProperty('--burrow-depth', `${decorations.burrowDepth}px`);
   pet.style.setProperty('--mole-shadow', String(decorations.shadow));
@@ -564,11 +580,13 @@ function paintArena(next: BattleState): void {
     enemySlamTimer = window.setTimeout(clearEnemySlam, 380);
   }
   previousEnemyImpact = frame.enemyImpact;
-  // The native left arm follows the arena clock, not the stock attack strip.
+  // Custom species share the arena clock. Mole uses native pixels; sprout uses its stock strip.
+  const sproutAttacking = frame.petAnimation.id === 'sprout' && frame.petAnimation.phase !== 'IDLE';
   const scene = deriveBattleScene(
     next,
-    !customAnimation &&
-      ((!suppressedAttackPreview && next.preview.petAction === 'ATTACK') || frame.petAttack),
+    sproutAttacking ||
+      (!customAnimation &&
+        ((!suppressedAttackPreview && next.preview.petAction === 'ATTACK') || frame.petAttack)),
   );
   setImageSource(petSheet, assetUrl(scene.petAsset));
   updateSprite(scene.petSprite);
@@ -579,6 +597,17 @@ function paintArena(next: BattleState): void {
   petSheet.style.transform = walking
     ? `translateX(${-((frame.petStep ?? 0) % scene.petSprite.frameCount) * layout.petSize}px)`
     : '';
+  if (sproutAttacking) {
+    petSheet.classList.remove('animated-sheet');
+    const decoded =
+      petSheet.complete &&
+      petSheet.currentSrc === petSheet.src &&
+      petSheet.naturalWidth === petSheet.naturalHeight * scene.petSprite.frameCount;
+    const spriteFrame = decoded
+      ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
+      : 0;
+    petSheet.style.transform = `translateX(${-spriteFrame * layout.petSize}px)`;
+  }
   const nativeSlap = moleSprite.paint(
     petSheet,
     frame.petAnimation,

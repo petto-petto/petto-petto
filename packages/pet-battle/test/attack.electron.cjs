@@ -336,7 +336,7 @@ async function run() {
   const growthRepository = new PetGrowthRepository(database);
   const growth = new SqliteGrowthReadClient(growthRepository);
   const roomPets = new PetClientRoomAdapter(pets);
-  const [mole, initialWizard] = pets.createOwnedPets(['003', '006']);
+  const [mole, initialWizard, initialSprout] = pets.createOwnedPets(['003', '006', '004']);
   const wizard = pets.updateGrowth(initialWizard.ownedPetId, {
     level: 25,
     totalXp: 384,
@@ -442,6 +442,67 @@ async function run() {
   assert.equal((await state(reopened)).preview.displayOpacity, 0.35);
   await closeFromUi(reopened, 'reopened host battle');
   console.log('PASS host lifecycle: window close/reopen preserves STOP and opacity');
+
+  await evaluate(
+    overlay,
+    `window.petApi.setActivePet(${JSON.stringify(initialSprout.ownedPetId)})`,
+  );
+  await evaluate(overlay, 'window.overlay.openBattle()');
+  const sproutWindow = host.getBattleWindow();
+  await battleLoaded;
+  await command(sproutWindow, { type: 'SET_DISPLAY_OPACITY', percent: 100 });
+  for (const evolutionStage of [0, 1, 2]) {
+    const profiles = growthRepository.loadAll();
+    Object.assign(profiles[initialSprout.ownedPetId].pet, {
+      level: 40,
+      evolutionStage,
+      totalXp: 0,
+    });
+    growthRepository.saveAll(profiles);
+    room.applyGrowth(growthRepository.growth(), roomHost);
+    await verifyPet(sproutWindow, pets.getOwnedPet(initialSprout.ownedPetId));
+    const before = await state(sproutWindow);
+    await command(sproutWindow, { type: 'PREVIEW_PET', action: 'ATTACK', nowMs: Date.now() });
+    await waitFor(
+      sproutWindow,
+      "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'ROOT_STRIKE' && document.querySelector('#battle-overlay').dataset.beat === 'IMPACT' && !document.querySelector('.sprout-roots').hidden",
+      `sprout stage ${evolutionStage + 1} root strike`,
+    );
+    const pixels = await evaluate(
+      sproutWindow,
+      `(() => {
+      const canvas = document.querySelector('.sprout-roots');
+      const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+      return data.filter((value, index) => index % 4 === 3 && value > 0).length;
+    })()`,
+    );
+    assert.ok(pixels > 0, 'root attack must render visible hard pixels');
+    await capturePreview(sproutWindow, `sprout-stage${evolutionStage + 1}-roots`);
+    await waitFor(
+      sproutWindow,
+      "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'IDLE' && document.querySelector('.sprout-roots').hidden",
+      'sprout one-shot retracts and clears roots',
+    );
+    const after = await state(sproutWindow);
+    assert.equal(after.activePet.syncedTotalXp, before.activePet.syncedTotalXp);
+    assert.equal(after.enemyHpRatio, before.enemyHpRatio);
+    assert.equal(after.activePet.stage, before.activePet.stage);
+  }
+  await command(sproutWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  await command(sproutWindow, { type: 'PREVIEW_PET', action: 'ATTACK', nowMs: Date.now() });
+  await waitFor(
+    sproutWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'ROOT_STRIKE'",
+    'reduced sprout retains attack timing',
+  );
+  assert.equal(
+    await evaluate(sproutWindow, "document.querySelector('.sprout-roots').hidden"),
+    true,
+  );
+  await closeFromUi(sproutWindow, 'sprout battle');
+  console.log(
+    'PASS sprout stages 1/2/3: visible roots / one-shot recovery / no XP or HP writes / reduced motion',
+  );
 
   const standalone = new BrowserWindow({
     width: 640,
