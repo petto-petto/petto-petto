@@ -36,8 +36,7 @@
       "condition": "도감 5종",
       "fact": "dex_owned",
       "target": 5,
-      "token": 300000,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "collection.dex_15",
@@ -46,8 +45,7 @@
       "condition": "도감 15종",
       "fact": "dex_owned",
       "target": 15,
-      "token": 800000,
-      "tier": "silver"
+      "token": 800000
     },
     {
       "id": "collection.dex_complete",
@@ -57,7 +55,6 @@
       "fact": "dex_complete",
       "target": 1,
       "token": 3000000,
-      "tier": "gold",
       "title": "도감 마스터",
       "trophy": true
     },
@@ -78,8 +75,7 @@
       "condition": "합성 5회",
       "fact": "fusion_count",
       "target": 5,
-      "token": 300000,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "collection.fusion_50",
@@ -89,7 +85,6 @@
       "fact": "fusion_count",
       "target": 50,
       "token": 1200000,
-      "tier": "silver",
       "title": "심야의 연금술사"
     },
     {
@@ -108,8 +103,7 @@
       "condition": "한 펫이 Lv.10 달성",
       "fact": "max_pet_level",
       "target": 10,
-      "token": 400000,
-      "tier": "bronze"
+      "token": 400000
     },
     {
       "id": "growth.level_20",
@@ -118,8 +112,7 @@
       "condition": "한 펫이 Lv.20 달성",
       "fact": "max_pet_level",
       "target": 20,
-      "token": 1000000,
-      "tier": "silver"
+      "token": 1000000
     },
     {
       "id": "growth.max_level",
@@ -129,7 +122,6 @@
       "fact": "max_level_reached",
       "target": 1,
       "token": 2500000,
-      "tier": "gold",
       "title": "베테랑 조련사",
       "trophy": true
     },
@@ -158,8 +150,7 @@
       "condition": "전투 50승",
       "fact": "battle_wins",
       "target": 50,
-      "token": 800000,
-      "tier": "bronze"
+      "token": 800000
     },
     {
       "id": "battle.win_500",
@@ -169,7 +160,6 @@
       "fact": "battle_wins",
       "target": 500,
       "token": 3000000,
-      "tier": "gold",
       "title": "백전노장",
       "trophy": true
     },
@@ -180,8 +170,7 @@
       "condition": "10연승",
       "fact": "max_streak",
       "target": 10,
-      "token": 1200000,
-      "tier": "silver"
+      "token": 1200000
     },
     {
       "id": "usage.tokens_1m",
@@ -190,8 +179,7 @@
       "condition": "누적 토큰 100만",
       "fact": "earned_tokens",
       "target": 1000000,
-      "token": 200000,
-      "tier": "bronze"
+      "token": 200000
     },
     {
       "id": "usage.tokens_10m",
@@ -200,8 +188,7 @@
       "condition": "누적 토큰 1천만",
       "fact": "earned_tokens",
       "target": 10000000,
-      "token": 600000,
-      "tier": "silver"
+      "token": 600000
     },
     {
       "id": "usage.tokens_100m",
@@ -211,7 +198,6 @@
       "fact": "earned_tokens",
       "target": 100000000,
       "token": 2000000,
-      "tier": "gold",
       "title": "토큰 헤비유저"
     },
     {
@@ -221,8 +207,7 @@
       "condition": "활동 시간 1,440분",
       "fact": "activity_minutes",
       "target": 1440,
-      "token": 300000,
-      "tier": "bronze"
+      "token": 300000
     },
     {
       "id": "hidden.three_tools_day",

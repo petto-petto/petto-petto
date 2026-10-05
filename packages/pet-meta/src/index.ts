@@ -56,6 +56,7 @@ export * from './view/field.ts';
 export * from './view/info.ts';
 export * from './view/settings.ts';
 export * from './view/achievement.ts';
+export * from './view/badges.ts';
 
 export * from './app/state.ts';
 export * from './app/handlers.ts';

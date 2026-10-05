@@ -143,16 +143,32 @@ test('6.3: 알림이 꺼져 있거나 오버레이가 숨겨져 있으면 표시
   assert.equal((await hidden.earn(10_000)).bubble, undefined);
 });
 
-test('6.3: 업적 보상으로 비용을 넘기면 업적 말풍선에 뽑기 가능을 덧붙인다', async () => {
-  const { state, pets, earn } = app();
+test('6.3: 업적 보상은 받아야 잔액이 오르고, 그다음 집계에서 뽑기 가능을 알린다', async () => {
+  const { state, pets, map, earn } = app();
   state.meta.settings.notifyGachaReady = true;
   await earn(0);
 
   pets.give('003'); // `첫 만남` — 보상 100,000 이 곧 뽑기 1회 값이다.
-  const report = await earn(0);
+  const unlocked = await earn(0);
+  assert.deepEqual(unlocked.newlyUnlocked, ['collection.first_pet']);
+  assert.equal(unlocked.bubble, '첫 만남 달성! 보상을 받아 가!', '아직 받지 않아 잔액은 그대로다');
 
-  assert.deepEqual(report.newlyUnlocked, ['collection.first_pet']);
-  assert.equal(report.bubble, `첫 만남 달성! 토큰 100,000 · ${READY}`);
+  const claim = map['achievements:claim'];
+  assert.ok(claim);
+  assert.deepEqual(claim('collection.first_pet'), { claimed: true, error: undefined });
+
+  assert.equal((await earn(0)).bubble, READY);
+});
+
+test('6.3: 사용량으로 비용을 넘긴 집계에서 업적도 달성하면 한 말풍선에 이어 붙인다', async () => {
+  const { state, pets, earn } = app();
+  state.meta.settings.notifyGachaReady = true;
+  await earn(0);
+
+  pets.give('003');
+  const report = await earn(120_000);
+
+  assert.equal(report.bubble, `첫 만남 달성! 보상을 받아 가! · ${READY}`);
 });
 
 test('6.3: 잔액을 읽지 못한 집계는 알리지 않고, 다음 집계가 이어서 판단한다', async () => {

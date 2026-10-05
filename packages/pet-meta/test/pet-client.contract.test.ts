@@ -63,15 +63,7 @@ class Harness {
   }
 
   evaluate() {
-    return evaluate(
-      this.state,
-      this.catalog,
-      this.tokens,
-      this.collection,
-      this.pets,
-      this.rules,
-      this.clock,
-    );
+    return evaluate(this.state, this.catalog, this.tokens, this.pets, this.rules, this.clock);
   }
 
   unlocked(id: string): boolean {

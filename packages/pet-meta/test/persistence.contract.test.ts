@@ -12,6 +12,7 @@ import { FixedClock, PROVIDERS, petId } from '@pet/core';
 import {
   AchievementCatalog,
   beginSession,
+  claimRewards,
   createMetaState,
   evaluate,
   factSnapshot,
@@ -215,19 +216,18 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
   const collection = new InMemoryCollection();
   const pets = new InMemoryPetClient();
   const judge = () =>
-    evaluate(
-      session.state,
-      catalog,
-      session.tokens,
-      collection,
-      pets,
-      STUB_GROWTH_RULES,
-      session.clock,
-    );
+    evaluate(session.state, catalog, session.tokens, pets, STUB_GROWTH_RULES, session.clock);
+
+  const claim = (id: string) =>
+    claimRewards(session.state, catalog, session.tokens, collection, id);
 
   session.state.eventFacts.battleWins = 37;
   const outcome = judge();
   assert.ok(outcome.newlyUnlocked.includes('battle.first_win'));
+  // 하나는 받고, 하나는 받지 않은 채로 앱을 끈다.
+  session.state.eventFacts.maxStreak = 10;
+  judge();
+  assert.equal(claim('battle.first_win').claimed, true);
 
   session.restart(store);
 
@@ -242,7 +242,13 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
 
   const grants = session.tokens.grantedKeyCount;
   judge();
-  assert.equal(session.tokens.grantedKeyCount, grants, '보상이 두 번 지급되지 않는다');
+  claim('battle.first_win');
+  assert.equal(session.tokens.grantedKeyCount, grants, '받은 보상이 두 번 지급되지 않는다');
+
+  // 받지 않은 보상은 다시 켠 뒤에도 받을 수 있다.
+  assert.deepEqual(judge().claimableRewards, ['battle.streak_10']);
+  assert.equal(claim('battle.streak_10').claimed, true);
+  assert.equal(session.tokens.grantedAmount('achievement:battle.streak_10'), 1_200_000);
 });
 
 test('기획서 8.4: 껐던 소스가 재실행으로 저절로 켜지지 않는다', () => {

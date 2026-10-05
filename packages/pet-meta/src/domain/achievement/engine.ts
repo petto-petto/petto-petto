@@ -36,12 +36,15 @@ import {
 export interface EvaluationOutcome {
   /** 이번 판정에서 새로 해제된 업적 ID. */
   newlyUnlocked: string[];
-  /** 보상이 아직 완료되지 않은 업적 ID(중복 없음). */
-  pendingRewards: string[];
+  /** 달성했지만 아직 보상을 받지 않은 업적 ID(중복 없음). */
+  claimableRewards: string[];
 }
 
 /**
  * 기획서 6.3·ACH-007: 한 묶음에서 두 개 이상 달성하면 집계 말풍선 한 번만 표시한다.
+ *
+ * 보상은 사용자가 업적 칸에서 직접 받는다. 그래서 말풍선은 무엇을 받았는지가 아니라 받으러
+ * 오라고 말한다.
  */
 export function bubbleMessage(
   outcome: EvaluationOutcome,
@@ -49,20 +52,13 @@ export function bubbleMessage(
 ): string | undefined {
   if (outcome.newlyUnlocked.length === 0) return undefined;
   if (outcome.newlyUnlocked.length > 1) {
-    return `${outcome.newlyUnlocked.length}개 업적을 달성했어!`;
+    return `${outcome.newlyUnlocked.length}개 업적을 달성했어! 보상을 받아 가!`;
   }
 
   const id = outcome.newlyUnlocked[0];
   const definition = id === undefined ? undefined : catalog.get(id);
   if (!definition) return undefined;
-
-  const reward =
-    definition.token > 0
-      ? tokenRewardLabel(definition.token)
-      : definition.title
-        ? `칭호 ${definition.title}`
-        : '트로피';
-  return `${definition.name} 달성! ${reward}`;
+  return `${definition.name} 달성! 보상을 받아 가!`;
 }
 
 /**
@@ -74,8 +70,7 @@ export function bubbleMessage(
 export function evaluate(
   state: MetaState,
   catalog: AchievementCatalog,
-  tokens: Pick<TokenPort, 'grantOnce' | 'earnedSince'>,
-  collection: CollectionPort,
+  tokens: Pick<TokenPort, 'earnedSince'>,
   pets: PetClient,
   rules: GrowthRules,
   clock: Clock,
@@ -84,8 +79,8 @@ export function evaluate(
   // 판정마다 현재 보유를 한 번 관측한다. 이벤트가 없어졌으니 펫 사실을 올릴 곳이 여기뿐이다.
   // 읽지 못하면 사실을 그대로 두고 나머지 판정을 계속한다(INFO-007).
   tryObservePets(state.eventFacts, pets, rules);
-  // 누적 토큰도 같은 식으로 관측한다. 이번 판정의 보상은 지급 전이라 아직 들어 있지 않고,
-  // 다음 판정에서 반영된다 — 보상 하나가 같은 판정에서 다음 마일스톤을 연달아 열지 않는다.
+  // 누적 토큰도 같은 식으로 관측한다. 달성한 업적의 보상은 사용자가 받기 전까지 원장에 없으므로
+  // 받은 뒤의 판정부터 누적에 들어간다.
   tryObserveEarnedTokens(state.eventFacts, tokens);
   const facts = factSnapshot(state);
   const newlyUnlocked: string[] = [];
@@ -103,8 +98,8 @@ export function evaluate(
     entry.unlockedAt = now;
     newlyUnlocked.push(definition.id);
 
-    // 기획서 7.5: 해제와 보상을 분리한다. 여기서는 지급해야 할 목록만 만들고 실제
-    // 지급은 아래 정산 단계에서 한다. 지급이 실패해도 해제는 남는다.
+    // 기획서 7.5: 해제와 보상을 분리한다. 여기서는 받을 보상의 목록만 만든다. 지급은 사용자가
+    // 업적 칸에서 `보상 받기` 를 누를 때 한다(`claimRewards`). 판정은 아무것도 지급하지 않는다.
     const records = [];
     if (definition.token > 0) {
       records.push(createRewardRecord(definition.id, tokenRewardKey(definition), 'token'));
@@ -122,71 +117,89 @@ export function evaluate(
     if (records.length > 0) state.rewards.set(definition.id, records);
   }
 
-  const pendingRewards = settleRewards(state, catalog, tokens, collection);
-  return { newlyUnlocked, pendingRewards };
+  return { newlyUnlocked, claimableRewards: claimableRewards(state) };
+}
+
+/** 달성했지만 아직 받지 않은 보상이 남은 업적 ID. */
+export function claimableRewards(state: MetaState): string[] {
+  const claimable: string[] = [];
+  for (const [achievementId, records] of state.rewards) {
+    if (records.some(isRewardPending)) claimable.push(achievementId);
+  }
+  return claimable;
+}
+
+/** 보상 받기의 결과. */
+export interface ClaimOutcome {
+  /** 이 업적의 보상을 모두 받았는가. 이미 받은 업적을 다시 눌러도 참이다. */
+  claimed: boolean;
+  /** 받지 못한 까닭. 사용자에게 그대로 보여 준다. */
+  error: string | undefined;
 }
 
 /**
- * 미완료 보상을 지급한다. 실패한 항목은 미완료로 남아 다음 호출에서 재시도된다(ACH-009).
+ * 달성한 업적 하나의 보상을 지급한다. 사용자가 업적 칸의 `보상 받기` 를 눌렀을 때 부른다.
  *
- * 따로 부를 수 있게 공개한 이유: 보상 실패는 판정과 무관하게 재시도돼야 한다.
+ * 보상 종류마다 따로 지급하고 따로 기록한다. 토큰 지급이 실패해도 칭호는 받고, 실패한 것만
+ * 받을 보상으로 남아 다시 누르면 **같은 멱등 키**로 지급된다(ACH-009). 그래서 몇 번을 눌러도
+ * 한 번만 들어온다.
+ *
+ * 달성하지 않은 업적과 정의가 없는 업적은 거절한다. 렌더러가 보낸 id 를 믿지 않는다.
  */
-export function settleRewards(
+export function claimRewards(
   state: MetaState,
   catalog: AchievementCatalog,
   tokens: Pick<TokenPort, 'grantOnce'>,
   collection: CollectionPort,
-): string[] {
-  const pending: string[] = [];
+  achievementId: string,
+): ClaimOutcome {
+  const definition = catalog.get(achievementId);
+  if (!definition) return { claimed: false, error: '알 수 없는 업적이에요' };
+  const entry = state.progress.get(achievementId);
+  if (entry === undefined || !isUnlocked(entry)) {
+    return { claimed: false, error: '아직 달성하지 않은 업적이에요' };
+  }
 
-  for (const [achievementId, records] of state.rewards) {
-    const definition = catalog.get(achievementId);
-    // 정의가 사라진 업적의 보상은 건드리지 않는다. ID는 릴리스 사이에 유지되므로
-    // 정상 경로에서는 일어나지 않는다.
-    if (!definition) continue;
+  let error: string | undefined;
+  for (const record of state.rewards.get(achievementId) ?? []) {
+    if (!isRewardPending(record)) continue;
 
-    for (const record of records) {
-      if (!isRewardPending(record)) continue;
-
-      try {
-        switch (record.kind) {
-          case 'token': {
-            const granted = tokens.grantOnce(record.rewardKey, definition.token, definition.name);
-            markRewardDone(record, granted ? tokenRewardLabel(definition.token) : '이미 지급됨');
-            break;
-          }
-          case 'title': {
-            // 칭호는 meta가 소유하는 상태라 외부 실패가 없다.
-            if (definition.title !== undefined) {
-              grantTitle(state.profile, definition.title);
-              markRewardDone(record, definition.title);
-            } else {
-              markRewardDone(record, undefined);
-            }
-            break;
-          }
-          case 'trophy': {
-            // 기획서 7.4: 자동 배치 실패가 트로피 지급 실패로 이어져서는 안 된다.
-            // 그래서 배치 위치는 결과값이고, 실패는 포트 오류일 때만이다.
-            const placement = collection.grantTrophy(achievementId, autoPlacesTrophy(definition));
-            markRewardDone(record, placement === 'room' ? '룸에 배치' : '보관함에 지급');
-            break;
-          }
+    try {
+      switch (record.kind) {
+        case 'token': {
+          const granted = tokens.grantOnce(record.rewardKey, definition.token, definition.name);
+          markRewardDone(record, granted ? tokenRewardLabel(definition.token) : '이미 지급됨');
+          break;
         }
-      } catch (error) {
-        markRewardFailed(record, error instanceof Error ? error.message : String(error));
+        case 'title': {
+          // 칭호는 meta가 소유하는 상태라 외부 실패가 없다.
+          if (definition.title !== undefined) {
+            grantTitle(state.profile, definition.title);
+            markRewardDone(record, definition.title);
+          } else {
+            markRewardDone(record, undefined);
+          }
+          break;
+        }
+        case 'trophy': {
+          // 기획서 7.4: 자동 배치 실패가 트로피 지급 실패로 이어져서는 안 된다.
+          // 그래서 배치 위치는 결과값이고, 실패는 포트 오류일 때만이다.
+          const placement = collection.grantTrophy(achievementId, autoPlacesTrophy(definition));
+          markRewardDone(record, placement === 'room' ? '룸에 배치' : '보관함에 지급');
+          break;
+        }
       }
-
-      if (isRewardPending(record) && !pending.includes(achievementId)) {
-        pending.push(achievementId);
-      }
+    } catch (failure) {
+      const message = failure instanceof Error ? failure.message : String(failure);
+      markRewardFailed(record, message);
+      error ??= message;
     }
   }
 
-  return pending;
+  return { claimed: rewardsSettled(state, achievementId), error };
 }
 
-/** 기획서 7.5: 사용자에게 "지급 완료"로 표시할 수 있는 시점인가. */
+/** 이 업적의 보상을 모두 받았는가. 받을 보상이 애초에 없는 업적도 참이다. */
 export function rewardsSettled(state: MetaState, achievementId: string): boolean {
   const records = state.rewards.get(achievementId);
   if (!records) return true;

@@ -20,6 +20,7 @@ import { type DomainEvent } from '../events/index.ts';
 import {
   AchievementCatalog,
   beginSession,
+  claimRewards,
   FixtureCollector,
   evaluate,
   gachaReadyTransition,
@@ -31,6 +32,7 @@ import {
   sourceOf,
   type AggregationRun,
   type Category,
+  type ClaimOutcome,
   type EvaluationOutcome,
   type MetaState,
   type MetaStore,
@@ -250,7 +252,6 @@ export class MetaAppState {
       this.meta,
       this.catalog,
       this.tokens,
-      this.collection,
       this.pets,
       this.growthRules,
       this.clock,
@@ -285,19 +286,20 @@ export class MetaAppState {
     return transition.notify;
   }
 
+  /**
+   * 달성한 업적의 보상을 받는다. 사용자가 업적 칸의 `보상 받기` 를 눌렀을 때 부른다.
+   *
+   * 판정(`evaluate`)은 보상을 지급하지 않는다. 재화·칭호·트로피가 들어오는 곳은 여기뿐이다.
+   */
+  claimRewards(achievementId: string): ClaimOutcome {
+    return claimRewards(this.meta, this.catalog, this.tokens, this.collection, achievementId);
+  }
+
   /** 이벤트 하나를 받아 업적을 판정한다. 데모의 시연 버튼이 쓴다. */
   ingestEvent(event: DomainEvent): EvaluationOutcome {
     this.bus.publish(event);
     recordEvent(this.meta, event);
-    return evaluate(
-      this.meta,
-      this.catalog,
-      this.tokens,
-      this.collection,
-      this.pets,
-      this.growthRules,
-      this.clock,
-    );
+    return evaluate(this.meta, this.catalog, this.tokens, this.pets, this.growthRules, this.clock);
   }
 
   /**

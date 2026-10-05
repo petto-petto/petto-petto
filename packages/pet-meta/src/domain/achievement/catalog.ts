@@ -30,13 +30,6 @@ export const categoryName = (category: Category): string => CATEGORY_NAMES[categ
 export const isCategory = (value: string): value is Category =>
   (CATEGORIES as readonly string[]).includes(value);
 
-/** 단계형 업적의 티어. */
-export type Tier = 'bronze' | 'silver' | 'gold';
-
-const TIER_NAMES: Record<Tier, string> = { bronze: '브론즈', silver: '실버', gold: '골드' };
-
-export const tierName = (tier: Tier): string => TIER_NAMES[tier];
-
 /**
  * 업적 하나의 정의. 기획서 10장의 `achievement_definition`.
  *
@@ -54,7 +47,6 @@ export interface AchievementDefinition {
   fact: string;
   /** 사실이 이 값 이상이면 달성이다. */
   target: number;
-  tier?: Tier;
   /** 재화 보상. 단위는 토큰이고, 뽑기·합성이 차감하는 것과 같은 원장에 그대로 지급된다. */
   token: number;
   title?: string;

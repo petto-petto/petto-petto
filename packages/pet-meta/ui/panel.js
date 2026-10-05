@@ -122,6 +122,35 @@ function bar(ratio) {
   ]);
 }
 
+/** 잠긴 배지의 색 농도. 원래 색의 절반을 칸 바탕에 섞는다. */
+const LOCKED_BADGE_ALPHA = 0.5;
+
+/**
+ * 업적 배지를 그린다. 16×16 픽셀 그림을 캔버스에 1:1 로 찍고, 크기는 CSS 가 정수 배율로 키운다.
+ *
+ * 달성한 업적은 팔레트 색 그대로다. 잠긴 업적도 **자기 색**으로 그리되 절반만 올려 바탕에 묻히게
+ * 한다. 예전에는 잠긴 배지를 나무색으로만 칠했는데, 처음 쓰는 사용자는 전부 잠겨 있어서 목록이
+ * 온통 갈색이었다. 달성은 색의 선명함에 더해 금색 띠와 달성 시각으로 구분된다.
+ */
+function badgeCanvas(rows, palette, unlocked) {
+  const size = rows.length;
+  const canvas = el('canvas', { attrs: { width: size, height: size, 'aria-hidden': 'true' } });
+  const context = canvas.getContext('2d');
+  if (!context) return canvas;
+  context.imageSmoothingEnabled = false;
+  context.globalAlpha = unlocked ? 1 : LOCKED_BADGE_ALPHA;
+
+  rows.forEach((line, y) => {
+    for (let x = 0; x < line.length; x += 1) {
+      const pixel = line[x];
+      if (pixel === '.') continue;
+      context.fillStyle = palette[pixel];
+      context.fillRect(x, y, 1, 1);
+    }
+  });
+  return canvas;
+}
+
 /* ---------- 화면 상태 ---------- */
 
 const SUBTABS = {
@@ -816,6 +845,13 @@ async function renderAchievements() {
       el('span', { text: `${data.unlocked} / ${data.total} · ${data.completionPercent}%` }),
     ]),
     bar(data.total ? data.unlocked / data.total : 0),
+    // 다른 필터 탭에 남은 보상도 놓치지 않게 전체 기준으로 센다.
+    data.claimableCount > 0
+      ? el('div', { class: 'claim-note' }, [
+          // 금색 칩 — 지금 받을 수 있는 보상이 있다는 표시다.
+          el('span', { class: 'chip', text: `받을 보상 ${data.claimableCount}개` }),
+        ])
+      : null,
   ]);
 
   const titleCard = el('div', { class: 'card' }, [
@@ -860,26 +896,43 @@ async function renderAchievements() {
           class: `ach${row.unlocked ? ' unlocked' : ''}${row.masked ? ' masked' : ''}`,
         },
         [
-          el('div', { class: 'medal', text: row.unlocked ? '🏅' : row.masked ? '?' : '🔒' }),
+          el(
+            'div',
+            {
+              class: 'medal',
+              // 그림은 장식이다. 상태는 색에만 기대지 않도록 글자로도 준다.
+              title: row.unlocked ? '달성' : row.masked ? '히든' : '잠김',
+            },
+            [badgeCanvas(row.badge, data.badgePalette, row.unlocked)],
+          ),
           el('div', { class: 'body' }, [
             el('div', { class: 'title-line' }, [
               el('span', { class: 'name', text: row.name }),
-              row.tier ? el('span', { class: `tier ${row.tier}`, text: row.tier }) : null,
-              el('span', { class: 'chip plain', text: row.categoryLabel }),
-              row.rewardPending ? el('span', { class: 'pending', text: '보상 처리 중' }) : null,
+              // 분류는 상자에 넣지 않는다. 보상과 같은 모양이면 무엇이 무엇인지 섞여 보인다.
+              el('span', { class: 'category', text: row.categoryLabel }),
             ]),
             el('div', { class: 'cond', text: row.condition }),
-            el(
-              'div',
-              { class: 'rewards' },
-              row.rewards.map((reward) => el('span', { class: 'chip plain', text: reward })),
-            ),
+            // 조건 바로 아래에 진행률을 둔다. "무엇을 얼마나 했나"가 한 덩어리로 읽힌다.
             row.masked
               ? null
-              : el('div', { class: 'progress-line' }, [
-                  bar(row.target ? row.progress / row.target : 0),
-                  el('span', { class: 'num', text: row.progressLabel }),
-                ]),
+              : row.unlockedAtLabel
+                ? // 달성한 업적은 막대 대신 언제 달성했는지를 적는다. 꽉 찬 막대는 알려 주는 것이 없다.
+                  el('div', {
+                    class: 'achieved',
+                    text: `✓ ${row.progressLabel} ${row.unlockedAtLabel}`,
+                  })
+                : el('div', { class: 'progress-line' }, [
+                    bar(row.target ? row.progress / row.target : 0),
+                    el('span', { class: 'num', text: row.progressLabel }),
+                  ]),
+            row.rewardError
+              ? el('div', { class: 'pending', text: `⚠ 받지 못했어요 — ${row.rewardError}` })
+              : null,
+          ]),
+          // 보상은 줄의 오른쪽 위다. 달성하면 그 아래에서 직접 받는다.
+          el('div', { class: 'reward-col', attrs: { 'aria-label': '보상' } }, [
+            ...row.rewards.map((reward) => rewardItem(reward, data)),
+            rewardAction(row),
           ]),
         ],
       ),
@@ -887,6 +940,61 @@ async function renderAchievements() {
   );
 
   commit(generation, filters, header, titleCard, list);
+}
+
+/**
+ * 보상 하나. 종류마다 모양이 다르다 — 토큰은 동전과 굵은 숫자, 칭호는 리본 띠, 트로피는 잔과 글자.
+ *
+ * 전부 같은 네모 칩이던 때에는 무엇이 토큰이고 무엇이 칭호인지 글자를 읽어야 알았다. 아이콘이
+ * 종류를 말해 주므로 글자에는 값만 둔다. 뜻이 온전한 문구는 `title` 과 `aria-label` 에 있다.
+ */
+function rewardItem(reward, data) {
+  const icon = data.rewardIcons[reward.kind];
+  return el(
+    'div',
+    {
+      class: `reward ${reward.kind}`,
+      title: reward.description,
+      attrs: { 'aria-label': reward.description },
+    },
+    [
+      icon ? badgeCanvas(icon, data.badgePalette, true) : null,
+      el('span', { class: 'text', text: reward.label }),
+    ],
+  );
+}
+
+/**
+ * 업적 줄의 보상 아래. 달성했으면 `보상 받기` 버튼, 받았으면 받았다는 표시다.
+ *
+ * 버튼은 누르는 동안 잠근다. 지급은 멱등이라 두 번 눌러도 한 번만 들어오지만, 응답을 기다리는
+ * 사이에 같은 요청을 또 보낼 이유가 없다.
+ */
+function rewardAction(row) {
+  if (row.rewardState === 'claimed') {
+    return el('span', { class: 'reward-done', text: '✓ 받음' });
+  }
+  if (row.rewardState !== 'claimable') return null;
+
+  const button = el('button', {
+    class: 'tiny-button claim-button',
+    text: row.rewardError ? '다시 받기' : '보상 받기',
+    attrs: { 'aria-label': `${row.name} 보상 받기` },
+    on: {
+      click: async () => {
+        button.disabled = true;
+        try {
+          const outcome = await api.claimAchievement(row.id);
+          if (outcome.claimed) flash(`${row.name} 보상을 받았어요`);
+          else flash(outcome.error ?? '보상을 받지 못했어요', true);
+        } catch (error) {
+          flash(String(error?.message ?? error), true);
+        }
+        render();
+      },
+    },
+  });
+  return button;
 }
 
 /* ---------- 시연 (프로토타입 전용) ---------- */

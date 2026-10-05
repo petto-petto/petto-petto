@@ -257,6 +257,16 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     return achievementScreen(state.meta, state.catalog, state.achievementFilter);
   });
 
+  // 달성한 업적의 보상을 받는다. 판정은 보상을 지급하지 않으므로 재화가 들어오는 길은 이것뿐이다.
+  handle('achievements:claim', (achievementId) => {
+    if (typeof achievementId !== 'string') throw new Error('업적을 알 수 없습니다');
+    const outcome = state.claimRewards(achievementId);
+    state.persist();
+    // 잔액과 누적 토큰이 바뀌었다. 열려 있는 다른 화면도 다시 그리게 한다.
+    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble: undefined });
+    return outcome;
+  });
+
   handle('pet:overlay', () => state.collection.overlayPet());
 
   /* ---------- 수집 ---------- */

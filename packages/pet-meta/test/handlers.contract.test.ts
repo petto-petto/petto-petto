@@ -321,6 +321,50 @@ test('종료: idle() 은 진행 중인 집계가 끝나야 풀린다 — 그 전
   assert.equal(idle, true);
 });
 
+test('ACH: 보상 받기 채널이 그 업적의 보상을 지급하고 화면에 알린다', async () => {
+  const pets = new InMemoryPetClient();
+  const tokens = new InMemoryTokenClient();
+  const store = new InMemoryMetaStore();
+  const broadcasts: string[] = [];
+  const state = new MetaAppState(
+    store,
+    '~/Library/…',
+    '0.1.0',
+    new InMemoryCollection(),
+    tokens,
+    pets,
+    STUB_GROWTH_RULES,
+    FixtureCollector.withEmptySnapshots(),
+  );
+  const map = metaHandlers(state, {
+    ...noopHost,
+    broadcast: (channel) => broadcasts.push(channel),
+  });
+  const claim = map['achievements:claim'];
+  assert.ok(claim, 'achievements:claim 채널이 있어야 한다');
+
+  pets.give('003');
+  await state.aggregate();
+  assert.equal(tokens.balance(), 0, '달성만으로는 지급되지 않는다');
+
+  assert.deepEqual(claim('collection.first_pet'), { claimed: true, error: undefined });
+  assert.equal(tokens.balance(), 100_000);
+  assert.equal(state.meta.profile.equippedTitle, '초보 조련사');
+  assert.ok(broadcasts.includes('usage:aggregated'), '열려 있는 화면이 잔액을 다시 그린다');
+  assert.equal(
+    store.load()?.rewards.every((record) => record.status === 'done'),
+    true,
+    '받은 기록이 저장된다',
+  );
+
+  // 렌더러가 보낸 값은 믿지 않는다.
+  assert.throws(() => claim(undefined), /업적/);
+  assert.deepEqual(claim('battle.win_50'), {
+    claimed: false,
+    error: '아직 달성하지 않은 업적이에요',
+  });
+});
+
 test('앱을 다시 켜면 꺼져 있던 동안의 사용은 적립하지 않는다', async () => {
   // 같은 저장소와 같은 도구 기록을 두 번의 앱 실행이 이어서 본다.
   const store = new InMemoryMetaStore();
