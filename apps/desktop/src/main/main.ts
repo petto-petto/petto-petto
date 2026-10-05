@@ -37,6 +37,7 @@ import { RoomState, mountRoom, type RoomHost } from './room.ts';
 import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
+import { registerDexIpc } from './ipc/dex.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
@@ -47,7 +48,9 @@ import {
   createBattleWindow,
   createOverlayWindow,
   createCombineWindow,
+  createDexWindow,
   createGachaWindow,
+  isDexWebContents,
   isGachaWebContents,
   isRoomWebContents,
   isCombineWebContents,
@@ -59,6 +62,7 @@ import {
   petAssetsDir,
   moveOverlayDrag,
   replaceRoomWith,
+  replaceWindowWith,
   returnToRoom,
   setOverlayInteractive,
   showPanel,
@@ -178,9 +182,14 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
-  // 뽑기·합성 화면의 "펫룸" 버튼. 그 두 창에서 온 요청만 받는다.
+  // 뽑기·합성·도감 화면의 "펫룸" 버튼. 그 세 창에서 온 요청만 받는다.
   ipcMain.handle('window:backToRoom', (event) => {
-    if (!isGachaWebContents(event.sender) && !isCombineWebContents(event.sender)) return;
+    if (
+      !isGachaWebContents(event.sender) &&
+      !isCombineWebContents(event.sender) &&
+      !isDexWebContents(event.sender)
+    )
+      return;
     const from = BrowserWindow.fromWebContents(event.sender);
     if (from) returnToRoom(from);
   });
@@ -199,6 +208,9 @@ const roomHost: RoomHost = {
         return;
       case 'combine':
         replaceRoomWith(createCombineWindow());
+        return;
+      case 'dex':
+        replaceRoomWith(createDexWindow());
         return;
       default: {
         const unreachable: never = destination;
@@ -270,8 +282,6 @@ function buildTray(current: MetaAppState): void {
   );
 }
 
-// `userData` 경로가 앱 이름에서 나오므로 `whenReady` 전에 정해야 한다. 이걸 빼면
-// 저장 파일이 `Application Support/Electron/`에 들어가 다른 Electron 개발 앱과 섞인다.
 /**
  * 앱 메뉴. 트레이와 별개로 **항상 보이는** 진입점이다.
  *
@@ -304,9 +314,29 @@ function buildAppMenu(current: MetaAppState): void {
   );
 }
 
-app.setName('tamagotchi-pet');
+/**
+ * 화면에 보이는 앱 이름. 메뉴의 "숨기기·종료" 항목 등이 이 이름을 쓴다. 메뉴 막대의 굵은 이름과
+ * Dock 이름은 번들 `Info.plist`가 정하므로, 개발 중에는 `scripts/brand-dev-electron.mjs`가
+ * `Electron.app`의 이름·아이콘·번들 ID 를 바꾼다.
+ */
+const APP_NAME = 'Petto Petto';
+
+/**
+ * 저장 위치는 옛 이름 `tamagotchi-pet` 폴더에 그대로 둔다. `userData`는 앱 이름에서 나오므로
+ * 이름만 바꾸면 기존 사용자의 펫·토큰 DB 를 못 찾는다. `--user-data-dir`로 띄우면(검증용 임시
+ * 프로필) 그 값을 따른다. 둘 다 `whenReady` 전에 정해야 한다.
+ */
+const DATA_DIRECTORY_NAME = 'tamagotchi-pet';
+
+app.setName(APP_NAME);
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), DATA_DIRECTORY_NAME));
+}
 
 app.whenReady().then(async () => {
+  // 패키징하지 않고 `electron`으로 띄우면 Dock 에 Electron 기본 아이콘이 뜬다. 앱 아이콘은
+  // `tools/app-icon.py`가 만든다. Dock 이 없는 플랫폼에서는 `app.dock`이 없다.
+  app.dock?.setIcon(join(appRoot, 'resources', 'icon.png'));
   // 저장 위치는 OS가 정하는 앱 데이터 디렉터리다.
   const directory = app.getPath('userData');
   const databasePath = join(directory, 'petto.sqlite');
@@ -361,6 +391,22 @@ app.whenReady().then(async () => {
     createPersistentCombine(pets, tokens, featureTransaction),
     (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
     petsChanged,
+  );
+  registerDexIpc(
+    ipcMain,
+    pets,
+    (event) => isDexWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    (event) => isRoomWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    {
+      openInRoom: (event, ownedPetId) => {
+        const from = BrowserWindow.fromWebContents(event.sender);
+        if (from) returnToRoom(from, ownedPetId);
+      },
+      goGacha: (event) => {
+        const from = BrowserWindow.fromWebContents(event.sender);
+        if (from) replaceWindowWith(from, createGachaWindow());
+      },
+    },
   );
   state = new MetaAppState(
     store,

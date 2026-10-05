@@ -1,4 +1,4 @@
-import type { OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
+import type { DexEntry, OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
 
 import { PetRepository } from '../persistence/repositories/pet-repository.ts';
 
@@ -60,5 +60,13 @@ export class SqlitePetClient implements PetClient {
 
   replaceOwnedPets(materialOwnedPetIds: readonly string[], resultSpeciesId: string): OwnedPet {
     return this.#repository.replaceOwnedPets(materialOwnedPetIds, resultSpeciesId);
+  }
+
+  listDexEntries(): DexEntry[] {
+    return this.#repository.listDexEntries();
+  }
+
+  markDexSeen(speciesId: string): void {
+    this.#repository.markDexSeen(speciesId);
   }
 }

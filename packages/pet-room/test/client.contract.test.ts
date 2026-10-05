@@ -46,6 +46,8 @@ function fixture(): {
       return { ...selected };
     },
     replaceOwnedPets: unused,
+    listDexEntries: unused,
+    markDexSeen: unused,
   };
   return { pets, client, reader: new PetClientRoomAdapter(client) };
 }

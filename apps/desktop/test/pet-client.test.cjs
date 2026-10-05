@@ -248,3 +248,141 @@ test('pet migration 실패 시 테이블과 seed가 rollback되고 다음 실행
   database.open();
   assert.equal(database.prepare('SELECT COUNT(*) AS count FROM pet_species').get().count, 6);
 });
+
+async function dexFixture(t) {
+  const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
+  const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
+  const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
+  const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
+  const { FixedClock } = await import('@pet/core');
+  const directory = mkdtempSync(join(tmpdir(), 'petto-pet-dex-'));
+  const database = new SqliteFileDatabase({
+    filePath: join(directory, 'petto.sqlite'),
+    migrations: APP_MIGRATIONS,
+  });
+  t.after(() => {
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+  database.open();
+  const clock = new FixedClock('2026-09-28T03:00:00.000Z');
+  const client = new SqlitePetClient(new PetRepository(database, clock));
+  return { database, client, clock };
+}
+
+const dexEntry = (client, speciesId) =>
+  client.listDexEntries().find((entry) => entry.species.speciesId === speciesId);
+
+test('도감은 등록 종 전부를 등급·번호 순으로 돌려주고 처음에는 모두 미발견이다', async (t) => {
+  const { client } = await dexFixture(t);
+  const entries = client.listDexEntries();
+  assert.deepEqual(
+    entries.map((entry) => `${entry.species.rarity}:${entry.species.speciesId}`),
+    ['COMMON:003', 'COMMON:004', 'RARE:002', 'RARE:005', 'EPIC:001', 'EPIC:006'],
+  );
+  for (const entry of entries) {
+    assert.equal(entry.discoveredAt, null);
+    assert.equal(entry.ownedCount, 0);
+    assert.equal(entry.highestLevel, 0);
+    assert.equal(entry.highestStage, null);
+    assert.equal(entry.isNew, false);
+  }
+});
+
+test('뽑기로 새 종을 얻으면 NEW 로 발견되고 확인하면 NEW 가 사라진다', async (t) => {
+  const { client, clock } = await dexFixture(t);
+  const [first] = client.createOwnedPets(['003', '003']);
+  client.updateGrowth(first.ownedPetId, {
+    level: 12,
+    totalXp: 100,
+    xpIntoLevel: 1,
+    evolutionStage: 1,
+  });
+  let mole = dexEntry(client, '003');
+  assert.equal(mole.discoveredAt, '2026-09-28T03:00:00.000Z');
+  assert.equal(mole.ownedCount, 2);
+  assert.equal(mole.highestLevel, 12);
+  assert.equal(mole.highestStage, 1);
+  assert.equal(mole.isNew, true);
+
+  client.markDexSeen('003');
+  assert.equal(dexEntry(client, '003').isNew, false);
+  // 다시 확인해도 오류 없이 그대로다.
+  client.markDexSeen('003');
+
+  // 같은 종을 다시 얻어도 첫 만남 날짜와 확인 상태는 바뀌지 않는다.
+  clock.set('2026-10-01T03:00:00.000Z');
+  client.createOwnedPets(['003']);
+  mole = dexEntry(client, '003');
+  assert.equal(mole.discoveredAt, '2026-09-28T03:00:00.000Z');
+  assert.equal(mole.ownedCount, 3);
+  assert.equal(mole.isNew, false);
+});
+
+test('합성으로 마지막 한 마리를 써도 발견은 남고 결과 종은 새로 발견된다', async (t) => {
+  const { client } = await dexFixture(t);
+  const [material, keep] = client.createOwnedPets(['004', '003']);
+  client.setActivePet(keep.ownedPetId);
+  client.replaceOwnedPets([material.ownedPetId], '005');
+  const sprout = dexEntry(client, '004');
+  assert.equal(sprout.discoveredAt, '2026-09-28T03:00:00.000Z');
+  assert.equal(sprout.ownedCount, 0);
+  assert.equal(sprout.highestLevel, 0);
+  assert.equal(sprout.highestStage, null);
+  const hamster = dexEntry(client, '005');
+  assert.equal(hamster.ownedCount, 1);
+  assert.equal(hamster.isNew, true);
+});
+
+test('펫 생성이 취소되면 발견 기록도 남지 않는다', async (t) => {
+  const { database, client } = await dexFixture(t);
+  assert.throws(() => client.createOwnedPets(['003', 'missing']));
+  assert.equal(dexEntry(client, '003').discoveredAt, null);
+  const [first] = client.createOwnedPets(['004']);
+  database.exec(`CREATE TRIGGER reject_pet_insert BEFORE INSERT ON owned_pets
+    BEGIN SELECT RAISE(ABORT, 'injected insert failure'); END`);
+  assert.throws(() => client.replaceOwnedPets([first.ownedPetId], '006'));
+  assert.equal(dexEntry(client, '006').discoveredAt, null);
+});
+
+test('미발견·없는 종의 확인 요청과 DB 실패는 예외다', async (t) => {
+  const { database, client } = await dexFixture(t);
+  assert.throws(() => client.markDexSeen('003'));
+  assert.throws(() => client.markDexSeen('missing'));
+  database.close();
+  assert.throws(() => client.listDexEntries());
+});
+
+test('도감 migration 은 기존 보유 종을 확인한 발견으로 채운다', async (t) => {
+  const { SqliteFileDatabase } = await import('../dist/main/persistence/sqlite-file.js');
+  const { APP_MIGRATIONS } = await import('../dist/main/persistence/migrations/index.js');
+  const { PetRepository } = await import('../dist/main/persistence/repositories/pet-repository.js');
+  const { SqlitePetClient } = await import('../dist/main/clients/sqlite-pet-client.js');
+  const directory = mkdtempSync(join(tmpdir(), 'petto-pet-dex-upgrade-'));
+  const filePath = join(directory, 'petto.sqlite');
+  let database = new SqliteFileDatabase({
+    filePath,
+    migrations: APP_MIGRATIONS.filter(
+      (migration) => migration.scope !== 'pet' || migration.version === 1,
+    ),
+  });
+  t.after(() => {
+    database.close();
+    rmSync(directory, { recursive: true, force: true });
+  });
+  database.open();
+  database.exec(`INSERT INTO owned_pets (owned_pet_id, species_id) VALUES
+    ('a', '003'), ('b', '003'), ('c', '006')`);
+  database.close();
+  database = new SqliteFileDatabase({ filePath, migrations: APP_MIGRATIONS });
+  database.open();
+  const client = new SqlitePetClient(new PetRepository(database));
+  const found = client.listDexEntries().filter((entry) => entry.discoveredAt !== null);
+  assert.deepEqual(
+    found.map((entry) => [entry.species.speciesId, entry.ownedCount, entry.isNew]),
+    [
+      ['003', 2, false],
+      ['006', 1, false],
+    ],
+  );
+});

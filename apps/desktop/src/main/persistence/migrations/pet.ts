@@ -38,4 +38,27 @@ export const PET_MIGRATIONS: readonly SqliteMigration[] = [
       `);
     },
   },
+  {
+    scope: 'pet',
+    version: 2,
+    name: 'create pet discoveries for the dex',
+    up(database) {
+      // 합성은 재료 개체를 지우므로 `owned_pets`로는 "한 번이라도 만난 종"을 되살릴 수 없다.
+      // 그 사실은 처음 얻는 순간에만 존재해서 여기 따로 남긴다. seen_at 이 NULL 이면 도감의 NEW 다.
+      // 이 migration 전에 이미 보유하던 종은 확인한 것으로 채운다 — 전부 NEW 로 뜨면 의미가 없다.
+      database.exec(`
+        CREATE TABLE pet_discoveries (
+          species_id TEXT PRIMARY KEY NOT NULL REFERENCES pet_species(species_id) ON DELETE RESTRICT,
+          discovered_at TEXT NOT NULL,
+          seen_at TEXT
+        );
+
+        INSERT INTO pet_discoveries (species_id, discovered_at, seen_at)
+        SELECT DISTINCT species_id,
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
+               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+        FROM owned_pets;
+      `);
+    },
+  },
 ];

@@ -34,7 +34,8 @@ export interface CombineEngine<Pet extends CombinePet> {
   combine(): CombineOutcome<Pet>;
 }
 
-const REQUIRED_COUNT = 10;
+/** 합성 한 번에 드는 같은 등급 재료 수. 도감의 획득 경로 안내도 이 값을 읽는다. */
+export const COMBINE_MATERIAL_COUNT = 10;
 const COST: Readonly<Record<CombineGrade, number>> = { common: 30_000, rare: 100_000 };
 const RESULT_GRADE: Readonly<Record<CombineGrade, ResultGrade>> = { common: 'rare', rare: 'epic' };
 
@@ -78,7 +79,8 @@ export function createCombineEngine<Pet extends CombinePet>(
     },
     addPet(id) {
       const pet = petById.get(id);
-      if (!pet || pet.grade !== activeGrade || selection.length >= REQUIRED_COUNT) return state();
+      if (!pet || pet.grade !== activeGrade || selection.length >= COMBINE_MATERIAL_COUNT)
+        return state();
       if (selectedCount(id) >= (inventory[id] ?? 0)) return state();
       selection = [...selection, id];
       return state();
@@ -89,7 +91,7 @@ export function createCombineEngine<Pet extends CombinePet>(
       return state();
     },
     combine() {
-      if (selection.length !== REQUIRED_COUNT) return { kind: 'error', code: 'selection' };
+      if (selection.length !== COMBINE_MATERIAL_COUNT) return { kind: 'error', code: 'selection' };
       const cost = COST[activeGrade];
       if (tokenBalance < cost) return { kind: 'error', code: 'tokens' };
       const candidates = petsByGrade[RESULT_GRADE[activeGrade]];
@@ -114,7 +116,7 @@ function autoSelection<Pet extends CombinePet>(
   for (const pet of petsByGrade[grade]) {
     for (
       let count = 0;
-      count < (inventory[pet.id] ?? 0) && selection.length < REQUIRED_COUNT;
+      count < (inventory[pet.id] ?? 0) && selection.length < COMBINE_MATERIAL_COUNT;
       count += 1
     ) {
       selection.push(pet.id);

@@ -23,6 +23,7 @@ const EVENT_CHANNELS = [
   'room:activePetChanged',
   'room:backgroundChanged',
   'room:rosterChanged',
+  'room:focusPet',
 ];
 
 contextBridge.exposeInMainWorld('petApi', {
@@ -53,6 +54,8 @@ contextBridge.exposeInMainWorld('petApi', {
   openRoom: () => ipcRenderer.invoke('room:open'),
   navigateFromRoom: (destination) => ipcRenderer.invoke('room:navigate', destination),
   setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
+  /** 도감에 확인하지 않은 신규 발견이 있는가. 펫룸 도감 버튼의 NEW 표식이 쓴다. */
+  dexHasNew: () => ipcRenderer.invoke('dex:hasNew'),
 
   // 창
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),

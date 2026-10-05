@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>petto-petto | 펫 도감</title>
+    <link rel="stylesheet" href="dex.css" />
+  </head>
+  <body>
+    <!-- 뽑기·합성과 같은 자리에 같은 버튼을 둔다. 세 화면이 한 창처럼 보여야 한다. -->
+    <div class="window-controls">
+      <button class="window-back" type="button" aria-label="펫룸으로 돌아가기">← 펫룸</button>
+      <button class="window-close" type="button" aria-label="창 닫기">×</button>
+    </div>
+
+    <header class="dex-header">
+      <h1 class="dex-title">펫 도감</h1>
+      <div class="dex-progress" aria-live="polite">
+        <span class="dex-progress__label">수집 <strong id="progress-count">— / —</strong></span>
+        <span class="xp-bar" aria-hidden="true"><span id="progress-fill"></span></span>
+        <span class="dex-progress__percent" id="progress-percent">—</span>
+      </div>
+    </header>
+
+    <nav class="dex-tabs" id="tabs" role="tablist" aria-label="등급별 보기"></nav>
+
+    <main class="dex-body">
+      <section class="dex-grid" id="grid" aria-label="도감 슬롯"></section>
+
+      <!-- 조회 실패는 숫자 0 으로 그리지 않고 이 자리에 보인다. -->
+      <section class="dex-error" id="error" role="alert" hidden>
+        <p><span aria-hidden="true">⚠</span> <span id="error-message"></span></p>
+        <button class="pixel-button" type="button" id="error-retry">다시 시도</button>
+      </section>
+
+      <aside class="dex-detail pixel-panel" id="detail" aria-label="펫 상세">
+        <p class="dex-detail__empty" id="detail-empty">
+          아직 만난 펫이 없어요.<br />✨ 펫 뽑기로 첫 친구를 만나 보세요.
+        </p>
+
+        <div class="dex-detail__body" id="detail-body" hidden>
+          <div class="showcase">
+            <span class="grade-badge" id="detail-grade"></span>
+            <canvas id="showcase" width="32" height="32"></canvas>
+          </div>
+          <div class="detail-head">
+            <h2 id="detail-name"></h2>
+            <span class="detail-number" id="detail-number"></span>
+          </div>
+          <p class="detail-line" id="detail-owned"></p>
+          <p class="detail-line" id="detail-met"></p>
+          <div class="evolution" id="evolution" aria-label="진화 단계"></div>
+          <ul class="hints" id="hints"></ul>
+          <button class="pixel-button detail-action" type="button" id="detail-action"></button>
+          <p class="detail-action-error" id="detail-action-error" role="alert" hidden></p>
+        </div>
+      </aside>
+    </main>
+
+    <script type="module" src="../dist/ui/app.js"></script>
+  </body>
+</html>
