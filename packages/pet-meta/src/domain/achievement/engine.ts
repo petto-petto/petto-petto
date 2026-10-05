@@ -13,11 +13,16 @@
 
 import type { Clock } from '@pet/core';
 
-import type { CollectionPort, CurrencyPort, GrowthRules, PetClient } from '../../ports/index.ts';
+import type { CollectionPort, GrowthRules, PetClient, TokenPort } from '../../ports/index.ts';
 import { factSnapshot, type MetaState } from '../state.ts';
 import { grantTitle } from '../profile/index.ts';
-import { autoPlacesTrophy, coinRewardKey, type AchievementCatalog } from './catalog.ts';
-import { factValue, tryObservePets } from './facts.ts';
+import {
+  autoPlacesTrophy,
+  tokenRewardKey,
+  tokenRewardLabel,
+  type AchievementCatalog,
+} from './catalog.ts';
+import { factValue, tryObserveEarnedTokens, tryObservePets } from './facts.ts';
 import {
   createProgress,
   createRewardRecord,
@@ -52,8 +57,8 @@ export function bubbleMessage(
   if (!definition) return undefined;
 
   const reward =
-    definition.coin > 0
-      ? `코인 ${definition.coin}`
+    definition.token > 0
+      ? tokenRewardLabel(definition.token)
       : definition.title
         ? `칭호 ${definition.title}`
         : '트로피';
@@ -69,7 +74,7 @@ export function bubbleMessage(
 export function evaluate(
   state: MetaState,
   catalog: AchievementCatalog,
-  currency: CurrencyPort,
+  tokens: Pick<TokenPort, 'grantOnce' | 'earnedSince'>,
   collection: CollectionPort,
   pets: PetClient,
   rules: GrowthRules,
@@ -79,6 +84,9 @@ export function evaluate(
   // 판정마다 현재 보유를 한 번 관측한다. 이벤트가 없어졌으니 펫 사실을 올릴 곳이 여기뿐이다.
   // 읽지 못하면 사실을 그대로 두고 나머지 판정을 계속한다(INFO-007).
   tryObservePets(state.eventFacts, pets, rules);
+  // 누적 토큰도 같은 식으로 관측한다. 이번 판정의 보상은 지급 전이라 아직 들어 있지 않고,
+  // 다음 판정에서 반영된다 — 보상 하나가 같은 판정에서 다음 마일스톤을 연달아 열지 않는다.
+  tryObserveEarnedTokens(state.eventFacts, tokens);
   const facts = factSnapshot(state);
   const newlyUnlocked: string[] = [];
 
@@ -98,8 +106,8 @@ export function evaluate(
     // 기획서 7.5: 해제와 보상을 분리한다. 여기서는 지급해야 할 목록만 만들고 실제
     // 지급은 아래 정산 단계에서 한다. 지급이 실패해도 해제는 남는다.
     const records = [];
-    if (definition.coin > 0) {
-      records.push(createRewardRecord(definition.id, coinRewardKey(definition), 'coin'));
+    if (definition.token > 0) {
+      records.push(createRewardRecord(definition.id, tokenRewardKey(definition), 'token'));
     }
     if (definition.title !== undefined) {
       records.push(
@@ -114,7 +122,7 @@ export function evaluate(
     if (records.length > 0) state.rewards.set(definition.id, records);
   }
 
-  const pendingRewards = settleRewards(state, catalog, currency, collection);
+  const pendingRewards = settleRewards(state, catalog, tokens, collection);
   return { newlyUnlocked, pendingRewards };
 }
 
@@ -126,7 +134,7 @@ export function evaluate(
 export function settleRewards(
   state: MetaState,
   catalog: AchievementCatalog,
-  currency: CurrencyPort,
+  tokens: Pick<TokenPort, 'grantOnce'>,
   collection: CollectionPort,
 ): string[] {
   const pending: string[] = [];
@@ -142,12 +150,9 @@ export function settleRewards(
 
       try {
         switch (record.kind) {
-          case 'coin': {
-            const outcome = currency.grantOnce(record.rewardKey, definition.coin, definition.name);
-            markRewardDone(
-              record,
-              outcome.kind === 'granted' ? `코인 ${outcome.amount}` : '이미 지급됨',
-            );
+          case 'token': {
+            const granted = tokens.grantOnce(record.rewardKey, definition.token, definition.name);
+            markRewardDone(record, granted ? tokenRewardLabel(definition.token) : '이미 지급됨');
             break;
           }
           case 'title': {

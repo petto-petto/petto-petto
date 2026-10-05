@@ -379,14 +379,17 @@ async function renderSummary() {
           }),
       el('span', {
         class: 'hero-sub',
-        text: data.todayEarnedCoins.error
+        text: data.todayEarnedTokens.error
           ? '오늘 조회 실패'
-          : `오늘 +${num(data.todayEarnedCoins.value)}`,
+          : `오늘 +${num(data.todayEarnedTokens.value)}`,
       }),
     ]),
     // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
     data.hasNoRecords
-      ? el('div', { class: 'card-note', text: '설치 이후 기록이 아직 없습니다' })
+      ? el('div', {
+          class: 'card-note',
+          text: '아직 기록이 없습니다. 앱을 켜 둔 동안 쓴 토큰만 쌓여요',
+        })
       : null,
   ]);
 
@@ -398,13 +401,21 @@ async function renderSummary() {
   const records = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
     el('div', { class: 'stat-grid record-grid' }, [
-      stat('사용한 토큰', el('div', { class: 'value', text: compact(data.totalObservedTokens) })),
+      // 사용 가능 토큰과 같은 원장의 값이다. 지금까지 쌓은 양이고, 써도 줄지 않는다.
+      stat('누적 토큰', fieldValue(data.totalEarnedTokens, compact)),
       stat('함께한 시간', el('div', { class: 'value small', text: data.togetherLabel })),
-      stat('뽑은 횟수', fieldValue(data.drawCount)),
+      stat(
+        '뽑은 횟수',
+        // 뽑기가 아직 횟수를 저장하지 않는다. 0 은 실제 값이라 쓰지 않고 모른다고 그린다.
+        !data.drawCount.error && data.drawCount.value === null
+          ? el('div', { class: 'value', text: '—', title: '뽑기 횟수는 아직 기록되지 않아요' })
+          : fieldValue(data.drawCount),
+      ),
       stat('보유 펫', fieldValue(data.ownedPets)),
       stat(
         '도감',
-        data.dexOwned.error
+        // 전체 칸 수도 펫 조회에서 온다. 둘 중 하나라도 못 읽으면 `3/undefined` 를 그리지 않는다.
+        data.dexOwned.error || data.dexTotal.error
           ? el('div', { class: 'value error', text: '⚠ 조회 실패' })
           : el('div', {
               class: 'value small',
@@ -458,12 +469,12 @@ async function renderUsage() {
 
   // 비율(%)은 숫자로 쓰지 않는다. 막대가 보여준다.
   const usageCard = el('div', { class: 'card' }, [
-    el('div', { class: 'card-label', text: '사용한 토큰' }),
+    el('div', { class: 'card-label', text: '쌓인 토큰' }),
     el('div', { class: 'usage-headline' }, [
       el('span', {
         class: 'usage-total',
-        text: compact(data.periodObserved),
-        title: `${num(data.periodObserved)} 토큰`,
+        text: compact(data.periodTokens),
+        title: `${num(data.periodTokens)} 토큰`,
       }),
       filters,
     ]),
@@ -473,7 +484,7 @@ async function renderUsage() {
             el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name' }, [bar(row.sharePercent / 100)]),
             row.paused ? el('span', { class: 'status paused', text: row.statusLabel }) : null,
-            el('span', { class: 'num', text: compact(row.observed) }),
+            el('span', { class: 'num', text: compact(row.tokens) }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
@@ -499,7 +510,7 @@ async function renderUsage() {
           el('div', { class: 'row model-row' }, [
             el('span', { class: 'badge', text: row.providerLabel }),
             el('span', { class: 'name', text: row.rawModel, title: row.rawModel }),
-            el('span', { class: 'num', text: compact(row.observed) }),
+            el('span', { class: 'num', text: compact(row.tokens) }),
           ]),
         )
       : [el('div', { class: 'empty', text: '이 기간에 기록이 없습니다' })]),
@@ -532,14 +543,14 @@ async function renderUsage() {
           week.cells.map((cell) =>
             el('div', {
               class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
-              title: cell.future ? cell.date : `${cell.date} · ${num(cell.observed)} 토큰`,
+              title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
               // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
               attrs: cell.future
                 ? {}
                 : {
                     tabindex: '0',
                     role: 'img',
-                    'aria-label': `${cell.date} ${num(cell.observed)} 토큰`,
+                    'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
                   },
             }),
           ),
@@ -754,7 +765,7 @@ async function renderSettings() {
       el('div', {
         class: 'mono-small',
         attrs: { style: 'margin-top:6px' },
-        text: '후원은 게임 내 코인·칭호·트로피와 연결되지 않습니다',
+        text: '후원은 게임 내 토큰·칭호·트로피와 연결되지 않습니다',
       }),
     ]),
     el('div', { class: 'card' }, [
@@ -1027,11 +1038,10 @@ async function selftestInfoLayout() {
   const stats = [...content.querySelectorAll('.record-grid .stat .label')].map(
     (node) => node.textContent,
   );
-  const coins = Boolean(content.querySelector('.recent-coins'));
   await report(
-    stats.join(',') === '사용한 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적' && !coins,
-    `요약 펼침        함께한 기록 ${stats.length}칸 · 최근 코인 없음`,
-    `요약 펼침 칸 ${stats.join(',')}, 최근 코인 ${coins}`,
+    stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
+    `요약 펼침        함께한 기록 ${stats.length}칸`,
+    `요약 펼침 칸 ${stats.join(',')}`,
   );
 
   await clickExpand();

@@ -18,7 +18,7 @@ import {
   factSnapshot,
   FixtureCollector,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryPetClient,
   isUnlocked,
   MASK,
@@ -36,7 +36,7 @@ const NOW = '2026-08-24T14:37:12+09:00';
 class Harness {
   state: MetaState = createMetaState();
   catalog = AchievementCatalog.embedded();
-  currency = new InMemoryCurrency();
+  tokens = new InMemoryTokenClient();
   collection = new InMemoryCollection();
   /** 펫 업적의 출처. 이벤트가 아니라 `PetClient` 의 현재 보유를 관측한다. */
   pets = new InMemoryPetClient();
@@ -44,7 +44,7 @@ class Harness {
   clock = new FixedClock(NOW);
 
   constructor() {
-    this.currency.setNow(this.clock.now());
+    this.tokens.setNow(this.clock.now());
   }
 
   send(id: string, payload: EventPayload): void {
@@ -55,7 +55,7 @@ class Harness {
     return evaluate(
       this.state,
       this.catalog,
-      this.currency,
+      this.tokens,
       this.collection,
       this.pets,
       this.rules,
@@ -77,7 +77,7 @@ const wonBattle = (streak: number): EventPayload => ({
   streak,
 });
 
-test('ACH-001: 22개 ID와 보상이 기획서 7.2와 일치한다', () => {
+test('ACH-001: 22개 ID와 보상이 업적 정의와 일치한다', () => {
   const catalog = AchievementCatalog.embedded();
   assert.equal(catalog.size, 22);
 
@@ -108,12 +108,13 @@ test('ACH-001: 22개 ID와 보상이 기획서 7.2와 일치한다', () => {
   for (const id of expected) assert.ok(catalog.get(id), `${id} 정의가 없다`);
 
   const firstPet = catalog.get('collection.first_pet');
-  assert.equal(firstPet?.coin, 10);
+  // 재화는 토큰량 그대로다. `첫 만남` 보상은 뽑기 1회 값이다.
+  assert.equal(firstPet?.token, 100_000);
   assert.equal(firstPet?.title, '초보 조련사');
   assert.equal(firstPet?.trophy, true);
 
   const win500 = catalog.get('battle.win_500');
-  assert.equal(win500?.coin, 300);
+  assert.equal(win500?.token, 3_000_000);
   assert.equal(win500?.tier, 'gold');
 
   const tokens100m = catalog.get('usage.tokens_100m');
@@ -135,7 +136,7 @@ test('ACH-001: 알 수 없는 사실 키를 참조하는 정의는 거부된다'
           condition: '테스트',
           fact: '존재하지_않는_사실',
           target: 1,
-          coin: 0,
+          token: 0,
         } as AchievementDefinition,
       ]),
     /알 수 없는 사실 키/,
@@ -173,7 +174,6 @@ test('ACH-002: 달성한 히든 업적은 실제 값을 공개한다', () => {
   harness.send('fusion-1', {
     eventType: 'fusion.completed',
     fusionId: 'f-1',
-    parentRarities: ['COMMON', 'COMMON'],
     resultPetId: petId('pet-epic'),
     resultRarity: 'EPIC',
   });
@@ -185,6 +185,37 @@ test('ACH-002: 달성한 히든 업적은 실제 값을 공개한다', () => {
   assert.equal(hidden?.unlocked, true);
   assert.equal(hidden?.masked, false);
   assert.ok(hidden?.rewards.some((reward) => reward.includes('기적의 연금술사')));
+});
+
+test('연금술의 기적은 합성 결과가 에픽일 때만 열린다', () => {
+  // 현재 합성은 같은 등급 10마리로 한 단계 위를 만든다. 에픽이 나오는 경로는 레어 합성뿐이다.
+  const harness = new Harness();
+  harness.send('fusion-rare', {
+    eventType: 'fusion.completed',
+    fusionId: 'f-rare',
+    resultPetId: petId('pet-rare'),
+    resultRarity: 'RARE',
+  });
+  harness.evaluate();
+
+  assert.equal(harness.state.eventFacts.fusionCount, 1);
+  assert.equal(harness.state.eventFacts.fusionEpic, 0);
+  assert.ok(
+    !harness.isUnlocked('hidden.common_fusion_epic'),
+    '레어를 얻은 합성으로는 열리지 않는다',
+  );
+
+  harness.send('fusion-epic', {
+    eventType: 'fusion.completed',
+    fusionId: 'f-epic',
+    resultPetId: petId('pet-epic'),
+    resultRarity: 'EPIC',
+  });
+  harness.evaluate();
+
+  assert.equal(harness.state.eventFacts.fusionCount, 2);
+  assert.equal(harness.state.eventFacts.fusionEpic, 1);
+  assert.ok(harness.isUnlocked('hidden.common_fusion_epic'));
 });
 
 test('ACH-003: 같은 이벤트와 같은 업적을 반복해도 해제와 보상이 한 번뿐이다', () => {
@@ -212,8 +243,8 @@ test('ACH-003: 같은 이벤트와 같은 업적을 반복해도 해제와 보�
     );
   }
 
-  assert.equal(harness.currency.grantedAmount('achievement:collection.first_pet'), 10);
-  assert.equal(harness.currency.grantedKeyCount, 1);
+  assert.equal(harness.tokens.grantedAmount('achievement:collection.first_pet'), 100_000);
+  assert.equal(harness.tokens.grantedKeyCount, 1);
   assert.equal(harness.collection.trophies.length, 1, '트로피도 한 번만 지급된다');
   assert.deepEqual(harness.state.profile.ownedTitles, ['초보 조련사']);
 });
@@ -221,8 +252,10 @@ test('ACH-003: 같은 이벤트와 같은 업적을 반복해도 해제와 보�
 test('ACH-004: 새로 추가한 정의가 기존 사실로 소급 판정된다', () => {
   const harness = new Harness();
 
+  // 연승 없이 37승. 연승이 쌓이면 `무패` 보상(1,200,000)이 누적 토큰 100만을 넘겨 토큰 마일스톤이
+  // 함께 열리는데, 여기서는 새 정의 하나만 소급되는 것을 본다.
   for (let index = 1; index <= 37; index += 1) {
-    harness.send(`battle-${index}`, wonBattle(index));
+    harness.send(`battle-${index}`, wonBattle(1));
   }
   harness.evaluate();
   assert.ok(harness.isUnlocked('battle.first_win'));
@@ -239,7 +272,7 @@ test('ACH-004: 새로 추가한 정의가 기존 사실로 소급 판정된다',
       fact: 'battle_wins',
       target: 30,
       tier: 'bronze',
-      coin: 55,
+      token: 55,
     },
   ]);
 
@@ -248,7 +281,7 @@ test('ACH-004: 새로 추가한 정의가 기존 사실로 소급 판정된다',
 
   assert.deepEqual(outcome.newlyUnlocked, ['battle.win_30']);
   assert.equal(
-    harness.currency.grantedAmount('achievement:battle.win_30'),
+    harness.tokens.grantedAmount('achievement:battle.win_30'),
     55,
     '소급 판정도 일반 달성과 동일하게 보상을 한 번 지급한다',
   );
@@ -320,7 +353,7 @@ test('ACH-007: 한 개는 상세 말풍선, 여러 개는 집계 말풍선', () 
   const single = harness.evaluate();
   const message = bubbleMessage(single, harness.catalog);
   assert.ok(message?.includes('첫 만남'));
-  assert.ok(message?.includes('코인 10'));
+  assert.ok(message?.includes('토큰 100,000'));
 
   for (let index = 1; index <= 50; index += 1) {
     harness.send(`battle-${index}`, wonBattle(index));
@@ -335,37 +368,32 @@ test('ACH-007: 한 개는 상세 말풍선, 여러 개는 집계 말풍선', () 
 
 test('ACH-009: 보상 실패가 미완료로 남고 같은 멱등 키로 재시도된다', () => {
   const harness = new Harness();
-  harness.currency.failNextGrant();
+  harness.tokens.failNextGrant();
 
   harness.pets.give('003');
   const outcome = harness.evaluate();
 
   assert.ok(harness.isUnlocked('collection.first_pet'), '해제는 됐다');
   assert.deepEqual(outcome.pendingRewards, ['collection.first_pet']);
-  assert.equal(harness.currency.grantedKeyCount, 0);
+  assert.equal(harness.tokens.grantedKeyCount, 0);
 
   const screen = achievementScreen(harness.state, harness.catalog, undefined);
   const row = screen.rows.find((r) => r.id === 'collection.first_pet');
   assert.equal(row?.unlocked, true);
   assert.equal(row?.rewardPending, true);
 
-  const pending = settleRewards(
-    harness.state,
-    harness.catalog,
-    harness.currency,
-    harness.collection,
-  );
+  const pending = settleRewards(harness.state, harness.catalog, harness.tokens, harness.collection);
   assert.deepEqual(pending, []);
-  assert.equal(harness.currency.grantedAmount('achievement:collection.first_pet'), 10);
+  assert.equal(harness.tokens.grantedAmount('achievement:collection.first_pet'), 100_000);
 
-  settleRewards(harness.state, harness.catalog, harness.currency, harness.collection);
-  assert.equal(harness.currency.grantedKeyCount, 1, '다시 정산해도 중복 지급되지 않는다');
+  settleRewards(harness.state, harness.catalog, harness.tokens, harness.collection);
+  assert.equal(harness.tokens.grantedKeyCount, 1, '다시 정산해도 중복 지급되지 않는다');
 });
 
 test('사용량 업적이 수집 파이프라인 결과로 판정된다', () => {
   const harness = new Harness();
   const collector = FixtureCollector.withEmptySnapshots();
-  runAggregation(harness.state, collector, harness.currency, harness.clock);
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
 
   for (const [provider, model] of [
     ['claude_code', 'claude-opus-5'],
@@ -379,7 +407,7 @@ test('사용량 업적이 수집 파이프라인 결과로 판정된다', () => 
       tokenCounts(200_000, 100_000, 50_000, 50_000),
     );
   }
-  runAggregation(harness.state, collector, harness.currency, harness.clock);
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
 
   assert.equal(observedTotal(harness.state), 1_200_000);
 
@@ -391,19 +419,79 @@ test('사용량 업적이 수집 파이프라인 결과로 판정된다', () => 
   );
 });
 
+test('토큰 마일스톤은 누적 토큰으로 판정한다 — 재화가 되지 않는 사용량은 세지 않는다', () => {
+  const harness = new Harness();
+  const collector = FixtureCollector.withEmptySnapshots();
+  const use = (input: number, cacheRead: number): void => {
+    collector.accumulate(
+      'claude_code',
+      '2026-08-24',
+      'claude-opus-5',
+      tokenCounts(input, 0, 0, cacheRead),
+    );
+    runAggregation(harness.state, collector, harness.tokens, harness.clock);
+  };
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
+
+  // 관측으로는 510만이지만 쌓인 토큰은 10만이다.
+  use(100_000, 5_000_000);
+  harness.evaluate();
+  assert.ok(!harness.isUnlocked('usage.tokens_1m'), '캐시 읽기로는 마일스톤이 열리지 않는다');
+  assert.equal(harness.state.progress.get('usage.tokens_1m')?.progress, 100_000);
+
+  use(900_000, 0);
+  const outcome = harness.evaluate();
+  assert.deepEqual(outcome.newlyUnlocked, ['usage.tokens_1m']);
+  assert.equal(harness.tokens.balance(), 1_200_000, '마일스톤 Ⅰ 보상 200,000 이 지급됐다');
+
+  // 업적 보상도 쌓은 토큰이다. 다음 판정에서 누적에 들어간다.
+  harness.evaluate();
+  assert.equal(harness.state.progress.get('usage.tokens_10m')?.progress, 1_200_000);
+});
+
+test('업적 보상만으로도 누적 토큰이 목표에 닿으면 토큰 마일스톤이 열린다', () => {
+  // 누적 토큰은 화면에 보이는 그 숫자다. 어디서 쌓였는지를 가리지 않는다.
+  const harness = new Harness();
+  for (let index = 1; index <= 10; index += 1) {
+    harness.send(`battle-${index}`, wonBattle(index));
+  }
+
+  const first = harness.evaluate();
+  assert.ok(first.newlyUnlocked.includes('battle.streak_10'), '무패 — 보상 1,200,000');
+  assert.ok(!first.newlyUnlocked.includes('usage.tokens_1m'), '보상은 다음 판정부터 누적에 든다');
+
+  const second = harness.evaluate();
+  assert.deepEqual(second.newlyUnlocked, ['usage.tokens_1m']);
+});
+
+test('누적 토큰을 읽지 못한 판정은 마일스톤 진행을 그대로 둔다', () => {
+  const harness = new Harness();
+  harness.tokens.grantOnce('usage:test', 400_000, '사용량 보상');
+  harness.evaluate();
+  assert.equal(harness.state.progress.get('usage.tokens_1m')?.progress, 400_000);
+
+  harness.tokens.grantOnce('usage:test-2', 100_000, '사용량 보상');
+  harness.tokens.setQueryFailure(true);
+  harness.pets.give('003');
+  const outcome = harness.evaluate();
+
+  assert.equal(harness.state.progress.get('usage.tokens_1m')?.progress, 400_000);
+  assert.ok(outcome.newlyUnlocked.includes('collection.first_pet'), '다른 업적 판정은 계속된다');
+});
+
 test('진행률은 소스가 rebase돼도 감소하지 않는다', () => {
   const harness = new Harness();
   const collector = FixtureCollector.withEmptySnapshots();
-  runAggregation(harness.state, collector, harness.currency, harness.clock);
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
 
   collector.accumulate('claude_code', '2026-08-24', 'claude-opus-5', tokenCounts(300_000, 200_000));
-  runAggregation(harness.state, collector, harness.currency, harness.clock);
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
   harness.evaluate();
   const before = harness.state.progress.get('usage.tokens_1m')?.progress;
   assert.equal(before, 500_000);
 
   collector.setSnapshot({ provider: 'claude_code', rows: new Map() });
-  runAggregation(harness.state, collector, harness.currency, harness.clock);
+  runAggregation(harness.state, collector, harness.tokens, harness.clock);
   harness.evaluate();
 
   assert.equal(harness.state.progress.get('usage.tokens_1m')?.progress, before);

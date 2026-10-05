@@ -1,4 +1,13 @@
-/** 사용량 화면의 조회. 기획서 5.2가 이 파일의 명세다. */
+/**
+ * 사용량 화면의 조회. 기획서 5.2가 이 파일의 명세다.
+ *
+ * ## 세는 것은 쌓이는 토큰이다
+ *
+ * 이 화면의 모든 숫자는 **보상 대상 토큰**(입력 + 출력 + 캐시 생성)이다. 재화로 지급되는 바로
+ * 그 양이라, 요약의 `누적 토큰` · `사용 가능 토큰` 과 같은 기준으로 읽힌다. 예전에는 캐시
+ * 읽기까지 더한 관측 토큰을 보여 줬는데, 재화가 되지 않는 캐시 읽기가 대부분이라 누적 토큰보다
+ * 수십 배 큰 숫자가 나란히 보였다.
+ */
 
 import {
   PROVIDERS,
@@ -11,7 +20,7 @@ import {
 } from '@pet/core';
 
 import { splitUsageKey, sourceStatusName, type MetaState } from '../state.ts';
-import { observed } from './tokens.ts';
+import { rewardTokens } from './tokens.ts';
 
 /** 기간 필터(기획서 5.2). */
 export type Period = 'today' | 'week' | 'month' | 'all';
@@ -52,7 +61,8 @@ export function periodContains(period: Period, date: LocalDate, today: LocalDate
 export interface ToolRow {
   provider: Provider;
   providerLabel: string;
-  observed: number;
+  /** 선택 기간에 이 도구로 쌓인 토큰. */
+  tokens: number;
   /** 선택 기간 내 비율(0~100). */
   sharePercent: number;
   statusLabel: string;
@@ -66,13 +76,15 @@ export interface ModelRow {
   providerLabel: string;
   /** 정규화하지 않은 원본 모델명. 알 수 없는 새 모델도 원본 이름으로 표시한다. */
   rawModel: string;
-  observed: number;
+  /** 선택 기간에 이 모델로 쌓인 토큰. */
+  tokens: number;
   sharePercent: number;
 }
 
 export interface GrassCell {
   date: LocalDate;
-  observed: number;
+  /** 그날 쌓인 토큰. */
+  tokens: number;
   /** 0 = 빈 칸, 1~4 = 농도 단계. */
   level: number;
   /** 오늘 이후 날짜. 화면에서 칸을 비워 둔다. */
@@ -86,8 +98,8 @@ export interface GrassWeek {
 export interface UsageScreen {
   period: Period;
   periodLabel: string;
-  /** 선택 기간의 관측 토큰 합계. */
-  periodObserved: number;
+  /** 선택 기간에 쌓인 토큰 합계. */
+  periodTokens: number;
   tools: ToolRow[];
   /** 상위 5개만이 아니라 전체를 담는다. 접기·펼치기는 화면이 결정한다. */
   models: ModelRow[];
@@ -95,8 +107,8 @@ export interface UsageScreen {
   modelCount: number;
   /** 기간 필터를 적용하지 않는 최근 12주 잔디. */
   grass: GrassWeek[];
-  /** 잔디 기간의 관측 토큰 합계. 기간 필터와 무관하다. */
-  grassObserved: number;
+  /** 잔디 기간에 쌓인 토큰 합계. 기간 필터와 무관하다. */
+  grassTokens: number;
   /**
    * `갱신` 버튼 옆 마지막 갱신 시각. 오늘이면 `HH:MM`, 아니면 `MM-DD HH:MM`. 켜진 소스가 한 번도
    * 성공하지 않았으면 `없음`.
@@ -119,7 +131,7 @@ function grassStart(today: LocalDate): LocalDate {
   return shiftDays(monday, -(GRASS_WEEKS - 1) * 7);
 }
 
-/** 관측 토큰을 0~4 농도로 바꾼다. `sortedNonzero`는 오름차순 정렬된 0이 아닌 값들이다. */
+/** 하루에 쌓인 토큰을 0~4 농도로 바꾼다. `sortedNonzero`는 오름차순 정렬된 0이 아닌 값들이다. */
 function intensityLevel(value: number, sortedNonzero: readonly number[]): number {
   if (value === 0 || sortedNonzero.length === 0) return 0;
   const quantile = (ratio: number): number => {
@@ -147,7 +159,7 @@ export function grass(state: MetaState, today: LocalDate): GrassWeek[] {
   for (const [key, counts] of state.usageDaily) {
     const { date } = splitUsageKey(key);
     if (date >= start && date <= today) {
-      perDate.set(date, (perDate.get(date) ?? 0) + observed(counts));
+      perDate.set(date, (perDate.get(date) ?? 0) + rewardTokens(counts));
     }
   }
 
@@ -161,7 +173,7 @@ export function grass(state: MetaState, today: LocalDate): GrassWeek[] {
       const value = perDate.get(date) ?? 0;
       cells.push({
         date,
-        observed: value,
+        tokens: value,
         level: intensityLevel(value, sortedNonzero),
         future: date > today,
       });
@@ -176,7 +188,7 @@ function grassTotal(state: MetaState, today: LocalDate): number {
   let total = 0;
   for (const [key, counts] of state.usageDaily) {
     const { date } = splitUsageKey(key);
-    if (date >= start && date <= today) total += observed(counts);
+    if (date >= start && date <= today) total += rewardTokens(counts);
   }
   return total;
 }
@@ -193,7 +205,7 @@ function toolRows(state: MetaState, today: LocalDate, period: Period, total: num
       const parsed = splitUsageKey(key);
       if (parsed.provider !== provider) continue;
       hasHistory = true;
-      if (periodContains(period, parsed.date, today)) value += observed(counts);
+      if (periodContains(period, parsed.date, today)) value += rewardTokens(counts);
     }
 
     // 한 번도 감지되지 않았고 과거 기록도 없는 소스는 도구별 분해에서 뺀다.
@@ -203,7 +215,7 @@ function toolRows(state: MetaState, today: LocalDate, period: Period, total: num
     rows.push({
       provider,
       providerLabel: providerName(provider),
-      observed: value,
+      tokens: value,
       sharePercent: share(value, total),
       statusLabel: source ? sourceStatusName(source.status) : '',
       paused: source ? !source.enabled : false,
@@ -214,7 +226,7 @@ function toolRows(state: MetaState, today: LocalDate, period: Period, total: num
 }
 
 function modelRows(state: MetaState, today: LocalDate, period: Period, total: number): ModelRow[] {
-  const aggregated = new Map<string, { provider: Provider; rawModel: string; observed: number }>();
+  const aggregated = new Map<string, { provider: Provider; rawModel: string; tokens: number }>();
 
   for (const [key, counts] of state.usageDaily) {
     const { provider, date, rawModel } = splitUsageKey(key);
@@ -222,9 +234,9 @@ function modelRows(state: MetaState, today: LocalDate, period: Period, total: nu
     const groupKey = `${provider}|${rawModel}`;
     const existing = aggregated.get(groupKey);
     if (existing) {
-      existing.observed += observed(counts);
+      existing.tokens += rewardTokens(counts);
     } else {
-      aggregated.set(groupKey, { provider, rawModel, observed: observed(counts) });
+      aggregated.set(groupKey, { provider, rawModel, tokens: rewardTokens(counts) });
     }
   }
 
@@ -232,14 +244,14 @@ function modelRows(state: MetaState, today: LocalDate, period: Period, total: nu
     provider: entry.provider,
     providerLabel: providerName(entry.provider),
     rawModel: entry.rawModel,
-    observed: entry.observed,
-    sharePercent: share(entry.observed, total),
+    tokens: entry.tokens,
+    sharePercent: share(entry.tokens, total),
   }));
 
-  // 기획서 5.2: 관측 토큰 내림차순. 동률은 이름으로 안정 정렬해 화면이 흔들리지 않게 한다.
+  // 기획서 5.2: 토큰 내림차순. 동률은 이름으로 안정 정렬해 화면이 흔들리지 않게 한다.
   rows.sort(
     (left, right) =>
-      right.observed - left.observed ||
+      right.tokens - left.tokens ||
       left.provider.localeCompare(right.provider) ||
       left.rawModel.localeCompare(right.rawModel),
   );
@@ -273,22 +285,23 @@ function lastRefreshedLabel(state: MetaState, today: LocalDate): string {
 
 /** 사용량 화면 모델을 만든다. */
 export function usageScreen(state: MetaState, today: LocalDate, period: Period): UsageScreen {
-  let periodObserved = 0;
+  let periodTokens = 0;
   for (const [key, counts] of state.usageDaily) {
-    if (periodContains(period, splitUsageKey(key).date, today)) periodObserved += observed(counts);
+    if (periodContains(period, splitUsageKey(key).date, today))
+      periodTokens += rewardTokens(counts);
   }
 
-  const models = modelRows(state, today, period, periodObserved);
+  const models = modelRows(state, today, period, periodTokens);
 
   return {
     period,
     periodLabel: periodName(period),
-    periodObserved,
-    tools: toolRows(state, today, period, periodObserved),
+    periodTokens,
+    tools: toolRows(state, today, period, periodTokens),
     models,
     modelCount: models.length,
     grass: grass(state, today),
-    grassObserved: grassTotal(state, today),
+    grassTokens: grassTotal(state, today),
     lastRefreshedLabel: lastRefreshedLabel(state, today),
   };
 }

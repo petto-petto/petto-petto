@@ -10,6 +10,7 @@
 import {
   categoryName,
   tierName,
+  tokenRewardLabel,
   type AchievementCatalog,
   type Category,
 } from '../domain/achievement/catalog.ts';
@@ -81,7 +82,7 @@ export function achievementScreen(
         rewards = [MASK];
       } else {
         rewards = [];
-        if (definition.coin > 0) rewards.push(`코인 ${definition.coin}`);
+        if (definition.token > 0) rewards.push(tokenRewardLabel(definition.token));
         if (definition.title !== undefined) rewards.push(`칭호 ${definition.title}`);
         if (definition.trophy === true) rewards.push('트로피');
       }

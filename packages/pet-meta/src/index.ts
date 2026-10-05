@@ -39,6 +39,7 @@ export * from './domain/state.ts';
 export * from './domain/settings/index.ts';
 export * from './domain/profile/index.ts';
 export * from './domain/panel/index.ts';
+export * from './domain/notification/gacha-ready.ts';
 export * from './domain/usage/tokens.ts';
 export * from './domain/usage/collector.ts';
 export * from './domain/usage/ccusage.ts';

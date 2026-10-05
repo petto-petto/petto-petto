@@ -15,7 +15,7 @@ import {
   emptySnapshot,
   FixtureCollector,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryMetaStore,
   InMemoryPetClient,
   MetaAppState,
@@ -53,7 +53,7 @@ function handlers() {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     FixtureCollector.withEmptySnapshots(),
@@ -97,7 +97,7 @@ test('INFO: 활성 펫이 있으면 초상화 채널이 진화 단계를 넘긴�
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     pets,
     STUB_GROWTH_RULES,
     FixtureCollector.withEmptySnapshots(),
@@ -124,7 +124,7 @@ function collectHandlers() {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     collector,
@@ -156,7 +156,7 @@ test('COLLECT-003: 갱신은 refresh 가 끝난 뒤의 스냅샷으로 증가분
   collector.accumulate('claude_code', '2026-09-27', 'claude-opus-5', tokenCounts(1_000));
   const report = (await now()) as TickReport;
 
-  assert.ok(report.sourceNotes.includes('claude_code: 관측 토큰 +1000'));
+  assert.ok(report.sourceNotes.includes('claude_code: 토큰 +1000'));
   assert.equal(state.meta.sources.get('claude_code')?.status, 'connected');
 });
 
@@ -189,7 +189,7 @@ test('데모 사용량 채널은 실제 수집기에서 오류로 거절한다',
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     {
@@ -246,7 +246,7 @@ function gatedHandlers() {
     '~/Library/…',
     '0.1.0',
     new InMemoryCollection(),
-    new InMemoryCurrency(),
+    new InMemoryTokenClient(),
     new InMemoryPetClient(),
     STUB_GROWTH_RULES,
     collector,
@@ -321,6 +321,44 @@ test('종료: idle() 은 진행 중인 집계가 끝나야 풀린다 — 그 전
   assert.equal(idle, true);
 });
 
+test('앱을 다시 켜면 꺼져 있던 동안의 사용은 적립하지 않는다', async () => {
+  // 같은 저장소와 같은 도구 기록을 두 번의 앱 실행이 이어서 본다.
+  const store = new InMemoryMetaStore();
+  const tokens = new InMemoryTokenClient();
+  const collector = FixtureCollector.withEmptySnapshots();
+  const launch = () =>
+    new MetaAppState(
+      store,
+      '~/Library/…',
+      '0.1.0',
+      new InMemoryCollection(),
+      tokens,
+      new InMemoryPetClient(),
+      STUB_GROWTH_RULES,
+      collector,
+    );
+
+  const first = launch();
+  await first.aggregate();
+  collector.accumulate('claude_code', '2026-09-27', 'claude-opus-5', tokenCounts(50_000));
+  await first.aggregate();
+  first.persist();
+  assert.equal(tokens.balance(), 50_000);
+
+  // 앱을 끈 사이에 80,000 을 썼다.
+  collector.accumulate('claude_code', '2026-09-28', 'claude-opus-5', tokenCounts(80_000));
+
+  const second = launch();
+  assert.equal(second.isFreshInstall, false);
+  await second.aggregate();
+  assert.equal(tokens.balance(), 50_000, '앱 시작 집계는 기준점만 잡는다');
+  assert.equal(tokens.entries.length, 1);
+
+  collector.accumulate('claude_code', '2026-09-28', 'claude-opus-5', tokenCounts(20_000));
+  await second.aggregate();
+  assert.equal(tokens.balance(), 70_000, '켜진 뒤에 쓴 것만 쌓인다');
+});
+
 test('데모 시드는 실제 수집기에서 아무것도 하지 않고 그 사실을 알린다', () => {
   const store = () => new InMemoryMetaStore();
   const make = (collector: ConstructorParameters<typeof MetaAppState>[7]) =>
@@ -329,7 +367,7 @@ test('데모 시드는 실제 수집기에서 아무것도 하지 않고 그 사
       '~/Library/…',
       '0.1.0',
       new InMemoryCollection(),
-      new InMemoryCurrency(),
+      new InMemoryTokenClient(),
       new InMemoryPetClient(),
       STUB_GROWTH_RULES,
       collector,

@@ -50,6 +50,11 @@ export class SqliteTokenClient implements TokenClient {
     return this.#currencyRepository().balance();
   }
 
+  earnedSince(since: string): number {
+    if (since.trim().length === 0) throw new Error('기준 시각이 필요합니다.');
+    return this.#currencyRepository().earnedSince(since);
+  }
+
   grantOnce(key: string, amount: number, reason: string): boolean {
     if (!Number.isSafeInteger(amount) || amount <= 0) {
       throw new Error('지급 금액은 양의 안전 정수여야 합니다.');

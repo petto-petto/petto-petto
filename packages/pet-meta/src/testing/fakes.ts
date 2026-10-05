@@ -16,38 +16,46 @@ import { PortError, type DomainEvent, type EventBus } from '../index.ts';
  * 은 **실패를 만들 수 있어야** 검증된다.
  */
 
-import { petId, type Coin } from '@pet/core';
+import { petId } from '@pet/core';
 import type { OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
 import type {
   BattlePort,
   CollectionPort,
-  CurrencyPort,
-  CurrencyTotals,
   GachaPort,
-  GrantOutcome,
   GrowthRules,
-  LedgerEntry,
   MetaSnapshot,
   MetaStore,
   PetSummary,
+  TokenPort,
   TrophyPlacement,
+  UsageEntry,
 } from '@pet/meta';
 
-/** 재화 도메인 대역. */
-export class InMemoryCurrency implements CurrencyPort {
-  /** 이미 지급한 멱등 키. 기획서 9.5: 같은 키를 중복 지급하지 않는다. */
-  #grantedKeys = new Map<string, Coin>();
-  #ledger: LedgerEntry[] = [];
-  #balance = 0;
-  #earned = 0;
-  #spent = 0;
+/** 원장 한 줄. 대역 안에서만 쓴다. */
+interface LedgerLine {
+  /** ISO 8601. */
+  occurredAt: string;
+  /** 토큰 수. 지급은 양수, 소비는 음수다. */
+  delta: number;
+}
+
+/**
+ * 공통 `TokenClient` 중 meta 가 쓰는 부분(`TokenPort`)의 인메모리 대역.
+ *
+ * 실제 구현의 계약을 따른다 — 같은 멱등 키의 적재·지급은 한 번만 반영하고 `false` 를 돌려주며,
+ * 0 이하의 지급과 빈 기준 시각은 거부하고, 저장·조회 실패는 던진다.
+ */
+export class InMemoryTokenClient implements TokenPort {
+  /** 이미 지급한 멱등 키와 그 금액. */
+  #grantedKeys = new Map<string, number>();
+  #ledger: LedgerLine[] = [];
+  #usage: UsageEntry[] = [];
   #failNextGrant = false;
+  #failNextRecord = false;
   #failQueries = false;
-  /** 토큰 → 코인 환산 비율. 재화 도메인의 정책이므로 여기(대역)에 있다. */
-  #tokensPerCoin = 10_000;
   #now: Date | undefined;
 
-  /** 원장 항목의 시각을 고정한다. `오늘 획득 코인` 계산을 결정론적으로 만든다. */
+  /** 원장 항목의 시각을 고정한다. 오늘 획득량 계산을 결정론적으로 만든다. */
   setNow(now: Date): void {
     this.#now = now;
   }
@@ -55,6 +63,11 @@ export class InMemoryCurrency implements CurrencyPort {
   /** 다음 지급 한 번을 실패시킨다. */
   failNextGrant(): void {
     this.#failNextGrant = true;
+  }
+
+  /** 다음 사용량 적재 한 번을 실패시킨다. */
+  failNextRecord(): void {
+    this.#failNextRecord = true;
   }
 
   setQueryFailure(failing: boolean): void {
@@ -65,69 +78,55 @@ export class InMemoryCurrency implements CurrencyPort {
     return this.#grantedKeys.size;
   }
 
-  grantedAmount(rewardKey: string): Coin | undefined {
+  grantedAmount(rewardKey: string): number | undefined {
     return this.#grantedKeys.get(rewardKey);
   }
 
+  /** 적재된 순서대로의 사용량 내역. */
+  get entries(): readonly UsageEntry[] {
+    return this.#usage;
+  }
+
   /** 소비를 기록한다. 원장에 음수 항목을 넣는 테스트용이다. */
-  spend(amount: number, reason: string): void {
-    this.#balance -= amount;
-    this.#spent += amount;
-    this.#ledger.push({
-      entryId: `spend-${this.#ledger.length}`,
-      reason,
-      occurredAt: (this.#now ?? new Date()).toISOString(),
-      delta: -amount,
-    });
+  spend(amount: number): void {
+    this.#ledger.push({ occurredAt: (this.#now ?? new Date()).toISOString(), delta: -amount });
   }
 
-  #record(key: string, amount: Coin, reason: string): void {
+  recordUsage(entry: UsageEntry): boolean {
+    if (this.#failNextRecord) {
+      this.#failNextRecord = false;
+      throw new PortError('토큰 사용량을 저장하지 못했어요');
+    }
+    if (this.#usage.some((existing) => existing.dedupeKey === entry.dedupeKey)) return false;
+    this.#usage.push({ ...entry });
+    return true;
+  }
+
+  grantOnce(key: string, amount: number, _reason: string): boolean {
+    if (this.#failNextGrant) {
+      this.#failNextGrant = false;
+      throw new PortError('재화 지급에 실패했어요');
+    }
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new PortError('지급 금액은 양의 안전 정수여야 합니다.');
+    }
+    if (this.#grantedKeys.has(key)) return false;
     this.#grantedKeys.set(key, amount);
-    this.#balance += amount;
-    this.#earned += amount;
-    this.#ledger.push({
-      entryId: `grant-${this.#ledger.length}`,
-      reason,
-      occurredAt: (this.#now ?? new Date()).toISOString(),
-      delta: amount,
-    });
+    this.#ledger.push({ occurredAt: (this.#now ?? new Date()).toISOString(), delta: amount });
+    return true;
   }
 
-  grantOnce(rewardKey: string, amount: Coin, reason: string): GrantOutcome {
-    if (this.#failNextGrant) {
-      this.#failNextGrant = false;
-      throw new PortError('재화 지급에 실패했어요');
-    }
-    if (this.#grantedKeys.has(rewardKey)) return { kind: 'already_granted' };
-    this.#record(rewardKey, amount, reason);
-    return { kind: 'granted', amount };
-  }
-
-  grantUsageTokens(dedupeKey: string, rewardTokens: number, reason: string): GrantOutcome {
-    if (this.#failNextGrant) {
-      this.#failNextGrant = false;
-      throw new PortError('재화 지급에 실패했어요');
-    }
-    if (this.#grantedKeys.has(dedupeKey)) return { kind: 'already_granted' };
-    // 환산은 재화 도메인의 정책이다. meta는 이 계산을 알지 못한다.
-    const amount = Math.floor(rewardTokens / this.#tokensPerCoin);
-    this.#record(dedupeKey, amount, reason);
-    return { kind: 'granted', amount };
-  }
-
-  balance(): Coin {
+  balance(): number {
     if (this.#failQueries) throw new PortError('잔액을 불러오지 못했어요');
-    return this.#balance;
+    return this.#ledger.reduce((sum, line) => sum + line.delta, 0);
   }
 
-  recentLedger(limit: number): LedgerEntry[] {
+  earnedSince(since: string): number {
     if (this.#failQueries) throw new PortError('원장을 불러오지 못했어요');
-    return [...this.#ledger].reverse().slice(0, limit);
-  }
-
-  totals(): CurrencyTotals {
-    if (this.#failQueries) throw new PortError('누적 재화를 불러오지 못했어요');
-    return { earned: this.#earned, spent: this.#spent, balance: this.#balance };
+    if (since.trim().length === 0) throw new PortError('기준 시각이 필요합니다.');
+    return this.#ledger
+      .filter((line) => line.delta > 0 && line.occurredAt >= since)
+      .reduce((sum, line) => sum + line.delta, 0);
   }
 }
 
@@ -192,24 +191,36 @@ export class InMemoryCollection implements CollectionPort {
   }
 }
 
-/** gacha 도메인 대역. */
+/**
+ * gacha 도메인 대역.
+ *
+ * `draws` 에 `null` 을 주면 "횟수를 저장하는 곳이 없다"를 흉내낸다. 뽑기가 아직 횟수를 저장하지
+ * 않으므로 앱이 쓰는 대역이 바로 그 모양이다. 비용의 기본값은 뽑기 구현이 차감하는 값과 같다.
+ */
 export class StubGacha implements GachaPort {
   #failQueries = false;
-  readonly #draws: number;
+  readonly #draws: number | null;
   readonly #fusions: number;
+  readonly #drawCost: number;
 
-  constructor(draws: number, fusions: number) {
+  constructor(draws: number | null, fusions: number, drawCost = 100_000) {
     this.#draws = draws;
     this.#fusions = fusions;
+    this.#drawCost = drawCost;
   }
 
   setQueryFailure(failing: boolean): void {
     this.#failQueries = failing;
   }
 
-  drawCount(): number {
+  drawCount(): number | null {
     if (this.#failQueries) throw new PortError('뽑기 기록을 불러오지 못했어요');
     return this.#draws;
+  }
+
+  drawCost(): number {
+    if (this.#failQueries) throw new PortError('뽑기 비용을 불러오지 못했어요');
+    return this.#drawCost;
   }
 
   fusionCount(): number {

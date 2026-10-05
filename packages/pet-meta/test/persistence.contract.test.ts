@@ -11,13 +11,14 @@ import assert from 'node:assert/strict';
 import { FixedClock, PROVIDERS, petId } from '@pet/core';
 import {
   AchievementCatalog,
+  beginSession,
   createMetaState,
   evaluate,
   factSnapshot,
   FixtureCollector,
   grantTitle,
   InMemoryCollection,
-  InMemoryCurrency,
+  InMemoryTokenClient,
   InMemoryMetaStore,
   InMemoryPetClient,
   isUnlocked,
@@ -41,25 +42,29 @@ const NOW = '2026-08-26T14:37:12+09:00';
 class Session {
   state: MetaState = createMetaState();
   collector = FixtureCollector.withEmptySnapshots();
-  currency = new InMemoryCurrency();
+  tokens = new InMemoryTokenClient();
   clock = new FixedClock(NOW);
 
   constructor() {
-    this.currency.setNow(this.clock.now());
+    this.tokens.setNow(this.clock.now());
   }
 
   run(): SourceRunResult[] {
-    return runAggregation(this.state, this.collector, this.currency, this.clock).outcomes.map(
+    return runAggregation(this.state, this.collector, this.tokens, this.clock).outcomes.map(
       (outcome) => outcome.result,
     );
   }
 
-  /** 앱을 껐다 켠다. 저장한 뒤 **완전히 새 상태**를 저장된 것에서 되살린다. */
+  /**
+   * 앱을 껐다 켠다. 저장한 뒤 **완전히 새 상태**를 저장된 것에서 되살리고, 앱이 켜질 때 하는
+   * 것처럼 새 실행을 시작한다.
+   */
   restart(store: InMemoryMetaStore): void {
     saveState(store, this.state);
     const restored = loadState(store);
     assert.ok(restored, '저장된 상태가 있어야 한다');
     this.state = restored;
+    beginSession(this.state);
   }
 }
 
@@ -69,11 +74,11 @@ const resultFor = (results: SourceRunResult[], provider: string): SourceRunResul
   return result;
 };
 
-test('기획서 8.2: 기준점이 재실행 후에도 살아 있다', () => {
+test('앱을 켤 때마다 기준점을 새로 잡는다', () => {
   const store = new InMemoryMetaStore();
   const session = new Session();
 
-  // 설치 전 기록이 잔뜩 있는 상태에서 첫 스캔 → 기준점만 잡는다.
+  // 앱을 처음 켜기 전의 기록이 잔뜩 있는 상태에서 첫 스캔 → 기준점만 잡는다.
   session.collector.accumulate(
     'claude_code',
     '2026-05-01',
@@ -88,14 +93,61 @@ test('기획서 8.2: 기준점이 재실행 후에도 살아 있다', () => {
   const results = session.run();
   assert.deepEqual(
     resultFor(results, 'claude_code'),
-    { kind: 'no_change' },
-    '기준점이 살아 있어야 한다',
+    { kind: 'baseline_captured' },
+    '이번 실행의 첫 스캔이 새 기준점이다',
   );
-  assert.equal(observedTotal(session.state), 0, '재실행이 설치 전 기록을 적립하면 안 된다');
+  assert.equal(observedTotal(session.state), 0, '재실행이 예전 기록을 적립하면 안 된다');
 
   session.collector.accumulate('claude_code', '2026-08-26', 'claude-opus-5', tokenCounts(5_000));
   session.run();
-  assert.equal(observedTotal(session.state), 5_000, '재실행 이후의 증가분만 잡힌다');
+  assert.equal(observedTotal(session.state), 5_000, '앱이 켜진 동안의 증가분만 잡힌다');
+});
+
+test('앱이 꺼져 있던 동안의 사용은 통계에도 재화에도 토큰 표에도 쌓이지 않는다', () => {
+  const store = new InMemoryMetaStore();
+  const session = new Session();
+  session.run();
+  session.collector.accumulate('claude_code', '2026-08-26', 'claude-opus-5', tokenCounts(5_000));
+  session.run();
+  assert.equal(session.tokens.balance(), 5_000);
+
+  // 앱을 끈 사이에 80,000 을 썼다. 그 뒤에 앱을 다시 켠다.
+  saveState(store, session.state);
+  session.collector.accumulate('claude_code', '2026-08-27', 'claude-opus-5', tokenCounts(80_000));
+  session.restart(store);
+  session.run();
+
+  assert.equal(observedTotal(session.state), 5_000, '꺼져 있던 동안의 사용은 통계에 없다');
+  assert.equal(session.tokens.balance(), 5_000, '재화로도 지급하지 않는다');
+  assert.equal(session.tokens.entries.length, 1, '공용 토큰 표에도 적재하지 않는다');
+  assert.equal(session.state.activityMinutes.size, 1, '함께한 시간도 늘지 않는다');
+
+  // 다시 켠 뒤에 쓴 것은 쌓인다.
+  session.collector.accumulate('claude_code', '2026-08-27', 'claude-opus-5', tokenCounts(2_000));
+  session.run();
+
+  assert.equal(observedTotal(session.state), 7_000);
+  assert.equal(session.tokens.balance(), 7_000);
+  assert.equal(session.tokens.entries.length, 2);
+});
+
+test('새 실행을 시작해도 꺼 둔 소스와 지난 기록은 그대로다', () => {
+  const session = new Session();
+  session.run();
+  session.collector.accumulate('codex', '2026-08-26', 'gpt-5.4-codex', tokenCounts(3_000));
+  session.run();
+  setSourceEnabled(session.state, session.clock, 'gemini_cli', false);
+
+  beginSession(session.state);
+
+  const codex = session.state.sources.get('codex');
+  assert.equal(codex?.baseline, undefined);
+  assert.equal(codex?.status, 'scanning', '첫 스캔 전까지는 확인 중이다');
+  assert.equal(codex?.everConnected, true, '최초 실행으로 되돌아가지 않는다');
+  const gemini = session.state.sources.get('gemini_cli');
+  assert.equal(gemini?.enabled, false);
+  assert.equal(gemini?.status, 'paused');
+  assert.equal(observedTotal(session.state), 3_000, '이미 쌓은 통계는 건드리지 않는다');
 });
 
 test('기획서 4.3: 재실행은 최초 실행이 아니다', () => {
@@ -147,13 +199,13 @@ test('기획서 8.3: 멱등 키가 재실행 후에도 살아 있다', () => {
   session.collector.accumulate('claude_code', '2026-08-26', 'claude-opus-5', tokenCounts(1_000));
   session.run();
   const observed = observedTotal(session.state);
-  const grants = session.currency.grantedKeyCount;
+  const grants = session.tokens.grantedKeyCount;
 
   session.restart(store);
   for (let index = 0; index < 3; index += 1) session.run();
 
   assert.equal(observedTotal(session.state), observed);
-  assert.equal(session.currency.grantedKeyCount, grants);
+  assert.equal(session.tokens.grantedKeyCount, grants);
 });
 
 test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후에도 유지된다', () => {
@@ -166,7 +218,7 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
     evaluate(
       session.state,
       catalog,
-      session.currency,
+      session.tokens,
       collection,
       pets,
       STUB_GROWTH_RULES,
@@ -188,9 +240,9 @@ test('기획서 9.4 / ACH-004: 업적 사실·진행률·보상이 재실행 후
     '진행률도 유지되어야 한다',
   );
 
-  const grants = session.currency.grantedKeyCount;
+  const grants = session.tokens.grantedKeyCount;
   judge();
-  assert.equal(session.currency.grantedKeyCount, grants, '보상이 두 번 지급되지 않는다');
+  assert.equal(session.tokens.grantedKeyCount, grants, '보상이 두 번 지급되지 않는다');
 });
 
 test('기획서 8.4: 껐던 소스가 재실행으로 저절로 켜지지 않는다', () => {
@@ -261,6 +313,46 @@ test('조련사 이름을 담고 있던 v1 저장 파일도 그대로 열린다'
   assert.equal(observedTotal(restored), 9_000);
   // 읽지 않는 키라 상태에 살아남지 않는다.
   assert.equal('displayName' in restored.profile, false);
+});
+
+test('코인 보상을 담고 있던 v2 저장 파일은 토큰 보상으로 열린다', () => {
+  const session = new Session();
+  session.run();
+  session.state.rewards.set('collection.first_pet', [
+    {
+      achievementId: 'collection.first_pet',
+      rewardKey: 'achievement:collection.first_pet',
+      kind: 'token',
+      status: 'done',
+      attempts: 1,
+      lastError: undefined,
+      detail: '토큰 10',
+    },
+  ]);
+
+  // 재화를 코인이라 부르고 도감 칸 수·옛 합성 사실을 저장하던 시절의 파일을 재현한다.
+  const legacy = JSON.parse(JSON.stringify(snapshotOf(session.state)));
+  legacy.schemaVersion = 2;
+  legacy.rewards[0].kind = 'coin';
+  legacy.rewards[0].detail = '코인 10';
+  legacy.eventFacts.dexTotal = 20;
+  legacy.eventFacts.commonFusionEpic = 1;
+  legacy.eventFacts.fusionCount = 3;
+  delete legacy.eventFacts.fusionEpic;
+
+  const restored = loadState(InMemoryMetaStore.withSnapshot(legacy));
+
+  assert.ok(restored);
+  const reward = restored.rewards.get('collection.first_pet')?.[0];
+  assert.equal(reward?.kind, 'token');
+  assert.equal(reward?.detail, '토큰 10');
+  assert.equal(restored.eventFacts.fusionCount, 3, '아는 사실은 그대로 가져온다');
+  assert.equal(restored.eventFacts.fusionEpic, 0, '새 사실은 0에서 시작한다');
+  assert.deepEqual(
+    Object.keys(restored.eventFacts).sort(),
+    Object.keys(createMetaState().eventFacts).sort(),
+    '지금 코드가 모르는 사실은 상태에 남지 않는다',
+  );
 });
 
 test('알 수 없는 스키마 버전은 추측하지 않고 거절한다', () => {

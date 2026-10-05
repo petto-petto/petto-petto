@@ -44,6 +44,33 @@ test('TokenClient는 신규 지급을 한 번만 기록하고 잔액보다 많�
   assert.throws(() => currency.spend(-1, '뽑기'));
 });
 
+test('earnedSince는 기준 시각부터 지급된 양만 더하고 소비는 세지 않는다', async (t) => {
+  const { database } = await fixture(t);
+  const { CurrencyRepository } =
+    await import('../dist/main/persistence/repositories/currency-repository.js');
+  const { TokenRepository } =
+    await import('../dist/main/persistence/repositories/token-repository.js');
+  const { SqliteTokenClient } = await import('../dist/main/clients/sqlite-token-client.js');
+  let now = '2026-10-04T14:59:59.999Z';
+  const tokens = new SqliteTokenClient(
+    new TokenRepository(database),
+    new CurrencyRepository(database),
+    () => now,
+  );
+
+  tokens.grantOnce('reward:before', 500, '기준 시각 직전');
+  now = '2026-10-04T15:00:00.000Z';
+  tokens.grantOnce('reward:boundary', 300, '기준 시각 정각');
+  now = '2026-10-05T03:00:00.000Z';
+  tokens.grantOnce('reward:after', 200, '기준 시각 이후');
+  assert.equal(tokens.spend(100, '펫 뽑기'), true);
+
+  assert.equal(tokens.earnedSince('2026-10-04T15:00:00.000Z'), 500, '정각 포함, 소비 제외');
+  assert.equal(tokens.earnedSince('2026-10-06T00:00:00.000Z'), 0, '지급이 없으면 0');
+  assert.equal(tokens.balance(), 900);
+  assert.throws(() => tokens.earnedSince(' '), '기준 시각이 비면 전체 합으로 오해된다');
+});
+
 test('새 저장소는 자동 재화 없이 시작하고 재시작해도 0을 유지한다', async (t) => {
   const { database, currency } = await fixture(t);
   const tokenModule = await import('../dist/main/clients/sqlite-token-client.js');

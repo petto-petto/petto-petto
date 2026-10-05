@@ -6,23 +6,29 @@
  * 1. 고정 버전 수집기 실행과 JSON 검증
  * 2. 소스별 기준점 이후 증가분 계산
  * 3. 중복 키 검사
- * 4. 사용량·활동 분·업적 사실 저장
- * 5. 보상 대상 토큰을 재화 도메인에 멱등 요청
+ * 4. 증가분을 공용 토큰 원장에 적재하고, 사용량·활동 분·업적 사실 저장
+ * 5. 보상 대상 토큰을 재화 원장에 그대로 멱등 지급
  * 6. `usage.aggregated` 발행
  * 7. 소스별 기준점과 마지막 성공 시각 갱신
  *
  * ## 왜 "기준점 + 누적 스냅샷" 방식인가
  *
  * 수집기는 실행할 때마다 **전체 누적 기록**을 돌려준다. 증가분만 주는 게 아니다.
- * 그래서 "설치 전 기록을 제외한다"(기획서 8.2)를 지키려면, 첫 스캔 결과를 진행량으로
- * 적립하지 않고 **기준점**으로만 저장한 다음, 이후 스캔에서 기준점과의 차이만 반영하면
- * 된다. 로그 파일을 지우거나 앱을 다시 깔지 않아도 되고, 원천 로그를 건드리지도 않는다.
+ * 그래서 첫 스캔 결과를 진행량으로 적립하지 않고 **기준점**으로만 저장한 다음, 이후 스캔에서
+ * 기준점과의 차이만 반영한다. 로그 파일을 지우거나 앱을 다시 깔지 않아도 되고, 원천 로그를
+ * 건드리지도 않는다.
+ *
+ * ## 앱이 켜져 있는 동안의 사용만 센다
+ *
+ * 기준점은 **앱을 켤 때마다** 새로 잡는다(`beginSession`). 토큰은 사용자가 이 앱을 켜 두고
+ * 쓴 만큼만 의미가 있는 재화라서, 앱이 꺼져 있던 동안의 사용은 통계에도 재화에도 넣지 않는다.
+ * 기준점을 지난 실행에서 이어받으면 다시 켠 순간 그 사이의 사용이 한꺼번에 적립된다.
  */
 
 import { PROVIDERS, localMinuteOf, type Clock, type Provider } from '@pet/core';
 import { domainEvent, eventId, type DomainEvent } from '../../events/index.ts';
 
-import type { CurrencyPort } from '../../ports/index.ts';
+import type { TokenPort } from '../../ports/index.ts';
 import { sourceOf, usageKey, type MetaState } from '../state.ts';
 import {
   CollectError,
@@ -59,7 +65,7 @@ export interface SourceOutcome {
    * 나중에 저장소에서 되찾지 않고 **여기 실어 나른다.** 키는
    * `<provider>:<이전 총합>-><현재 총합>` 문자열이라 저장 순서가 사전순이고,
    * `90->100`이 `100->250`보다 뒤에 온다. "마지막 키"를 뒤늦게 찾으면 틀린 키를 집어
-   * 이미 지급된 것으로 처리돼 새 증가분의 코인이 사라진다.
+   * 이미 지급된 것으로 처리돼 새 증가분의 재화가 사라진다.
    */
   appliedDedupeKey: string | undefined;
   /** 재화 지급 실패. 사용량 반영 자체는 성공했으므로 결과와 분리한다. */
@@ -81,10 +87,10 @@ const dedupeKeyOf = (provider: Provider, from: number, to: number): string =>
 export function runAggregation(
   state: MetaState,
   collector: UsageCollector,
-  currency: CurrencyPort,
+  tokens: TokenPort,
   clock: Clock,
 ): AggregationRun {
-  return runProviders(state, collector, currency, clock, PROVIDERS);
+  return runProviders(state, collector, tokens, clock, PROVIDERS);
 }
 
 /**
@@ -96,11 +102,11 @@ export function runAggregation(
 export function rescanSource(
   state: MetaState,
   collector: UsageCollector,
-  currency: CurrencyPort,
+  tokens: TokenPort,
   clock: Clock,
   provider: Provider,
 ): AggregationRun {
-  return runProviders(state, collector, currency, clock, [provider]);
+  return runProviders(state, collector, tokens, clock, [provider]);
 }
 
 /**
@@ -112,17 +118,17 @@ export function rescanSource(
 export function runAggregationFor(
   state: MetaState,
   collector: UsageCollector,
-  currency: CurrencyPort,
+  tokens: TokenPort,
   clock: Clock,
   providers: readonly Provider[],
 ): AggregationRun {
-  return runProviders(state, collector, currency, clock, providers);
+  return runProviders(state, collector, tokens, clock, providers);
 }
 
 function runProviders(
   state: MetaState,
   collector: UsageCollector,
-  currency: CurrencyPort,
+  tokens: TokenPort,
   clock: Clock,
   providers: readonly Provider[],
 ): AggregationRun {
@@ -130,23 +136,27 @@ function runProviders(
 
   // 지난 집계에서 실패한 재화 지급을 먼저 재시도한다. 멱등 키가 같으므로
   // 이미 지급된 것이 다시 지급되지는 않는다.
-  retryPendingGrants(state, currency);
+  retryPendingGrants(state, tokens);
 
   const outcomes: SourceOutcome[] = [];
   const events: DomainEvent[] = [];
 
   for (const provider of providers) {
-    const outcome = runSingleSource(state, collector, provider, now);
+    const outcome = runSingleSource(state, collector, tokens, provider, now);
 
     if (outcome.result.kind === 'applied' && outcome.appliedDedupeKey !== undefined) {
       const key = outcome.appliedDedupeKey;
 
-      // 5단계: 보상 대상 토큰을 재화 도메인에 멱등 요청.
-      try {
-        currency.grantUsageTokens(key, outcome.result.rewardTokens, '사용량 보상');
-      } catch (error) {
-        state.pendingUsageGrants.set(key, outcome.result.rewardTokens);
-        outcome.currencyError = error instanceof Error ? error.message : String(error);
+      // 5단계: 보상 대상 토큰 수를 그대로 재화로 지급한다. 재화의 단위가 토큰이라 환산이 없다.
+      // 캐시 읽기만 늘어난 증가분은 보상 대상이 0이므로 원장에 0짜리 항목을 만들지 않는다.
+      const rewardTokens = outcome.result.rewardTokens;
+      if (rewardTokens > 0) {
+        try {
+          tokens.grantOnce(key, rewardTokens, '사용량 보상');
+        } catch (error) {
+          state.pendingUsageGrants.set(key, rewardTokens);
+          outcome.currencyError = error instanceof Error ? error.message : String(error);
+        }
       }
 
       // 6단계: `usage.aggregated` 발행.
@@ -202,6 +212,7 @@ function totalObserved(state: MetaState): number {
 function runSingleSource(
   state: MetaState,
   collector: UsageCollector,
+  tokens: TokenPort,
   provider: Provider,
   now: Date,
 ): SourceOutcome {
@@ -241,7 +252,7 @@ function runSingleSource(
   const baseline = source.baseline;
 
   if (baseline === undefined) {
-    // 기획서 8.2: 첫 정상 스캔은 기준점만 저장한다. 이 스캔의 값은 정보, 코인,
+    // 기획서 8.2: 첫 정상 스캔은 기준점만 저장한다. 이 스캔의 값은 정보, 재화,
     // 활동 시간, 업적에 반영하지 않는다.
     source.baseline = { rows: snapshot.rows, totalObserved: currentTotal, capturedAt: timestamp };
     source.status = 'connected';
@@ -300,13 +311,43 @@ function runSingleSource(
 
   // 2단계: 행별 증가분 계산.
   const delta = computeDelta(snapshot.rows, baseline.rows);
-
-  // 4단계: 사용량 저장.
   let observedDelta = 0;
   let reward = 0;
-  for (const [key, counts] of delta) {
+  for (const counts of delta.values()) {
     observedDelta += observed(counts);
     reward += rewardTokens(counts);
+  }
+
+  // 4단계: 공용 토큰 원장에 적재한다. **상태를 바꾸기 전에** 한다.
+  //
+  // 적재가 실패하면 기준점을 그대로 둔 채 이 소스만 실패로 끝낸다. 다음 집계가 같은 기준점에서
+  // 증가분을 다시 계산하므로 빠지는 사용량이 없다. 순서를 바꿔 통계부터 올리면, 적재가 실패한
+  // 증가분은 기준점이 이미 지나가 버려 토큰 원장에 영영 들어가지 못한다.
+  //
+  // 이미 적재한 키면 `false` 가 온다. 적재한 뒤 meta 상태를 저장하기 전에 앱이 꺼진 경우이고,
+  // 원장은 그대로 두고 통계만 이어서 반영하면 된다.
+  try {
+    tokens.recordUsage({
+      provider,
+      observed: observedDelta,
+      reward,
+      dedupeKey,
+      occurredAt: timestamp,
+    });
+  } catch {
+    const storeError = new CollectError('storage_failed');
+    source.status = 'error';
+    source.lastError = storeError.userMessage();
+    return {
+      provider,
+      result: { kind: 'failed', error: storeError },
+      appliedDedupeKey: undefined,
+      currencyError: undefined,
+    };
+  }
+
+  // 4단계: 사용량 저장.
+  for (const [key, counts] of delta) {
     const { date, rawModel } = splitRowKey(key);
     const target = usageKey(provider, date, rawModel);
     const existing = state.usageDaily.get(target);
@@ -397,15 +438,33 @@ function capKind(delta: SnapshotRows, kind: TokenKind, allowed: number): void {
 }
 
 /** 지난 집계에서 실패한 재화 지급을 재시도한다. */
-function retryPendingGrants(state: MetaState, currency: CurrencyPort): void {
+function retryPendingGrants(state: MetaState, tokens: TokenPort): void {
   if (state.pendingUsageGrants.size === 0) return;
-  for (const [key, tokens] of [...state.pendingUsageGrants]) {
+  for (const [key, rewardTokens] of [...state.pendingUsageGrants]) {
     try {
-      currency.grantUsageTokens(key, tokens, '사용량 보상 재시도');
+      tokens.grantOnce(key, rewardTokens, '사용량 보상 재시도');
       state.pendingUsageGrants.delete(key);
     } catch {
       // 다음 집계에서 다시 시도한다.
     }
+  }
+}
+
+/**
+ * 새 실행을 시작한다. 앱을 켤 때 한 번 부른다.
+ *
+ * 모든 소스의 기준점을 비워 이번 실행의 첫 정상 스캔이 새 기준점이 되게 한다. 그 스캔은 아무것도
+ * 적립하지 않으므로, 앱이 꺼져 있던 동안 쌓인 기록은 영구히 제외된다. 소스를 껐다 켤 때 비활성
+ * 기간을 제외하는 것(아래 `setSourceEnabled`)과 같은 방법이다.
+ *
+ * 이미 집계한 사용량·활동 분·업적·멱등 키·지급 대기는 건드리지 않는다. 전부 앱이 켜져 있던
+ * 동안 얻은 것이다. `everConnected` 도 그대로라 최초 실행으로 되돌아가지 않는다.
+ */
+export function beginSession(state: MetaState): void {
+  for (const source of state.sources.values()) {
+    source.baseline = undefined;
+    // 꺼 둔 소스는 `수집 중지` 그대로다. 켜진 소스는 첫 스캔이 끝날 때까지 확인 중이다.
+    if (source.enabled) source.status = 'scanning';
   }
 }
 

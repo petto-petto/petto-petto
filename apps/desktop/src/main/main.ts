@@ -9,7 +9,7 @@ import { systemClock } from '@pet/core';
 import { createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
-import { FixtureCollector, MetaAppState, type UsageCollector } from '@pet/meta';
+import { FixtureCollector, MetaAppState, tickBubble, type UsageCollector } from '@pet/meta';
 import type { StoredRoomSnapshot } from '@pet/room';
 
 import { RoomCollectionPort } from './collection.ts';
@@ -17,7 +17,6 @@ import type { PetClient, TokenClient } from '@pet/client';
 
 import { SqlitePetClient } from './clients/sqlite-pet-client.ts';
 import { SqliteTokenClient } from './clients/sqlite-token-client.ts';
-import { SqliteCurrencyPort } from './currency.ts';
 import { importLegacyMetaSnapshot, SqliteMetaStore } from './meta-store.ts';
 import { OVERLAY_GROWTH_RULES } from './growth-rules.ts';
 import { MetaRepository } from './persistence/repositories/meta-repository.ts';
@@ -104,11 +103,13 @@ async function aggregateTick(roomHost: RoomHost): Promise<void> {
   room?.refreshBackground(roomHost);
   if (!state || quitting) return;
   try {
-    const { run, outcome } = await state.aggregate();
+    const { run, outcome, gachaReady } = await state.aggregate();
     state.persist();
+    // 주기 집계에서도 펫이 할 말을 보낸다. 재화는 주로 여기서 쌓이므로, 뽑기 가능 알림이 나갈
+    // 자리도 여기다. 알림 설정과 오버레이 숨김은 `tickBubble` 이 본다.
     broadcast('usage:aggregated', {
       activityMinuteAdded: run.activityMinuteAdded,
-      bubble: undefined,
+      bubble: tickBubble(state, outcome, gachaReady),
       newlyUnlocked: outcome.newlyUnlocked,
     });
   } catch (error) {
@@ -303,15 +304,14 @@ app.whenReady().then(async () => {
     createPersistentCombine(pets, tokens, featureTransaction),
     (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
   );
-  // 재화는 공통 SQLite 파일에 남는다. 인메모리 대역이던 시절에는 앱을 끌 때마다 잔액이
-  // 0으로 돌아갔고, 멱등 키는 meta 스냅샷에 남아 다시 지급되지도 않았다.
-  const currency = new SqliteCurrencyPort(currencyRepository, systemClock);
   state = new MetaAppState(
     store,
     databasePath,
     app.getVersion(),
     collection,
-    currency,
+    // 사용량 적재도 재화 지급도 뽑기·합성과 같은 `TokenClient` 로 한다. 재화가 공통 SQLite 에
+    // 남으므로 앱을 꺼도 잔액이 유지된다.
+    tokens,
     pets,
     OVERLAY_GROWTH_RULES,
     createUsageCollector(),
@@ -352,7 +352,8 @@ app.whenReady().then(async () => {
   if (shouldOpenGachaPrototype()) createGachaWindow();
   if (shouldOpenCombinePrototype()) createCombineWindow();
 
-  // 앱 시작 집계. 기획서 8.2에 따라 이 스캔은 기준점만 만들고 아무것도 적립하지 않는다.
+  // 앱 시작 집계. 이 스캔은 이번 실행의 기준점만 만들고 아무것도 적립하지 않는다. 앱이 꺼져 있던
+  // 동안의 사용은 세지 않는다 — `MetaAppState` 가 만들어질 때 지난 실행의 기준점을 비운다.
   // 데모 모드에서는 그다음 데모 기록을 심고 한 번 더 돌려야 "설치 이후 사용"이 생긴다.
   // 실제 수집기로 두 번 돌리면 ccusage 를 한 번 더 실행할 뿐이라 데모일 때만 다시 돈다.
   try {
