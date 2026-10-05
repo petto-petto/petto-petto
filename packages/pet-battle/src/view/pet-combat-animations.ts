@@ -22,9 +22,14 @@ export type PetCombatPhase =
   | 'ZEBRA_APPROACH'
   | 'ZEBRA_WAVE'
   | 'ZEBRA_RECOVER'
-  | 'ZEBRA_SETTLE';
+  | 'ZEBRA_SETTLE'
+  | 'HAMSTER_PUFF'
+  | 'HAMSTER_HOLD'
+  | 'HAMSTER_FIRE'
+  | 'HAMSTER_BURST'
+  | 'HAMSTER_RECOVER';
 export interface PetCombatAnimation {
-  readonly id: 'default' | 'mole' | 'sprout' | 'zebra';
+  readonly id: 'default' | 'mole' | 'sprout' | 'zebra' | 'hamster';
   readonly durationMs: number;
   readonly recoveryAt: number;
   readonly beats: readonly (readonly [number, number])[];
@@ -47,6 +52,12 @@ export interface PetCombatPose {
   frontApproach: number;
   bodyDip: number;
   spriteProgress: number;
+  cheekPuff: number;
+  mouthOpen: boolean;
+  foodFlight: number;
+  foodBurst: number;
+  chargeHop: number;
+  shotRecoil: number;
 }
 
 const DEFAULT: PetCombatAnimation = {
@@ -109,10 +120,25 @@ const ZEBRA: PetCombatAnimation = {
     [1200, 1300],
   ],
 };
+const HAMSTER: PetCombatAnimation = {
+  id: 'hamster',
+  durationMs: 1200,
+  recoveryAt: 900,
+  beats: [
+    [0, 280],
+    [280, 420],
+    [420, 500],
+    [500, 720],
+    [720, 860],
+    [860, 900],
+    [900, 1200],
+  ],
+};
 const PROFILES: Readonly<Record<string, PetCombatAnimation>> = {
   mole_digger: MOLE,
   sprout_treant: SPROUT,
   midnight_zebra: ZEBRA,
+  cheek_hamster: HAMSTER,
 };
 
 /** Species IDs from PetClient, never a nickname, owned ID or rarity. */
@@ -167,6 +193,12 @@ export function petCombatPose(
     frontApproach: 0,
     bodyDip: 0,
     spriteProgress: 0,
+    cheekPuff: 0,
+    mouthOpen: false,
+    foodFlight: 0,
+    foodBurst: 0,
+    chargeHop: 0,
+    shotRecoil: 0,
   };
   if (t >= profile.durationMs) return pose;
   if (profile.id === 'sprout') {
@@ -209,6 +241,29 @@ export function petCombatPose(
       pose.frontApproach = heldPulse(t, 450, 520, 560, 660);
       pose.spriteProgress = 0;
       pose.shockwaveProgress = smooth(t, 660, 950) * (1 - smooth(t, 1050, 1250));
+    }
+    return pose;
+  }
+  if (profile.id === 'hamster') {
+    pose.phase =
+      t < 280
+        ? 'HAMSTER_PUFF'
+        : t < 420
+          ? 'HAMSTER_HOLD'
+          : t < 720
+            ? 'HAMSTER_FIRE'
+            : t < 900
+              ? 'HAMSTER_BURST'
+              : 'HAMSTER_RECOVER';
+    pose.impact = t >= 720 && t < 860;
+    if (!reducedMotion) {
+      pose.bodyDip = heldPulse(t, 0, 140, 180, 260) * 0.75 + pulse(t, 760, 820, 960);
+      pose.chargeHop = heldPulse(t, 180, 280, 520, 780);
+      pose.shotRecoil = heldPulse(t, 420, 470, 510, 610);
+      pose.cheekPuff = smooth(t, 0, 280) * (1 - smooth(t, 420, 500));
+      pose.mouthOpen = t >= 280 && t < 780;
+      pose.foodFlight = smooth(t, 420, 720);
+      pose.foodBurst = t >= 720 ? 1 - smooth(t, 720, 1050) : 0;
     }
     return pose;
   }

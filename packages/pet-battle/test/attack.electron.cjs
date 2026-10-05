@@ -207,6 +207,82 @@ async function recordZebraAttack(window, stage, automatic = false) {
   return metrics;
 }
 
+async function recordHamsterAttack(window, stage, automatic = false) {
+  const top = [11, 13, 13][stage - 1];
+  const bottom = [16, 18, 19][stage - 1];
+  const mouth = stage === 1 ? { x: 15, y: 14 } : stage === 2 ? { x: 15, y: 16 } : { x: 16, y: 17 };
+  await evaluate(
+    window,
+    `(() => {
+    const root = document.querySelector('#battle-overlay');
+    const image = document.querySelector('#pet-sheet');
+    const native = document.querySelector('.hamster-native-sprite');
+    const food = document.querySelector('.hamster-food');
+    const reference = document.createElement('canvas'); reference.width = reference.height = 32;
+    const context = reference.getContext('2d', { willReadFrequently: true });
+    context.drawImage(image, 0, 0, 32, 32, 0, 0, 32, 32);
+    const base = context.getImageData(0, 0, 32, 32).data;
+    const mouth = ${JSON.stringify(mouth)};
+    const eyeLeft = ${stage === 3 ? 11 : 10}, eyeRight = ${stage === 3 ? 22 : 21};
+    let started = 0, lastAt = 0, fixedChangedMax = 0, invisibleFrames = 0;
+    let maxPuff = 0, shots = 0, impacts = 0, wasShot = false, wasImpact = false;
+    let foodVisible = false, burstVisible = false;
+    const pet = document.querySelector('#pet');
+    const number = name => Number.parseFloat(pet.style.getPropertyValue(name)) || 0;
+    let maxHop = 0, maxRecoil = 0, maxTilt = 0, minScaleY = 1;
+    const phases = [], sources = new Set(), gaps = [];
+    window.__hamsterRecording = undefined;
+    const tick = at => {
+      const phase = root.dataset.petCombatPhase;
+      if (!started && phase === 'IDLE') { requestAnimationFrame(tick); return; }
+      if (!started) started = at;
+      if (lastAt) gaps.push(at - lastAt); lastAt = at;
+      if (phase === 'IDLE') {
+        const sorted = [...gaps].sort((a,b) => a-b);
+        window.__hamsterRecording = { fixedChangedMax, invisibleFrames, maxPuff, shots, impacts,
+          maxHop, maxRecoil, maxTilt, minScaleY,
+          endProjection: [number('--hamster-x'), number('--hamster-y'), number('--hamster-sx'), number('--hamster-sy'), number('--hamster-tilt')],
+          foodVisible, burstVisible, phases, sources: [...sources], p95Gap: sorted[Math.floor(sorted.length * 0.95)] };
+        return;
+      }
+      if (phases.at(-1) !== phase) phases.push(phase);
+      const pixels = native.getContext('2d').getImageData(0,0,32,32).data;
+      let fixedChanged = 0;
+      for (let y=0; y<32; y++) for (let x=0; x<32; x++) {
+        const inMouth = Math.abs(x-mouth.x)<=1 && Math.abs(y-mouth.y)<=1;
+        const fixed = y<${top} || y>=${bottom} || (x>eyeLeft && x<eyeRight && !inMouth);
+        if (!fixed) continue;
+        const pixel=(y*32+x)*4;
+        if (pixels.slice(pixel,pixel+4).some((value,channel) => value !== base[pixel+channel])) fixedChanged++;
+      }
+      fixedChangedMax = Math.max(fixedChangedMax,fixedChanged);
+      maxHop = Math.max(maxHop, -number('--hamster-y'));
+      maxRecoil = Math.max(maxRecoil, -number('--hamster-x'));
+      maxTilt = Math.max(maxTilt, Math.abs(number('--hamster-tilt')));
+      minScaleY = Math.min(minScaleY, number('--hamster-sy'));
+      if (Number(native.style.opacity)!==1 && getComputedStyle(document.querySelector('.pet-viewport')).visibility!=='visible') invisibleFrames++;
+      maxPuff = Math.max(maxPuff, Number(native.dataset.cheekPuff) || 0);
+      const shot = phase==='HAMSTER_FIRE', impact=root.dataset.beat==='IMPACT';
+      if (shot && !wasShot) shots++;
+      if (impact && !wasImpact) impacts++;
+      wasShot=shot; wasImpact=impact;
+      foodVisible ||= shot && !food.hidden;
+      burstVisible ||= phase==='HAMSTER_BURST' && !food.hidden;
+      sources.add(image.currentSrc);
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  })()`,
+  );
+  await petAction(window, automatic ? 'START' : 'ATTACK');
+  await waitFor(window, 'Boolean(window.__hamsterRecording)', 'complete hamster attack recording');
+  const report = await evaluate(window, 'window.__hamsterRecording');
+  console.log(
+    `HAMSTER RECORD stage ${stage} ${automatic ? 'automatic' : 'manual'}: ${JSON.stringify(report)}`,
+  );
+  return report;
+}
+
 async function waitForImpact(window) {
   await waitFor(
     window,
@@ -359,6 +435,19 @@ async function capturePreview(window, name) {
   console.log(`ARTIFACT ${filePath}`);
 }
 
+async function captureHamsterPose(window, expression, name) {
+  // capturePage can finish after a short beat has passed. Sample each pose in
+  // its own attack; the separate continuous recorder verifies the full sequence.
+  await petAction(window, 'ATTACK');
+  await waitFor(window, expression, `hamster ${name}`);
+  await capturePreview(window, name);
+  await waitFor(
+    window,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'IDLE' && document.querySelector('.hamster-food').hidden && getComputedStyle(document.querySelector('.pet-viewport')).visibility === 'visible'",
+    'hamster clears and restores original',
+  );
+}
+
 async function closeFromUi(window, label) {
   let onClosed;
   const closed = new Promise((resolve) => {
@@ -435,11 +524,12 @@ async function run() {
   const growthRepository = new PetGrowthRepository(database);
   const growth = new SqliteGrowthReadClient(growthRepository);
   const roomPets = new PetClientRoomAdapter(pets);
-  const [mole, initialWizard, initialSprout, initialZebra] = pets.createOwnedPets([
+  const [mole, initialWizard, initialSprout, initialZebra, initialHamster] = pets.createOwnedPets([
     '003',
     '006',
     '004',
     '002',
+    '005',
   ]);
   const wizard = pets.updateGrowth(initialWizard.ownedPetId, {
     level: 25,
@@ -775,6 +865,141 @@ async function run() {
   await closeFromUi(zebraWindow, 'zebra battle');
   console.log(
     'PASS zebra stages 1/2/3: manual and automatic double hoof stomp / unchanged torso pixels / striped shockwave / recovery / no XP or HP writes / reduced motion',
+  );
+
+  await evaluate(
+    overlay,
+    `window.petApi.setActivePet(${JSON.stringify(initialHamster.ownedPetId)})`,
+  );
+  await evaluate(overlay, 'window.overlay.openBattle()');
+  const hamsterWindow = host.getBattleWindow();
+  await battleLoaded;
+  await command(hamsterWindow, { type: 'SET_DISPLAY_OPACITY', percent: 100 });
+  if ((await state(hamsterWindow)).preview.reducedMotion)
+    await command(hamsterWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  for (const evolutionStage of [0, 1, 2]) {
+    const profiles = growthRepository.loadAll();
+    Object.assign(profiles[initialHamster.ownedPetId].pet, {
+      level: 40,
+      evolutionStage,
+      totalXp: 0,
+    });
+    growthRepository.saveAll(profiles);
+    room.applyGrowth(growthRepository.growth(), roomHost);
+    await verifyPet(hamsterWindow, pets.getOwnedPet(initialHamster.ownedPetId));
+    await petAction(hamsterWindow, 'STOP');
+    await waitFor(
+      hamsterWindow,
+      "document.querySelector('[data-action=STOP]').textContent === 'OFF'",
+      'pause hamster',
+    );
+    const before = await state(hamsterWindow);
+    const report = await recordHamsterAttack(hamsterWindow, evolutionStage + 1);
+    assert.equal(report.fixedChangedMax, 0, 'every torso, foot, ear and eye pixel stays fixed');
+    assert.equal(report.invisibleFrames, 0);
+    assert.equal(report.maxPuff, 1);
+    assert.ok(
+      report.maxHop >= 21 &&
+        report.maxRecoil >= 9 &&
+        report.maxTilt >= 6 &&
+        report.minScaleY < 0.91,
+      'hamster visibly crouches, jumps, recoils and lands',
+    );
+    assert.deepEqual(report.endProjection, [0, 0, 1, 1, 0], 'whole-body motion resets at the end');
+    assert.equal(report.shots, 1);
+    assert.equal(report.impacts, 1);
+    assert.equal(report.foodVisible, true);
+    assert.equal(report.burstVisible, true);
+    assert.deepEqual(report.phases, [
+      'HAMSTER_PUFF',
+      'HAMSTER_HOLD',
+      'HAMSTER_FIRE',
+      'HAMSTER_BURST',
+      'HAMSTER_RECOVER',
+    ]);
+    assert.equal(report.sources.length, 1);
+    assert.ok(report.sources[0].endsWith(`pet_005_s${evolutionStage + 1}_idle.png`));
+    for (const [name, expression] of [
+      [
+        'puff',
+        "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_HOLD' && document.querySelector('.hamster-native-sprite').dataset.cheekPuff === '1'",
+      ],
+      [
+        'recoil',
+        "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_FIRE' && Number.parseFloat(document.querySelector('#pet').style.getPropertyValue('--hamster-x')) <= -9 && Number.parseFloat(document.querySelector('#pet').style.getPropertyValue('--hamster-tilt')) <= -6",
+      ],
+      [
+        'food',
+        "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_FIRE' && Number(document.querySelector('.hamster-food').dataset.flight) > 0.55 && !document.querySelector('.hamster-food').hidden",
+      ],
+      [
+        'burst',
+        "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_BURST' && !document.querySelector('.hamster-food').hidden",
+      ],
+      [
+        'landing',
+        "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_BURST' && Number(document.querySelector('#pet').style.getPropertyValue('--hamster-sy')) < 0.9",
+      ],
+    ])
+      await captureHamsterPose(
+        hamsterWindow,
+        expression,
+        `hamster-stage${evolutionStage + 1}-${name}`,
+      );
+    const after = await state(hamsterWindow);
+    assert.equal(after.activePet.syncedTotalXp, before.activePet.syncedTotalXp);
+    assert.equal(after.enemyHpRatio, before.enemyHpRatio);
+    assert.equal(after.activePet.stage, before.activePet.stage);
+  }
+  const hamsterAutomatic = await recordHamsterAttack(hamsterWindow, 3, true);
+  assert.equal(hamsterAutomatic.fixedChangedMax, 0);
+  assert.equal(hamsterAutomatic.invisibleFrames, 0);
+  assert.equal(hamsterAutomatic.shots, 1);
+  assert.equal(hamsterAutomatic.impacts, 1);
+  assert.ok(
+    hamsterAutomatic.maxHop > 0 &&
+      hamsterAutomatic.maxTilt >= 6 &&
+      hamsterAutomatic.minScaleY < 0.91,
+  );
+  assert.deepEqual(hamsterAutomatic.endProjection, [0, 0, 1, 1, 0]);
+  await waitFor(
+    hamsterWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_FIRE' && Number(document.querySelector('.hamster-food').dataset.flight) > 0.55 && document.querySelector('#pet-menu').hidden",
+    'automatic hamster shot with menu closed',
+  );
+  await capturePreview(hamsterWindow, 'hamster-stage3-automatic-food');
+  await petAction(hamsterWindow, 'STOP');
+  await waitFor(
+    hamsterWindow,
+    "document.querySelector('[data-action=STOP]').textContent === 'OFF'",
+    'stop hamster automatic',
+  );
+  await petAction(hamsterWindow, 'ATTACK');
+  await waitFor(
+    hamsterWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'HAMSTER_HOLD'",
+    'cancel puff mid-attack',
+  );
+  await petAction(hamsterWindow, 'STOP');
+  await waitFor(
+    hamsterWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase === 'IDLE' && document.querySelector('.hamster-food').hidden && document.querySelector('.hamster-native-sprite').style.opacity === '0' && getComputedStyle(document.querySelector('.pet-viewport')).visibility === 'visible'",
+    'STOP restores original hamster',
+  );
+  await command(hamsterWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  const reducedHamster = await recordHamsterAttack(hamsterWindow, 3);
+  assert.equal(reducedHamster.fixedChangedMax, 0);
+  assert.equal(reducedHamster.maxPuff, 0);
+  assert.equal(reducedHamster.maxHop, 0);
+  assert.equal(reducedHamster.maxRecoil, 0);
+  assert.equal(reducedHamster.maxTilt, 0);
+  assert.equal(reducedHamster.minScaleY, 1);
+  assert.equal(reducedHamster.foodVisible, false);
+  assert.equal(reducedHamster.burstVisible, false);
+  assert.equal(reducedHamster.impacts, 1);
+  await closeFromUi(hamsterWindow, 'hamster battle');
+  console.log(
+    'PASS hamster stages 1/2/3: crouch / hop / cannon recoil / landing / native pixels preserved / single shot and hit / manual and automatic / STOP and reduced motion / unchanged XP and HP',
   );
 
   const standalone = new BrowserWindow({

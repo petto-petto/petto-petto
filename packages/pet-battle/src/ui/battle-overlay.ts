@@ -25,6 +25,9 @@ import { MoleSprite } from './mole-sprite.ts';
 import { SproutRoots } from './sprout-roots.ts';
 import { ZebraShockwave } from './zebra-shockwave.ts';
 import { ZebraSprite } from './zebra-sprite.ts';
+import { HamsterSprite } from './hamster-sprite.ts';
+import { HamsterFood } from './hamster-food.ts';
+import { hamsterBodyProjection, hamsterMouthPosition } from '../view/hamster-combat.ts';
 
 declare global {
   interface Window {
@@ -56,6 +59,9 @@ const moleCanvas = required<HTMLCanvasElement>('.mole-native-sprite');
 const moleSprite = new MoleSprite(moleCanvas);
 const zebraCanvas = required<HTMLCanvasElement>('.zebra-native-sprite');
 const zebraSprite = new ZebraSprite(zebraCanvas);
+const hamsterCanvas = required<HTMLCanvasElement>('.hamster-native-sprite');
+const hamsterSprite = new HamsterSprite(hamsterCanvas);
+const hamsterFood = new HamsterFood(required<HTMLCanvasElement>('.hamster-food'));
 const moleSoil = required<HTMLElement>('.mole-soil');
 const sproutRoots = new SproutRoots(required<HTMLCanvasElement>('.sprout-roots'));
 const zebraShockwave = new ZebraShockwave(required<HTMLCanvasElement>('.zebra-shockwave'));
@@ -524,6 +530,15 @@ function paintArena(next: BattleState): void {
   root.dataset['petAnimation'] = frame.petAnimation.id;
   root.dataset['molePhase'] = frame.petAnimation.phase;
   root.dataset['petCombatPhase'] = frame.petAnimation.phase;
+  const hamsterPlacement = { x: petX, foot: petY, width: layout.width, height: layout.height };
+  const hamsterBody = hamsterBodyProjection(frame.petAnimation, layout.petSize, hamsterPlacement);
+  pet.style.setProperty('--hamster-x', `${hamsterBody.x}px`);
+  pet.style.setProperty('--hamster-y', `${hamsterBody.y}px`);
+  pet.style.setProperty('--hamster-sx', String(hamsterBody.scaleX));
+  pet.style.setProperty('--hamster-sy', String(hamsterBody.scaleY));
+  pet.style.setProperty('--hamster-tilt', `${hamsterBody.tilt}deg`);
+  pet.style.setProperty('--hamster-shadow-scale', String(hamsterBody.shadowScale));
+  pet.style.setProperty('--hamster-shadow-opacity', String(hamsterBody.shadowOpacity));
   const forward = zebraForwardProjection(frame.petAnimation, layout.petSize);
   pet.style.setProperty('--zebra-forward-scale', String(forward.scale));
   pet.style.setProperty('--zebra-forward-y', `${forward.offsetY}px`);
@@ -546,6 +561,25 @@ function paintArena(next: BattleState): void {
     { x: enemyX + layout.enemyFrameSize * 0.05, y: enemyY - 3 },
     next.activePet?.evolutionStage ?? 0,
     layout.petSize / 32,
+    layout.width,
+    layout.height,
+  );
+  const petUnit = layout.petSize / 32;
+  hamsterFood.paint(
+    frame.petAnimation,
+    hamsterMouthPosition(
+      frame.petAnimation,
+      next.activePet?.evolutionStage ?? 0,
+      layout.petSize,
+      Number.parseFloat(pet.style.getPropertyValue('--pet-ground-offset')) || 0,
+      hamsterPlacement,
+    ),
+    {
+      x: enemyX + layout.enemyFrameSize * 0.36,
+      y: enemyY - base.enemyHeight * layout.scale * 0.55,
+    },
+    next.activePet?.evolutionStage ?? 0,
+    petUnit,
     layout.width,
     layout.height,
   );
@@ -604,6 +638,8 @@ function paintArena(next: BattleState): void {
   // Custom species share the arena clock. Mole uses native pixels; sprout and zebra use stock strips.
   const sproutAttacking = frame.petAnimation.id === 'sprout' && frame.petAnimation.phase !== 'IDLE';
   const zebraAttacking = frame.petAnimation.id === 'zebra' && frame.petAnimation.phase !== 'IDLE';
+  const hamsterAttacking =
+    frame.petAnimation.id === 'hamster' && frame.petAnimation.phase !== 'IDLE';
   const scene = deriveBattleScene(
     next,
     sproutAttacking ||
@@ -619,17 +655,18 @@ function paintArena(next: BattleState): void {
   petSheet.style.transform = walking
     ? `translateX(${-((frame.petStep ?? 0) % scene.petSprite.frameCount) * layout.petSize}px)`
     : '';
-  if (sproutAttacking || zebraAttacking) {
+  if (sproutAttacking || zebraAttacking || hamsterAttacking) {
     petSheet.classList.remove('animated-sheet');
     const decoded =
       petSheet.complete &&
       petSheet.currentSrc === petSheet.src &&
       petSheet.naturalWidth === petSheet.naturalHeight * scene.petSprite.frameCount;
-    const spriteFrame = zebraAttacking
-      ? 0
-      : decoded
-        ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
-        : 0;
+    const spriteFrame =
+      zebraAttacking || hamsterAttacking
+        ? 0
+        : decoded
+          ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
+          : 0;
     petSheet.style.transform = `translateX(${-spriteFrame * layout.petSize}px)`;
   }
   const nativeSlap = moleSprite.paint(
@@ -644,7 +681,13 @@ function paintArena(next: BattleState): void {
   );
   moleCanvas.style.opacity = nativeSlap ? '1' : '0';
   zebraCanvas.style.opacity = nativeHoof ? '1' : '0';
-  petViewport.style.visibility = nativeSlap || nativeHoof ? 'hidden' : '';
+  const nativeCheeks = hamsterSprite.paint(
+    petSheet,
+    frame.petAnimation,
+    next.activePet?.evolutionStage ?? 0,
+  );
+  hamsterCanvas.style.opacity = nativeCheeks ? '1' : '0';
+  petViewport.style.visibility = nativeSlap || nativeHoof || nativeCheeks ? 'hidden' : '';
   paintHpBar(hpMotion.frame(hpInput));
 }
 

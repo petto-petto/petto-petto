@@ -517,7 +517,8 @@ img:not([src]) {
 }
 
 .sprout-roots,
-.zebra-shockwave {
+.zebra-shockwave,
+.hamster-food {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -525,6 +526,10 @@ img:not([src]) {
   z-index: 6;
   pointer-events: none;
   image-rendering: pixelated;
+}
+
+.hamster-food {
+  z-index: 8;
 }
 
 [data-pet-animation='sprout'] .pet-body-clip {
@@ -537,11 +542,14 @@ img:not([src]) {
 [data-pet-animation='sprout'] .combat-effects .slash,
 [data-pet-animation='sprout'] .combat-effects .speed-line,
 [data-pet-animation='zebra'] .combat-effects .slash,
-[data-pet-animation='zebra'] .combat-effects .speed-line {
+[data-pet-animation='zebra'] .combat-effects .speed-line,
+[data-pet-animation='hamster'] .combat-effects .slash,
+[data-pet-animation='hamster'] .combat-effects .speed-line {
   display: none;
 }
 
-[data-pet-animation='zebra'] .pet-body-clip {
+[data-pet-animation='zebra'] .pet-body-clip,
+[data-pet-animation='hamster'] .pet-body-clip {
   display: block;
   position: absolute;
   inset: 0;
@@ -553,12 +561,24 @@ img:not([src]) {
   transform: translateY(var(--zebra-forward-y)) scale(var(--zebra-forward-scale));
 }
 
-.zebra-native-sprite {
+[data-pet-animation='hamster'] .pet-body-clip {
+  transform: translate(var(--hamster-x), var(--hamster-y)) rotate(var(--hamster-tilt))
+    scale(var(--hamster-sx), var(--hamster-sy));
+}
+
+[data-pet-animation='hamster'] .pet > .ground-shadow {
+  transform: scaleX(var(--hamster-shadow-scale));
+  opacity: var(--hamster-shadow-opacity);
+}
+
+.zebra-native-sprite,
+.hamster-native-sprite {
   display: none;
   pointer-events: none;
 }
 
-[data-pet-animation='zebra'] .zebra-native-sprite {
+[data-pet-animation='zebra'] .zebra-native-sprite,
+[data-pet-animation='hamster'] .hamster-native-sprite {
   display: block;
   position: absolute;
   top: 0;
