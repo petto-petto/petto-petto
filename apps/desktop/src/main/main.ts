@@ -378,7 +378,7 @@ app.whenReady().then(async () => {
     ipcMain,
     pets,
     (event) => isDexWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
-    (event) => isRoomWebContents(event.sender),
+    (event) => isRoomWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
     {
       openInRoom: (event, ownedPetId) => {
         const from = BrowserWindow.fromWebContents(event.sender);

@@ -8,6 +8,7 @@ import {
   acquisitionHints,
   dexView,
   formatDiscoveredOn,
+  initialSelection,
   roomFocusTarget,
   slotState,
   type DexViewOptions,
@@ -232,4 +233,17 @@ test('펫룸에서 보기는 활성 개체, 없으면 최고 레벨 개체를 �
     ]),
     'c',
   );
+});
+
+test('처음 열 때는 NEW, 없으면 발견한 칸, 없으면 아무것도 고르지 않는다', () => {
+  const all = (patches: Record<string, Partial<DexEntry>>) =>
+    dexView(
+      SPECIES.map((species) => entry(species.speciesId, patches[species.speciesId] ?? {})),
+      OPTIONS,
+    );
+  // 방금 뽑은 EPIC 이 NEW 면 앞선 발견 칸보다 먼저 고른다.
+  assert.equal(initialSelection(all({ '004': found(), '006': found({ isNew: true }) })), '006');
+  // NEW 가 없으면 첫 미발견 칸(003)이 아니라 첫 발견 칸을 고른다.
+  assert.equal(initialSelection(all({ '005': found() })), '005');
+  assert.equal(initialSelection(all({})), null);
 });

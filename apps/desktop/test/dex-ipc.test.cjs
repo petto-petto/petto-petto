@@ -11,12 +11,15 @@ const DEX_EVENT = { sender: 'dex' };
 const ROOM_EVENT = { sender: 'room' };
 const OTHER_EVENT = { sender: 'other' };
 
-async function setup({ owned = [], entries = [] } = {}) {
+async function setup({ owned = [], entries = [], failRead = false } = {}) {
   const { registerDexIpc } = await import('../dist/main/ipc/dex.js');
   const ipc = fakeIpc();
   const calls = { seen: [], room: [], gacha: 0 };
   const pets = {
-    listDexEntries: () => entries,
+    listDexEntries: () => {
+      if (failRead) throw new Error('injected read failure');
+      return entries;
+    },
     markDexSeen: (speciesId) => calls.seen.push(speciesId),
     listOwnedPets: (speciesId) => owned.filter((pet) => pet.speciesId === speciesId),
   };
@@ -106,4 +109,9 @@ test('NEW 표식은 펫룸 창에만 답하고 화면 모델과 같은 판정을
   assert.throws(() => fresh.call('dex:hasNew', OTHER_EVENT));
   const none = await setup({ entries: [entry()] });
   assert.equal(none.call('dex:hasNew', ROOM_EVENT), false);
+});
+
+test('NEW 표식 조회가 실패하면 false 로 숨기지 않고 거부한다', async () => {
+  const { call } = await setup({ failRead: true });
+  assert.throws(() => call('dex:hasNew', ROOM_EVENT), /injected read failure/);
 });

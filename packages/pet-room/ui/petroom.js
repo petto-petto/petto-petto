@@ -736,12 +736,29 @@ window.addEventListener('focus', () => refreshDexBadge());
 // 도감의 `펫룸에서 보기`. 이미 열려 있던 펫룸이면 main 이 이 이벤트로 알린다.
 api.on('room:focusPet', (ownedPetId) => focusPet(ownedPetId));
 
-/** 그 개체를 클릭한 것처럼 상세를 연다. 명부에 없으면(그사이 합성됨) 아무것도 고르지 않는다. */
+/**
+ * 그 개체를 클릭한 것처럼 상세를 연다. 명부에 없으면(그사이 합성됨) 아무것도 고르지 않고
+ * `false`를 돌려준다.
+ */
 function focusPet(ownedPetId) {
-  if (!ownedPetId || !room.views.has(ownedPetId)) return;
+  if (!ownedPetId || !room.views.has(ownedPetId)) return false;
   room.selectedPetId = ownedPetId;
   room.players.get(ownedPetId)?.playClick();
   renderDetail();
+  return true;
+}
+
+/**
+ * 창을 열 때 넘겨받은 `?focus=`를 한 번만 꺼낸다. 주소에 남겨 두면 새로 고칠 때마다 그 개체가
+ * 다시 골라진다.
+ */
+function takeFocusQuery() {
+  const url = new URL(window.location.href);
+  const focus = url.searchParams.get('focus');
+  if (focus === null) return null;
+  url.searchParams.delete('focus');
+  history.replaceState(null, '', url);
+  return focus;
 }
 
 /**
@@ -770,7 +787,8 @@ window.addEventListener('load', async () => {
     await loadPets(scene.pets);
     // 처음 열면 상세를 바로 보여 준다. 도감의 `펫룸에서 보기`로 왔으면 그 개체를, 아니면 지금
     // 오버레이에 떠 있는 활성 펫을 클릭한 것과 같게 연다. 보유 펫이 없으면 아무것도 고르지 않는다.
-    focusPet(new URLSearchParams(window.location.search).get('focus') ?? room.activePetId);
+    // 넘겨받은 개체가 그사이 합성으로 사라졌으면 활성 펫으로 대신한다.
+    if (!focusPet(takeFocusQuery())) focusPet(room.activePetId);
 
     api.debugLog(
       `[PETROOM] ${scene.background.id}(${scene.background.phase}) · ` +

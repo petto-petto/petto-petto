@@ -386,6 +386,10 @@ canvas {
   animation: pop 160ms steps(2) 1;
 }
 
+.dex-slot__new--shown {
+  animation: none;
+}
+
 .dex-slot[aria-pressed='true'] {
   outline: 2px dashed var(--gold);
   outline-offset: 2px;
@@ -563,21 +567,27 @@ canvas {
   display: none;
 }
 
+/* 아래 획득 경로 상자와 같은 폭을 쓴다. 세 칸이 남는 폭을 똑같이 나눠 갖는다. */
 .evolution {
   display: flex;
   align-items: center;
   gap: 2px;
+  width: 100%;
 }
 
 .evolution[hidden] {
   display: none;
 }
 
-/* 썸네일은 1배로 그린다. 32px·48px 카드를 같은 상자에 정수 배율로 담으려면 48px 상자가 필요하다. */
+/*
+ * 썸네일은 1배로 그린다. 칸 폭은 늘어나도 그림은 늘리지 않고 가운데에 둔다(정수 배율). 높이
+ * 48px 은 32px·48px 카드를 모두 담는 값이다.
+ */
 .evolution__stage {
   display: grid;
+  flex: 1;
   place-items: center;
-  width: 48px;
+  min-width: 48px;
   height: 48px;
   background: var(--parchment-ring);
 }

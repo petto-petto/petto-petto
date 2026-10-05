@@ -7,6 +7,7 @@
 // 실루엣은 픽셀을 읽지 않고 `source-in` 합성으로 칠하므로 상관없다.
 
 import {
+  initialSelection,
   unwrapDexResponse,
   type DexBridge,
   type DexSlotView,
@@ -64,7 +65,20 @@ const dex: {
   /** 마지막으로 그린 그리드와 상세 무대. 같으면 다시 만들지 않는다(깜박임·첫 클릭 유실 방지). */
   gridKey: string;
   showcaseKey: string;
-} = { view: null, tab: 'ALL', selectedId: null, marking: new Set(), gridKey: '', showcaseKey: '' };
+  /** 마지막으로 그린 진화 썸네일·힌트. 같으면 다시 만들지 않는다. */
+  detailKey: string;
+  /** NEW 팝을 이미 보여 준 종. 그리드를 다시 만들어도 같은 표식을 또 튀기지 않는다. */
+  popped: Set<string>;
+} = {
+  view: null,
+  tab: 'ALL',
+  selectedId: null,
+  marking: new Set(),
+  gridKey: '',
+  showcaseKey: '',
+  detailKey: '',
+  popped: new Set(),
+};
 
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
 document.querySelector('.window-back')?.addEventListener('click', () => {
@@ -84,10 +98,8 @@ async function load(): Promise<void> {
     dex.view = view;
     errorEl.hidden = true;
     grid.hidden = false;
-    // 처음 열면 첫 슬롯을 고른다. 아무것도 못 만났으면 상세 자리에 안내만 둔다.
-    if (dex.selectedId === null && view.progress.found > 0) {
-      dex.selectedId = view.sections.flatMap((section) => section.slots)[0]?.speciesId ?? null;
-    }
+    // 처음 열면 NEW 나 발견한 칸을 고른다. 아무것도 못 만났으면 상세 자리에 안내만 둔다.
+    if (dex.selectedId === null) dex.selectedId = initialSelection(view);
     render();
   } catch (error) {
     showError(error);
@@ -98,6 +110,7 @@ function showError(error: unknown): void {
   dex.view = null;
   dex.gridKey = '';
   dex.showcaseKey = '';
+  dex.detailKey = '';
   // 이전 슬롯의 상세와 버튼이 남지 않게 상세 본문도 숨긴다.
   detailBody.hidden = true;
   detailEmpty.hidden = true;
@@ -204,7 +217,7 @@ function slotElement(slot: DexSlotView): HTMLButtonElement {
   button.setAttribute('aria-label', slotLabel(slot));
 
   const canvas = document.createElement('canvas');
-  void drawCard(canvas, slot.sprite, slot.state === 'undiscovered', SLOT_SCALE);
+  void drawCard(canvas, slot.sprite, slot.state === 'undiscovered', () => SLOT_SCALE);
   button.append(canvas);
 
   const number = span('dex-slot__number', slot.number);
@@ -222,7 +235,13 @@ function slotElement(slot: DexSlotView): HTMLButtonElement {
       throw new Error(`알 수 없는 슬롯 상태: ${String(unreachable)}`);
     }
   }
-  if (slot.isNew) button.append(span('dex-slot__new', 'NEW'));
+  if (slot.isNew) {
+    const badge = span('dex-slot__new', 'NEW');
+    // 팝은 처음 나타날 때 한 번만(design prompt). 다시 그린 그리드에서는 정지한 표식이다.
+    if (dex.popped.has(slot.speciesId)) badge.classList.add('dex-slot__new--shown');
+    dex.popped.add(slot.speciesId);
+    button.append(badge);
+  }
 
   button.addEventListener('click', () => select(slot.speciesId));
   return button;
@@ -319,25 +338,12 @@ function renderDetail(): void {
   detailMet.textContent = `첫 만남 ${slot.discoveredOn ?? ''}`;
 
   evolution.hidden = hidden;
-  evolution.replaceChildren(
-    ...slot.stages.flatMap((stage, index) => {
-      const box = document.createElement('span');
-      box.className = 'evolution__stage';
-      box.title = `${stage.stage}단계${stage.reached ? '' : ' (아직 못 만남)'}`;
-      const canvas = document.createElement('canvas');
-      void drawCard(canvas, stage.sprite, !stage.reached, 1);
-      box.append(canvas);
-      return index === 0 ? [box] : [span('evolution__arrow', '›'), box];
-    }),
-  );
-
-  hints.replaceChildren(
-    ...slot.hints.map((hint) => {
-      const item = document.createElement('li');
-      item.textContent = hint;
-      return item;
-    }),
-  );
+  // focus 마다 다시 읽으므로, 바뀐 것이 없으면 썸네일·힌트를 갈아 끼우지 않는다(깜박임 방지).
+  const detailKey = JSON.stringify([slot.speciesId, slot.stages, slot.hints]);
+  if (detailKey !== dex.detailKey) {
+    dex.detailKey = detailKey;
+    renderStagesAndHints(slot);
+  }
 
   detailAction.textContent = slot.state === 'owned' ? '펫룸에서 보기' : '✨ 펫 뽑기로 가기';
   detailActionError.hidden = true;
@@ -351,6 +357,28 @@ function renderDetail(): void {
   // 상세에 보이면 확인한 것이다. 처음 열 때 자동으로 고른 슬롯도 같다 — 보고 있는데 NEW 가
   // 남으면 표식이 고장 난 것처럼 보이고 펫룸 버튼의 NEW 도 꺼지지 않는다.
   if (slot.isNew) void markSeen(slot.speciesId);
+}
+
+function renderStagesAndHints(slot: DexSlotView): void {
+  evolution.replaceChildren(
+    ...slot.stages.flatMap((stage, index) => {
+      const box = document.createElement('span');
+      box.className = 'evolution__stage';
+      box.title = `${stage.stage}단계${stage.reached ? '' : ' (아직 못 만남)'}`;
+      const canvas = document.createElement('canvas');
+      void drawCard(canvas, stage.sprite, !stage.reached, () => 1);
+      box.append(canvas);
+      return index === 0 ? [box] : [span('evolution__arrow', '›'), box];
+    }),
+  );
+
+  hints.replaceChildren(
+    ...slot.hints.map((hint) => {
+      const item = document.createElement('li');
+      item.textContent = hint;
+      return item;
+    }),
+  );
 }
 
 /**
@@ -378,7 +406,7 @@ async function runDetailAction(): Promise<void> {
 async function drawShowcase(slot: DexSlotView, token: number): Promise<void> {
   const sprite = slot.showcase.sprite;
   if (slot.state === 'undiscovered') {
-    await drawCard(showcase, sprite, true, scaleFor(32), () => token === showcaseToken);
+    await drawCard(showcase, sprite, true, scaleFor, () => token === showcaseToken);
     return;
   }
   try {
@@ -422,7 +450,7 @@ async function drawShowcase(slot: DexSlotView, token: number): Promise<void> {
     requestAnimationFrame(step);
   } catch {
     // idle 시트가 없으면 카드라도 보인다.
-    await drawCard(showcase, sprite, false, scaleFor(32), () => token === showcaseToken);
+    await drawCard(showcase, sprite, false, scaleFor, () => token === showcaseToken);
   }
 }
 
@@ -435,13 +463,14 @@ function scaleFor(size: number): number {
 
 /**
  * 카드 한 장을 그린다. `silhouette`이면 불투명 픽셀을 전부 외곽선 색으로 칠한다.
- * 에셋이 없으면 그 칸에만 `?`를 그리고 다른 칸은 그대로 둔다.
+ * 에셋이 없으면 그 칸에만 `?`를 그리고 다른 칸은 그대로 둔다. 배율은 카드 크기를 보고 정한다 —
+ * EPIC 3단계 카드는 48px 라 32px 기준 배율로 그리면 칸을 넘친다.
  */
 async function drawCard(
   canvas: HTMLCanvasElement,
   sprite: DexSpriteRef,
   silhouette: boolean,
-  scale: number,
+  scaleOf: (size: number) => number,
   stillWanted: () => boolean = () => true,
 ): Promise<void> {
   let image: HTMLImageElement;
@@ -449,11 +478,11 @@ async function drawCard(
     image = await loadImage(asset(sprite.card));
   } catch {
     if (!stillWanted()) return;
-    drawMissing(canvas, scale);
+    drawMissing(canvas, scaleOf(32));
     return;
   }
   if (!stillWanted()) return;
-  sizeCanvas(canvas, image.naturalWidth, image.naturalHeight, scale);
+  sizeCanvas(canvas, image.naturalWidth, image.naturalHeight, scaleOf(image.naturalWidth));
   const context = canvas.getContext('2d');
   if (!context) return;
   context.imageSmoothingEnabled = false;

@@ -215,6 +215,17 @@ export function formatDiscoveredOn(iso: string, timeZone?: string): string {
 }
 
 /**
+ * 도감을 처음 열 때 고를 칸. 방금 만난 NEW 종을 먼저, 없으면 첫 발견 칸을 고른다. 미발견 칸을
+ * 고르면 `???`만 보여 반가운 소식이 묻힌다. 하나도 못 만났으면 null — 상세 자리에 안내를 둔다.
+ */
+export function initialSelection(view: DexView): string | null {
+  const slots = view.sections.flatMap((section) => section.slots);
+  const pick =
+    slots.find((slot) => slot.isNew) ?? slots.find((slot) => slot.state !== 'undiscovered');
+  return pick?.speciesId ?? null;
+}
+
+/**
  * `펫룸에서 보기`가 열 개체. 활성 개체가 그 종이면 그것을, 아니면 레벨이 가장 높은 개체를
  * (같으면 앞선 것을) 연다. 보유 개체가 없으면 null.
  */
