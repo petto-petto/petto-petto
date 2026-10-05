@@ -476,6 +476,12 @@ body,
 .dev-body {
   margin-top: 6px;
   width: 252px;
+  /*
+   * 오버레이 창은 높이가 고정(520px)이다. 보유 펫 버튼이 늘면 패널이 창 밖으로 잘리므로, 창 안에
+   * 남는 높이(위 여백 12 + 토글 34 + 간격 6 + 아래 여백 12)까지만 쓰고 나머지는 스크롤한다.
+   */
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
   background: rgba(14, 16, 26, 0.97);
   color: #e5e7eb;
   border-radius: 11px;
