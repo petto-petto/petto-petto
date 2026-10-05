@@ -16,9 +16,15 @@ import { BattleImages, setImageSource } from './battle-images.ts';
 import { ArenaDirector, type ArenaFrame } from '../view/arena.ts';
 import { combatContactDistance, separateCombatants } from '../view/footwork.ts';
 import { HpBarMotion, type HpBarFrame } from '../view/hp-bar-motion.ts';
-import { petCombatAnimation, petCombatDecorations } from '../view/pet-combat-animations.ts';
+import {
+  petCombatAnimation,
+  petCombatDecorations,
+  zebraForwardProjection,
+} from '../view/pet-combat-animations.ts';
 import { MoleSprite } from './mole-sprite.ts';
 import { SproutRoots } from './sprout-roots.ts';
+import { ZebraShockwave } from './zebra-shockwave.ts';
+import { ZebraSprite } from './zebra-sprite.ts';
 
 declare global {
   interface Window {
@@ -48,8 +54,11 @@ const pet = required<HTMLElement>('#pet');
 const petSheet = required<HTMLImageElement>('#pet-sheet');
 const moleCanvas = required<HTMLCanvasElement>('.mole-native-sprite');
 const moleSprite = new MoleSprite(moleCanvas);
+const zebraCanvas = required<HTMLCanvasElement>('.zebra-native-sprite');
+const zebraSprite = new ZebraSprite(zebraCanvas);
 const moleSoil = required<HTMLElement>('.mole-soil');
 const sproutRoots = new SproutRoots(required<HTMLCanvasElement>('.sprout-roots'));
+const zebraShockwave = new ZebraShockwave(required<HTMLCanvasElement>('.zebra-shockwave'));
 const petViewport = required<HTMLElement>('.pet-viewport');
 const enemy = required<HTMLElement>('#enemy');
 const enemyImage = required<HTMLImageElement>('#enemy-image');
@@ -515,6 +524,9 @@ function paintArena(next: BattleState): void {
   root.dataset['petAnimation'] = frame.petAnimation.id;
   root.dataset['molePhase'] = frame.petAnimation.phase;
   root.dataset['petCombatPhase'] = frame.petAnimation.phase;
+  const forward = zebraForwardProjection(frame.petAnimation, layout.petSize);
+  pet.style.setProperty('--zebra-forward-scale', String(forward.scale));
+  pet.style.setProperty('--zebra-forward-y', `${forward.offsetY}px`);
   pet.style.setProperty(
     '--sprout-dip',
     `${Math.round(frame.petAnimation.bodyDip * 2) * Math.max(1, Math.round(layout.petSize / 32))}px`,
@@ -523,6 +535,15 @@ function paintArena(next: BattleState): void {
     frame.petAnimation,
     { x: petX + layout.petSize * 0.6, y: petY - 3 },
     { x: enemyX + layout.enemyFrameSize * 0.3, y: enemyY - 3 },
+    next.activePet?.evolutionStage ?? 0,
+    layout.petSize / 32,
+    layout.width,
+    layout.height,
+  );
+  zebraShockwave.paint(
+    frame.petAnimation,
+    { x: petX + layout.petSize * 0.6, y: petY - 3 },
+    { x: enemyX + layout.enemyFrameSize * 0.05, y: enemyY - 3 },
     next.activePet?.evolutionStage ?? 0,
     layout.petSize / 32,
     layout.width,
@@ -580,8 +601,9 @@ function paintArena(next: BattleState): void {
     enemySlamTimer = window.setTimeout(clearEnemySlam, 380);
   }
   previousEnemyImpact = frame.enemyImpact;
-  // Custom species share the arena clock. Mole uses native pixels; sprout uses its stock strip.
+  // Custom species share the arena clock. Mole uses native pixels; sprout and zebra use stock strips.
   const sproutAttacking = frame.petAnimation.id === 'sprout' && frame.petAnimation.phase !== 'IDLE';
+  const zebraAttacking = frame.petAnimation.id === 'zebra' && frame.petAnimation.phase !== 'IDLE';
   const scene = deriveBattleScene(
     next,
     sproutAttacking ||
@@ -597,15 +619,17 @@ function paintArena(next: BattleState): void {
   petSheet.style.transform = walking
     ? `translateX(${-((frame.petStep ?? 0) % scene.petSprite.frameCount) * layout.petSize}px)`
     : '';
-  if (sproutAttacking) {
+  if (sproutAttacking || zebraAttacking) {
     petSheet.classList.remove('animated-sheet');
     const decoded =
       petSheet.complete &&
       petSheet.currentSrc === petSheet.src &&
       petSheet.naturalWidth === petSheet.naturalHeight * scene.petSprite.frameCount;
-    const spriteFrame = decoded
-      ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
-      : 0;
+    const spriteFrame = zebraAttacking
+      ? 0
+      : decoded
+        ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
+        : 0;
     petSheet.style.transform = `translateX(${-spriteFrame * layout.petSize}px)`;
   }
   const nativeSlap = moleSprite.paint(
@@ -613,8 +637,14 @@ function paintArena(next: BattleState): void {
     frame.petAnimation,
     next.activePet?.evolutionStage ?? 0,
   );
+  const nativeHoof = zebraSprite.paint(
+    petSheet,
+    frame.petAnimation,
+    next.activePet?.evolutionStage ?? 0,
+  );
   moleCanvas.style.opacity = nativeSlap ? '1' : '0';
-  petViewport.style.visibility = nativeSlap ? 'hidden' : '';
+  zebraCanvas.style.opacity = nativeHoof ? '1' : '0';
+  petViewport.style.visibility = nativeSlap || nativeHoof ? 'hidden' : '';
   paintHpBar(hpMotion.frame(hpInput));
 }
 
