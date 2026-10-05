@@ -1071,7 +1071,7 @@ function renderDemo() {
         text: '합성 · 전투는 아직 테이블이 없어 손으로 발행합니다. 펫 업적은 펫 DB 로 열립니다',
       }),
       el('div', { class: 'link-list', attrs: { style: 'margin-top:6px' } }, [
-        demoButton('커먼2→에픽 합성', () => api.demoEvent('fusion_miracle')),
+        demoButton('합성으로 EPIC 획득', () => api.demoEvent('fusion_miracle')),
         demoButton('전투 승리', () => api.demoEvent('battle_win')),
       ]),
     ]),

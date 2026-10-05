@@ -29,6 +29,9 @@ declare global {
 }
 
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
+document.querySelector('.window-back')?.addEventListener('click', () => {
+  void bridge().backToRoom();
+});
 const pityBox = document.querySelector('.pity-box');
 if (pityBox) document.querySelector('.summon-stage')?.append(pityBox);
 

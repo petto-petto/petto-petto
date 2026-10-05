@@ -1,25 +1,20 @@
 /**
  * 보유 펫 명부.
  *
- * ## 왜 이게 `@pet/room`에 있는가
+ * ## 정본은 `PetClient`다
  *
- * 보유 펫은 원래 `collection` 도메인의 것이다. 그 도메인은 팀의 다른 사람이 만든다
- * (`@pet/meta`의 `testing/fakes.ts` 주석 참조). 아직 없는 도메인의 이름을 선점하지 않기
- * 위해, 펫룸이 자기가 그리는 데 필요한 만큼만 여기서 들고 있는다.
+ * 보유 펫은 공통 SQLite의 `owned_pets`가 정본이고, 뽑기·합성이 그 표에 개체를 만들고 지운다.
+ * 펫룸은 그 목록을 받아 자기가 그리는 모양(`RoomCollection`)으로 바꿀 뿐 따로 저장하지 않는다.
+ * 예전에는 펫룸이 `room-state.json`에 고정 시드 여섯 마리를 들고 있어서, 뽑은 펫이 펫룸에
+ * 나타나지 않았다 — 명부가 둘이었다.
  *
- * **`collection` 담당자가 오면 이 파일이 그 패키지로 넘어간다.** 그때 펫룸은 자기
- * 포트(`RoomCollection`)만 남기고 구현을 그쪽에서 받는다.
+ * `@pet/room`은 `@pet/client`를 의존하지 않는다. 받는 값의 모양만 `OwnedPetRecord`로 적어 둔다.
  *
- * 그 전까지도 이것은 **테스트 대역이 아니다.** 실제로 저장되고, 실제로 활성 펫이 바뀐다.
- * `@pet/meta`가 프로덕션에서 `InMemoryCollection`을 쓰던 상태를 이걸로 대체한다.
+ * ## 이 명부가 정하지 않는 것
  *
- * ## 이 명부가 정하는 것과 정하지 않는 것
- *
- * **정한다** — 누가 있는지(개체와 종), 어느 개체가 활성인지.
- *
- * **정하지 않는다** — 레벨과 진화 단계. 그 둘의 정본은 오버레이의 성장 저장소이고, 여기
- * 담긴 값은 `withPetGrowth`로 밀어 넣은 **투영**이다. 명부가 자기 레벨을 따로 올리면
- * 오버레이가 보여 주는 레벨과 갈라지고, 프로필과 화면이 서로 다른 숫자를 말하게 된다.
+ * 레벨과 진화 단계. 그 둘의 정본은 오버레이의 성장 저장소이고, 여기 담긴 값은
+ * `withPetGrowth`로 밀어 넣은 **투영**이다. 명부가 자기 레벨을 따로 올리면 오버레이가
+ * 보여 주는 레벨과 갈라지고, 프로필과 화면이 서로 다른 숫자를 말하게 된다.
  */
 
 import { petId, type PetId, type Rarity } from '@pet/core';
@@ -95,38 +90,6 @@ export function stageForEvolution(stage: EvolutionStage): PetStage {
   return 3;
 }
 
-/**
- * 진화 게이트 — 이 레벨을 넘겨야 다음 진화를 **실행할 수 있다.**
- *
- * 성장 엔진(`@pet/main-overlay`의 `growth/constants.js`)이 소유한 규칙을 옮겨 적은 것이다.
- * 명부는 성장 저장소에 시드·이관값을 건네야 하는데 그때 다른 눈금을 쓰면 성장 엔진이 결코
- * 만들 수 없는 값이 정본에 깔린다 — 실제로 그렇게 활성 펫이 최종 단계로 시작해 진화가
- * 영구히 잠겼다. 두 값이 갈라지면 `pet.contract.test.ts`가 잡는다.
- */
-export const EVOLUTION_LEVELS: readonly number[] = [15, 35];
-
-/** 이 레벨에서 성장 엔진이 허용하는 **최대** 진화 횟수. 넘긴 게이트 수와 같다. */
-export function maxEvolutionStageAt(level: number): EvolutionStage {
-  return EVOLUTION_LEVELS.filter((gate) => level >= gate).length as EvolutionStage;
-}
-
-/**
- * 레벨 → 진화 단계. 에셋 가이드 §3.
- *
- * **이관 전용이다.** 진화 횟수 칸이 없던 v1 저장 파일이 화면에 내던 단계를 되살릴 때만
- * 쓴다. 시드는 이 함수를 쓰지 않는다 — 경계가 10/20 이라 성장 게이트(15/35)와 눈금이 달라서,
- * 시드에 쓰면 성장 엔진이 만들 수 없는 진화 횟수가 깔린다(`seedCollection` 주석 참조).
- *
- * 화면에 그릴 단계도 이 함수가 정하지 않는다. `stageForEvolution`이 정한다.
- *
- * 경계가 10과 20이다. Lv.9는 stage1, Lv.10은 stage2.
- */
-export function stageOfLevel(level: number): PetStage {
-  if (level < 10) return 1;
-  if (level < 20) return 2;
-  return 3;
-}
-
 /** 사용자가 가진 펫 한 마리. */
 export interface OwnedPet {
   /** 개체 식별자. 같은 종을 여러 마리 가질 수 있으므로 `petId`와 다르다. */
@@ -145,56 +108,66 @@ export interface OwnedPet {
  * 활성 펫을 `OwnedPet.isActive` 플래그로 두지 않고 명부 바깥의 id 하나로 둔다. 플래그로
  * 두면 "둘 다 활성"이라는 표현 불가능해야 할 상태가 타입상 표현 가능해지고, 그걸 막는
  * 코드를 매번 써야 한다. id 하나면 **구조적으로 하나만 활성**이다.
+ *
+ * 보유 펫이 없으면 활성도 없다(`null`). 첫 실행에서는 펫이 한 마리도 없다.
  */
 export interface RoomCollection {
   pets: readonly OwnedPet[];
-  activePetId: string;
+  activePetId: string | null;
+}
+
+/** `PetClient`의 보유 개체 중 펫룸이 읽는 칸. `@pet/client`의 `OwnedPet`과 같은 이름이다. */
+export interface OwnedPetRecord {
+  ownedPetId: string;
+  /** '001' 같은 3자리 종 id. */
+  speciesId: string;
+  level: number;
+  evolutionStage: EvolutionStage;
+  nickname: string | null;
+  isActive: boolean;
 }
 
 /**
- * 시드 명부.
+ * 보유 개체 목록을 명부로 바꾼다.
  *
- * 획득 로직(가챠)이 아직 없어서 고정값으로 채운다. 이 목록이 만족해야 하는 것 셋:
- *
- * 1. **stage 1·2·3이 모두 화면에 난다.** 특히 EPIC stage3만 캔버스가 48px이라, 프레임
- *    크기를 32로 하드코딩한 실수가 있으면 그 펫만 잘려서 즉시 드러난다.
- * 2. **등급 COMMON·RARE·EPIC이 모두 들어간다.**
- * 3. **진화 횟수가 성장 엔진의 게이트와 어긋나지 않는다.** 진화는 레벨이 게이트를 넘었을
- *    때 사용자가 **실행해야** 일어나므로, 넘긴 게이트 수보다 많이 진화한 상태는 성장
- *    엔진이 만들 수 없는 값이다. 그런 값을 시드로 깔면 그 펫은 진화가 영영 잠긴다.
- *
- * 그래서 진화 횟수를 레벨에서 유도하지 않고 **직접 적는다.** `stageOfLevel`(10/20 경계)로
- * 유도하면 성장 게이트(15/35)와 눈금이 달라 3번이 깨진다 — 실제로 활성 펫이 최종 단계로
- * 시작해 진화 버튼이 영구히 비활성이었다.
- *
- * 활성 펫(`seed-006`)은 게이트를 막 넘긴 채 아직 진화하지 않은 상태로 둔다. 앱을 처음 켜면
- * 진화가 **가능한** 펫이 오버레이에 떠 있어서, 그 기능이 있다는 것이 보인다.
+ * 펫룸이 그릴 줄 모르는 종(에셋이 없는 종)은 빼고 넘어간다. 한 마리 때문에 펫룸 전체가 안
+ * 열리는 것보다 낫다. 뺀 개체는 `skipped`로 돌려줘 호출한 쪽이 기록하게 한다.
  */
-export function seedCollection(): RoomCollection {
-  const seed = (
-    id: string,
-    species: string,
-    level: number,
-    evolutionStage: EvolutionStage,
-  ): OwnedPet => ({
-    id,
-    speciesPetId: petId(species),
-    level,
-    evolutionStage,
-  });
+export function collectionFromRecords(records: readonly OwnedPetRecord[]): {
+  collection: RoomCollection;
+  skipped: OwnedPetRecord[];
+} {
+  const pets: OwnedPet[] = [];
+  const skipped: OwnedPetRecord[] = [];
+  for (const record of records) {
+    const species = PET_SPECIES.find((candidate) => candidate.petId === record.speciesId);
+    if (!species) {
+      skipped.push(record);
+      continue;
+    }
+    pets.push({
+      id: record.ownedPetId,
+      speciesPetId: species.petId,
+      level: record.level,
+      evolutionStage: record.evolutionStage,
+      ...(record.nickname === null ? {} : { nickname: record.nickname }),
+    });
+  }
+  const active = records.find(
+    (record) => record.isActive && pets.some((pet) => pet.id === record.ownedPetId),
+  );
+  return { collection: { pets, activePetId: active?.ownedPetId ?? null }, skipped };
+}
 
-  return {
-    pets: [
-      seed('seed-001', '003', 3, 0),
-      seed('seed-002', '004', 7, 0),
-      seed('seed-003', '005', 20, 1),
-      seed('seed-004', '002', 28, 1),
-      seed('seed-005', '001', 40, 2),
-      // 게이트(Lv.15)는 넘겼지만 아직 진화하지 않았다 → 첫 실행에서 진화가 가능하다.
-      seed('seed-006', '006', 16, 0),
-    ],
-    activePetId: 'seed-006',
-  };
+/**
+ * 활성으로 세워야 할 개체. 이미 활성이 있거나 펫이 없으면 `null`이다.
+ *
+ * 보유 펫이 있는데 활성이 없으면 오버레이에 아무것도 안 뜬다. 첫 뽑기 직후가 정확히 그
+ * 상황이라, 명부의 첫 마리를 세운다.
+ */
+export function activeCandidate(collection: RoomCollection): string | null {
+  if (collection.activePetId !== null) return null;
+  return collection.pets[0]?.id ?? null;
 }
 
 export function findOwnedPet(collection: RoomCollection, ownedPetId: string): OwnedPet {
@@ -203,7 +176,8 @@ export function findOwnedPet(collection: RoomCollection, ownedPetId: string): Ow
   return found;
 }
 
-export function activePet(collection: RoomCollection): OwnedPet {
+export function activePet(collection: RoomCollection): OwnedPet | null {
+  if (collection.activePetId === null) return null;
   return findOwnedPet(collection, collection.activePetId);
 }
 
@@ -306,14 +280,4 @@ export function roomPetView(collection: RoomCollection, pet: OwnedPet): RoomPetV
 
 export function roomPetViews(collection: RoomCollection): RoomPetView[] {
   return collection.pets.map((pet) => roomPetView(collection, pet));
-}
-
-/**
- * XP 바 채움 비율.
- *
- * **실제 경험치가 아니다.** 펫룸은 성장 저장소를 읽지 않으므로 레벨에서 만들어 낸 표시용
- * 값이다. 이름에 `mock`을 박아 둔 것은 진짜 XP를 붙일 때 이 호출부를 놓치지 않기 위해서다.
- */
-export function mockXpRatio(level: number): number {
-  return (level % 10) / 10;
 }

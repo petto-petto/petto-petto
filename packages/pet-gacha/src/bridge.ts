@@ -8,6 +8,8 @@ export type GachaResponse<T> =
 export interface GachaBridge {
   load(): Promise<GachaResponse<GachaSnapshot>>;
   draw(count: DrawCount, requestId: string): Promise<GachaResponse<SavedGachaDraw>>;
+  /** 이 창을 닫고 그 자리에 펫룸을 띄운다. */
+  backToRoom(): Promise<void>;
 }
 
 export function unwrapGachaResponse<T>(response: GachaResponse<T>): T {

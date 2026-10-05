@@ -30,22 +30,19 @@ import { activePet, speciesOf, stageForEvolution, type RoomCollection } from '@p
  * 진실의 원천이 둘로 쪼개진다.
  */
 export class RoomCollectionPort implements CollectionPort {
-  #collection: RoomCollection;
+  #collection: RoomCollection = { pets: [], activePetId: null };
   /** 룸의 남은 빈자리 수. 트로피 배치는 아직 도메인이 없어 여기서 센다. */
   #roomSlots = 1;
   #trophies: { achievementId: string; placement: TrophyPlacement }[] = [];
-
-  constructor(collection: RoomCollection) {
-    this.#collection = collection;
-  }
 
   update(collection: RoomCollection): void {
     this.#collection = collection;
   }
 
   /** 기획서 5.1: 프로필 펫은 별도 설정값이 아니라 지금 오버레이에 떠 있는 펫이다. */
-  overlayPet(): PetSummary {
+  overlayPet(): PetSummary | null {
     const pet = activePet(this.#collection);
+    if (!pet) return null;
     const species = speciesOf(pet.speciesPetId);
     return {
       petId: species.petId,

@@ -10,3 +10,6 @@ logs/*
 
 # 브레인스토밍 시각 도우미가 만드는 목업
 .superpowers/
+
+# 이사만루체는 라이선스상 파일 재배포가 금지라 커밋하지 않는다. `scripts/fetch-fonts.mjs`가 받는다.
+apps/desktop/renderer/assets/fonts/GongGothic*.woff

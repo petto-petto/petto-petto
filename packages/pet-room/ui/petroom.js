@@ -21,7 +21,6 @@ import {
   AURA_ROUNDNESS,
   backgroundAssetPath,
   backgroundFrameIndexAt,
-  backgroundOf,
   drawBoxOf,
   fireflyAlpha,
   fireflyCountFor,
@@ -31,7 +30,6 @@ import {
   hitTest,
   inDrawOrder,
   layersInDrawOrder,
-  mockXpRatio,
   PET_SCALE,
   spawnFireflies,
   spawnRoamingPet,
@@ -52,25 +50,19 @@ import { drawFrame, fetchJson, loadImage, SpritePlayer } from './sprite.js';
 const api = window.petApi;
 
 const stageEl = document.getElementById('stage');
-const openGachaBtn = document.getElementById('open-gacha');
+const destinationsEl = document.getElementById('destinations');
 const layersEl = document.getElementById('layers');
 const canvas = document.getElementById('pets');
 const ctx = canvas.getContext('2d');
-const phaseEl = document.getElementById('phase');
+const emptyEl = document.getElementById('empty');
 const errorEl = document.getElementById('error');
 
 const detailEl = document.getElementById('detail');
 const detailName = document.getElementById('detail-name');
 const detailGrade = document.getElementById('detail-grade');
 const detailLevel = document.getElementById('detail-level');
-const detailXp = document.getElementById('detail-xp');
-const detailXpLabel = document.getElementById('detail-xp-label');
-const detailNote = document.getElementById('detail-note');
 const detailActivate = document.getElementById('detail-activate');
 const detailClose = document.getElementById('detail-close');
-
-const GRADE_LABEL = { COMMON: '커먼', RARE: '레어', EPIC: '에픽' };
-const PHASE_LABEL = { day: '낮', night: '밤' };
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -101,13 +93,6 @@ const room = {
   activePetId: null,
   /** 상세 패널이 보여 주는 펫. 창 안에서만 의미 있는 로컬 UI 상태다. */
   selectedPetId: null,
-  /**
-   * 미리보기로 고정한 계절·시간대. null 이면 시각을 따른다.
-   *
-   * 고정된 동안 main 의 배경 교체 push 를 무시한다 — 안 그러면 1분 뒤 타이머가
-   * 화면을 도로 가져간다.
-   */
-  preview: null,
 };
 
 function showError(message) {
@@ -508,15 +493,10 @@ function renderDetail() {
   detailGrade.replaceChildren();
   const gem = document.createElement('span');
   gem.className = 'grade-badge__gem';
-  detailGrade.append(gem, document.createTextNode(GRADE_LABEL[view.rarity] ?? view.rarity));
+  // 등급은 COMMON·RARE·EPIC 영문 대문자로 쓴다(design.md §2).
+  detailGrade.append(gem, document.createTextNode(view.rarity));
 
   detailLevel.textContent = `Lv.${view.level} · ${view.stage}단계`;
-
-  const ratio = mockXpRatio(view.level);
-  detailXp.style.width = `${Math.round(ratio * 100)}%`;
-  // 진행을 색으로만 말하지 않는다(design.md §6).
-  detailXpLabel.textContent = `EXP ${Math.round(ratio * 100)}%`;
-  detailNote.textContent = '경험치는 성장 로직이 붙기 전까지 레벨에서 만든 표시값입니다.';
 
   const isActive = view.ownedPetId === room.activePetId;
   detailActivate.textContent = isActive ? '오버레이 활성 중' : '오버레이로 지정';
@@ -547,9 +527,15 @@ canvas.addEventListener('click', (event) => {
   renderDetail();
 });
 
-// 뽑기 창을 띄운다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
-openGachaBtn.addEventListener('click', () => {
-  api.openGacha().catch((error) => showError(`뽑기를 열지 못했습니다 — ${error.message}`));
+document.querySelector('.window-close').addEventListener('click', () => window.close());
+
+// 뽑기·합성 화면으로 넘어간다. 실패해도 펫룸은 그대로 살아 있어야 하므로 오류만 보여 준다.
+destinationsEl.addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-destination]');
+  if (!button) return;
+  api
+    .navigateFromRoom(button.dataset.destination)
+    .catch((error) => showError(`화면을 옮기지 못했습니다 — ${error.message}`));
 });
 
 detailClose.addEventListener('click', () => {
@@ -666,18 +652,6 @@ async function applyBackground(background) {
         ? spawnWeather(weatherArea, weatherKind, weatherCount, Math.random)
         : [],
   };
-  // 배경 이름이 이미 낮/밤을 말하므로 위상은 이름이 없을 때만 쓴다.
-  phaseEl.textContent = meta.name ?? PHASE_LABEL[background.phase] ?? background.phase;
-
-  // 선택기를 지금 보고 있는 장면에 맞춘다. 시각이 넘어가 배경이 자동으로 바뀌어도
-  // 드롭다운이 엉뚱한 값을 가리키지 않는다.
-  //
-  // **미리보기 중에는 건드리지 않는다.** 사용자가 방금 고른 값을 되돌려 버린다.
-  if (!room.preview && previewSeason && previewPhase) {
-    previewSeason.value = background.season;
-    previewPhase.value = background.phase;
-  }
-
   // 배경이 바뀌면 배회 영역도 바뀔 수 있다. 이미 서 있는 펫을 새 영역 안으로 데려온다.
   if (previous) {
     for (const pet of room.roaming) {
@@ -691,6 +665,9 @@ async function applyBackground(background) {
 }
 
 async function loadPets(views) {
+  // 보유 펫이 없으면 장면 가운데에 뽑기 안내를 띄운다.
+  emptyEl.hidden = views.length > 0;
+
   room.views = new Map(views.map((view) => [view.ownedPetId, view]));
   room.activePetId = views.find((view) => view.isActive)?.ownedPetId ?? null;
 
@@ -733,50 +710,23 @@ api.on('room:activePetChanged', (view) => {
   }
 });
 
+// 뽑기·합성으로 보유 펫이 바뀌었다. 지워진 펫이 남아 있으면 지정할 때 실패하므로 다시 세운다.
+api.on('room:rosterChanged', (views) => {
+  loadPets(views)
+    .then(() => {
+      if (room.selectedPetId && !room.views.has(room.selectedPetId)) room.selectedPetId = null;
+      renderDetail();
+    })
+    .catch((error) => showError(`보유 펫을 다시 읽지 못했습니다 — ${error.message}`));
+});
+
+// 시각이 넘어갔거나 오버레이의 Growth Debug 에서 계절·시간대를 골랐다. 어느 쪽이든 main 이
+// 정한 배경을 그대로 따른다.
 api.on('room:backgroundChanged', (background) => {
-  // 미리보기로 고정해 둔 동안에는 시각이 넘어가도 화면을 빼앗지 않는다.
-  if (room.preview) return;
   applyBackground(background).catch((error) => {
     showError(`배경을 바꾸지 못했습니다 — ${error.message}`);
   });
 });
-
-/* ---------- 계절·시간대 미리보기 ---------- */
-
-const previewSeason = document.getElementById('preview-season');
-const previewPhase = document.getElementById('preview-phase');
-const previewNow = document.getElementById('preview-now');
-
-/**
- * 고른 계절·시간대로 배경을 바꾼다.
- *
- * `backgroundOf`가 `backgroundAt`과 같은 규칙으로 디렉터리와 메타 파일명을
- * 만든다 — 미리보기가 실제 경로 규칙을 우회하면 여기서만 되고 진짜로는 깨지는
- * 조합이 생긴다.
- */
-function showPreview() {
-  room.preview = { season: previewSeason.value, phase: previewPhase.value };
-  previewNow.disabled = false;
-  applyBackground(backgroundOf(room.preview.season, room.preview.phase)).catch((error) => {
-    showError(`미리보기를 열지 못했습니다 — ${error.message}`);
-  });
-}
-
-/** 고정을 풀고 지금 시각의 배경으로 돌아간다. */
-function clearPreview() {
-  room.preview = null;
-  previewNow.disabled = true;
-  api
-    .roomScene()
-    .then((scene) => applyBackground(scene.background))
-    .catch((error) => {
-      showError(`배경을 되돌리지 못했습니다 — ${error.message}`);
-    });
-}
-
-previewSeason.addEventListener('change', showPreview);
-previewPhase.addEventListener('change', showPreview);
-previewNow.addEventListener('click', clearPreview);
 
 /* ---------- 시작 ---------- */
 

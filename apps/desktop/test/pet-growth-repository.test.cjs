@@ -58,6 +58,11 @@ async function openRepository(directory, legacyPath) {
   return { database, repository };
 }
 
+/** 이관 규칙이 다루는 값만 남긴다. 경험치는 `owned_pets` 동기화용이라 이 테스트들의 관심 밖이다. */
+function levelAndStage(growth) {
+  return growth && { level: growth.level, evolutionStage: growth.evolutionStage };
+}
+
 /** 명부 한 마리분. `growthSeeds()`가 내는 모양과 같다. */
 const seed = (ownedPetId, petKey, displayName, level, evolutionStage) => ({
   ownedPetId,
@@ -96,8 +101,8 @@ test('종 단위였던 옛 성장 기록은 명부의 개체가 물려받고, �
     assert.equal(snapshots['seed-006'].petKey, 'star_wizard');
 
     // 명부에 투영할 값도 같은 것을 말한다.
-    assert.deepEqual(growth.get('seed-001'), { level: 7, evolutionStage: 1 });
-    assert.deepEqual(growth.get('seed-006'), { level: 25, evolutionStage: 2 });
+    assert.deepEqual(levelAndStage(growth.get('seed-001')), { level: 7, evolutionStage: 1 });
+    assert.deepEqual(levelAndStage(growth.get('seed-006')), { level: 25, evolutionStage: 2 });
 
     // 활성 펫의 정본은 명부 하나다. 오버레이가 들고 있던 키는 남아 있으면 안 된다.
     const leftover = database
@@ -172,9 +177,9 @@ test('이관은 한 번만 일어나고, 뒤늦게 들어온 개체도 성장 �
       seed('seed-002', 'sprout_treant', '새싹나무', 7, 0),
     ]);
 
-    assert.deepEqual(growth.get('seed-001'), { level: 12, evolutionStage: 1 });
+    assert.deepEqual(levelAndStage(growth.get('seed-001')), { level: 12, evolutionStage: 1 });
     // 새로 들어온 개체는 종 기록을 물려받지 않는다 — 이관은 이미 끝났다.
-    assert.deepEqual(growth.get('seed-002'), { level: 7, evolutionStage: 0 });
+    assert.deepEqual(levelAndStage(growth.get('seed-002')), { level: 7, evolutionStage: 0 });
   } finally {
     database.close();
     rmSync(directory, { recursive: true, force: true });
@@ -233,8 +238,11 @@ test('저장 초기화는 명부 전원을 Lv.1 · 진화 0회로 되돌린다',
     ];
 
     const growth = repository.resetGrowth(grown);
-    assert.deepEqual(growth.get('seed-001'), { level: 1, evolutionStage: 0 });
-    assert.deepEqual(growth.get('seed-006'), { level: 1, evolutionStage: 0 });
+    assert.deepEqual(levelAndStage(growth.get('seed-001')), { level: 1, evolutionStage: 0 });
+    assert.deepEqual(levelAndStage(growth.get('seed-006')), { level: 1, evolutionStage: 0 });
+    // 초기화는 경험치도 비운다. `owned_pets`에 그대로 적히므로 레벨만 되돌리면 카드가 어긋난다.
+    assert.equal(growth.get('seed-006').totalXp, 0);
+    assert.equal(growth.get('seed-006').xpIntoLevel, 0);
 
     // 레벨만 살아남고 경험치만 0인 모순된 기록이 남으면 안 된다.
     const after = repository.loadAll();
@@ -261,7 +269,7 @@ test('빈 명부로는 이관을 끝냈다고 적지 않는다 — 옛 종 기�
 
     // 명부가 뒤늦게 도착해도 옛 성장을 그대로 물려받는다.
     const growth = repository.adoptRoster([seed('seed-001', 'mole_digger', '두더지', 3, 0)]);
-    assert.deepEqual(growth.get('seed-001'), { level: 7, evolutionStage: 1 });
+    assert.deepEqual(levelAndStage(growth.get('seed-001')), { level: 7, evolutionStage: 1 });
   } finally {
     database.close();
     rmSync(directory, { recursive: true, force: true });
@@ -282,7 +290,7 @@ test('명부에 같은 id 가 둘이면 뒤엣것이 앞엣것의 성장을 덮�
       seed('dup', 'mole_digger', '두더지', 3, 0),
     ]);
     // 물려받은 Lv.7 이 시드값 Lv.3 으로 되감기지 않는다.
-    assert.deepEqual(growth.get('dup'), { level: 7, evolutionStage: 1 });
+    assert.deepEqual(levelAndStage(growth.get('dup')), { level: 7, evolutionStage: 1 });
   } finally {
     database.close();
     rmSync(directory, { recursive: true, force: true });

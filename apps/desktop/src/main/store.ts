@@ -1,5 +1,5 @@
 /**
- * JSON 파일 저장소. `@pet/meta`의 `MetaStore`와 `@pet/room`의 `RoomStore`를 함께 채운다.
+ * JSON 파일 저장소. 표로 옮기기 전의 `meta-state.json`을 읽는 데 쓴다.
  *
  * 팀 결정: 별도 서버와 DB를 두지 않고 사용자 기기에 저장한다. 그래서 앱 데이터
  * 디렉터리에 파일 하나를 쓴다.
@@ -30,13 +30,11 @@ import { PortError } from '@pet/meta';
  * 깨지면 둘 다 격리된다. 저장 주기와 변경 이유가 다른 것을 같은 파일에 두지 않는다.
  */
 export const META_FILE_NAME = 'meta-state.json';
-export const ROOM_FILE_NAME = 'room-state.json';
 
 /**
  * 스냅샷 한 덩어리를 파일 하나에 담는다.
  *
- * 타입 매개변수만 다를 뿐 저장 규칙은 같으므로 구현을 공유한다. `MetaStore`와
- * `RoomStore` 둘 다 `load`/`save` 두 메서드뿐이라, 이 클래스가 구조적으로 둘 다 만족한다.
+ * 타입 매개변수만 다를 뿐 저장 규칙은 같으므로 구현을 공유한다.
  */
 export class JsonFileStore<T> {
   readonly path: string;

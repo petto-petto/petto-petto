@@ -1,4 +1,4 @@
-/** 보유 펫 명부·활성 펫·스프라이트 규칙·영속의 실행 증거. */
+/** 보유 펫 명부·활성 펫·스프라이트 규칙의 실행 증거. */
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,38 +8,33 @@ import { fileURLToPath } from 'node:url';
 
 import { petId } from '@pet/core';
 import {
+  activeCandidate,
   activePet,
   auraOf,
   auraRingsAt,
   AURA_PULSE_STEPS,
   AURA_ROUNDNESS,
+  collectionFromRecords,
   discoveredSpeciesCount,
   findOwnedPet,
   frameIndexAt,
-  fromSnapshot,
   growthSeeds,
   isMotionFinished,
-  mockXpRatio,
   motionDurationMs,
   petAssetPath,
   PET_SPECIES,
   pickClickMotion,
   roomPetViews,
-  seedCollection,
   speciesOf,
   spriteMetaPath,
-  EVOLUTION_LEVELS,
-  maxEvolutionStageAt,
   stageForEvolution,
-  stageOfLevel,
-  toSnapshot,
   UnknownOwnedPetError,
   UnknownSpeciesError,
   withActivePet,
   withPetGrowth,
+  type OwnedPetRecord,
   type PetGrowth,
-  type RoomSnapshot,
-  type RoomSnapshotV1,
+  type RoomCollection,
   type SpriteMeta,
 } from '@pet/room';
 
@@ -51,6 +46,38 @@ const here = dirname(fileURLToPath(import.meta.url));
  * 있으므로 직접 짚는다.
  */
 const assetsDir = join(here, '..', '..', '..', 'apps', 'desktop', 'renderer', 'assets');
+
+/** 여섯 종이 한 마리씩 있는 명부. stage 1·2·3과 등급 3종이 모두 들어 있다. */
+function sampleCollection(): RoomCollection {
+  const pet = (id: string, species: string, level: number, evolutionStage: 0 | 1 | 2) => ({
+    id,
+    speciesPetId: petId(species),
+    level,
+    evolutionStage,
+  });
+  return {
+    pets: [
+      pet('p1', '003', 3, 0),
+      pet('p2', '004', 7, 0),
+      pet('p3', '005', 20, 1),
+      pet('p4', '002', 28, 1),
+      pet('p5', '001', 40, 2),
+      pet('p6', '006', 16, 0),
+    ],
+    activePetId: 'p6',
+  };
+}
+
+function record(overrides: Partial<OwnedPetRecord> & { ownedPetId: string }): OwnedPetRecord {
+  return {
+    speciesId: '003',
+    level: 1,
+    evolutionStage: 0,
+    nickname: null,
+    isActive: false,
+    ...overrides,
+  };
+}
 
 /* ---------- 종 카탈로그 ---------- */
 
@@ -79,16 +106,7 @@ test('모르는 종을 조회하면 던진다', () => {
   assert.throws(() => speciesOf(petId('999')), UnknownSpeciesError);
 });
 
-/* ---------- 레벨 → 단계 ---------- */
-
-test('레벨 경계는 10과 20이다 (에셋 가이드 §3)', () => {
-  assert.equal(stageOfLevel(1), 1);
-  assert.equal(stageOfLevel(9), 1);
-  assert.equal(stageOfLevel(10), 2);
-  assert.equal(stageOfLevel(19), 2);
-  assert.equal(stageOfLevel(20), 3);
-  assert.equal(stageOfLevel(29), 3);
-});
+/* ---------- 진화 → 단계 ---------- */
 
 test('화면에 뜨는 단계는 레벨이 아니라 진화 횟수가 정한다', () => {
   assert.equal(stageForEvolution(0), 1);
@@ -101,40 +119,39 @@ test('화면에 뜨는 단계는 레벨이 아니라 진화 횟수가 정한다'
     pets: [{ id: 'a', speciesPetId: petId('006'), level: 25, evolutionStage: 0 as const }],
     activePetId: 'a',
   };
-  assert.equal(stageOfLevel(25), 3);
   assert.equal(roomPetViews(notEvolved)[0]?.stage, 1);
 });
 
 /* ---------- 성장 투영 ---------- */
 
 test('레벨과 진화 단계는 성장 저장소가 정하고 명부는 그 값을 받아 적는다', () => {
-  const growth = new Map<string, PetGrowth>([['seed-001', { level: 11, evolutionStage: 1 }]]);
-  const after = withPetGrowth(seedCollection(), growth);
+  const growth = new Map<string, PetGrowth>([['p1', { level: 11, evolutionStage: 1 }]]);
+  const after = withPetGrowth(sampleCollection(), growth);
 
-  const moved = after.pets.find((pet) => pet.id === 'seed-001');
+  const moved = after.pets.find((pet) => pet.id === 'p1');
   assert.equal(moved?.level, 11);
   assert.equal(moved?.evolutionStage, 1);
-  assert.equal(roomPetViews(after).find((view) => view.ownedPetId === 'seed-001')?.stage, 2);
+  assert.equal(roomPetViews(after).find((view) => view.ownedPetId === 'p1')?.stage, 2);
 
   // 성장 기록이 없는 개체는 건드리지 않는다.
-  const untouched = seedCollection().pets.find((pet) => pet.id === 'seed-002');
+  const untouched = sampleCollection().pets.find((pet) => pet.id === 'p2');
   assert.deepEqual(
-    after.pets.find((pet) => pet.id === 'seed-002'),
+    after.pets.find((pet) => pet.id === 'p2'),
     untouched,
   );
   // 명부에 없는 개체가 와도 무시한다.
   assert.equal(
-    withPetGrowth(seedCollection(), new Map([['nope', { level: 9, evolutionStage: 0 as const }]]))
+    withPetGrowth(sampleCollection(), new Map([['nope', { level: 9, evolutionStage: 0 as const }]]))
       .pets.length,
     6,
   );
 });
 
 test('성장 저장소에 넘기는 씨앗은 종 slug 를 펫 key 로 쓴다', () => {
-  const seeds = growthSeeds(seedCollection());
+  const seeds = growthSeeds(sampleCollection());
   assert.equal(seeds.length, 6);
 
-  const wizard = seeds.find((seed) => seed.ownedPetId === 'seed-006');
+  const wizard = seeds.find((seed) => seed.ownedPetId === 'p6');
   // 오버레이 카탈로그의 key 와 같은 값이라 변환 표가 필요 없다.
   assert.equal(wizard?.petKey, 'star_wizard');
   assert.equal(wizard?.displayName, '별빛마법사');
@@ -144,44 +161,68 @@ test('성장 저장소에 넘기는 씨앗은 종 slug 를 펫 key 로 쓴다', 
 
 /* ---------- 명부와 활성 펫 ---------- */
 
-test('시드 명부는 활성 펫이 정확히 하나다', () => {
-  const collection = seedCollection();
-  assert.equal(collection.pets.length, 6);
-  const active = activePet(collection);
-  assert.equal(active.id, collection.activePetId);
+test('보유 개체 목록을 명부로 바꾸면 활성 펫이 정확히 하나다', () => {
+  const { collection, skipped } = collectionFromRecords([
+    record({ ownedPetId: 'a', speciesId: '003' }),
+    record({ ownedPetId: 'b', speciesId: '006', level: 16, isActive: true, nickname: '별이' }),
+  ]);
+  assert.deepEqual(skipped, []);
+  assert.equal(collection.activePetId, 'b');
+  assert.equal(activePet(collection)?.nickname, '별이');
   assert.equal(roomPetViews(collection).filter((view) => view.isActive).length, 1);
+  // 별명이 없으면 키 자체가 없다 — exactOptionalPropertyTypes와 맞춘다.
+  assert.ok(!('nickname' in (collection.pets[0] as object)));
 });
 
-test('시드 명부는 stage 1·2·3과 등급 3종을 모두 화면에 낸다', () => {
-  const views = roomPetViews(seedCollection());
-  assert.deepEqual(new Set(views.map((view) => view.stage)), new Set([1, 2, 3]));
-  assert.deepEqual(new Set(views.map((view) => view.rarity)), new Set(['COMMON', 'RARE', 'EPIC']));
+test('보유 펫이 없으면 명부도 활성 펫도 비어 있다', () => {
+  const { collection } = collectionFromRecords([]);
+  assert.deepEqual(collection, { pets: [], activePetId: null });
+  assert.equal(activePet(collection), null);
+  assert.deepEqual(roomPetViews(collection), []);
+  assert.equal(activeCandidate(collection), null);
 });
 
-test('시드에는 EPIC stage3(48px 캔버스)가 들어 있다 — 32 하드코딩이 있으면 드러난다', () => {
-  const views = roomPetViews(seedCollection());
-  assert.ok(views.some((view) => view.rarity === 'EPIC' && view.stage === 3));
+test('펫룸이 모르는 종은 빼고, 뺀 개체를 알려 준다', () => {
+  const { collection, skipped } = collectionFromRecords([
+    record({ ownedPetId: 'a', speciesId: '999', isActive: true }),
+    record({ ownedPetId: 'b', speciesId: '004' }),
+  ]);
+  assert.deepEqual(
+    collection.pets.map((pet) => pet.id),
+    ['b'],
+  );
+  assert.deepEqual(
+    skipped.map((pet) => pet.ownedPetId),
+    ['a'],
+  );
+  // 빠진 개체가 활성이었으면 활성이 없는 것으로 본다. 첫 마리를 세우는 것은 호출한 쪽이다.
+  assert.equal(collection.activePetId, null);
+  assert.equal(activeCandidate(collection), 'b');
+});
+
+test('활성이 이미 있으면 새로 세울 개체가 없다', () => {
+  assert.equal(activeCandidate(sampleCollection()), null);
 });
 
 test('활성 펫을 바꾸면 이전 활성은 자동으로 풀린다', () => {
-  const before = seedCollection();
-  const after = withActivePet(before, 'seed-001');
+  const before = sampleCollection();
+  const after = withActivePet(before, 'p1');
 
-  assert.equal(after.activePetId, 'seed-001');
+  assert.equal(after.activePetId, 'p1');
   const actives = roomPetViews(after).filter((view) => view.isActive);
   assert.equal(actives.length, 1);
-  assert.equal(actives[0]?.ownedPetId, 'seed-001');
+  assert.equal(actives[0]?.ownedPetId, 'p1');
   // 원본은 건드리지 않는다.
-  assert.equal(before.activePetId, 'seed-006');
+  assert.equal(before.activePetId, 'p6');
 });
 
 test('명부에 없는 펫은 활성으로 지정할 수 없다', () => {
-  assert.throws(() => withActivePet(seedCollection(), 'nope'), UnknownOwnedPetError);
-  assert.throws(() => findOwnedPet(seedCollection(), 'nope'), UnknownOwnedPetError);
+  assert.throws(() => withActivePet(sampleCollection(), 'nope'), UnknownOwnedPetError);
+  assert.throws(() => findOwnedPet(sampleCollection(), 'nope'), UnknownOwnedPetError);
 });
 
 test('도감 진행도는 마리 수가 아니라 종 수다 (에셋 가이드 §9)', () => {
-  const collection = seedCollection();
+  const collection = sampleCollection();
   assert.equal(discoveredSpeciesCount(collection), 6);
 
   const duplicated = {
@@ -209,12 +250,6 @@ test('닉네임이 있으면 종 이름 대신 닉네임을 보여준다', () =>
     activePetId: 'a',
   };
   assert.equal(roomPetViews(collection)[0]?.name, '별이');
-});
-
-test('XP 비율은 진짜 경험치가 아니라 레벨에서 만든 표시값이다', () => {
-  assert.equal(mockXpRatio(3), 0.3);
-  assert.equal(mockXpRatio(20), 0);
-  assert.ok(mockXpRatio(29) < 1);
 });
 
 /* ---------- 스프라이트 규칙 ---------- */
@@ -308,197 +343,6 @@ test('click과 click2가 모두 뽑힌다 — 한 종만 쓰면 반복 클릭이
   assert.equal(pickClickMotion(0.999), 'click2');
   // 경계값 1.0이 들어와도 배열 밖을 짚지 않는다.
   assert.equal(pickClickMotion(1), 'click2');
-});
-
-/* ---------- 영속 ---------- */
-
-test('저장하고 다시 읽으면 명부와 활성 펫이 그대로다', () => {
-  const before = withActivePet(seedCollection(), 'seed-003');
-  const after = fromSnapshot(toSnapshot(before));
-  assert.deepEqual(after.pets, before.pets);
-  assert.equal(after.activePetId, 'seed-003');
-});
-
-test('저장된 상태가 없으면 시드로 시작한다', () => {
-  assert.deepEqual(fromSnapshot(undefined), seedCollection());
-});
-
-test('활성 펫이 명부에서 사라졌으면 첫 마리로 되돌린다 — 활성이 없는 상태는 없다', () => {
-  const snapshot: RoomSnapshot = {
-    version: 2,
-    pets: [{ id: 'a', speciesPetId: '006', level: 5, evolutionStage: 0 }],
-    activePetId: 'gone',
-  };
-  assert.equal(fromSnapshot(snapshot).activePetId, 'a');
-});
-
-test('저장 파일이 손상돼도 앱이 죽지 않고 시드로 되돌아간다', () => {
-  const unknownSpecies: RoomSnapshot = {
-    version: 2,
-    pets: [{ id: 'a', speciesPetId: '999', level: 5, evolutionStage: 0 }],
-    activePetId: 'a',
-  };
-  assert.deepEqual(fromSnapshot(unknownSpecies), seedCollection());
-
-  const wrongVersion = { version: 99, pets: [], activePetId: 'a' } as unknown as RoomSnapshot;
-  assert.deepEqual(fromSnapshot(wrongVersion), seedCollection());
-});
-
-test('닉네임이 없으면 스냅샷에 키 자체가 없다 — exactOptionalPropertyTypes와 맞춘다', () => {
-  const snapshot = toSnapshot(seedCollection());
-  assert.ok(!('nickname' in (snapshot.pets[0] as object)));
-
-  const named = toSnapshot({
-    pets: [
-      {
-        id: 'a',
-        speciesPetId: petId('006'),
-        level: 5,
-        evolutionStage: 0 as const,
-        nickname: '별이',
-      },
-    ],
-    activePetId: 'a',
-  });
-  assert.equal(named.pets[0]?.nickname, '별이');
-  assert.equal(fromSnapshot(named).pets[0]?.nickname, '별이');
-});
-
-test('v1 저장 파일의 단계는 승격되되 성장 게이트를 넘지 않는다', () => {
-  const v1: RoomSnapshotV1 = {
-    version: 1,
-    pets: [
-      { id: 'a', speciesPetId: '003', level: 3 },
-      { id: 'b', speciesPetId: '005', level: 12 },
-      { id: 'c', speciesPetId: '006', level: 25 },
-    ],
-    activePetId: 'b',
-  };
-
-  const promoted = fromSnapshot(v1);
-
-  // v1 은 레벨(10/20 경계)에서 단계를 유도해 화면에 냈지만, 그 눈금은 성장 게이트(15/35)와
-  // 다르다. 유도값을 그대로 쓰면 Lv.12 는 진화 1회, Lv.25 는 2회를 공짜로 받아 **다음 진화가
-  // 밀리거나 영구히 잠긴다.** 게이트로 자른 값이 성장 엔진이 만들 수 있는 유일한 값이다.
-  assert.deepEqual(
-    promoted.pets.map((pet) => pet.evolutionStage),
-    [0, 0, 1],
-  );
-  for (const pet of promoted.pets) {
-    assert.ok(
-      pet.evolutionStage <= maxEvolutionStageAt(pet.level),
-      `${pet.id}: 게이트를 넘은 진화 횟수`,
-    );
-  }
-  assert.equal(promoted.activePetId, 'b');
-
-  // 다시 저장하면 v2 로만 쓴다.
-  assert.equal(toSnapshot(promoted).version, 2);
-});
-
-test('승격된 펫은 진화가 잠기지 않는다 — 게이트를 넘겼으면 다음 진화가 남아 있다', () => {
-  const v1: RoomSnapshotV1 = {
-    version: 1,
-    // Lv.20~34 는 v1 이 3단계로 그리던 구간이다. 자르지 않으면 최종 단계로 잠긴다.
-    pets: [{ id: 'a', speciesPetId: '006', level: 25 }],
-    activePetId: 'a',
-  };
-  const promoted = fromSnapshot(v1);
-  assert.ok(promoted.pets[0] !== undefined);
-  assert.ok(
-    promoted.pets[0].evolutionStage < EVOLUTION_LEVELS.length,
-    '승격 직후 최종 단계면 그 펫은 영영 진화할 수 없다',
-  );
-});
-
-test('진화 단계가 손상된 값이어도 게이트를 넘겨 되살리지 않는다', () => {
-  const broken = {
-    version: 2,
-    pets: [{ id: 'a', speciesPetId: '006', level: 25, evolutionStage: 7 }],
-    activePetId: 'a',
-  } as RoomSnapshot;
-  // 손상값에는 "보던 모습" 명분조차 없다 — 화면에 뜬 적이 없는 값이다.
-  assert.equal(fromSnapshot(broken).pets[0]?.evolutionStage, maxEvolutionStageAt(25));
-  assert.equal(fromSnapshot(broken).pets[0]?.evolutionStage, 1);
-});
-
-test('쓸 수 없는 레벨은 명부에 들이지 않는다 — 성장 저장소가 앱 시작에서 던진다', () => {
-  // 성장 스키마가 `CHECK (level >= 1)`이라, 0·음수·소수가 명부로 새어 들어가면 앱 시작
-  // 경로에서 던져 창이 하나도 안 뜬다. 저장 파일을 방어하는 목적 그 자체가 무너진다.
-  const broken = {
-    version: 2,
-    pets: [
-      { id: 'zero', speciesPetId: '003', level: 0, evolutionStage: 0 },
-      { id: 'negative', speciesPetId: '004', level: -5, evolutionStage: 0 },
-      { id: 'fraction', speciesPetId: '005', level: 3.7, evolutionStage: 0 },
-      { id: 'ok', speciesPetId: '006', level: 4, evolutionStage: 0 },
-    ],
-    activePetId: 'ok',
-  } as RoomSnapshot;
-
-  const loaded = fromSnapshot(broken);
-  assert.deepEqual(
-    loaded.pets.map((pet) => pet.id),
-    ['ok'],
-  );
-  for (const seed of growthSeeds(loaded)) {
-    assert.ok(Number.isSafeInteger(seed.level) && seed.level >= 1, `${seed.ownedPetId} 레벨`);
-  }
-
-  // 쓸 수 있는 펫이 하나도 안 남으면 시드로 되돌아간다. 여기서도 던지지 않는다.
-  const allBroken = {
-    version: 2,
-    pets: [{ id: 'zero', speciesPetId: '003', level: 0, evolutionStage: 0 }],
-    activePetId: 'zero',
-  } as RoomSnapshot;
-  assert.deepEqual(fromSnapshot(allBroken), seedCollection());
-});
-
-/* ---------- 시드와 성장 게이트 ---------- */
-
-/**
- * 성장 엔진이 쓰는 진화 게이트를 **그 파일에서 직접 읽는다.**
- *
- * 여기 숫자를 옮겨 적으면 두 눈금이 갈라져도 테스트가 통과한다 — 이 테스트가 막으려는 것이
- * 정확히 그 상황이다(예전에 시드가 `stageOfLevel`의 10/20 으로 채워져 활성 펫이 최종
- * 단계로 시작했다).
- */
-function evolutionGates(): number[] {
-  const source = readFileSync(
-    join(here, '..', '..', 'pet-overlay', 'src', 'growth', 'constants.js'),
-    'utf8',
-  );
-  const matched = /export const EVOLUTION_LEVELS = \[([^\]]+)\]/.exec(source);
-  const levels = matched?.[1];
-  assert.ok(levels !== undefined, '성장 엔진에서 EVOLUTION_LEVELS 를 찾지 못했다');
-  return levels.split(',').map((value) => Number(value.trim()));
-}
-
-test('명부가 든 진화 게이트는 성장 엔진의 것과 같다 — 갈라지면 시드와 이관이 어긋난다', () => {
-  assert.deepEqual([...EVOLUTION_LEVELS], evolutionGates());
-});
-
-test('시드의 진화 횟수는 성장 엔진이 만들 수 있는 값이다 — 넘긴 게이트보다 많이 진화하지 않는다', () => {
-  const gates = evolutionGates();
-
-  for (const pet of seedCollection().pets) {
-    const passed = gates.filter((gate) => pet.level >= gate).length;
-    assert.ok(
-      pet.evolutionStage <= passed,
-      `${pet.id}: Lv.${pet.level}에서 넘긴 게이트는 ${passed}개인데 진화 횟수가 ${pet.evolutionStage}이다`,
-    );
-  }
-});
-
-test('첫 실행의 활성 펫은 진화할 여지가 있다 — 최종 단계로 시작하면 그 기능이 보이지 않는다', () => {
-  const collection = seedCollection();
-  const active = activePet(collection);
-  const gates = evolutionGates();
-
-  assert.ok(active.evolutionStage < gates.length, '활성 펫이 최종 단계로 시작한다');
-  // 게이트를 이미 넘겼으므로 켜자마자 진화가 가능하다.
-  const nextGate = gates[active.evolutionStage];
-  assert.ok(nextGate !== undefined && active.level >= nextGate);
 });
 
 /* ---------- 활성 펫 오라 ---------- */
