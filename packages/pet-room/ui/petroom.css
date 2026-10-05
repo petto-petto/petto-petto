@@ -46,8 +46,8 @@
   --space-7: 18px;
 
   --drop: 2px 2px 0 rgba(0, 0, 0, 0.35);
-  --font-body: 'Galmuri9', ui-monospace, monospace;
-  --font-heading: 'Galmuri11', ui-monospace, monospace;
+  --font-body: 'Isamanru', sans-serif;
+  --font-heading: 'Isamanru', sans-serif;
 }
 
 * {
@@ -65,9 +65,6 @@ body {
   -webkit-user-select: none;
   font-family: var(--font-body);
   font-size: 12px;
-  /* 도트 폰트는 안티에일리어싱하면 뭉개진다(design.md §3). */
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
 }
 
 /* 기본 스타일시트의 `[hidden]`은 우선순위가 가장 낮아 작성자 규칙 하나에 진다. */
@@ -97,8 +94,8 @@ body {
   background: #6b4a2e;
   color: #f5ecd8;
   font:
-    20px/1 ui-monospace,
-    monospace;
+    20px/1 'Isamanru',
+    sans-serif;
   cursor: pointer;
 }
 
@@ -231,6 +228,7 @@ body {
     inset 0 -2px 0 var(--wood-border),
     var(--drop);
   font-family: var(--font-heading);
+  font-weight: 700;
   font-size: 12px;
   cursor: default;
 }
@@ -303,6 +301,7 @@ body {
 #detail-name {
   margin: 0;
   font-family: var(--font-heading);
+  font-weight: 700;
   font-size: 13px;
 }
 
@@ -332,6 +331,7 @@ body {
   background: var(--grade-common-dark);
   color: var(--light-text);
   font-family: var(--font-heading);
+  font-weight: 700;
   font-size: 11px;
 }
 

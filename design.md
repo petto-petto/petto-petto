@@ -47,8 +47,10 @@ petto-petto is a pixel UI inspired by a small pet space deep in a dark forest. P
 
 ## 3. Typography
 
-- Use `Galmuri9` for body copy and bold `Galmuri11` for headings and rarity labels.
-- Use `ui-monospace, monospace` as the fallback stack.
+- Use `Isamanru` (이사만루체, Gong Games) for every piece of text, Korean and English alike: regular (400) for body copy and bold (700) for headings, rarity labels, and level numbers. Do not mix in pixel fonts, monospace fonts, or system fonts.
+- Write the stack as `font-family: 'Isamanru', sans-serif;`. `sans-serif` is only the fallback for when the font files are missing.
+- The app injects the `@font-face` rules into every window (`injectFonts` in `apps/desktop/src/main/windows.ts`). Feature packages name the family only and never load font files themselves.
+- Never commit the font files. The license allows embedding in the app but forbids redistributing the files, and this repository is public. `scripts/fetch-fonts.mjs` downloads them on `npm install` and `npm run build`.
 - Use only `10 / 11 / 12 / 13 / 15 / 16px` font sizes.
 
 | Use | Size | Font |
@@ -60,7 +62,7 @@ petto-petto is a pixel UI inspired by a small pet space deep in a dark forest. P
 | Panel titles | 15px | Heading |
 | Screen titles | 16px | Heading |
 
-- Do not smooth pixel-font edges. Apply `-webkit-font-smoothing: none` and `text-rendering: optimizeSpeed`.
+- Keep the browser's default font smoothing. Do not apply `-webkit-font-smoothing: none` or `text-rendering: optimizeSpeed`; they make an outline font look jagged.
 - Keep body copy short and value-focused; do not pack excessive information into one line.
 - Use light text on dark surfaces and ink-colored text on parchment surfaces.
 
@@ -163,5 +165,5 @@ Use a 2px base unit and the following values for layout.
 - Communicate button presses through position, and use small pixel-scale pop effects for new pets or rewards.
 - Avoid decorative looping animation; reduce or remove motion for `prefers-reduced-motion`.
 - Make keyboard focus clear with a 2px gold outline and an outer 1px `#2C2438` support ring.
-- Maintain sufficient contrast between text and backgrounds, including at small pixel-font sizes.
+- Maintain sufficient contrast between text and backgrounds, including at the 10px and 11px sizes.
 - Pair color-dependent states with an icon, text, or pattern.

@@ -1,8 +1,3 @@
-@font-face {
-  font-family: Galmuri11;
-  src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2309@1.1/Galmuri11-Bold.woff2');
-}
-
 * {
   box-sizing: border-box;
 }
@@ -26,8 +21,8 @@
   background: #6b4a2e;
   color: #f5ecd8;
   font:
-    20px/1 ui-monospace,
-    monospace;
+    20px/1 'Isamanru',
+    sans-serif;
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
@@ -44,9 +39,8 @@
   background: #6b4a2e;
   color: #f5ecd8;
   font:
-    700 12px/1 Galmuri11,
-    ui-monospace,
-    monospace;
+    700 12px/1 'Isamanru',
+    sans-serif;
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
@@ -75,9 +69,8 @@ body {
   overflow: hidden;
   background: #161828;
   color: #f5ecd8;
-  font-family: Galmuri11, ui-monospace, monospace;
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
 }
 
 .combine-shell {
@@ -115,6 +108,8 @@ body {
 }
 .combine-tabs button {
   flex: 1;
+  /* 등급명과 "합성"이 한 줄에 있어야 한다. 줄바꿈되면 탭이 높아져 아래 슬롯을 덮는다. */
+  white-space: nowrap;
 }
 .token-readout {
   grid-area: token;
@@ -246,7 +241,7 @@ body {
   border: 1px solid #f5ecd8;
   color: #f5ecd8;
   background: #3a2a1c;
-  font-family: ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: bold;
   line-height: 1;
@@ -314,7 +309,7 @@ body {
   font-size: 13px;
 }
 .stage-copy span {
-  font-family: ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
 }
 
@@ -449,8 +444,8 @@ body {
   color: #f5ecd8;
   background: #3a2a1c;
   font:
-    16px/1 ui-monospace,
-    monospace;
+    16px/1 'Isamanru',
+    sans-serif;
   cursor: pointer;
 }
 

@@ -34,10 +34,8 @@ body {
 
 body {
   color: var(--cream);
-  font-family: 'Galmuri9', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 10px;
-  -webkit-font-smoothing: none;
-  text-rendering: optimizeSpeed;
   user-select: none;
 }
 
@@ -101,7 +99,8 @@ input {
   gap: 8px;
   height: 18px;
   color: var(--cream);
-  font-family: 'Galmuri11', ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
+  font-weight: 700;
   -webkit-app-region: no-drag;
 }
 

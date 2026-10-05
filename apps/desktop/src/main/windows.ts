@@ -180,6 +180,7 @@ export function createOverlayWindow(): BrowserWindow {
     y: position.y,
   });
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
+  injectFonts(overlayWindow);
   void overlayWindow.loadFile(join(overlayUiDir, 'index.html'));
   overlayWindow.on('blur', () => {
     overlayWindow?.webContents.send('overlay:menu-close');
@@ -227,31 +228,32 @@ export function endOverlayDrag(): void {
 }
 
 /**
- * 도트 폰트를 창에 넣는다.
+ * 이사만루체를 창에 넣는다.
  *
- * 다섯 UI(`meta`·`room`·`gacha`·`combine`·`battle`)가 전부 `Galmuri11`을 쓰는데 폰트 파일은
- * **앱이** 가진다(`renderer/assets/fonts/`). 패키지가 앱의 파일 경로를 알면 앱 밖에서 못
- * 쓰게 되므로, 패키지는 폰트 이름만 말하고 파일은 호스트인 앱이 대 준다.
+ * 모든 UI(`meta`·`room`·`gacha`·`combine`·`battle`·오버레이)가 `Isamanru` 한 가지만 쓰는데
+ * 폰트 파일은 **앱이** 가진다(`renderer/assets/fonts/`). 패키지가 앱의 파일 경로를 알면 앱 밖에서
+ * 못 쓰게 되므로, 패키지는 폰트 이름만 말하고 파일은 호스트인 앱이 대 준다.
+ *
+ * 파일은 저장소에 없다. 라이선스가 재배포를 금지해 `scripts/fetch-fonts.mjs`가 설치 때 받는다.
+ * 파일이 없으면 시스템 기본 폰트로 보인다.
  *
  * 앱이 여는 모든 창에 넣는다. 창마다 따로 챙기면 새 창을 추가할 때 빠뜨리고, 그 창만 조용히
- * 기본 고정폭으로 떨어진다 — 실제로 `gacha`·`battle`·`meta` 가 그 상태였다.
+ * 기본 폰트로 떨어진다 — 실제로 오버레이 창이 그 상태였다.
  */
 function injectFonts(window: BrowserWindow): void {
   const url = (file: string) => pathToFileURL(join(rendererDir, 'assets', 'fonts', file)).href;
-  const css = `
+  const face = (file: string, weight: number) => `
     @font-face {
-      font-family: 'Galmuri9';
-      src: url('${url('Galmuri9.woff2')}') format('woff2');
-      font-weight: 400;
+      font-family: 'Isamanru';
+      src: url('${url(file)}') format('woff');
+      font-weight: ${weight};
       font-display: swap;
-    }
-    @font-face {
-      font-family: 'Galmuri11';
-      src: url('${url('Galmuri11-Bold.woff2')}') format('woff2');
-      font-weight: 700;
-      font-display: swap;
-    }
-  `;
+    }`;
+  const css = [
+    face('GongGothicLight.woff', 300),
+    face('GongGothicMedium.woff', 400),
+    face('GongGothicBold.woff', 700),
+  ].join('\n');
   window.webContents.on('did-finish-load', () => {
     void window.webContents.insertCSS(css);
   });
