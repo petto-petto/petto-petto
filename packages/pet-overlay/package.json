@@ -8,7 +8,7 @@
     "generate:pets": "node scripts/generate-renderer-pet-catalog.mjs",
     "prebuild": "npm run generate:pets",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && tsc --build --force tsconfig.json",
     "preview": "vite preview --port 4173 --strictPort",
     "test": "node src/growth/engine.test.mjs && node src/growth/controller.test.mjs && node --test test/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
