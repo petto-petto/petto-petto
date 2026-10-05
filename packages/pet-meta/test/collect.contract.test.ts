@@ -230,7 +230,12 @@ test('COLLECT-006: 보상 대상 토큰이 0인 증가분은 재화를 지급하
 
   const result = Harness.resultFor(harness.run(), 'claude_code');
 
-  assert.deepEqual(result, { kind: 'applied', observedDelta: 5_000, rewardTokens: 0 });
+  assert.deepEqual(result, {
+    kind: 'applied',
+    observedDelta: 5_000,
+    rewardTokens: 0,
+    growthTokenDelta: 0,
+  });
   assert.equal(harness.tokens.grantedKeyCount, 0, '0짜리 원장 항목을 만들지 않는다');
   assert.equal(harness.tokens.entries.length, 1, '사용량 자체는 토큰 원장에 남는다');
 });
@@ -276,7 +281,12 @@ test('TOKEN: 토큰 원장 적재가 실패하면 증가분을 반영하지 않�
 
   const retried = Harness.resultFor(harness.run(), 'codex');
 
-  assert.deepEqual(retried, { kind: 'applied', observedDelta: 4_000, rewardTokens: 4_000 });
+  assert.deepEqual(retried, {
+    kind: 'applied',
+    observedDelta: 4_000,
+    rewardTokens: 4_000,
+    growthTokenDelta: 4_000,
+  });
   assert.equal(observedTotal(harness.state), 4_000);
   assert.equal(harness.tokens.entries.length, 1, '한 번만 적재된다');
   assert.equal(harness.tokens.grantedAmount('codex:0->4000'), 4_000);

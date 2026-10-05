@@ -103,7 +103,7 @@ test('6.3: 사용량 보상으로 뽑기 비용을 넘기면 말풍선이 한 �
   const crossed = await earn(60_000);
   assert.equal(crossed.bubble, READY);
   assert.deepEqual(
-    broadcasts.at(-1),
+    broadcasts.findLast((event) => event.channel === 'usage:aggregated'),
     {
       channel: 'usage:aggregated',
       payload: { activityMinuteAdded: crossed.activityMinuteAdded, bubble: READY },
