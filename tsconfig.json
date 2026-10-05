@@ -8,6 +8,7 @@
     { "path": "packages/pet-meta" },
     { "path": "packages/pet-overlay" },
     { "path": "packages/pet-room" },
+    { "path": "packages/pet-dex" },
     { "path": "apps/desktop" },
     { "path": "packages/pet-client" }
   ]

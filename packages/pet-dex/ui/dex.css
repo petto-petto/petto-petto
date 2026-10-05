@@ -1,0 +1,624 @@
+/* 펫 도감. 값의 근거는 design.md 와 기획서의 Design prompt 다. */
+
+:root {
+  color-scheme: dark;
+  font-family: 'Isamanru', sans-serif;
+  color: #f5ecd8;
+  background: #10231a;
+  font-synthesis: none;
+  --forest-deep: #10231a;
+  --forest-mid: #1c4a34;
+  --forest-bright: #3c7a4a;
+  --forest-glow: #8fd68a;
+  --wood-border: #3a2a1c;
+  --wood: #6b4a2e;
+  --wood-light: #a5763f;
+  --parchment: #f3e3c0;
+  --parchment-ring: #e0c894;
+  --ink: #3b2a1a;
+  --paper: #f5ecd8;
+  --gold: #ffd166;
+  --outline: #2c2438;
+  --disabled: #999999;
+  --disabled-dark: #555555;
+  --warning: #f0b775;
+  --warning-dark: #725127;
+  --common: #9aa0a6;
+  --common-dark: #62676c;
+  --rare: #4aa3ff;
+  --rare-dark: #1f5a99;
+  --epic: #b46bff;
+  --epic-dark: #6c37a0;
+  --shadow: 2px 2px 0 rgb(0 0 0 / 35%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  width: 640px;
+  height: 420px;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  position: relative;
+  background: var(--forest-deep);
+  user-select: none;
+}
+
+button {
+  font-family: 'Isamanru', sans-serif;
+}
+
+canvas {
+  image-rendering: pixelated;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--outline);
+}
+
+/* ---------- 창 버튼: 뽑기·합성과 같은 자리 ---------- */
+
+.window-controls {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  display: flex;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+}
+
+.window-back,
+.window-close {
+  height: 28px;
+  -webkit-app-region: no-drag;
+  border: 2px solid var(--wood-border);
+  background: var(--wood);
+  color: var(--paper);
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 var(--wood-light),
+    inset 0 -2px 0 var(--wood-border);
+}
+
+.window-back {
+  padding: 0 8px;
+  font:
+    700 12px/1 'Isamanru',
+    sans-serif;
+}
+
+.window-close {
+  width: 28px;
+  padding: 0;
+  font:
+    20px/1 'Isamanru',
+    sans-serif;
+}
+
+.window-back:hover {
+  background: #8a6340;
+}
+
+.window-close:hover {
+  background: #762f35;
+}
+
+/* ---------- 머리줄: 제목과 수집 진행도 ---------- */
+
+.dex-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 48px;
+  /*
+   * 창 끌기 영역이 오른쪽 위 창 버튼(10 + 95px)을 덮으면 OS 가 클릭을 가로채 버튼이 눌리지
+   * 않는다. 안쪽 여백이 아니라 바깥 여백으로 비켜, 끌기 영역 자체가 버튼 자리에 닿지 않게 한다.
+   */
+  margin-right: 115px;
+  padding: 10px 0 0 18px;
+  -webkit-app-region: drag;
+}
+
+.dex-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--paper);
+  text-shadow: var(--shadow);
+}
+
+.dex-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.dex-progress__label strong {
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.dex-progress__percent {
+  min-width: 32px;
+  font-size: 10px;
+  text-align: right;
+}
+
+/* design.md §6: 높이 10px, 테두리 2px, 세로 그라데이션. */
+.xp-bar {
+  position: relative;
+  display: block;
+  width: 120px;
+  height: 10px;
+  border: 2px solid var(--wood-border);
+  background: var(--forest-deep);
+}
+
+.xp-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--forest-glow),
+    var(--forest-bright),
+    var(--forest-mid)
+  );
+}
+
+/* ---------- 등급 탭 ---------- */
+
+.dex-tabs {
+  display: flex;
+  gap: 6px;
+  height: 28px;
+  margin: 0 18px;
+}
+
+.dex-tab {
+  height: 28px;
+  padding: 0 10px;
+  border: 2px solid var(--wood-border);
+  background: var(--wood);
+  color: var(--paper);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 var(--wood-light),
+    inset 0 -2px 0 var(--wood-border),
+    var(--shadow);
+}
+
+.dex-tab strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dex-tab[aria-selected='true'] {
+  background: var(--wood-light);
+  box-shadow:
+    inset 0 -2px 0 var(--gold),
+    var(--shadow);
+}
+
+.dex-tab:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+/* ---------- 본문: 그리드 + 상세 ---------- */
+
+.dex-body {
+  position: absolute;
+  top: 88px;
+  right: 18px;
+  bottom: 14px;
+  left: 18px;
+  display: grid;
+  grid-template-columns: 370px 1fr;
+  gap: 12px;
+}
+
+.dex-grid,
+.dex-error {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+}
+
+.dex-grid {
+  overflow-y: auto;
+  /*
+   * 스크롤 영역은 바깥으로 나온 그림을 자른다. 선택 외곽선(2px + 간격 2px)과 NEW 표식(-5px)이
+   * 첫 칸에서 잘리지 않게 여백을 그보다 넓게 둔다.
+   */
+  padding: 6px;
+}
+
+.dex-section + .dex-section {
+  margin-top: 10px;
+}
+
+.dex-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.dex-section h2::after {
+  content: '';
+  flex: 1;
+  border-top: 1px dashed currentcolor;
+  opacity: 0.6;
+}
+
+.dex-section h2 small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--paper);
+}
+
+.dex-section[data-rarity='COMMON'] h2 {
+  color: var(--common);
+}
+
+.dex-section[data-rarity='RARE'] h2 {
+  color: var(--rare);
+}
+
+.dex-section[data-rarity='EPIC'] h2 {
+  color: var(--epic);
+}
+
+.dex-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ---------- 슬롯 ---------- */
+
+.dex-slot {
+  --rarity: var(--common);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  padding: 0;
+  border: 3px solid var(--wood-border);
+  background: var(--parchment);
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 2px var(--rarity),
+    var(--shadow);
+}
+
+.dex-slot[data-rarity='RARE'] {
+  --rarity: var(--rare);
+}
+
+.dex-slot[data-rarity='EPIC'] {
+  --rarity: var(--epic);
+}
+
+/* 32px 카드를 2배로 그린다(정수 배율, design.md §4). */
+.dex-slot canvas {
+  width: 64px;
+  height: 64px;
+}
+
+.dex-slot[data-state='undiscovered'] {
+  background: #2b3a30;
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--rarity) 50%, #000),
+    var(--shadow);
+}
+
+.dex-slot[data-state='discovered-empty'] canvas {
+  filter: grayscale(0.6) brightness(0.85);
+}
+
+.dex-slot__number {
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  font-size: 10px;
+  color: var(--ink);
+}
+
+.dex-slot[data-state='undiscovered'] .dex-slot__number {
+  color: var(--paper);
+}
+
+.dex-slot__unknown {
+  position: absolute;
+  bottom: 14px;
+  font-size: 10px;
+  color: var(--paper);
+}
+
+.dex-slot__count {
+  position: absolute;
+  /* 번호(왼쪽 아래)와 겹치지 않게 오른쪽 위에 둔다. 72px 슬롯은 한 줄에 둘을 담기에 좁다. */
+  top: 2px;
+  right: 2px;
+  padding: 1px 3px;
+  border: 2px solid var(--wood-border);
+  background: var(--wood-border);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dex-slot[data-state='discovered-empty'] .dex-slot__count {
+  border-color: var(--disabled-dark);
+  background: var(--disabled-dark);
+  color: var(--disabled);
+}
+
+.dex-slot__new {
+  position: absolute;
+  top: -5px;
+  left: -5px;
+  padding: 1px 3px;
+  background: var(--gold);
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: var(--shadow);
+  animation: pop 160ms steps(2) 1;
+}
+
+.dex-slot[aria-pressed='true'] {
+  outline: 2px dashed var(--gold);
+  outline-offset: 2px;
+}
+
+/* 선택 중인 슬롯에 키보드 포커스가 오면 포커스 표시(실선)가 이긴다. */
+.dex-slot[aria-pressed='true']:focus-visible {
+  outline-style: solid;
+}
+
+.dex-slot:hover {
+  transform: translateY(-2px);
+  transition: transform 80ms steps(2);
+}
+
+@keyframes pop {
+  from {
+    transform: scale(0.5);
+  }
+
+  to {
+    transform: scale(1);
+  }
+}
+
+/* ---------- 오류 ---------- */
+
+.dex-error {
+  align-self: start;
+  padding: 14px;
+  border: 3px solid var(--wood-border);
+  background: var(--warning-dark);
+  color: var(--paper);
+  font-size: 12px;
+  box-shadow:
+    inset 0 0 0 2px var(--warning),
+    var(--shadow);
+}
+
+.dex-error p {
+  margin: 0 0 10px;
+}
+
+/* ---------- 상세 패널 ---------- */
+
+.pixel-panel {
+  border: 3px solid var(--wood-border);
+  background: var(--parchment);
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 2px var(--wood-light),
+    inset 0 0 0 5px var(--parchment-ring),
+    var(--shadow);
+}
+
+.pixel-button {
+  height: 28px;
+  padding: 0 10px;
+  border: 2px solid var(--wood-border);
+  background: var(--wood);
+  color: var(--paper);
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 2px 0 var(--wood-light),
+    inset 0 -2px 0 var(--wood-border),
+    var(--shadow);
+}
+
+.pixel-button:active {
+  transform: translate(2px, 2px);
+  box-shadow: none;
+}
+
+.dex-detail {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 10px 12px;
+}
+
+.dex-detail__empty {
+  margin: 40px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.dex-detail__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.dex-detail__body[hidden] {
+  display: none;
+}
+
+.showcase {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 72px;
+}
+
+/* 바닥 타원 그림자. 펫 외곽선을 가리지 않게 발밑에만 둔다. */
+.showcase::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 48px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgb(59 42 26 / 25%);
+}
+
+.showcase canvas {
+  position: relative;
+  z-index: 1;
+}
+
+/* 패널 높이가 빠듯해 등급 배지는 무대 왼쪽 위에 얹는다. */
+.showcase .grade-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+}
+
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.detail-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.detail-number {
+  font-size: 10px;
+}
+
+.grade-badge {
+  padding: 2px 6px;
+  line-height: 1.2;
+  border: 2px solid var(--common);
+  background: var(--common-dark);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.grade-badge[data-rarity='RARE'] {
+  border-color: var(--rare);
+  background: var(--rare-dark);
+}
+
+.grade-badge[data-rarity='EPIC'] {
+  border-color: var(--epic);
+  background: var(--epic-dark);
+}
+
+.detail-line {
+  margin: 0;
+  font-size: 12px;
+}
+
+.detail-line[hidden] {
+  display: none;
+}
+
+.evolution {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.evolution[hidden] {
+  display: none;
+}
+
+/* 썸네일은 1배로 그린다. 32px·48px 카드를 같은 상자에 정수 배율로 담으려면 48px 상자가 필요하다. */
+.evolution__stage {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  background: var(--parchment-ring);
+}
+
+.evolution__arrow {
+  font-size: 12px;
+}
+
+.hints {
+  width: 100%;
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--parchment-ring);
+  font-size: 10px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.detail-action-error {
+  margin: 0;
+  color: #762f35;
+  font-size: 10px;
+}
+
+.detail-action-error[hidden] {
+  display: none;
+}
+
+.detail-action {
+  flex: none;
+  align-self: stretch;
+  margin-top: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dex-slot__new {
+    animation: none;
+  }
+
+  .dex-slot:hover {
+    transform: none;
+    transition: none;
+  }
+}

@@ -1,11 +1,20 @@
 import { randomUUID } from 'node:crypto';
 
-import type { OwnedPet, PetGrowth, PetSpecies, Rarity } from '@pet/client';
+import type { DexEntry, OwnedPet, PetGrowth, PetSpecies, Rarity } from '@pet/client';
+import { systemClock, type Clock } from '@pet/core';
 
 import { SqliteFileDatabase } from '../sqlite-file.ts';
 
 interface OwnedPetRow extends Omit<OwnedPet, 'isActive'> {
   isActive: number;
+}
+
+interface DexRow extends PetSpecies {
+  discoveredAt: string | null;
+  seenAt: string | null;
+  ownedCount: number;
+  highestLevel: number;
+  highestStage: PetGrowth['evolutionStage'] | null;
 }
 
 const SPECIES_SELECT = `SELECT species_id AS speciesId, name, rarity, sprite FROM pet_species`;
@@ -16,13 +25,28 @@ const OWNED_SELECT = `
          p.evolution_stage AS evolutionStage, p.is_active AS isActive
   FROM owned_pets p JOIN pet_species s ON s.species_id = p.species_id
 `;
+const DEX_SELECT = `
+  SELECT s.species_id AS speciesId, s.name, s.rarity, s.sprite,
+         d.discovered_at AS discoveredAt, d.seen_at AS seenAt,
+         COUNT(p.owned_pet_id) AS ownedCount,
+         COALESCE(MAX(p.level), 0) AS highestLevel,
+         MAX(p.evolution_stage) AS highestStage
+  FROM pet_species s
+  LEFT JOIN pet_discoveries d ON d.species_id = s.species_id
+  LEFT JOIN owned_pets p ON p.species_id = s.species_id
+  GROUP BY s.species_id
+  ORDER BY CASE s.rarity WHEN 'COMMON' THEN 0 WHEN 'RARE' THEN 1 ELSE 2 END, s.species_id
+`;
 
 /** 공용 DB의 펫 테이블만 접근하는 구체 Repository. 연결 수명주기는 host가 소유한다. */
 export class PetRepository {
   readonly #database: SqliteFileDatabase;
+  /** 도감의 첫 만남·확인 시각. 테스트가 고정할 수 있게 주입받는다. */
+  readonly #clock: Clock;
 
-  constructor(database: SqliteFileDatabase) {
+  constructor(database: SqliteFileDatabase, clock: Clock = systemClock) {
     this.#database = database;
+    this.#clock = clock;
   }
 
   listSpecies(rarity?: Rarity): PetSpecies[] {
@@ -142,11 +166,36 @@ export class PetRepository {
     });
   }
 
+  listDexEntries(): DexEntry[] {
+    return this.#database.prepare<[], DexRow>(DEX_SELECT).all().map(toDexEntry);
+  }
+
+  markDexSeen(speciesId: string): void {
+    this.#database.transaction(() => {
+      const found = this.#database
+        .prepare<[string], { seenAt: string | null }>(
+          'SELECT seen_at AS seenAt FROM pet_discoveries WHERE species_id = ?',
+        )
+        .get(speciesId);
+      if (!found) throw new Error(`발견하지 않은 종입니다: ${speciesId}`);
+      if (found.seenAt !== null) return;
+      this.#database
+        .prepare<[string, string]>('UPDATE pet_discoveries SET seen_at = ? WHERE species_id = ?')
+        .run(this.#clock.now().toISOString(), speciesId);
+    });
+  }
+
+  /** 개체 생성은 언제나 이 길을 지난다. 발견을 같은 트랜잭션에 남겨, 펫만 생기고 발견이 빠지지 않게 한다. */
   #insertPet(speciesId: string): OwnedPet {
     const ownedPetId = randomUUID();
     this.#database
       .prepare<[string, string]>('INSERT INTO owned_pets (owned_pet_id, species_id) VALUES (?, ?)')
       .run(ownedPetId, speciesId);
+    this.#database
+      .prepare<[string, string]>(
+        'INSERT OR IGNORE INTO pet_discoveries (species_id, discovered_at, seen_at) VALUES (?, ?, NULL)',
+      )
+      .run(speciesId, this.#clock.now().toISOString());
     return this.getOwnedPet(ownedPetId);
   }
 
@@ -159,6 +208,17 @@ export class PetRepository {
 
 function toOwnedPet(row: OwnedPetRow): OwnedPet {
   return { ...row, isActive: row.isActive === 1 };
+}
+
+function toDexEntry(row: DexRow): DexEntry {
+  return {
+    species: { speciesId: row.speciesId, name: row.name, rarity: row.rarity, sprite: row.sprite },
+    discoveredAt: row.discoveredAt,
+    ownedCount: row.ownedCount,
+    highestLevel: row.highestLevel,
+    highestStage: row.highestStage,
+    isNew: row.discoveredAt !== null && row.seenAt === null,
+  };
 }
 
 function validateRarity(rarity: Rarity): void {

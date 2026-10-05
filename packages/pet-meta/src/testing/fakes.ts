@@ -17,7 +17,7 @@ import { PortError, type DomainEvent, type EventBus } from '../index.ts';
  */
 
 import { petId } from '@pet/core';
-import type { OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
+import type { DexEntry, OwnedPet, PetClient, PetGrowth, PetSpecies, Rarity } from '@pet/client';
 import type {
   BattlePort,
   CollectionPort,
@@ -280,6 +280,8 @@ export class InMemoryPetClient implements PetClient {
   #pets: OwnedPet[] = [];
   #sequence = 0;
   #failQueries = false;
+  /** speciesId → 확인했는가. 발견은 지우지 않는다(합성으로 0마리가 되어도 남는다). */
+  #discovered = new Map<string, boolean>();
 
   /** 테스트용: 한 마리를 바로 만든다. 성장 값을 덮어쓸 수 있다. */
   give(speciesId: string, growth: Partial<PetGrowth> = {}): OwnedPet {
@@ -369,6 +371,9 @@ export class InMemoryPetClient implements PetClient {
       };
     });
     this.#pets = [...this.#pets, ...created];
+    for (const pet of created) {
+      if (!this.#discovered.has(pet.speciesId)) this.#discovered.set(pet.speciesId, false);
+    }
     return created;
   }
 
@@ -402,6 +407,37 @@ export class InMemoryPetClient implements PetClient {
     const [result] = this.createOwnedPets([resultSpeciesId]);
     if (result === undefined) throw new Error('생성 실패');
     return result;
+  }
+
+  listDexEntries(): DexEntry[] {
+    this.#guard();
+    const order: Readonly<Record<Rarity, number>> = { COMMON: 0, RARE: 1, EPIC: 2 };
+    return [...SEEDED_SPECIES]
+      .sort((a, b) => order[a.rarity] - order[b.rarity] || a.speciesId.localeCompare(b.speciesId))
+      .map((species) => {
+        const owned = this.#pets.filter((pet) => pet.speciesId === species.speciesId);
+        const seen = this.#discovered.get(species.speciesId);
+        return {
+          species,
+          discoveredAt: seen === undefined ? null : '2026-01-01T00:00:00.000Z',
+          ownedCount: owned.length,
+          highestLevel: owned.reduce((best, pet) => Math.max(best, pet.level), 0),
+          highestStage:
+            owned.length === 0
+              ? null
+              : owned.reduce<PetGrowth['evolutionStage']>(
+                  (best, pet) => (pet.evolutionStage > best ? pet.evolutionStage : best),
+                  0,
+                ),
+          isNew: seen === false,
+        };
+      });
+  }
+
+  markDexSeen(speciesId: string): void {
+    this.#guard();
+    if (!this.#discovered.has(speciesId)) throw new PortError(`발견하지 않은 종: ${speciesId}`);
+    this.#discovered.set(speciesId, true);
   }
 }
 

@@ -37,6 +37,7 @@ import { RoomState, mountRoom, type RoomHost } from './room.ts';
 import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
+import { registerDexIpc } from './ipc/dex.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
@@ -47,7 +48,9 @@ import {
   createBattleWindow,
   createOverlayWindow,
   createCombineWindow,
+  createDexWindow,
   createGachaWindow,
+  isDexWebContents,
   isGachaWebContents,
   isRoomWebContents,
   isCombineWebContents,
@@ -59,6 +62,7 @@ import {
   petAssetsDir,
   moveOverlayDrag,
   replaceRoomWith,
+  replaceWindowWith,
   returnToRoom,
   setOverlayInteractive,
   showPanel,
@@ -178,9 +182,14 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
-  // 뽑기·합성 화면의 "펫룸" 버튼. 그 두 창에서 온 요청만 받는다.
+  // 뽑기·합성·도감 화면의 "펫룸" 버튼. 그 세 창에서 온 요청만 받는다.
   ipcMain.handle('window:backToRoom', (event) => {
-    if (!isGachaWebContents(event.sender) && !isCombineWebContents(event.sender)) return;
+    if (
+      !isGachaWebContents(event.sender) &&
+      !isCombineWebContents(event.sender) &&
+      !isDexWebContents(event.sender)
+    )
+      return;
     const from = BrowserWindow.fromWebContents(event.sender);
     if (from) returnToRoom(from);
   });
@@ -199,6 +208,9 @@ const roomHost: RoomHost = {
         return;
       case 'combine':
         replaceRoomWith(createCombineWindow());
+        return;
+      case 'dex':
+        replaceRoomWith(createDexWindow());
         return;
       default: {
         const unreachable: never = destination;
@@ -361,6 +373,22 @@ app.whenReady().then(async () => {
     createPersistentCombine(pets, tokens, featureTransaction),
     (event) => isCombineWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
     petsChanged,
+  );
+  registerDexIpc(
+    ipcMain,
+    pets,
+    (event) => isDexWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
+    (event) => isRoomWebContents(event.sender),
+    {
+      openInRoom: (event, ownedPetId) => {
+        const from = BrowserWindow.fromWebContents(event.sender);
+        if (from) returnToRoom(from, ownedPetId);
+      },
+      goGacha: (event) => {
+        const from = BrowserWindow.fromWebContents(event.sender);
+        if (from) replaceWindowWith(from, createGachaWindow());
+      },
+    },
   );
   state = new MetaAppState(
     store,

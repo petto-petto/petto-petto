@@ -42,6 +42,7 @@ const combineUiDir = join(
   dirname(fileURLToPath(import.meta.resolve('@pet/combine/package.json'))),
   'ui',
 );
+const dexUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/dex/package.json'))), 'ui');
 const roomUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/room/package.json'))), 'ui');
 const overlayUiDir = join(dirname(fileURLToPath(import.meta.resolve('@pet/main-overlay/ui'))));
 const battleUiDir = dirname(fileURLToPath(import.meta.resolve('@pet/battle/ui')));
@@ -59,6 +60,7 @@ let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
+let dexWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
 let growthUsageReadyWebContentsId: number | undefined;
 const pendingGrowthUsage: unknown[] = [];
@@ -382,6 +384,40 @@ export function isCombineWebContents(contents: WebContents): boolean {
   );
 }
 
+/** 펫 도감. 뽑기·합성과 같은 640x420 프레임 없는 창으로, 펫룸 자리를 갈아 끼운다. */
+export function createDexWindow(): BrowserWindow {
+  if (dexWindow && !dexWindow.isDestroyed()) {
+    dexWindow.show();
+    dexWindow.focus();
+    return dexWindow;
+  }
+  dexWindow = new BrowserWindow({
+    width: 640,
+    height: 420,
+    useContentSize: true,
+    frame: false,
+    resizable: false,
+    backgroundColor: '#10231a',
+    title: 'Petto Petto — 펫 도감',
+    webPreferences: {
+      preload: join(appRoot, 'src', 'preload', 'dex.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  injectFonts(dexWindow);
+  void dexWindow.loadFile(join(dexUiDir, 'index.html'), { query: assetsQuery() });
+  dexWindow.on('closed', () => {
+    dexWindow = undefined;
+  });
+  return dexWindow;
+}
+
+export function isDexWebContents(contents: WebContents): boolean {
+  return dexWindow !== undefined && !dexWindow.isDestroyed() && dexWindow.webContents === contents;
+}
+
 /**
  * 전투 UI와 에셋은 `@pet/battle`이 소유하고, 데스크톱 앱은 창 수명만 맡는다.
  *
@@ -436,10 +472,12 @@ export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
  * 닫기 버튼 자리가 같아야 한 창처럼 보인다. 닫기는 화면 오른쪽 위 버튼이, 옮기기는 하단
  * 패널의 빈 바탕이 맡는다(`petroom.css`).
  */
-export function showRoom(): BrowserWindow {
+export function showRoom(focusOwnedPetId?: string): BrowserWindow {
   if (roomWindow && !roomWindow.isDestroyed()) {
     roomWindow.show();
     roomWindow.focus();
+    if (focusOwnedPetId !== undefined)
+      roomWindow.webContents.send('room:focusPet', focusOwnedPetId);
     return roomWindow;
   }
 
@@ -465,7 +503,10 @@ export function showRoom(): BrowserWindow {
   });
 
   injectFonts(roomWindow);
-  void roomWindow.loadFile(join(roomUiDir, 'petroom.html'), { query: assetsQuery() });
+  // 도감의 `펫룸에서 보기`로 열리면 그 개체의 상세를 바로 연다.
+  const query: Record<string, string> = assetsQuery();
+  if (focusOwnedPetId !== undefined) query['focus'] = focusOwnedPetId;
+  void roomWindow.loadFile(join(roomUiDir, 'petroom.html'), { query });
   return roomWindow;
 }
 
@@ -493,9 +534,14 @@ export function replaceRoomWith(next: BrowserWindow): void {
   if (roomWindow) replaceWindow(roomWindow, next);
 }
 
-/** 뽑기·합성 화면에서 펫룸으로 돌아간다. */
-export function returnToRoom(from: BrowserWindow): void {
-  replaceWindow(from, showRoom());
+/** 뽑기·합성·도감 화면에서 펫룸으로 돌아간다. `focusOwnedPetId`가 있으면 그 개체 상세를 연다. */
+export function returnToRoom(from: BrowserWindow, focusOwnedPetId?: string): void {
+  replaceWindow(from, showRoom(focusOwnedPetId));
+}
+
+/** 도감 화면 자리에 다른 화면(뽑기)을 띄운다. */
+export function replaceWindowWith(from: BrowserWindow, next: BrowserWindow): void {
+  replaceWindow(from, next);
 }
 
 /** 창의 논리 픽셀 사각형. */

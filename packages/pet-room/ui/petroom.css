@@ -183,6 +183,28 @@ body {
   grid-row: 1 / -1;
 }
 
+/* 도감에 아직 확인하지 않은 신규 발견이 있다. 색만이 아니라 글자로도 알린다. */
+#dex-button {
+  position: relative;
+}
+
+.destination-new {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  padding: 1px 3px;
+  background: var(--gold);
+  color: #3b2a1a;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: 2px 2px 0 rgb(0 0 0 / 35%);
+}
+
+.destination-new[hidden] {
+  display: none;
+}
+
 /*
  * 배경 레이어와 펫 캔버스.
  *

@@ -14,7 +14,7 @@ import type { RoomDestination, RoomHost, RoomState } from './room-state.ts';
 export { RoomState, type RoomDestination, type RoomHost, type RoomScene } from './room-state.ts';
 
 function destinationFrom(value: unknown): RoomDestination {
-  if (value === 'gacha' || value === 'combine') return value;
+  if (value === 'gacha' || value === 'combine' || value === 'dex') return value;
   throw new Error(`이동할 수 없는 화면입니다: ${String(value)}`);
 }
 
@@ -41,7 +41,7 @@ export function mountRoom(state: RoomState, host: RoomHost): void {
   ipcMain.handle('room:open', () => {
     host.showRoom();
   });
-  // 펫룸에서 뽑기·합성으로 건너가는 길. 창을 다루는 일은 앱이 하고, room 은 요청만 한다.
+  // 펫룸에서 뽑기·합성·도감으로 건너가는 길. 창을 다루는 일은 앱이 하고, room 은 요청만 한다.
   ipcMain.handle('room:navigate', (event, destination: unknown) => {
     host.navigate(destinationFrom(destination), event.sender);
   });

@@ -52,7 +52,7 @@ export interface RoomHost {
 }
 
 /** 펫룸에서 건너갈 수 있는 화면. */
-export type RoomDestination = 'gacha' | 'combine';
+export type RoomDestination = 'gacha' | 'combine' | 'dex';
 
 /** 렌더러가 받는 장면 정보. 배경 파일은 렌더러가 이 값으로 조립해 읽는다. */
 export interface RoomScene {

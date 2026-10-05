@@ -51,6 +51,7 @@ const api = window.petApi;
 
 const stageEl = document.getElementById('stage');
 const destinationsEl = document.getElementById('destinations');
+const dexNewEl = document.getElementById('dex-new');
 const layersEl = document.getElementById('layers');
 const canvas = document.getElementById('pets');
 const ctx = canvas.getContext('2d');
@@ -712,6 +713,7 @@ api.on('room:activePetChanged', (view) => {
 
 // 뽑기·합성으로 보유 펫이 바뀌었다. 지워진 펫이 남아 있으면 지정할 때 실패하므로 다시 세운다.
 api.on('room:rosterChanged', (views) => {
+  refreshDexBadge();
   loadPets(views)
     .then(() => {
       if (room.selectedPetId && !room.views.has(room.selectedPetId)) room.selectedPetId = null;
@@ -728,13 +730,45 @@ api.on('room:backgroundChanged', (background) => {
   });
 });
 
+// 펫룸이 열린 채 다른 창(도감)에서 NEW 를 확인했을 수 있다. 돌아오면 다시 읽는다.
+window.addEventListener('focus', () => refreshDexBadge());
+
+// 도감의 `펫룸에서 보기`. 이미 열려 있던 펫룸이면 main 이 이 이벤트로 알린다.
+api.on('room:focusPet', (ownedPetId) => focusPet(ownedPetId));
+
+/** 그 개체의 상세를 연다. 명부에 없으면(그사이 합성됨) 아무것도 고르지 않는다. */
+function focusPet(ownedPetId) {
+  if (!ownedPetId || !room.views.has(ownedPetId)) return;
+  room.selectedPetId = ownedPetId;
+  room.players.get(ownedPetId)?.playClick();
+  renderDetail();
+}
+
+/**
+ * 도감 버튼의 NEW 표식. 읽지 못하면 표식만 빼고 펫룸은 그대로 쓴다 — 표식 하나 때문에
+ * 펫룸을 오류 화면으로 만들 이유가 없다.
+ */
+function refreshDexBadge() {
+  api
+    .dexHasNew()
+    .then((hasNew) => {
+      dexNewEl.hidden = !hasNew;
+    })
+    .catch((error) => {
+      dexNewEl.hidden = true;
+      api.debugLog(`[PETROOM] 도감 NEW 표식을 읽지 못했습니다 — ${error.message}`);
+    });
+}
+
 /* ---------- 시작 ---------- */
 
 window.addEventListener('load', async () => {
   try {
+    refreshDexBadge();
     const scene = await api.roomScene();
     await applyBackground(scene.background);
     await loadPets(scene.pets);
+    focusPet(new URLSearchParams(window.location.search).get('focus'));
 
     api.debugLog(
       `[PETROOM] ${scene.background.id}(${scene.background.phase}) · ` +
