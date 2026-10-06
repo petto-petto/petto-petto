@@ -283,6 +283,67 @@ async function recordHamsterAttack(window, stage, automatic = false) {
   return report;
 }
 
+async function recordWizardAttack(window, stage, automatic = false) {
+  await evaluate(
+    window,
+    `(() => {
+    const root=document.querySelector('#battle-overlay'),native=document.querySelector('.wizard-native-sprite');
+    const image=document.querySelector('#pet-sheet'),sky=document.querySelector('.wizard-sky'),storm=document.querySelector('.wizard-meteors'),pet=document.querySelector('#pet');
+    const size=image.naturalHeight;
+    const ref=document.createElement('canvas');ref.width=ref.height=size;
+    const ctx=ref.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,size,size,0,0,size,size);
+    const base=ctx.getImageData(0,0,size,size).data;
+    let started=0,last=0,invisible=0,faceChanges=0,impacts=0,previousHit=false,maxMeteors=0,maxLift=0,maxCast=0;
+    let checkedCoverage=false,coverage=[false,false,false,false];
+    const phases=[],gaps=[],sources=new Set();
+    window.__wizardRecording=undefined;
+    const tick=at=>{
+      const phase=root.dataset.petCombatPhase;
+      if(!started&&phase==='IDLE'){requestAnimationFrame(tick);return;}
+      if(!started)started=at;if(last)gaps.push(at-last);last=at;
+      if(phase==='IDLE'){
+        const sorted=[...gaps].sort((a,b)=>a-b);
+        window.__wizardRecording={size,invisible,faceChanges,impacts,maxMeteors,maxLift,maxCast,coverage,phases,sources:[...sources],
+          p95Gap:sorted[Math.floor(sorted.length*.95)],cleared:sky.hidden&&storm.hidden,
+          finalY:Number.parseFloat(pet.style.getPropertyValue('--wizard-y'))||0};return;
+      }
+      if(phases.at(-1)!==phase)phases.push(phase);
+      const used=Number(native.style.opacity)===1;
+      if(!used&&getComputedStyle(document.querySelector('.pet-viewport')).visibility!=='visible')invisible++;
+      if(used){
+        const pixels=native.getContext('2d').getImageData(0,0,size,size).data;
+        const from=size===48?18:10,to=size===48?30:20;let changed=0;
+        for(let y=8;y<22;y++)for(let x=from;x<=to;x++){
+          const p=(y*size+x)*4;if(pixels.slice(p,p+4).some((v,c)=>v!==base[p+c]))changed++;
+        }
+        faceChanges=Math.max(faceChanges,changed);
+      }
+      const hit=root.dataset.beat==='IMPACT';if(hit&&!previousHit)impacts++;previousHit=hit;
+      maxMeteors=Math.max(maxMeteors,Number(storm.dataset.meteorCount)||0);
+      maxLift=Math.max(maxLift,-Number.parseFloat(pet.style.getPropertyValue('--wizard-y'))||0);
+      maxCast=Math.max(maxCast,Number(native.dataset.castProgress)||0);
+      if(!checkedCoverage&&phase==='WIZARD_RAIN'&&Number(storm.dataset.spellMs)>1500){
+        checkedCoverage=true;const data=storm.getContext('2d').getImageData(0,0,storm.width,storm.height).data;
+        for(let y=0;y<storm.height;y++)for(let x=0;x<storm.width;x++)if(data[(y*storm.width+x)*4+3]>0)coverage[Math.min(3,Math.floor(x/storm.width*4))]=true;
+      }
+      sources.add(image.currentSrc);requestAnimationFrame(tick);
+    };requestAnimationFrame(tick);
+  })()`,
+  );
+  await petAction(window, automatic ? 'START' : 'ATTACK');
+  await waitFor(
+    window,
+    'Boolean(window.__wizardRecording)',
+    'complete wizard spell recording',
+    15000,
+  );
+  const report = await evaluate(window, 'window.__wizardRecording');
+  console.log(
+    `WIZARD RECORD stage ${stage} ${automatic ? 'automatic' : 'manual'}: ${JSON.stringify(report)}`,
+  );
+  return report;
+}
+
 async function waitForImpact(window) {
   await waitFor(
     window,
@@ -477,13 +538,13 @@ function cleanup() {
 }
 
 const watchdog = setTimeout(() => {
-  console.error('FAIL battle host smoke exceeded 90 seconds');
+  console.error('FAIL battle host smoke exceeded 150 seconds');
   try {
     cleanup();
   } finally {
     app.exit(1);
   }
-}, 90_000);
+}, 150_000);
 
 async function run() {
   const desktop = (file) =>
@@ -524,14 +585,9 @@ async function run() {
   const growthRepository = new PetGrowthRepository(database);
   const growth = new SqliteGrowthReadClient(growthRepository);
   const roomPets = new PetClientRoomAdapter(pets);
-  const [mole, initialWizard, initialSprout, initialZebra, initialHamster] = pets.createOwnedPets([
-    '003',
-    '006',
-    '004',
-    '002',
-    '005',
-  ]);
-  const wizard = pets.updateGrowth(initialWizard.ownedPetId, {
+  const [mole, initialGenericEpic, initialSprout, initialZebra, initialHamster, initialWizard] =
+    pets.createOwnedPets(['003', '001', '004', '002', '005', '006']);
+  const genericEpic = pets.updateGrowth(initialGenericEpic.ownedPetId, {
     level: 25,
     totalXp: 384,
     xpIntoLevel: 0,
@@ -544,11 +600,11 @@ async function run() {
   const roomHost = { showRoom() {}, navigate() {}, broadcast: host.broadcast };
   growthRepository.adoptRoster(room.growthSeeds());
   const profiles = growthRepository.loadAll();
-  Object.assign(profiles[wizard.ownedPetId].pet, {
-    level: wizard.level,
-    totalXp: wizard.totalXp,
-    xpIntoLevel: wizard.xpIntoLevel,
-    evolutionStage: wizard.evolutionStage,
+  Object.assign(profiles[genericEpic.ownedPetId].pet, {
+    level: genericEpic.level,
+    totalXp: genericEpic.totalXp,
+    xpIntoLevel: genericEpic.xpIntoLevel,
+    evolutionStage: genericEpic.evolutionStage,
   });
   growthRepository.saveAll(profiles);
   room.applyGrowth(growthRepository.growth(), roomHost);
@@ -602,21 +658,26 @@ async function run() {
   await waitFor(battle, '!document.hidden', 'host battle window shown');
   assert.deepEqual(battle.getContentSize(), [640, 420]);
   await verifyPet(battle, mole);
-  await evaluate(overlay, `window.petApi.setActivePet(${JSON.stringify(wizard.ownedPetId)})`);
-  await verifyPet(battle, wizard);
-  await capturePreview(battle, 'linked-room-wizard');
+  await evaluate(overlay, `window.petApi.setActivePet(${JSON.stringify(genericEpic.ownedPetId)})`);
+  await verifyPet(battle, genericEpic);
+  await capturePreview(battle, 'linked-room-epic');
   assert.equal(host.getBattleWindow(), battle, 'linked room selection updates the running window');
-  assert.equal(pets.getActivePet().ownedPetId, wizard.ownedPetId);
+  assert.equal(pets.getActivePet().ownedPetId, genericEpic.ownedPetId);
   const sharedBefore = pets.listOwnedPets();
   const selectedRoomSnapshot = room.scene();
   await assert.rejects(
-    command(battle, { type: 'GROWTH_XP_ADDED', petId: wizard.ownedPetId, amount: 99999, nowMs: 0 }),
+    command(battle, {
+      type: 'GROWTH_XP_ADDED',
+      petId: genericEpic.ownedPetId,
+      amount: 99999,
+      nowMs: 0,
+    }),
     /허용하지/,
   );
   await verifyAttack(battle, 'RoomPetReadClient → sandbox host IPC → Electron engine');
   await command(battle, { type: 'SET_DISPLAY_OPACITY', percent: 35 });
   assert.equal(
-    pets.getOwnedPet(wizard.ownedPetId).totalXp,
+    pets.getOwnedPet(genericEpic.ownedPetId).totalXp,
     384,
     'battle controls must not grant owner XP',
   );
@@ -631,7 +692,7 @@ async function run() {
   await evaluate(overlay, 'window.overlay.openBattle()');
   const reopened = host.getBattleWindow();
   await battleLoaded;
-  await verifyPet(reopened, wizard);
+  await verifyPet(reopened, genericEpic);
   await verifyStopped(reopened);
   assert.equal((await state(reopened)).preview.displayOpacity, 0.35);
   await closeFromUi(reopened, 'reopened host battle');
@@ -1000,6 +1061,111 @@ async function run() {
   await closeFromUi(hamsterWindow, 'hamster battle');
   console.log(
     'PASS hamster stages 1/2/3: crouch / hop / cannon recoil / landing / native pixels preserved / single shot and hit / manual and automatic / STOP and reduced motion / unchanged XP and HP',
+  );
+
+  await evaluate(
+    overlay,
+    `window.petApi.setActivePet(${JSON.stringify(initialWizard.ownedPetId)})`,
+  );
+  await evaluate(overlay, 'window.overlay.openBattle()');
+  const wizardWindow = host.getBattleWindow();
+  await battleLoaded;
+  await command(wizardWindow, { type: 'SET_DISPLAY_OPACITY', percent: 100 });
+  if ((await state(wizardWindow)).preview.reducedMotion)
+    await command(wizardWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  for (const evolutionStage of [0, 1, 2]) {
+    const profiles = growthRepository.loadAll();
+    Object.assign(profiles[initialWizard.ownedPetId].pet, {
+      level: 40,
+      evolutionStage,
+      totalXp: 0,
+    });
+    growthRepository.saveAll(profiles);
+    room.applyGrowth(growthRepository.growth(), roomHost);
+    await verifyPet(wizardWindow, pets.getOwnedPet(initialWizard.ownedPetId));
+    await petAction(wizardWindow, 'STOP');
+    await waitFor(
+      wizardWindow,
+      "document.querySelector('[data-action=STOP]').textContent==='OFF'",
+      'pause wizard',
+    );
+    const before = await state(wizardWindow),
+      report = await recordWizardAttack(wizardWindow, evolutionStage + 1);
+    assert.equal(report.size, evolutionStage === 2 ? 48 : 32);
+    assert.equal(report.invisible, 0);
+    assert.equal(report.faceChanges, 0);
+    assert.equal(report.impacts, 1);
+    assert.ok(report.maxMeteors > 0 && report.maxMeteors <= 24);
+    assert.ok(report.maxLift >= 24);
+    assert.equal(report.maxCast, 1);
+    assert.deepEqual(report.coverage, [true, true, true, true]);
+    assert.equal(report.cleared, true);
+    assert.equal(report.finalY, 0);
+    assert.deepEqual(report.phases, [
+      'WIZARD_CHARGE',
+      'WIZARD_CAST',
+      'WIZARD_RAIN',
+      'WIZARD_FINISH',
+      'WIZARD_BURST',
+      'WIZARD_RETURN',
+    ]);
+    assert.equal(report.sources.length, 1);
+    assert.ok(report.sources[0].endsWith(`pet_006_s${evolutionStage + 1}_idle.png`));
+    await petAction(wizardWindow, 'ATTACK');
+    for (const [phase, label, at] of [
+      ['WIZARD_RAIN', 'rain', 1350],
+      ['WIZARD_FINISH', 'meteor', 2050],
+      ['WIZARD_BURST', 'burst', 2400],
+    ]) {
+      await waitFor(
+        wizardWindow,
+        `document.querySelector('#battle-overlay').dataset.petCombatPhase==='${phase}' && Number(document.querySelector('.wizard-meteors').dataset.spellMs)>=${at}`,
+        'wizard ' + label,
+      );
+      await capturePreview(wizardWindow, `wizard-stage${evolutionStage + 1}-${label}`);
+    }
+    await waitFor(
+      wizardWindow,
+      "document.querySelector('#battle-overlay').dataset.petCombatPhase==='IDLE'&&document.querySelector('.wizard-sky').hidden&&document.querySelector('.wizard-meteors').hidden",
+      'wizard spell clears',
+    );
+    const after = await state(wizardWindow);
+    assert.equal(after.activePet.syncedTotalXp, before.activePet.syncedTotalXp);
+    assert.equal(after.enemyHpRatio, before.enemyHpRatio);
+    assert.equal(after.activePet.stage, before.activePet.stage);
+  }
+  const wizardAutomatic = await recordWizardAttack(wizardWindow, 3, true);
+  assert.equal(wizardAutomatic.impacts, 1);
+  assert.equal(wizardAutomatic.invisible, 0);
+  assert.deepEqual(wizardAutomatic.coverage, [true, true, true, true]);
+  assert.equal(wizardAutomatic.cleared, true);
+  await petAction(wizardWindow, 'STOP');
+  await waitFor(
+    wizardWindow,
+    "document.querySelector('[data-action=STOP]').textContent==='OFF'",
+    'pause wizard after auto',
+  );
+  await petAction(wizardWindow, 'ATTACK');
+  await waitFor(
+    wizardWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase==='WIZARD_RAIN'",
+    'cancel live meteor rain',
+  );
+  await petAction(wizardWindow, 'STOP');
+  await waitFor(
+    wizardWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase==='IDLE'&&document.querySelector('.wizard-sky').hidden&&document.querySelector('.wizard-meteors').hidden&&getComputedStyle(document.querySelector('.pet-viewport')).visibility==='visible'",
+    'STOP clears wizard weather and restores pet',
+  );
+  await command(wizardWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  const wizardReduced = await recordWizardAttack(wizardWindow, 3);
+  assert.equal(wizardReduced.impacts, 1);
+  assert.equal(wizardReduced.maxMeteors, 0);
+  assert.equal(wizardReduced.maxLift, 0);
+  assert.equal(wizardReduced.invisible, 0);
+  await closeFromUi(wizardWindow, 'wizard battle');
+  console.log(
+    'PASS wizard stages 1/2/3: native 32/48px forms / full-width meteor rain / single main hit / manual and automatic / STOP and reduced motion / unchanged HP and XP',
   );
 
   const standalone = new BrowserWindow({

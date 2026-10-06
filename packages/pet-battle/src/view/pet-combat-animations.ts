@@ -1,4 +1,5 @@
 import type { Point } from './layout.ts';
+import type { WizardSpellPose } from './wizard-combat.ts';
 
 export type PetCombatPhase =
   | 'IDLE'
@@ -27,9 +28,15 @@ export type PetCombatPhase =
   | 'HAMSTER_HOLD'
   | 'HAMSTER_FIRE'
   | 'HAMSTER_BURST'
-  | 'HAMSTER_RECOVER';
+  | 'HAMSTER_RECOVER'
+  | 'WIZARD_CHARGE'
+  | 'WIZARD_CAST'
+  | 'WIZARD_RAIN'
+  | 'WIZARD_FINISH'
+  | 'WIZARD_BURST'
+  | 'WIZARD_RETURN';
 export interface PetCombatAnimation {
-  readonly id: 'default' | 'mole' | 'sprout' | 'zebra' | 'hamster';
+  readonly id: 'default' | 'mole' | 'sprout' | 'zebra' | 'hamster' | 'wizard';
   readonly durationMs: number;
   readonly recoveryAt: number;
   readonly beats: readonly (readonly [number, number])[];
@@ -58,6 +65,7 @@ export interface PetCombatPose {
   foodBurst: number;
   chargeHop: number;
   shotRecoil: number;
+  wizard: WizardSpellPose | null;
 }
 
 const DEFAULT: PetCombatAnimation = {
@@ -134,11 +142,32 @@ const HAMSTER: PetCombatAnimation = {
     [900, 1200],
   ],
 };
+const WIZARD: PetCombatAnimation = {
+  id: 'wizard',
+  durationMs: 3000,
+  recoveryAt: 2500,
+  beats: [
+    [0, 250],
+    [250, 500],
+    [500, 720],
+    [720, 900],
+    [900, 1250],
+    [1250, 1600],
+    [1600, 1900],
+    [1900, 2050],
+    [2050, 2200],
+    [2200, 2340],
+    [2340, 2500],
+    [2500, 2800],
+    [2800, 3000],
+  ],
+};
 const PROFILES: Readonly<Record<string, PetCombatAnimation>> = {
   mole_digger: MOLE,
   sprout_treant: SPROUT,
   midnight_zebra: ZEBRA,
   cheek_hamster: HAMSTER,
+  star_wizard: WIZARD,
 };
 
 /** Species IDs from PetClient, never a nickname, owned ID or rarity. */
@@ -199,6 +228,7 @@ export function petCombatPose(
     foodBurst: 0,
     chargeHop: 0,
     shotRecoil: 0,
+    wizard: null,
   };
   if (t >= profile.durationMs) return pose;
   if (profile.id === 'sprout') {
@@ -265,6 +295,35 @@ export function petCombatPose(
       pose.foodFlight = smooth(t, 420, 720);
       pose.foodBurst = t >= 720 ? 1 - smooth(t, 720, 1050) : 0;
     }
+    return pose;
+  }
+  if (profile.id === 'wizard') {
+    pose.phase =
+      t < 500
+        ? 'WIZARD_CHARGE'
+        : t < 900
+          ? 'WIZARD_CAST'
+          : t < 1900
+            ? 'WIZARD_RAIN'
+            : t < 2200
+              ? 'WIZARD_FINISH'
+              : t < 2500
+                ? 'WIZARD_BURST'
+                : 'WIZARD_RETURN';
+    pose.impact = t >= 2200 && t < 2340;
+    pose.wizard = {
+      enabled: !reducedMotion,
+      elapsedMs: t,
+      charge: reducedMotion ? 0 : smooth(t, 0, 500) * (1 - smooth(t, 2200, 2600)),
+      staffRaise: reducedMotion ? 0 : smooth(t, 350, 800) * (1 - smooth(t, 2500, 2850)),
+      legSpread: reducedMotion ? 0 : smooth(t, 0, 400) * (1 - smooth(t, 2500, 2900)),
+      lift: reducedMotion ? 0 : heldPulse(t, 450, 850, 2350, 2900),
+      lean: reducedMotion || t >= 500 ? 0 : Math.sin((t / 500) * Math.PI * 2),
+      rain: reducedMotion ? 0 : smooth(t, 900, 1900),
+      finisher: reducedMotion ? 0 : smooth(t, 1900, 2200),
+      burst: reducedMotion || t < 2200 ? 0 : 1 - smooth(t, 2200, 2800),
+      intensity: reducedMotion ? 0 : smooth(t, 0, 700) * (1 - smooth(t, 2600, 3000)),
+    };
     return pose;
   }
   if (profile.id === 'default') {
