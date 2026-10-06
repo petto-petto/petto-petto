@@ -35,6 +35,19 @@ export function openBattle() {
   return api?.openBattle?.() ?? Promise.resolve();
 }
 
+export function openGacha() {
+  return api?.openGacha?.() ?? Promise.resolve();
+}
+
+export function isGachaOpen() {
+  return api?.isGachaOpen?.() ?? Promise.resolve(false);
+}
+
+export function onGachaVisibility(cb) {
+  if (!api?.onGachaVisibility) return () => {};
+  return api.onGachaVisibility(cb);
+}
+
 /**
  * 명부 조회·활성 펫 지정·활성 펫 변경 구독.
  *

@@ -1240,3 +1240,54 @@ button:focus-visible {
   color: var(--gold);
   text-shadow: 1px 1px 0 var(--outline);
 }
+
+/* ---------- 보유 펫이 없을 때 ---------- */
+/* 가짜 펫을 그리는 대신 뽑기로 가는 길을 둔다. 펫이 생기면 이 자리가 펫으로 바뀐다. */
+.empty-pet {
+  position: absolute;
+  cursor: move;
+  left: 50%;
+  top: 50%;
+  display: flex;
+  width: 232px;
+  padding: 14px 16px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  box-shadow:
+    inset 0 0 0 2px var(--parchment-ring),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%);
+}
+.empty-pet-title {
+  font-family: Galmuri11, ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+.empty-pet-body {
+  color: #5a4733;
+  font-family: Galmuri9, ui-monospace, monospace;
+  font-size: 12px;
+  text-align: center;
+}
+.empty-pet-cta {
+  margin-top: 2px;
+  padding: 8px 14px;
+  color: var(--cream);
+  font-family: Galmuri9, ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--wood);
+  border: 2px solid var(--wood-dark);
+  border-radius: 0;
+  box-shadow:
+    inset 0 2px 0 var(--wood-light),
+    inset 0 -2px 0 var(--wood-dark),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.empty-pet-cta:hover {
+  background: #795535;
+}
