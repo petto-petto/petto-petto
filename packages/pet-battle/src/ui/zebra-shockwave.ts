@@ -26,7 +26,7 @@ export class ZebraShockwave {
     }
     context.clearRect(0, 0, width, height);
     context.imageSmoothingEnabled = false;
-    const pixels = zebraShockwavePixels(pose, start, target, evolution, pixelSize);
+    const pixels = zebraShockwavePixels(pose, start, target, evolution, pixelSize, width);
     context.canvas.hidden = pixels.length === 0;
     for (const pixel of pixels) {
       context.fillStyle = pixel.color;

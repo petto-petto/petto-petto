@@ -213,6 +213,41 @@ test('초승달 줄무늬 파동은 적 방향으로 뻗고 진화별 광채만 
   assert.deepEqual(zebraShockwavePixels(reduced, origin, target, 2, 3), []);
 });
 
+test('초승달은 적을 관통해 더 멀리 뻗으며 가까운 적에게도 긴 사거리를 유지한다', () => {
+  const pose = petCombatPose(profile(), 950, origin, target);
+  for (const stage of [0, 1, 2]) {
+    const pixels = zebraShockwavePixels(pose, origin, target, stage, 3);
+    const right = Math.max(...pixels.map((p) => p.x + p.width));
+    assert.ok(
+      right >= origin.x + (target.x - origin.x) * 1.8,
+      'wave continues well beyond the enemy',
+    );
+    const nearby = { x: origin.x + 12, y: target.y };
+    const closePixels = zebraShockwavePixels(pose, origin, nearby, stage, 3);
+    assert.ok(
+      Math.max(...closePixels.map((p) => p.x + p.width)) >= nearby.x + 60,
+      'a nearby enemy must not shorten the wave to a tiny flash',
+    );
+    assert.deepEqual(pose.position, origin);
+  }
+});
+
+test('긴 파동은 작은 창의 오른쪽 안에서 마무리되어 초승달과 파편이 잘리지 않는다', () => {
+  const pose = petCombatPose(profile(), 950, origin, target);
+  for (const stage of [0, 1, 2]) {
+    const pixels = zebraShockwavePixels(
+      pose,
+      { x: 180, y: 200 },
+      { x: 260, y: 200 },
+      stage,
+      3,
+      316,
+    );
+    const right = Math.max(...pixels.map((p) => p.x + p.width));
+    assert.ok(right > 280 && right <= 316, `${stage}: extended crescent exceeds the window`);
+  }
+});
+
 test('자동 공격 중 STOP·선택 변경·정복은 충격파와 접촉 신호를 지운다', () => {
   const options: ArenaInput = {
     layout: battleLayout(636, 416),

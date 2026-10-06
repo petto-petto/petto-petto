@@ -134,6 +134,7 @@ async function recordZebraAttack(window, stage, automatic = false) {
     let forwardAt = null, forwardEndedAt = null, waveAt = null;
     let wasForward = false, maxScale = 1;
     let maxWavePixels = 0, maxWaveHeight = 0;
+    let maxWaveBeyondEnemy = 0;
     window.__zebraRecording = undefined;
     const tick = (at) => {
       const active = root.dataset.petCombatPhase !== 'IDLE';
@@ -159,7 +160,7 @@ async function recordZebraAttack(window, stage, automatic = false) {
         });
         const sorted = [...gaps].sort((a, b) => a - b);
         window.__zebraRecording = { landings, bodyChangedMax, invisibleFrames,
-          forwardAt, forwardEndedAt, waveAt, maxScale, maxWavePixels, maxWaveHeight,
+          forwardAt, forwardEndedAt, waveAt, maxScale, maxWavePixels, maxWaveHeight, maxWaveBeyondEnemy,
           sources: [...sources], frames: samples.length,
           maxGap: Math.max(...gaps), p95Gap: sorted[Math.floor(sorted.length * 0.95)],
           filmstrip: strip.toDataURL('image/png').split(',')[1] };
@@ -184,9 +185,10 @@ async function recordZebraAttack(window, stage, automatic = false) {
       if (root.dataset.petCombatPhase === 'ZEBRA_WAVE' && waveAt === null) waveAt = at - started;
       if (root.dataset.petCombatPhase === 'ZEBRA_WAVE' && samples.length % 3 === 0) {
         const wave=document.querySelector('.zebra-shockwave'),data=wave.getContext('2d').getImageData(0,0,wave.width,wave.height).data;
-        let count=0,minY=wave.height,maxY=0;
-        for(let y=0;y<wave.height;y++)for(let x=0;x<wave.width;x++)if(data[(y*wave.width+x)*4+3]>0){count++;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+        let count=0,minY=wave.height,maxY=0,maxX=0;
+        for(let y=0;y<wave.height;y++)for(let x=0;x<wave.width;x++)if(data[(y*wave.width+x)*4+3]>0){count++;minY=Math.min(minY,y);maxY=Math.max(maxY,y);maxX=Math.max(maxX,x);}
         maxWavePixels=Math.max(maxWavePixels,count);maxWaveHeight=Math.max(maxWaveHeight,maxY-minY);
+        maxWaveBeyondEnemy=Math.max(maxWaveBeyondEnemy,maxX-Number.parseFloat(document.querySelector('#enemy').style.left));
       }
       wasForward = forward;
       maxScale = Math.max(maxScale, scale);
@@ -893,6 +895,7 @@ async function run() {
       'every torso pixel must stay identical throughout the actual UI attack',
     );
     assert.equal(recording.invisibleFrames, 0, 'zebra must never disappear during the attack');
+    assert.ok(recording.maxWaveBeyondEnemy >= 60, 'the visible wave continues beyond the enemy');
     assert.equal(recording.landings.length, 2, 'UI attack must land the left hoof exactly twice');
     assert.ok(
       recording.landings[1] - recording.landings[0] >= 240,
@@ -943,8 +946,12 @@ async function run() {
         const root = document.querySelector('#battle-overlay');
         const canvas = document.querySelector('.zebra-shockwave');
         const image = document.querySelector('#pet-sheet');
+        const data=canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data;
+        let right=0;
+        for(let y=0;y<canvas.height;y++)for(let x=0;x<canvas.width;x++)if(data[(y*canvas.width+x)*4+3]>0)right=Math.max(right,x);
         return root.dataset.petAnimation === 'zebra' &&
           root.dataset.petCombatPhase === 'ZEBRA_WAVE' &&
+          right-Number.parseFloat(document.querySelector('#enemy').style.left)>=60 &&
           !canvas.hidden && image.complete && image.naturalWidth > 0 &&
             image.currentSrc.endsWith('pet_002_s${stage}_idle.png');
       })()`,

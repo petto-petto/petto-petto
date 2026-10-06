@@ -516,12 +516,18 @@ export function zebraShockwavePixels(
   target: Point,
   evolution: number,
   pixelSize: number,
+  arenaWidth?: number,
 ): ZebraPixel[] {
   if (pose.id !== 'zebra' || (pose.shockwaveProgress <= 0 && pose.hoofStomp <= 0)) return [];
   const unit = Math.max(1, Math.round(pixelSize));
   const stage = evolution === 1 || evolution === 2 ? evolution : 0;
   const bands = 2 + stage;
-  const distance = target.x - start.x;
+  const targetDistance = target.x - start.x;
+  // Carry the crescent through the enemy. Close encounters still get a visible
+  // follow-through; reserve space for the outer sparks at the window edge.
+  const requestedReach = targetDistance + Math.max(targetDistance, 24 * unit);
+  const availableReach = Math.max(0, (arenaWidth ?? Infinity) - start.x - 8 * unit);
+  const distance = Math.min(requestedReach, availableReach);
   const columns = Math.max(1, Math.ceil(distance / unit));
   const front = Math.min(columns, Math.floor(columns * pose.shockwaveProgress));
   const pixels: ZebraPixel[] = [];
