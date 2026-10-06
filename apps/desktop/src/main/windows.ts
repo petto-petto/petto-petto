@@ -317,10 +317,16 @@ export function isGachaWebContents(contents: WebContents): boolean {
 }
 
 /** 가챠 프로토타입은 오버레이와 수명·창 옵션을 공유하지 않는 독립 창이다. */
+/** 뽑기 창이 지금 보이는가. 시작 시 broadcast 를 놓친 창이 마운트할 때 묻는다. */
+export function isGachaWindowVisible(): boolean {
+  return Boolean(gachaWindow && !gachaWindow.isDestroyed() && gachaWindow.isVisible());
+}
+
 export function createGachaWindow(): BrowserWindow {
   if (gachaWindow && !gachaWindow.isDestroyed()) {
     gachaWindow.show();
     gachaWindow.focus();
+    broadcast('gacha:visibility', true);
     return gachaWindow;
   }
 
@@ -341,9 +347,15 @@ export function createGachaWindow(): BrowserWindow {
   });
   injectFonts(gachaWindow);
   void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), { query: assetsQuery() });
+  // 오버레이는 alwaysOnTop 이라, 펫이 없을 때 띄우는 안내가 이 창을 덮는다. 떠 있는
+  // 동안 숨기도록 표시 상태를 알린다.
+  gachaWindow.on('show', () => broadcast('gacha:visibility', true));
+  gachaWindow.on('hide', () => broadcast('gacha:visibility', false));
   gachaWindow.on('closed', () => {
     gachaWindow = undefined;
+    broadcast('gacha:visibility', false);
   });
+  broadcast('gacha:visibility', true);
   return gachaWindow;
 }
 

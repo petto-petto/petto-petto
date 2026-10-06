@@ -105,6 +105,14 @@ contextBridge.exposeInMainWorld('overlay', {
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
   openPetRoom: () => ipcRenderer.invoke('room:open'),
   openBattle: () => ipcRenderer.invoke('battle:open'),
+  openGacha: () => ipcRenderer.invoke('gacha:open'),
+  isGachaOpen: () => ipcRenderer.invoke('gacha:is-visible'),
+  /** 뽑기 창이 떠 있는 동안 오버레이 안내가 그 창을 가리지 않도록 표시 상태를 받는다. */
+  onGachaVisibility: (listener) => {
+    const wrapped = (_event, visible) => listener(Boolean(visible));
+    ipcRenderer.on('gacha:visibility', wrapped);
+    return () => ipcRenderer.removeListener('gacha:visibility', wrapped);
+  },
   loadGrowth: () => ipcRenderer.invoke('growth:load-all'),
   saveGrowth: (snapshots) => ipcRenderer.invoke('growth:save-all', snapshots),
   clearGrowth: () => ipcRenderer.invoke('growth:clear-all'),

@@ -1,59 +1,52 @@
 /**
- * 임시 초기 펫 지급.
+ * 첫 실행 지원과 활성 펫 보정.
  *
- * ## 왜 필요한가
+ * ## 첫 실행
  *
- * `PetClient` 는 종류 6종만 등록하고 **개체는 주지 않는다**(`docs/pet-client-handoff.md`).
- * 그래서 새 설치에는 보유 펫이 0마리, 활성 펫이 `null` 이다. 오버레이가 그릴 대상도,
- * meta 정보 화면이 읽을 펫도 없다.
+ * 새 사용자에게 펫을 그냥 주지 않는다. 뽑기 1회분 재화를 주고 뽑기 화면으로 보낸다 —
+ * 첫 펫을 뽑는 경험 자체가 제품의 시작점이다.
  *
- * ## 임시인 이유
+ * "첫 실행"을 따로 기록하지 않는다. `grantOnce` 의 멱등 키가 곧 마커다. 앱을 몇 번 켜든
+ * 지급도 안내도 한 번뿐이고, 플래그를 따로 두면 그 값과 실제 지급 여부가 어긋날 수 있다.
  *
- * 초기 지급은 기획 결정이다 — 설치할 때 한 마리를 주는지, 첫 뽑기로만 얻는지, 어떤 등급을
- * 주는지가 정해지지 않았다. 그때까지 COMMON 한 종을 무작위로 한 마리 준다.
- * **규칙이 정해지면 이 파일을 지운다.**
+ * ## 활성 펫 보정
+ *
+ * 뽑기와 합성은 비활성 개체를 만든다. 명부에 개체가 있는데 아무도 활성이 아니면 `PetClient`
+ * 의 `getActivePet()` 이 계속 null 이라, 그 값을 읽는 쪽(meta 정보 화면)이 펫을 못 찾는다.
  */
 
-import type { PetClient } from '@pet/client';
+import type { PetClient, TokenClient } from '@pet/client';
 
-/** 0 이상 `count` 미만의 정수를 고른다. 테스트가 결과를 고정할 수 있도록 주입받는다. */
-export type PickIndex = (count: number) => number;
+/** 뽑기 1회 비용. `@pet/gacha` 의 `count * 100_000` 과 같아야 한다. */
+export const FIRST_DRAW_GRANT = 100_000;
 
-export type StarterPetOutcome =
-  | { kind: 'granted'; ownedPetId: string; speciesId: string }
-  | { kind: 'activated'; ownedPetId: string }
-  | { kind: 'already_ready' }
-  | { kind: 'no_species' };
+const FIRST_DRAW_KEY = 'starter:first-draw';
 
-/**
- * 보유 펫이 없으면 한 마리를 지급하고, 있는데 활성 펫만 없으면 첫 개체를 활성화한다.
- *
- * 두 경우를 함께 다루는 이유: 뽑기로 받은 개체는 비활성 상태로 생기므로, 지급만으로는
- * 활성 펫이 `null` 인 상태가 그대로 남는다. 오버레이에는 둘 다 "그릴 펫이 없음"이다.
- */
-export function ensureStarterPet(pets: PetClient, pick: PickIndex): StarterPetOutcome {
-  if (pets.countOwnedPets() === 0) {
-    const candidates = pets.listSpecies('COMMON');
-    if (candidates.length === 0) return { kind: 'no_species' };
-    const species = candidates[clampIndex(pick(candidates.length), candidates.length)];
-    if (!species) return { kind: 'no_species' };
+export type StarterOutcome =
+  /** 처음 온 사용자다. 재화를 줬으니 뽑기 화면으로 보낸다. */
+  | { kind: 'granted'; amount: number }
+  /** 이미 받은 적이 있다. */
+  | { kind: 'already_granted' };
 
-    const [granted] = pets.createOwnedPets([species.speciesId]);
-    if (!granted) return { kind: 'no_species' };
-    pets.setActivePet(granted.ownedPetId);
-    return { kind: 'granted', ownedPetId: granted.ownedPetId, speciesId: species.speciesId };
-  }
-
-  if (pets.getActivePet() !== null) return { kind: 'already_ready' };
-
-  const [first] = pets.listOwnedPets();
-  if (!first) return { kind: 'already_ready' };
-  pets.setActivePet(first.ownedPetId);
-  return { kind: 'activated', ownedPetId: first.ownedPetId };
+/** 첫 실행이면 뽑기 1회분을 지급한다. 화면을 여는 일은 호출자가 한다. */
+export function grantFirstDrawCurrency(tokens: TokenClient): StarterOutcome {
+  const granted = tokens.grantOnce(FIRST_DRAW_KEY, FIRST_DRAW_GRANT, '첫 뽑기 지원');
+  return granted ? { kind: 'granted', amount: FIRST_DRAW_GRANT } : { kind: 'already_granted' };
 }
 
-/** 주입된 함수가 범위를 벗어난 값을 줘도 목록 밖을 가리키지 않게 한다. */
-function clampIndex(value: number, count: number): number {
-  if (!Number.isInteger(value) || value < 0) return 0;
-  return value >= count ? count - 1 : value;
+export type ActivePetOutcome =
+  { kind: 'activated'; ownedPetId: string } | { kind: 'already_active' } | { kind: 'no_pets' };
+
+/**
+ * 활성 펫이 없으면 보유한 첫 개체를 활성화한다.
+ *
+ * 앱 시작과 보유 펫이 바뀐 직후에 모두 불린다. 시작할 때만 보정하면 첫 뽑기를 하고도
+ * 앱을 다시 켤 때까지 활성 펫이 없는 채로 남는다. 이미 고른 펫은 건드리지 않는다.
+ */
+export function ensureActivePet(pets: PetClient): ActivePetOutcome {
+  if (pets.getActivePet() !== null) return { kind: 'already_active' };
+  const [first] = pets.listOwnedPets();
+  if (!first) return { kind: 'no_pets' };
+  pets.setActivePet(first.ownedPetId);
+  return { kind: 'activated', ownedPetId: first.ownedPetId };
 }

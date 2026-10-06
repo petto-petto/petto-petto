@@ -7,7 +7,8 @@ import PetSprite from './PetSprite.jsx';
 import LevelUpFx from './LevelUpFx.jsx';
 import EvolutionFx from './EvolutionFx.jsx';
 import Vfx from './Vfx.jsx';
-import { setInteractive, dragStart, dragMove, dragEnd } from '../platform/bridge.js';
+import { dragStart, dragMove, dragEnd } from '../platform/bridge.js';
+import { useOverlayHitTest } from './useHitTest.js';
 import { stageForEvolution, randomClick } from '../pets/catalog.ts';
 
 export default function Overlay({ g, activePet, roster, activeId, onSelectPet }) {
@@ -18,31 +19,9 @@ export default function Overlay({ g, activePet, roster, activeId, onSelectPet })
   const drag = useRef(null);
   const vfxRef = useRef(null);
   const petSpriteRef = useRef(null);
-  const menuOpenRef = useRef(false);
-  const lastSent = useRef(null);
 
-  // 연속 hit-test: 커서가 .io(펫/메뉴/패널) 위이거나 메뉴가 열려 있으면 입력 활성화, 그 외엔 클릭 통과.
-  useEffect(() => {
-    const onMove = (e) => {
-      const el = document.elementFromPoint(e.clientX, e.clientY);
-      const over = !!(el && el.closest && el.closest('.io'));
-      const want = over || menuOpenRef.current;
-      if (want !== lastSent.current) {
-        lastSent.current = want;
-        setInteractive(want);
-      }
-    };
-    window.addEventListener('mousemove', onMove);
-    return () => window.removeEventListener('mousemove', onMove);
-  }, []);
-
-  useEffect(() => {
-    menuOpenRef.current = menuOpen;
-    if (menuOpen && lastSent.current !== true) {
-      lastSent.current = true;
-      setInteractive(true);
-    }
-  }, [menuOpen]);
+  // 빈 상태 패널도 같은 규칙을 써야 해서 훅으로 뺐다(`useHitTest.js`).
+  useOverlayHitTest(menuOpen);
 
   // VFX 트리거
   useEffect(() => {

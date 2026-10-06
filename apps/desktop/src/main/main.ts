@@ -41,7 +41,7 @@ import { registerDexIpc } from './ipc/dex.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
-import { ensureStarterPet } from './starter-pet.ts';
+import { ensureActivePet, grantFirstDrawCurrency } from './starter-pet.ts';
 import {
   applyOverlayVisibility,
   beginOverlayDrag,
@@ -51,6 +51,7 @@ import {
   createCombineWindow,
   createDexWindow,
   createGachaWindow,
+  isGachaWindowVisible,
   isDexWebContents,
   isGachaWebContents,
   isRoomWebContents,
@@ -183,6 +184,12 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
+  // 보유 펫이 0마리일 때 오버레이가 여기로 보낸다. 뽑기 창을 닫아도 돌아올 길이 있어야
+  // 한다 — 메뉴에도 트레이에도 뽑기 진입점이 없다.
+  ipcMain.handle('gacha:open', () => {
+    createGachaWindow();
+  });
+  ipcMain.handle('gacha:is-visible', () => isGachaWindowVisible());
   // 뽑기·합성·도감 화면의 "펫룸" 버튼. 그 세 창에서 온 요청만 받는다.
   ipcMain.handle('window:backToRoom', (event) => {
     if (
@@ -364,21 +371,24 @@ app.whenReady().then(async () => {
   // 공통 펫 데이터. 펫 담당이 만든 `PetClient` 를 같은 DB 위에 한 번만 조립해 나눠 준다.
   const pets: PetClient = new SqlitePetClient(new PetRepository(database));
   const growth = new SqliteGrowthReadClient(growthRepository);
-  // 임시: 새 설치에는 보유 펫이 0마리라 오버레이도 meta 도 그릴 펫이 없다. 초기 지급
-  // 규칙이 정해지면 `starter-pet.ts` 와 함께 지운다.
-  const starter = ensureStarterPet(pets, (count) => Math.floor(Math.random() * count));
-  if (starter.kind !== 'already_ready') console.log(`[PET] 초기 펫 ${starter.kind}`);
   const currencyRepository = new CurrencyRepository(database);
   const tokens: TokenClient = new SqliteTokenClient(
     new TokenRepository(database),
     currencyRepository,
   );
   const featureTransaction = <T>(work: () => T): T => database.transaction(work);
+
+  // 첫 펫은 주지 않고 직접 뽑게 한다. 처음 켜면 뽑기 1회분을 주고 아래에서 창을 연다.
+  // 멱등 키가 마커라 몇 번 켜도 한 번뿐이다.
+  const starter = grantFirstDrawCurrency(tokens);
+  ensureActivePet(pets);
   // 뽑기·합성이 보유 펫을 바꾸면 펫룸 명부를 다시 읽고, 새 개체에 성장 행을 붙인다.
   // 이미 저장된 뽑기·합성 결과를 실패로 돌려보내면 안 되므로 여기서 던지지 않는다.
   const petsChanged = (): void => {
     if (!room) return;
     try {
+      // 뽑기·합성이 만든 개체는 비활성이다. 첫 펫이면 여기서 활성이 정해진다.
+      ensureActivePet(pets);
       room.reload(roomHost);
       room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
     } catch (error) {
@@ -477,7 +487,8 @@ app.whenReady().then(async () => {
   buildTray(state);
   buildAppMenu(state);
   applyOverlayVisibility(state.meta.settings.overlayVisible);
-  if (shouldOpenGachaPrototype()) createGachaWindow();
+  // 처음 온 사용자는 뽑기 화면으로 보낸다.
+  if (starter.kind === 'granted' || shouldOpenGachaPrototype()) createGachaWindow();
   if (shouldOpenCombinePrototype()) createCombineWindow();
 
   // 앱 시작 집계. 이 스캔은 이번 실행의 기준점만 만들고 아무것도 적립하지 않는다. 앱이 꺼져 있던

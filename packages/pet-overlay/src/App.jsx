@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useGrowth } from './growth/useGrowth.js';
 import Overlay from './overlay/Overlay.jsx';
+import EmptyPet from './overlay/EmptyPet.jsx';
 import { getPet, DEFAULT_PET_KEY } from './pets/catalog.ts';
 import {
   isElectron,
   onActivePetChanged,
+  isGachaOpen,
+  onGachaVisibility,
   onRosterChanged,
   roomScene,
   setActivePet,
@@ -39,13 +42,19 @@ const INITIAL_ROSTER = isElectron ? [] : PREVIEW_ROSTER;
 export default function App() {
   const [roster, setRoster] = useState(INITIAL_ROSTER);
   const [activeId, setActiveId] = useState(INITIAL_ROSTER[0]?.ownedPetId ?? null);
+  // 명부가 아직 안 온 것과 보유 펫이 0마리인 것은 다르다. 전자는 비우고, 후자는 안내한다.
+  const [rosterLoaded, setRosterLoaded] = useState(!isElectron);
+  // 오버레이는 alwaysOnTop 이라 안내가 뽑기 창을 덮는다. 떠 있는 동안은 그리지 않는다.
+  const [gachaOpen, setGachaOpen] = useState(false);
 
   useEffect(() => {
     let alive = true;
 
     void roomScene()
       .then((scene) => {
-        if (!alive || !scene?.pets?.length) return;
+        if (!alive) return;
+        setRosterLoaded(true);
+        if (!scene?.pets?.length) return;
         setRoster(scene.pets);
         setActiveId(scene.pets.find((pet) => pet.isActive)?.ownedPetId ?? scene.pets[0].ownedPetId);
       })
@@ -74,10 +83,19 @@ export default function App() {
       if (Array.isArray(views)) setRoster(views);
     });
 
+    // 시작 시 보내는 broadcast 는 이 창이 구독하기 전에 지나간다. 현재 상태를 한 번 묻는다.
+    void isGachaOpen()
+      .then((open) => {
+        if (alive) setGachaOpen(Boolean(open));
+      })
+      .catch(() => undefined);
+    const offGacha = onGachaVisibility(setGachaOpen);
+
     return () => {
       alive = false;
       off();
       offRoster();
+      offGacha();
     };
   }, []);
 
@@ -87,6 +105,12 @@ export default function App() {
       ? { ownedPetId: activeView.ownedPetId, petKey: activeView.slug, name: activeView.name }
       : null,
   );
+
+  // 보유 펫이 0마리다. 첫 펫은 뽑기로만 생기는데, 뽑기 창을 닫고 나면 그 창을 다시 열
+  // 길이 여기뿐이라 안내를 띄운다. 뽑기 창이 떠 있는 동안은 가리지 않도록 비운다.
+  if (rosterLoaded && roster.length === 0) {
+    return gachaOpen ? null : <EmptyPet />;
+  }
 
   // 명부가 아직 안 왔다. 투명 창이라 아무것도 안 그리는 편이 대역을 한 프레임 비추는 것보다 낫다.
   if (!activeView) return null;
