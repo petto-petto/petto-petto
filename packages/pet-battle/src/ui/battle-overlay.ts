@@ -31,6 +31,9 @@ import { hamsterBodyProjection, hamsterMouthPosition } from '../view/hamster-com
 import { WizardSprite } from './wizard-sprite.ts';
 import { WizardMeteors } from './wizard-meteors.ts';
 import { wizardBodyProjection } from '../view/wizard-combat.ts';
+import { SquirrelSprite } from './squirrel-sprite.ts';
+import { SquirrelForest } from './squirrel-forest.ts';
+import { squirrelBodyProjection } from '../view/squirrel-combat.ts';
 
 declare global {
   interface Window {
@@ -67,6 +70,12 @@ const hamsterSprite = new HamsterSprite(hamsterCanvas);
 const hamsterFood = new HamsterFood(required<HTMLCanvasElement>('.hamster-food'));
 const wizardCanvas = required<HTMLCanvasElement>('.wizard-native-sprite');
 const wizardSprite = new WizardSprite(wizardCanvas);
+const squirrelCanvas = required<HTMLCanvasElement>('.squirrel-native-sprite');
+const squirrelSprite = new SquirrelSprite(squirrelCanvas);
+const squirrelForest = new SquirrelForest(
+  required<HTMLCanvasElement>('.squirrel-grove'),
+  required<HTMLCanvasElement>('.squirrel-storm'),
+);
 const wizardMeteors = new WizardMeteors(
   required<HTMLCanvasElement>('.wizard-sky'),
   required<HTMLCanvasElement>('.wizard-meteors'),
@@ -552,7 +561,7 @@ function paintArena(next: BattleState): void {
   pet.style.setProperty('--wizard-tilt', `${wizardBody.tilt}deg`);
   pet.style.setProperty('--wizard-shadow-scale', String(wizardBody.shadowScale));
   pet.style.setProperty('--wizard-shadow-opacity', String(wizardBody.shadowOpacity));
-  const wizardGround = Number.parseFloat(pet.style.getPropertyValue('--pet-ground-offset')) || 0;
+  const spriteGround = Number.parseFloat(pet.style.getPropertyValue('--pet-ground-offset')) || 0;
   wizardMeteors.paint(
     frame.petAnimation,
     next.activePet?.evolutionStage ?? 0,
@@ -562,7 +571,7 @@ function paintArena(next: BattleState): void {
       size: layout.petSize,
       caster: {
         x: petX + layout.petSize / 2 + wizardBody.x,
-        y: petY - layout.petSize / 2 + wizardGround + wizardBody.y,
+        y: petY - layout.petSize / 2 + spriteGround + wizardBody.y,
       },
       casterFoot: { x: petX + layout.petSize / 2, y: petY },
       target: {
@@ -574,6 +583,40 @@ function paintArena(next: BattleState): void {
     next.preview.displayOpacity,
   );
   const hamsterPlacement = { x: petX, foot: petY, width: layout.width, height: layout.height };
+  const squirrelBody = squirrelBodyProjection(
+    frame.petAnimation,
+    next.activePet?.evolutionStage ?? 0,
+    layout.petSize,
+    hamsterPlacement,
+  );
+  pet.style.setProperty('--squirrel-x', `${squirrelBody.x}px`);
+  pet.style.setProperty('--squirrel-y', `${squirrelBody.y}px`);
+  pet.style.setProperty('--squirrel-sx', String(squirrelBody.scaleX));
+  pet.style.setProperty('--squirrel-sy', String(squirrelBody.scaleY));
+  pet.style.setProperty('--squirrel-tilt', `${squirrelBody.tilt}deg`);
+  pet.style.setProperty('--squirrel-shadow-scale', String(squirrelBody.shadowScale));
+  pet.style.setProperty('--squirrel-shadow-opacity', String(squirrelBody.shadowOpacity));
+  squirrelForest.paint(
+    frame.petAnimation,
+    next.activePet?.evolutionStage ?? 0,
+    {
+      width: layout.width,
+      height: layout.height,
+      size: layout.petSize,
+      caster: {
+        x: petX + layout.petSize / 2 + squirrelBody.x,
+        y: petY - layout.petSize / 2 + spriteGround + squirrelBody.y,
+      },
+      casterFoot: { x: petX + layout.petSize / 2, y: petY },
+      target: {
+        x: enemyX + layout.enemyFrameSize * 0.36,
+        y: enemyY - base.enemyHeight * layout.scale * 0.55,
+      },
+      targetFoot: { x: enemyX + layout.enemyFrameSize * 0.36, y: enemyY },
+    },
+    next.preview.displayOpacity,
+    squirrelSprite.ghostFor(assetUrl(base.petIdleAsset)),
+  );
   const hamsterBody = hamsterBodyProjection(frame.petAnimation, layout.petSize, hamsterPlacement);
   pet.style.setProperty('--hamster-x', `${hamsterBody.x}px`);
   pet.style.setProperty('--hamster-y', `${hamsterBody.y}px`);
@@ -684,6 +727,8 @@ function paintArena(next: BattleState): void {
   const hamsterAttacking =
     frame.petAnimation.id === 'hamster' && frame.petAnimation.phase !== 'IDLE';
   const wizardAttacking = frame.petAnimation.id === 'wizard' && frame.petAnimation.phase !== 'IDLE';
+  const squirrelAttacking =
+    frame.petAnimation.id === 'squirrel' && frame.petAnimation.phase !== 'IDLE';
   const scene = deriveBattleScene(
     next,
     sproutAttacking ||
@@ -699,14 +744,20 @@ function paintArena(next: BattleState): void {
   petSheet.style.transform = walking
     ? `translateX(${-((frame.petStep ?? 0) % scene.petSprite.frameCount) * layout.petSize}px)`
     : '';
-  if (sproutAttacking || zebraAttacking || hamsterAttacking || wizardAttacking) {
+  if (
+    sproutAttacking ||
+    zebraAttacking ||
+    hamsterAttacking ||
+    wizardAttacking ||
+    squirrelAttacking
+  ) {
     petSheet.classList.remove('animated-sheet');
     const decoded =
       petSheet.complete &&
       petSheet.currentSrc === petSheet.src &&
       petSheet.naturalWidth === petSheet.naturalHeight * scene.petSprite.frameCount;
     const spriteFrame =
-      zebraAttacking || hamsterAttacking || wizardAttacking
+      zebraAttacking || hamsterAttacking || wizardAttacking || squirrelAttacking
         ? 0
         : decoded
           ? Math.round(frame.petAnimation.spriteProgress * (scene.petSprite.frameCount - 1))
@@ -737,8 +788,14 @@ function paintArena(next: BattleState): void {
     next.activePet?.evolutionStage ?? 0,
   );
   wizardCanvas.style.opacity = nativeWizard ? '1' : '0';
+  const nativeSquirrel = squirrelSprite.paint(
+    petSheet,
+    frame.petAnimation,
+    next.activePet?.evolutionStage ?? 0,
+  );
+  squirrelCanvas.style.opacity = nativeSquirrel ? '1' : '0';
   petViewport.style.visibility =
-    nativeSlap || nativeHoof || nativeCheeks || nativeWizard ? 'hidden' : '';
+    nativeSlap || nativeHoof || nativeCheeks || nativeWizard || nativeSquirrel ? 'hidden' : '';
   paintHpBar(hpMotion.frame(hpInput));
 }
 

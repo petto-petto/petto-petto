@@ -133,6 +133,7 @@ async function recordZebraAttack(window, stage, automatic = false) {
     const baseWidth = hoof.getBoundingClientRect().width;
     let forwardAt = null, forwardEndedAt = null, waveAt = null;
     let wasForward = false, maxScale = 1;
+    let maxWavePixels = 0, maxWaveHeight = 0;
     window.__zebraRecording = undefined;
     const tick = (at) => {
       const active = root.dataset.petCombatPhase !== 'IDLE';
@@ -158,7 +159,7 @@ async function recordZebraAttack(window, stage, automatic = false) {
         });
         const sorted = [...gaps].sort((a, b) => a - b);
         window.__zebraRecording = { landings, bodyChangedMax, invisibleFrames,
-          forwardAt, forwardEndedAt, waveAt, maxScale,
+          forwardAt, forwardEndedAt, waveAt, maxScale, maxWavePixels, maxWaveHeight,
           sources: [...sources], frames: samples.length,
           maxGap: Math.max(...gaps), p95Gap: sorted[Math.floor(sorted.length * 0.95)],
           filmstrip: strip.toDataURL('image/png').split(',')[1] };
@@ -181,6 +182,12 @@ async function recordZebraAttack(window, stage, automatic = false) {
       if (forward && forwardAt === null) forwardAt = at - started;
       if (wasForward && !forward) forwardEndedAt = at - started;
       if (root.dataset.petCombatPhase === 'ZEBRA_WAVE' && waveAt === null) waveAt = at - started;
+      if (root.dataset.petCombatPhase === 'ZEBRA_WAVE' && samples.length % 3 === 0) {
+        const wave=document.querySelector('.zebra-shockwave'),data=wave.getContext('2d').getImageData(0,0,wave.width,wave.height).data;
+        let count=0,minY=wave.height,maxY=0;
+        for(let y=0;y<wave.height;y++)for(let x=0;x<wave.width;x++)if(data[(y*wave.width+x)*4+3]>0){count++;minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+        maxWavePixels=Math.max(maxWavePixels,count);maxWaveHeight=Math.max(maxWaveHeight,maxY-minY);
+      }
       wasForward = forward;
       maxScale = Math.max(maxScale, scale);
       const visible = Number(hoof.style.opacity) === 1 ||
@@ -344,6 +351,65 @@ async function recordWizardAttack(window, stage, automatic = false) {
   return report;
 }
 
+async function recordSquirrelAttack(window, stage, automatic = false) {
+  await evaluate(
+    window,
+    `(() => {
+    const root=document.querySelector('#battle-overlay'),native=document.querySelector('.squirrel-native-sprite');
+    const image=document.querySelector('#pet-sheet'),grove=document.querySelector('.squirrel-grove'),storm=document.querySelector('.squirrel-storm'),pet=document.querySelector('#pet');
+    const size=image.naturalHeight,ref=document.createElement('canvas');ref.width=ref.height=size;
+    const ctx=ref.getContext('2d',{willReadFrequently:true});ctx.drawImage(image,0,0,size,size,0,0,size,size);
+    const base=ctx.getImageData(0,0,size,size).data;
+    let started=false,last=0,invisible=0,faceChanges=0,impacts=0,previousHit=false,maxClones=0,maxBlades=0,maxLeap=0,maxSweep=0;
+    let checkedCoverage=false,coverage=[false,false,false,false];const phases=[],gaps=[],sources=new Set();
+    window.__squirrelRecording=undefined;
+    const tick=at=>{
+      const phase=root.dataset.petCombatPhase;if(!started&&phase==='IDLE'){requestAnimationFrame(tick);return;}
+      started=true;if(last)gaps.push(at-last);last=at;
+      if(phase==='IDLE'){
+        const sorted=[...gaps].sort((a,b)=>a-b);
+        window.__squirrelRecording={size,invisible,faceChanges,impacts,maxClones,maxBlades,maxLeap,maxSweep,coverage,phases,sources:[...sources],
+          p95Gap:sorted[Math.floor(sorted.length*.95)],cleared:grove.hidden&&storm.hidden,
+          finalY:Number.parseFloat(pet.style.getPropertyValue('--squirrel-y'))||0};return;
+      }
+      if(phases.at(-1)!==phase)phases.push(phase);
+      const used=Number(native.style.opacity)===1;
+      if(!used&&getComputedStyle(document.querySelector('.pet-viewport')).visibility!=='visible')invisible++;
+      if(used){
+        const pixels=native.getContext('2d').getImageData(0,0,native.width,native.height).data;
+        const from=size===48?18:10,to=size===48?28:18;let changed=0;
+        for(let y=8;y<22;y++)for(let x=from;x<=to;x++){
+          const p=(y*native.width+x)*4,b=(y*size+x)*4;if(pixels.slice(p,p+4).some((v,c)=>v!==base[b+c]))changed++;
+        }faceChanges=Math.max(faceChanges,changed);
+      }
+      const hit=root.dataset.beat==='IMPACT';if(hit&&!previousHit)impacts++;previousHit=hit;
+      maxClones=Math.max(maxClones,Number(storm.dataset.cloneCount)||0);maxBlades=Math.max(maxBlades,Number(storm.dataset.bladeCount)||0);
+      maxLeap=Math.max(maxLeap,-Number.parseFloat(pet.style.getPropertyValue('--squirrel-y'))||0);maxSweep=Math.max(maxSweep,Number(native.dataset.tailSweep)||0);
+      if(!checkedCoverage&&phase==='SQUIRREL_CLONES'&&Number(storm.dataset.spellMs)>1300){
+        checkedCoverage=true;const data=grove.getContext('2d').getImageData(0,0,grove.width,grove.height).data;
+        for(let y=0;y<grove.height;y++)for(let x=0;x<grove.width;x++){
+          const p=(y*grove.width+x)*4;
+          if(data[p+3]>0&&(data[p]>100||data[p+1]>100))coverage[Math.min(3,Math.floor(x/grove.width*4))]=true;
+        }
+      }
+      sources.add(image.currentSrc);requestAnimationFrame(tick);
+    };requestAnimationFrame(tick);
+  })()`,
+  );
+  await petAction(window, automatic ? 'START' : 'ATTACK');
+  await waitFor(
+    window,
+    'Boolean(window.__squirrelRecording)',
+    'complete squirrel spell recording',
+    15000,
+  );
+  const report = await evaluate(window, 'window.__squirrelRecording');
+  console.log(
+    `SQUIRREL RECORD stage ${stage} ${automatic ? 'automatic' : 'manual'}: ${JSON.stringify(report)}`,
+  );
+  return report;
+}
+
 async function waitForImpact(window) {
   await waitFor(
     window,
@@ -496,6 +562,17 @@ async function capturePreview(window, name) {
   console.log(`ARTIFACT ${filePath}`);
 }
 
+async function nextAttackPose(window) {
+  // A slow capturePage must not make a later, short pose disappear from the
+  // screenshot test. Continuous recorders above still verify the full sequence.
+  await waitFor(
+    window,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase==='IDLE'",
+    'previous pose completes',
+  );
+  await petAction(window, 'ATTACK');
+}
+
 async function captureHamsterPose(window, expression, name) {
   // capturePage can finish after a short beat has passed. Sample each pose in
   // its own attack; the separate continuous recorder verifies the full sequence.
@@ -538,13 +615,13 @@ function cleanup() {
 }
 
 const watchdog = setTimeout(() => {
-  console.error('FAIL battle host smoke exceeded 150 seconds');
+  console.error('FAIL battle host smoke exceeded 180 seconds');
   try {
     cleanup();
   } finally {
     app.exit(1);
   }
-}, 150_000);
+}, 180_000);
 
 async function run() {
   const desktop = (file) =>
@@ -674,7 +751,19 @@ async function run() {
     }),
     /허용하지/,
   );
-  await verifyAttack(battle, 'RoomPetReadClient → sandbox host IPC → Electron engine');
+  // The shared EPIC fixture is now a custom acorn squirrel. Generic fallback
+  // coverage remains in the standalone host; this host exercises its real species.
+  await petAction(battle, 'STOP');
+  await waitFor(
+    battle,
+    "document.querySelector('[data-action=STOP]').textContent==='OFF'",
+    'pause shared squirrel',
+  );
+  const linkedSquirrel = await recordSquirrelAttack(battle, 2, true);
+  assert.equal(linkedSquirrel.impacts, 1);
+  assert.equal(linkedSquirrel.invisible, 0);
+  await petAction(battle, 'STOP');
+  await verifyStopped(battle);
   await command(battle, { type: 'SET_DISPLAY_OPACITY', percent: 35 });
   assert.equal(
     pets.getOwnedPet(genericEpic.ownedPetId).totalXp,
@@ -840,12 +929,14 @@ async function run() {
       `zebra stage ${stage} isolates its left hoof from the torso`,
     );
     await capturePreview(zebraWindow, `zebra-stage${stage}-left-hoof-lift`);
+    await nextAttackPose(zebraWindow);
     await waitFor(
       zebraWindow,
       `document.querySelector('#battle-overlay').dataset.petCombatPhase === 'ZEBRA_APPROACH' && Number(document.querySelector('#pet').style.getPropertyValue('--zebra-forward-scale')) > 1.08`,
       `zebra stage ${stage} viewer-facing pop`,
     );
     await capturePreview(zebraWindow, `zebra-stage${stage}-front-pop`);
+    await nextAttackPose(zebraWindow);
     await waitFor(
       zebraWindow,
       `(() => {
@@ -871,9 +962,15 @@ async function run() {
         return { count: xs.length, height: Math.max(...ys) - Math.min(...ys), width: Math.max(...xs) - Math.min(...xs) };
       })()`,
     );
-    assert.ok(effect.count > previousWavePixels, `stage ${stage} adds visible shockwave details`);
-    previousWavePixels = effect.count;
-    if (stage === 3) assert.ok(effect.height >= 60, 'stage 3 renders a tall crescent arc');
+    assert.ok(effect.count > 0, 'captured wave has visible pixels');
+    // Compare the continuous attack maxima, not different moments in a growing wave.
+    assert.ok(
+      recording.maxWavePixels > previousWavePixels,
+      `stage ${stage} adds visible shockwave details`,
+    );
+    previousWavePixels = recording.maxWavePixels;
+    if (stage === 3)
+      assert.ok(recording.maxWaveHeight >= 60, 'stage 3 renders a tall crescent arc');
     await capturePreview(zebraWindow, `zebra-stage${stage}-shockwave`);
     await waitFor(
       zebraWindow,
@@ -1111,12 +1208,12 @@ async function run() {
     ]);
     assert.equal(report.sources.length, 1);
     assert.ok(report.sources[0].endsWith(`pet_006_s${evolutionStage + 1}_idle.png`));
-    await petAction(wizardWindow, 'ATTACK');
     for (const [phase, label, at] of [
       ['WIZARD_RAIN', 'rain', 1350],
       ['WIZARD_FINISH', 'meteor', 2050],
       ['WIZARD_BURST', 'burst', 2400],
     ]) {
+      await nextAttackPose(wizardWindow);
       await waitFor(
         wizardWindow,
         `document.querySelector('#battle-overlay').dataset.petCombatPhase==='${phase}' && Number(document.querySelector('.wizard-meteors').dataset.spellMs)>=${at}`,
@@ -1166,6 +1263,113 @@ async function run() {
   await closeFromUi(wizardWindow, 'wizard battle');
   console.log(
     'PASS wizard stages 1/2/3: native 32/48px forms / full-width meteor rain / single main hit / manual and automatic / STOP and reduced motion / unchanged HP and XP',
+  );
+
+  await evaluate(
+    overlay,
+    `window.petApi.setActivePet(${JSON.stringify(initialGenericEpic.ownedPetId)})`,
+  );
+  await evaluate(overlay, 'window.overlay.openBattle()');
+  const squirrelWindow = host.getBattleWindow();
+  await battleLoaded;
+  await command(squirrelWindow, { type: 'SET_DISPLAY_OPACITY', percent: 100 });
+  if ((await state(squirrelWindow)).preview.reducedMotion)
+    await command(squirrelWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  for (const evolutionStage of [0, 1, 2]) {
+    const profiles = growthRepository.loadAll();
+    Object.assign(profiles[initialGenericEpic.ownedPetId].pet, {
+      level: 40,
+      evolutionStage,
+      totalXp: 0,
+    });
+    growthRepository.saveAll(profiles);
+    room.applyGrowth(growthRepository.growth(), roomHost);
+    await verifyPet(squirrelWindow, pets.getOwnedPet(initialGenericEpic.ownedPetId));
+    await petAction(squirrelWindow, 'STOP');
+    await waitFor(
+      squirrelWindow,
+      "document.querySelector('[data-action=STOP]').textContent==='OFF'",
+      'pause squirrel',
+    );
+    const before = await state(squirrelWindow),
+      report = await recordSquirrelAttack(squirrelWindow, evolutionStage + 1);
+    assert.equal(report.size, evolutionStage === 2 ? 48 : 32);
+    assert.equal(report.invisible, 0);
+    assert.equal(report.faceChanges, 0);
+    assert.equal(report.impacts, 1);
+    assert.equal(report.maxClones, 2 + evolutionStage);
+    assert.ok(report.maxBlades > 0 && report.maxBlades <= 24);
+    assert.ok(report.maxLeap >= 24);
+    assert.equal(report.maxSweep, 1);
+    assert.deepEqual(report.coverage, [true, true, true, true]);
+    assert.equal(report.cleared, true);
+    assert.equal(report.finalY, 0);
+    assert.deepEqual(report.phases, [
+      'SQUIRREL_SIGN',
+      'SQUIRREL_DOMAIN',
+      'SQUIRREL_CLONES',
+      'SQUIRREL_SEAL',
+      'SQUIRREL_BURST',
+      'SQUIRREL_RETURN',
+    ]);
+    assert.equal(report.sources.length, 1);
+    assert.ok(report.sources[0].endsWith(`pet_001_s${evolutionStage + 1}_idle.png`));
+    for (const [phase, label, at] of [
+      ['SQUIRREL_CLONES', 'forest', 1250],
+      ['SQUIRREL_SEAL', 'seal', 2100],
+      ['SQUIRREL_BURST', 'burst', 2480],
+    ]) {
+      await nextAttackPose(squirrelWindow);
+      await waitFor(
+        squirrelWindow,
+        `document.querySelector('#battle-overlay').dataset.petCombatPhase==='${phase}'&&Number(document.querySelector('.squirrel-storm').dataset.spellMs)>=${at}`,
+        'squirrel ' + label,
+      );
+      await capturePreview(squirrelWindow, `squirrel-stage${evolutionStage + 1}-${label}`);
+    }
+    await waitFor(
+      squirrelWindow,
+      "document.querySelector('#battle-overlay').dataset.petCombatPhase==='IDLE'&&document.querySelector('.squirrel-grove').hidden&&document.querySelector('.squirrel-storm').hidden",
+      'squirrel clears',
+    );
+    const after = await state(squirrelWindow);
+    assert.equal(after.activePet.syncedTotalXp, before.activePet.syncedTotalXp);
+    assert.equal(after.enemyHpRatio, before.enemyHpRatio);
+    assert.equal(after.activePet.stage, before.activePet.stage);
+  }
+  const squirrelAuto = await recordSquirrelAttack(squirrelWindow, 3, true);
+  assert.equal(squirrelAuto.impacts, 1);
+  assert.equal(squirrelAuto.invisible, 0);
+  assert.equal(squirrelAuto.maxClones, 4);
+  assert.equal(squirrelAuto.cleared, true);
+  await petAction(squirrelWindow, 'STOP');
+  await waitFor(
+    squirrelWindow,
+    "document.querySelector('[data-action=STOP]').textContent==='OFF'",
+    'pause squirrel after auto',
+  );
+  await petAction(squirrelWindow, 'ATTACK');
+  await waitFor(
+    squirrelWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase==='SQUIRREL_CLONES'",
+    'cancel live forest',
+  );
+  await petAction(squirrelWindow, 'STOP');
+  await waitFor(
+    squirrelWindow,
+    "document.querySelector('#battle-overlay').dataset.petCombatPhase==='IDLE'&&document.querySelector('.squirrel-grove').hidden&&document.querySelector('.squirrel-storm').hidden&&getComputedStyle(document.querySelector('.pet-viewport')).visibility==='visible'",
+    'STOP clears forest and restores pet',
+  );
+  await command(squirrelWindow, { type: 'TOGGLE_REDUCED_MOTION' });
+  const squirrelReduced = await recordSquirrelAttack(squirrelWindow, 3);
+  assert.equal(squirrelReduced.impacts, 1);
+  assert.equal(squirrelReduced.maxClones, 0);
+  assert.equal(squirrelReduced.maxBlades, 0);
+  assert.equal(squirrelReduced.maxLeap, 0);
+  assert.equal(squirrelReduced.invisible, 0);
+  await closeFromUi(squirrelWindow, 'squirrel battle');
+  console.log(
+    'PASS squirrel stages 1/2/3: native face / forest domain / 2-3-4 clones / crossed acorn blades / tail seal / single hit / manual and automatic / STOP and reduced motion / unchanged HP and XP',
   );
 
   const standalone = new BrowserWindow({

@@ -1,5 +1,6 @@
 import type { Point } from './layout.ts';
 import type { WizardSpellPose } from './wizard-combat.ts';
+import type { SquirrelSpellPose } from './squirrel-combat.ts';
 
 export type PetCombatPhase =
   | 'IDLE'
@@ -34,9 +35,15 @@ export type PetCombatPhase =
   | 'WIZARD_RAIN'
   | 'WIZARD_FINISH'
   | 'WIZARD_BURST'
-  | 'WIZARD_RETURN';
+  | 'WIZARD_RETURN'
+  | 'SQUIRREL_SIGN'
+  | 'SQUIRREL_DOMAIN'
+  | 'SQUIRREL_CLONES'
+  | 'SQUIRREL_SEAL'
+  | 'SQUIRREL_BURST'
+  | 'SQUIRREL_RETURN';
 export interface PetCombatAnimation {
-  readonly id: 'default' | 'mole' | 'sprout' | 'zebra' | 'hamster' | 'wizard';
+  readonly id: 'default' | 'mole' | 'sprout' | 'zebra' | 'hamster' | 'wizard' | 'squirrel';
   readonly durationMs: number;
   readonly recoveryAt: number;
   readonly beats: readonly (readonly [number, number])[];
@@ -66,6 +73,7 @@ export interface PetCombatPose {
   chargeHop: number;
   shotRecoil: number;
   wizard: WizardSpellPose | null;
+  squirrel: SquirrelSpellPose | null;
 }
 
 const DEFAULT: PetCombatAnimation = {
@@ -162,12 +170,33 @@ const WIZARD: PetCombatAnimation = {
     [2800, 3000],
   ],
 };
+const SQUIRREL: PetCombatAnimation = {
+  id: 'squirrel',
+  durationMs: 3200,
+  recoveryAt: 2600,
+  beats: [
+    [0, 200],
+    [200, 450],
+    [450, 700],
+    [700, 900],
+    [900, 1200],
+    [1200, 1550],
+    [1550, 1900],
+    [1900, 2050],
+    [2050, 2300],
+    [2300, 2440],
+    [2440, 2600],
+    [2600, 2900],
+    [2900, 3200],
+  ],
+};
 const PROFILES: Readonly<Record<string, PetCombatAnimation>> = {
   mole_digger: MOLE,
   sprout_treant: SPROUT,
   midnight_zebra: ZEBRA,
   cheek_hamster: HAMSTER,
   star_wizard: WIZARD,
+  acorn_squirrel: SQUIRREL,
 };
 
 /** Species IDs from PetClient, never a nickname, owned ID or rarity. */
@@ -229,6 +258,7 @@ export function petCombatPose(
     chargeHop: 0,
     shotRecoil: 0,
     wizard: null,
+    squirrel: null,
   };
   if (t >= profile.durationMs) return pose;
   if (profile.id === 'sprout') {
@@ -323,6 +353,37 @@ export function petCombatPose(
       finisher: reducedMotion ? 0 : smooth(t, 1900, 2200),
       burst: reducedMotion || t < 2200 ? 0 : 1 - smooth(t, 2200, 2800),
       intensity: reducedMotion ? 0 : smooth(t, 0, 700) * (1 - smooth(t, 2600, 3000)),
+    };
+    return pose;
+  }
+  if (profile.id === 'squirrel') {
+    pose.phase =
+      t < 450
+        ? 'SQUIRREL_SIGN'
+        : t < 900
+          ? 'SQUIRREL_DOMAIN'
+          : t < 1900
+            ? 'SQUIRREL_CLONES'
+            : t < 2300
+              ? 'SQUIRREL_SEAL'
+              : t < 2600
+                ? 'SQUIRREL_BURST'
+                : 'SQUIRREL_RETURN';
+    pose.impact = t >= 2300 && t < 2440;
+    pose.squirrel = {
+      enabled: !reducedMotion,
+      elapsedMs: t,
+      brace: reducedMotion
+        ? 0
+        : heldPulse(t, 0, 180, 260, 450) * 0.8 + pulse(t, 920, 1000, 1160) * 0.75,
+      leap: reducedMotion ? 0 : heldPulse(t, 400, 620, 720, 1000),
+      dash: reducedMotion ? 0 : heldPulse(t, 680, 800, 860, 1040),
+      tailSweep: reducedMotion ? 0 : heldPulse(t, 1800, 2050, 2250, 2550),
+      domain: reducedMotion ? 0 : smooth(t, 450, 900) * (1 - smooth(t, 2650, 3100)),
+      clones: reducedMotion ? 0 : smooth(t, 650, 900) * (1 - smooth(t, 2300, 2800)),
+      seal: reducedMotion ? 0 : smooth(t, 1900, 2300),
+      burst: reducedMotion || t < 2300 ? 0 : 1 - smooth(t, 2300, 2950),
+      intensity: reducedMotion ? 0 : smooth(t, 0, 700) * (1 - smooth(t, 2800, 3200)),
     };
     return pose;
   }

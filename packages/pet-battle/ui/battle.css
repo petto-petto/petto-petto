@@ -520,7 +520,9 @@ img:not([src]) {
 .zebra-shockwave,
 .hamster-food,
 .wizard-sky,
-.wizard-meteors {
+.wizard-meteors,
+.squirrel-grove,
+.squirrel-storm {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -534,16 +536,19 @@ img:not([src]) {
   z-index: 8;
 }
 
-.wizard-sky {
+.wizard-sky,
+.squirrel-grove {
   z-index: 1;
 }
 .wizard-meteors {
   z-index: 6;
 }
-[data-pet-animation='wizard'] .battle-hud {
+[data-pet-animation='wizard'] .battle-hud,
+[data-pet-animation='squirrel'] .battle-hud {
   z-index: 9;
 }
-[data-pet-animation='wizard'] .combat-effects {
+[data-pet-animation='wizard'] .combat-effects,
+[data-pet-animation='squirrel'] .combat-effects {
   display: none;
 }
 
@@ -565,7 +570,8 @@ img:not([src]) {
 
 [data-pet-animation='zebra'] .pet-body-clip,
 [data-pet-animation='hamster'] .pet-body-clip,
-[data-pet-animation='wizard'] .pet-body-clip {
+[data-pet-animation='wizard'] .pet-body-clip,
+[data-pet-animation='squirrel'] .pet-body-clip {
   display: block;
   position: absolute;
   inset: 0;
@@ -598,14 +604,16 @@ img:not([src]) {
 
 .zebra-native-sprite,
 .hamster-native-sprite,
-.wizard-native-sprite {
+.wizard-native-sprite,
+.squirrel-native-sprite {
   display: none;
   pointer-events: none;
 }
 
 [data-pet-animation='zebra'] .zebra-native-sprite,
 [data-pet-animation='hamster'] .hamster-native-sprite,
-[data-pet-animation='wizard'] .wizard-native-sprite {
+[data-pet-animation='wizard'] .wizard-native-sprite,
+[data-pet-animation='squirrel'] .squirrel-native-sprite {
   display: block;
   position: absolute;
   top: 0;
@@ -616,6 +624,18 @@ img:not([src]) {
   opacity: 0;
   transform: translateY(var(--pet-ground-offset, 0px));
   image-rendering: pixelated;
+}
+
+[data-pet-animation='squirrel'] .squirrel-native-sprite {
+  width: calc(var(--pet-size) * 1.5);
+}
+[data-pet-animation='squirrel'] .pet-body-clip {
+  transform: translate(var(--squirrel-x), var(--squirrel-y)) rotate(var(--squirrel-tilt))
+    scale(var(--squirrel-sx), var(--squirrel-sy));
+}
+[data-pet-animation='squirrel'] .pet > .ground-shadow {
+  transform: scaleX(var(--squirrel-shadow-scale));
+  opacity: var(--squirrel-shadow-opacity);
 }
 
 .mole-soil,
