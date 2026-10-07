@@ -229,17 +229,15 @@ test('프로토타입에서 합의한 펫·적 제어가 하나도 빠지지 않
   assert.doesNotMatch(html, /\/v1\//);
 });
 
-test('표시 투명도는 펫을 제외한 전투 환경·적·HP 바에 동일하게 적용된다', async () => {
+test('표시 투명도는 전투 펫을 제외한 환경과 외곽선에 적용된다', async () => {
   const [html, script] = await Promise.all([
     readFile(new URL('index.html', UI_ROOT), 'utf8'),
     readFile(new URL('../src/ui/battle-overlay.ts', import.meta.url), 'utf8'),
   ]);
 
   assert.match(html, /id="battle-environment"/);
-  assert.match(script, /environment\.style\.opacity\s*=\s*String\(scene\.displayOpacity\)/);
-  assert.match(script, /enemy\.style\.opacity\s*=.*String\(scene\.displayOpacity\)/);
-  assert.match(script, /hpBar\.style\.opacity\s*=\s*String\(scene\.displayOpacity\)/);
-  assert.doesNotMatch(script, /pet\.style\.opacity/);
+  assert.match(script, /setProperty\(\s*'--battle-display-opacity'/);
+  assert.doesNotMatch(script, /(?:document\.body|pet)\.style\.opacity\s*=/);
 });
 
 test('renderer와 Electron IPC는 같은 epoch 시간 기준을 사용한다', async () => {

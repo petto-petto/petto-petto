@@ -264,7 +264,11 @@ function render(next: BattleState, previous?: BattleState): void {
       : '';
   notice.title = '';
   notice.hidden = notice.textContent === '';
-  notice.style.opacity = String(scene.displayOpacity);
+  document.documentElement.style.setProperty(
+    '--battle-display-opacity',
+    String(scene.displayOpacity),
+  );
+  root.classList.toggle('simple-animation', next.preview.animationsEnabled === false);
   setImageSource(background, assetUrl(scene.backgroundAsset));
   petGrounding.setSource(hasPet ? assetUrl(scene.petIdleAsset) : null);
   setImageSource(enemyImage, assetUrl(scene.enemyAsset));
@@ -272,13 +276,7 @@ function render(next: BattleState, previous?: BattleState): void {
     scene.enemyHueShiftDegrees === 0 ? '' : `hue-rotate(${scene.enemyHueShiftDegrees}deg)`;
   void battleImages.preload(hasPet ? assetUrl(scene.petAttackAsset) : null);
   enemy.style.setProperty('--enemy-height', `${scene.enemyHeight * layout.scale}px`);
-  environment.style.opacity = String(scene.displayOpacity);
   enemy.style.opacity = scene.enemyVisible ? String(scene.displayOpacity) : '0';
-  hpBar.style.opacity = String(scene.displayOpacity);
-  stageLabel.style.opacity = String(scene.displayOpacity);
-  combatEffects.style.opacity = String(scene.displayOpacity);
-  enemySlam.style.opacity = String(scene.displayOpacity);
-  defeatBurst.style.opacity = String(scene.displayOpacity);
   enemySlam.hidden = !hasPet;
   defeatBurst.hidden = !hasPet;
   const hpText = `${Math.round(scene.enemyHpRatio * 100)}%`;
@@ -301,6 +299,7 @@ function render(next: BattleState, previous?: BattleState): void {
   enemyMenu.hidden = !hasPet || next.preview.menu !== 'ENEMY';
   paintArena(next);
   if (
+    next.preview.animationsEnabled !== false &&
     ((next.preview.petAction === 'ATTACK' &&
       !suppressedAttackPreview &&
       petCombatAnimation(scene.petCombatSpecies).id === 'default') ||
@@ -326,7 +325,7 @@ function updateAmbientLogs(next: BattleState): void {
     hasDefeatedSpectators: false,
     pageVisible: !document.hidden,
     menuOpen: next.preview.menu !== 'CLOSED',
-    opacity: Math.max(0, Math.min(1, next.preview.displayOpacity)),
+    opacity: next.preview.displayOpacity,
     petPortrait: ambientPortrait(assetUrl(scene.petIdleAsset), 'PET'),
     enemyPortrait: ambientPortrait(assetUrl(scene.enemyAsset), 'ENEMY'),
   });
@@ -421,10 +420,13 @@ function placeActor(
 
 function paintArena(next: BattleState): void {
   const base = deriveBattleScene(next, false);
-  const customAnimation = petCombatAnimation(base.petCombatSpecies).id !== 'default';
-  const reducedMotion = next.preview.reducedMotion || reducedMotionPreference.matches;
+  const animationsEnabled = next.preview.animationsEnabled !== false;
+  const customAnimation =
+    animationsEnabled && petCombatAnimation(base.petCombatSpecies).id !== 'default';
+  const reducedMotion =
+    !animationsEnabled || next.preview.reducedMotion || reducedMotionPreference.matches;
   const key = next.activePet
-    ? `${next.activePet.petId}:${visibleEnemyStage(next)}:${currentTheme(next)}:${base.petIdleAsset}`
+    ? `${next.activePet.petId}:${visibleEnemyStage(next)}:${currentTheme(next)}:${base.petIdleAsset}:${animationsEnabled}`
     : null;
   if (next.preview.petAction !== 'ATTACK') suppressedAttackPreview = false;
   if (key !== arenaKey && arenaKey !== null && next.preview.petAction === 'ATTACK')
@@ -463,6 +465,7 @@ function paintArena(next: BattleState): void {
     arenaKey = key;
   }
   const frame = arena.frame({
+    simple: !animationsEnabled,
     layout,
     nowMs: nowMs(),
     hpRatio: base.enemyHpRatio,
@@ -500,7 +503,10 @@ function paintArena(next: BattleState): void {
   }
   worldPlane.style.transform = `translate(${-frame.camera.x}px, ${-frame.camera.y}px)`;
   const motion =
-    !customAnimation && !suppressedAttackPreview && next.preview.petAction === 'ATTACK'
+    animationsEnabled &&
+    !customAnimation &&
+    !suppressedAttackPreview &&
+    next.preview.petAction === 'ATTACK'
       ? next.motion
       : undefined;
   const contact = motion
@@ -547,8 +553,12 @@ function paintArena(next: BattleState): void {
     enemy,
     enemyX,
     enemyY,
-    motion?.enemyScale.x ?? frame.enemy.scaleX,
-    motion?.enemyScale.y ?? frame.enemy.scaleY,
+    !animationsEnabled && frame.attackTurn === 'ENEMY' && frame.phase === 'SLAM'
+      ? 1.04
+      : (motion?.enemyScale.x ?? frame.enemy.scaleX),
+    !animationsEnabled && frame.attackTurn === 'ENEMY' && frame.phase === 'SLAM'
+      ? 0.96
+      : (motion?.enemyScale.y ?? frame.enemy.scaleY),
   );
   root.dataset['petAnimation'] = frame.petAnimation.id;
   root.dataset['molePhase'] = frame.petAnimation.phase;
@@ -678,7 +688,7 @@ function paintArena(next: BattleState): void {
   pet.style.setProperty('--burrow-depth', `${decorations.burrowDepth}px`);
   pet.style.setProperty('--mole-shadow', String(decorations.shadow));
   pet.style.setProperty('--dirt-y', `${decorations.dirtY}px`);
-  moleSoil.style.opacity = String(frame.petAnimation.dust);
+  moleSoil.style.opacity = String(frame.petAnimation.dust * next.preview.displayOpacity);
   root.dataset['arenaPhase'] = frame.phase;
   root.dataset['attackTurn'] = frame.attackTurn ?? '';
   root.dataset['inAttackRange'] = String(frame.inAttackRange);

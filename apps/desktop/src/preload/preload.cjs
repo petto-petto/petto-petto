@@ -20,6 +20,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 const EVENT_CHANNELS = [
   'panel:show',
   'usage:aggregated',
+  'meta:updated',
   'room:activePetChanged',
   'room:backgroundChanged',
   'room:rosterChanged',
@@ -45,6 +46,7 @@ contextBridge.exposeInMainWorld('petApi', {
   // 설정
   setDisplaySetting: (key, value) => ipcRenderer.invoke('settings:display', key, value),
   setNotification: (key, value) => ipcRenderer.invoke('settings:notification', key, value),
+  setBattleSetting: (key, value) => ipcRenderer.invoke('settings:battle', key, value),
 
   // 프로필
   equipTitle: (title) => ipcRenderer.invoke('profile:equip-title', title),

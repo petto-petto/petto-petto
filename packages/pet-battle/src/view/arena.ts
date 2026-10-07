@@ -27,6 +27,7 @@ export type ArenaPhase =
   | 'SLAM'
   | 'RECOVER';
 export interface ArenaInput {
+  simple?: boolean;
   layout: BattleLayout;
   nowMs: number;
   hpRatio: number;
@@ -104,6 +105,7 @@ export class ArenaDirector {
   }
 
   frame(input: ArenaInput): ArenaFrame {
+    if (input.simple) input = { ...input, reducedMotion: true, petSprite: undefined };
     const now = Number.isFinite(input.nowMs) ? input.nowMs : this.lastNow;
     const profile = petCombatAnimation(input.petSprite);
     const identity = `${input.key ?? ''}:${input.theme}:${profile.id}`;

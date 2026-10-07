@@ -1,4 +1,5 @@
 :root {
+  --battle-display-opacity: 1;
   --pet-size: 96px;
   --enemy-frame-size: 128px;
   --forest-deep: #10231a;
@@ -80,12 +81,28 @@ img:not([src]) {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border: 2px solid var(--outline);
+  border: 2px solid rgb(44 36 56 / var(--battle-display-opacity));
   background: transparent;
   box-shadow:
-    inset 0 0 0 2px rgba(143, 214, 138, 0.22),
-    2px 2px 0 rgba(0, 0, 0, 0.38);
+    inset 0 0 0 2px rgb(143 214 138 / calc(0.22 * var(--battle-display-opacity))),
+    2px 2px 0 rgb(0 0 0 / calc(0.38 * var(--battle-display-opacity)));
   isolation: isolate;
+}
+
+#battle-overlay > :not(#pet):not(.battle-toast),
+.window-close {
+  opacity: var(--battle-display-opacity);
+}
+
+.simple-animation .combat-effects,
+.simple-animation .enemy-slam,
+.simple-animation .defeat-burst,
+.simple-animation .fireflies {
+  visibility: hidden;
+}
+
+.simple-animation .peek-actor {
+  animation: none;
 }
 
 /* Native drag hit testing is separate from DOM z-index. Never cover the X button. */
@@ -1229,7 +1246,7 @@ img:not([src]) {
 }
 
 .battle-toast.visible {
-  opacity: 1;
+  opacity: var(--battle-display-opacity);
   transform: translateX(-50%);
 }
 

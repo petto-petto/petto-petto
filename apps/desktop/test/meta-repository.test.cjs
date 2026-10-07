@@ -125,6 +125,8 @@ function sample() {
     ],
     profile: { equippedTitle: '초보 조련사', ownedTitles: ['초보 조련사', '토큰 헤비유저'] },
     settings: {
+      battleAnimationsEnabled: true,
+      battleOpacity: 100,
       overlayVisible: true,
       petSize: 'normal',
       autostart: false,
@@ -136,6 +138,47 @@ function sample() {
 }
 
 const clone = (value) => structuredClone(value);
+
+test('전투 표시 설정 migration 은 옛 설정을 보존하고 새 값을 재시작 후 복원한다', async () => {
+  const directory = temporaryDirectory('battle-settings');
+  const m = await modules();
+  const filePath = join(directory, 'petto.sqlite');
+  const old = new m.SqliteFileDatabase({
+    filePath,
+    migrations: m.APP_MIGRATIONS.filter(
+      (migration) => !(migration.scope === 'meta' && migration.version === 3),
+    ),
+  });
+  old.open();
+  old
+    .prepare(
+      "INSERT INTO meta_settings (id, overlay_visible, pet_size, autostart, notify_levelup, notify_achievement, notify_gacha_ready) VALUES (1, 0, 'large', 1, 0, 1, 1)",
+    )
+    .run();
+  old.close();
+  const first = await open(directory);
+  try {
+    const snapshot = first.repository.load();
+    assert.equal(snapshot.settings.overlayVisible, false);
+    assert.equal(snapshot.settings.petSize, 'large');
+    assert.equal(snapshot.settings.battleAnimationsEnabled, true);
+    assert.equal(snapshot.settings.battleOpacity, 100);
+    const next = clone(snapshot);
+    next.settings.battleAnimationsEnabled = false;
+    next.settings.battleOpacity = 36;
+    first.repository.write(snapshot, next);
+  } finally {
+    first.database.close();
+  }
+  const second = await open(directory);
+  try {
+    assert.equal(second.repository.load().settings.battleAnimationsEnabled, false);
+    assert.equal(second.repository.load().settings.battleOpacity, 36);
+  } finally {
+    second.database.close();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
 
 test('meta 표와 모든 열의 설명이 DB 스키마에 남는다', async () => {
   const directory = temporaryDirectory('comments');

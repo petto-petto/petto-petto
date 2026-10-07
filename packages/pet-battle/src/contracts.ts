@@ -51,6 +51,8 @@ export interface BattleOverlayState {
 }
 
 export interface BattlePreviewState {
+  /** Full choreography by default; false selects stationary basic attacks. */
+  animationsEnabled?: boolean;
   displayOpacity: number;
   menu: PreviewMenu;
   petAction: PetPreviewAction | null;
