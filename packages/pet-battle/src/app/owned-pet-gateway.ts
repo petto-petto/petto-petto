@@ -48,7 +48,10 @@ export class OwnedPetBattleGateway implements BattleGateway {
     const room = this.#room?.getSnapshot();
     const activePetId = room ? room.activePetId : (this.#pets.getActivePet()?.ownedPetId ?? null);
     const pets = room ? room.pets : this.#pets.listOwnedPets().map(ownedGrowthPet);
-    const rosterKey = JSON.stringify([activePetId, pets.map((pet) => pet.petId)]);
+    const rosterKey = JSON.stringify([
+      activePetId,
+      pets.map((pet) => [pet.petId, pet.sprite, pet.evolutionStage]),
+    ]);
     if (rosterKey !== this.#rosterKey) {
       this.#rosterKey = rosterKey;
       this.#spectators =

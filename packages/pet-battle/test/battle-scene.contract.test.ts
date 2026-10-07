@@ -90,10 +90,10 @@ test('지면 연출의 공격 여부가 기존 고정 주기 대신 펫 스프�
 test('현재 보유 펫에서 활성 펫을 제외하고 중복 없이 무작위 최대 3마리를 고른다', () => {
   const pets = [
     state().activePet!,
-    { ...state().activePet!, petId: 'pet-2' },
-    { ...state().activePet!, petId: 'pet-3' },
-    { ...state().activePet!, petId: 'pet-4' },
-    { ...state().activePet!, petId: 'pet-5' },
+    { ...state().activePet!, petId: 'pet-2', sprite: 'cat' },
+    { ...state().activePet!, petId: 'pet-3', sprite: 'dog' },
+    { ...state().activePet!, petId: 'pet-4', sprite: 'fox' },
+    { ...state().activePet!, petId: 'pet-5', sprite: 'rabbit' },
   ];
 
   const selected = selectRandomPetSpectators(pets, 'mio', () => 0);
@@ -103,6 +103,38 @@ test('현재 보유 펫에서 활성 펫을 제외하고 중복 없이 무작위
     ['pet-3', 'pet-4', 'pet-5'],
   );
   assert.equal(new Set(selected.map((pet) => pet.petId)).size, 3);
+});
+
+test('종류와 진화 단계가 같은 응원 펫은 하나만 고르고 활성 펫의 모습은 제외한다', () => {
+  const active = { ...state().activePet!, evolutionStage: 1 as const };
+  const pets = [
+    active,
+    { ...active, petId: 'active-copy' },
+    { ...active, petId: 'baby', evolutionStage: 0 as const },
+    { ...active, petId: 'baby-copy', evolutionStage: 0 as const },
+    { ...active, petId: 'adult', evolutionStage: 2 as const },
+    { ...active, petId: 'cat', sprite: 'cat' },
+    { ...active, petId: 'cat-copy', sprite: 'cat' },
+  ];
+  const selected = selectRandomPetSpectators(pets, active.petId, () => 0);
+  assert.equal(selected.length, 3);
+  assert.deepEqual(
+    selected.map((pet) => [pet.sprite, pet.evolutionStage]).sort(),
+    [
+      ['cat', 1],
+      ['mole_digger', 0],
+      ['mole_digger', 2],
+    ].sort(),
+  );
+});
+
+test('응원 후보가 부족하면 중복으로 채우지 않고 활성 펫이 없으면 비운다', () => {
+  const active = state().activePet!;
+  const cat = { ...active, petId: 'cat', sprite: 'cat' };
+  const pets = [active, { ...active, petId: 'copy' }, cat, { ...cat, petId: 'cat-copy' }];
+  assert.equal(selectRandomPetSpectators(pets, active.petId).length, 1);
+  assert.deepEqual(selectRandomPetSpectators([active], active.petId), []);
+  assert.deepEqual(selectRandomPetSpectators(pets, null), []);
 });
 
 test('처치한 적이 없으면 비우고, 있으면 최근 처치 적 최대 3마리를 역순으로 보여준다', () => {

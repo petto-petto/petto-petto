@@ -105,12 +105,20 @@ export function visibleEnemyStage(state: BattleState): number {
   return state.activePet?.stage ?? 1;
 }
 
-export function selectRandomPetSpectators<T extends { petId: string }>(
-  roster: readonly T[],
-  activePetId: string | null,
-  random: () => number = Math.random,
-): T[] {
-  const candidates = roster.filter((pet) => pet.petId !== activePetId);
+export function selectRandomPetSpectators<
+  T extends { petId: string; sprite: string; evolutionStage: 0 | 1 | 2 },
+>(roster: readonly T[], activePetId: string | null, random: () => number = Math.random): T[] {
+  const activePet = roster.find((pet) => pet.petId === activePetId);
+  if (!activePet) return [];
+  const appearanceKey = (pet: T): string => JSON.stringify([pet.sprite, pet.evolutionStage]);
+  const seen = new Set([appearanceKey(activePet)]);
+  const candidates = roster.filter((pet) => {
+    if (pet.petId === activePetId) return false;
+    const key = appearanceKey(pet);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
   for (let index = candidates.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
     [candidates[index], candidates[swapIndex]] = [candidates[swapIndex]!, candidates[index]!];

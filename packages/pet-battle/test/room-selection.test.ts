@@ -103,6 +103,34 @@ function owner(ownedPetId: string): OwnedPet {
   };
 }
 
+test('room spectators exclude duplicate appearances and follow active evolution changes', async () => {
+  const f = fixture();
+  const snapshot = f.selection.getSnapshot();
+  const wizard = snapshot.pets.find((pet) => pet.ownedPetId === 'seed-006')!;
+  f.selection.getSnapshot = () => ({
+    ...snapshot,
+    pets: [
+      ...snapshot.pets,
+      { ...wizard, ownedPetId: 'wizard-copy' },
+      { ...wizard, ownedPetId: 'wizard-stage-1', stage: 2 },
+      { ...wizard, ownedPetId: 'wizard-stage-2', stage: 3 },
+    ],
+  });
+  await f.integration.syncActivePet();
+  assert.deepEqual([...f.sync().spectatorPetIds].sort(), [
+    'seed-001',
+    'wizard-stage-1',
+    'wizard-stage-2',
+  ]);
+  f.setOwned([owner('seed-006')]);
+  await f.integration.syncActivePet();
+  assert.deepEqual([...f.sync().spectatorPetIds].sort(), [
+    'seed-001',
+    'wizard-copy',
+    'wizard-stage-2',
+  ]);
+});
+
 test('room selection reaches battle even when shared roster is empty, without inventing XP', async () => {
   const f = fixture();
   const result = await f.integration.syncActivePet();
