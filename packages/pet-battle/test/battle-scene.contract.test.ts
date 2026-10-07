@@ -9,6 +9,7 @@ import {
   enemyColorStageForColor,
   enemySizeStageForSize,
   visibleEnemyStage,
+  battleStageLabel,
   selectRandomPetSpectators,
   shouldStartEnemyHitReaction,
   type BattleState,
@@ -178,6 +179,59 @@ test('색마다 소·중·대를 거친 뒤 다음 색으로 넘어가고 24단�
   );
   assert.equal(rainbow.backgroundAsset, 'assets/backgrounds/v2/starlight-shrine.png');
   assert.match(rainbow.enemyAsset, /v2\/rainbow-steady\.png$/);
+});
+
+test('스테이지 번호는 색 순환 뒤에도 누적 구간으로 이어진다', () => {
+  const cases = [
+    [1, 'STAGE 1-1'],
+    [3, 'STAGE 1-3'],
+    [4, 'STAGE 2-1'],
+    [24, 'STAGE 8-3'],
+    [25, 'STAGE 9-1'],
+    [48, 'STAGE 16-3'],
+    [49, 'STAGE 17-1'],
+    [300, 'STAGE 100-3'],
+    [3000, 'STAGE 1,000-3'],
+    [0xffff_ffff, 'STAGE 1,431,655,765-3'],
+  ] as const;
+  for (const [stage, expected] of cases) {
+    assert.equal(
+      battleStageLabel(state({ activePet: { ...state().activePet!, stage } })),
+      expected,
+    );
+  }
+  for (let stage = 1; stage <= 24; stage++) {
+    const current = state({
+      activePet: { ...state().activePet!, stage },
+      enemyColor: enemyColorForStage(stage),
+    });
+    const scene = deriveBattleScene(current);
+    assert.equal(
+      battleStageLabel(current),
+      `STAGE ${scene.enemyColorStage}-${scene.enemySizeStage}`,
+    );
+  }
+});
+
+test('24단계 처치와 대기에는 8-3, 다음 적 등장부터 9-1을 표시한다', () => {
+  for (const phase of ['DEFEAT_MOTION', 'AWAITING_ADVANCE', 'SPAWNING', 'FIGHTING'] as const) {
+    const current = state({
+      activePet: { ...state().activePet!, stage: 25 },
+      overlay: { phase, elapsed: 0, defeatedStage: 24, nextStage: 25 },
+    });
+    assert.equal(
+      battleStageLabel(current),
+      phase === 'DEFEAT_MOTION' || phase === 'AWAITING_ADVANCE' ? 'STAGE 8-3' : 'STAGE 9-1',
+    );
+  }
+});
+
+test('적 색과 크기 미리보기는 누적 스테이지 번호를 바꾸지 않는다', () => {
+  const current = state({
+    activePet: { ...state().activePet!, stage: 49 },
+    preview: { ...state().preview, enemyColor: 'RAINBOW', enemySize: 'LARGE' },
+  });
+  assert.equal(battleStageLabel(current), 'STAGE 17-1');
 });
 
 test('정복 중에는 처치한 적 크기를 유지하고 다음 적 등장부터 크기를 바꾼다', () => {

@@ -2,6 +2,7 @@ import type { BattleClient, BattleClientCommand } from '../client.ts';
 import type { BattleState } from '../contracts.ts';
 import {
   backgroundForEnemy,
+  battleStageLabel,
   deriveBattleScene,
   shouldStartEnemyHitReaction,
   visibleEnemyStage,
@@ -281,9 +282,13 @@ function render(next: BattleState, previous?: BattleState): void {
   enemySlam.hidden = !hasPet;
   defeatBurst.hidden = !hasPet;
   const hpText = `${Math.round(scene.enemyHpRatio * 100)}%`;
-  const stageText = `STAGE ${scene.enemyColorStage}-${scene.enemySizeStage}`;
+  const stageText = battleStageLabel(next);
   if (hpLabel.textContent !== hpText) hpLabel.textContent = hpText;
-  if (stageLabel.textContent !== stageText) stageLabel.textContent = stageText;
+  if (stageLabel.textContent !== stageText) {
+    stageLabel.textContent = stageText;
+    stageLabel.title = stageText;
+    stageLabel.setAttribute('aria-label', stageText);
+  }
   opacity.value = String(Math.round(scene.displayOpacity * 100));
   root.dataset['enemyPhase'] = scene.enemyPhase;
   root.dataset['petAction'] = next.preview.petAction ?? 'IDLE';

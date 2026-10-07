@@ -105,6 +105,13 @@ export function visibleEnemyStage(state: BattleState): number {
   return state.activePet?.stage ?? 1;
 }
 
+export function battleStageLabel(state: BattleState): string {
+  const stage = visibleEnemyStage(state);
+  const section = Math.floor((stage - 1) / 3) + 1;
+  const battle = ((stage - 1) % 3) + 1;
+  return `STAGE ${section.toLocaleString('en-US')}-${battle}`;
+}
+
 export function selectRandomPetSpectators<
   T extends { petId: string; sprite: string; evolutionStage: 0 | 1 | 2 },
 >(roster: readonly T[], activePetId: string | null, random: () => number = Math.random): T[] {

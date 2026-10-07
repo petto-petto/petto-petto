@@ -368,6 +368,9 @@ img:not([src]) {
 }
 
 #stage-label {
+  max-width: min(180px, 35vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
   text-shadow: 1px 1px 0 var(--outline);
   transition: opacity 80ms linear;
