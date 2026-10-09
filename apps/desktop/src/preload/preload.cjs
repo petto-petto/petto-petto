@@ -56,6 +56,10 @@ contextBridge.exposeInMainWorld('petApi', {
   setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
   /** 도감에 확인하지 않은 신규 발견이 있는가. 펫룸 도감 버튼의 NEW 표식이 쓴다. */
   dexHasNew: () => ipcRenderer.invoke('dex:hasNew'),
+  /** 장면을 끌어 펫룸 창을 옮긴다. 장면은 펫 클릭을 받아야 해서 OS 끌기 영역을 쓰지 못한다. */
+  roomDragStart: (screenX, screenY) => ipcRenderer.send('room:drag-start', { screenX, screenY }),
+  roomDragMove: (screenX, screenY) => ipcRenderer.send('room:drag-move', { screenX, screenY }),
+  roomDragEnd: () => ipcRenderer.send('room:drag-end'),
 
   // 창
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),

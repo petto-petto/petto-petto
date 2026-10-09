@@ -19,6 +19,7 @@
  * |---|---|
  * | `domain/pet.ts` | 보유 펫 명부·종 카탈로그·활성 펫 |
  * | `domain/aura.ts` | 활성 펫의 등급 오라(고리 수·맥동) |
+ * | `domain/drag.ts` | 장면을 눌러 창을 옮길 때 클릭과 끌기 구분·창 위치 |
  * | `domain/sprite.ts` | 에셋 경로 조립과 프레임 진행 (에셋 가이드 §1·§5·§7·§8) |
  * | `domain/scene.ts` | 배경 계약·계절 및 시간대 선택·배회 영역·위치 갱신·클릭 판정 |
  *
@@ -31,6 +32,7 @@
  */
 
 export * from './domain/aura.ts';
+export * from './domain/drag.ts';
 export * from './domain/firefly.ts';
 export * from './client.ts';
 export * from './domain/pet.ts';

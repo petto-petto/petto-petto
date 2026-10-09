@@ -11,7 +11,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
-import { VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '@pet/room';
+import {
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  windowPositionDuringDrag,
+  type DragOrigin,
+} from '@pet/room';
 import battleWindowOptions from '@pet/battle/ui/window-options.json' with { type: 'json' };
 
 import {
@@ -58,6 +63,8 @@ const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).
 let overlayWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
+/** 펫룸 장면을 끄는 중이면 시작 시점의 창·포인터 위치. */
+let roomDragOrigin: DragOrigin | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
 let dexWindow: BrowserWindow | undefined;
@@ -512,6 +519,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
 
   roomWindow.on('closed', () => {
     roomWindow = undefined;
+    roomDragOrigin = undefined;
   });
 
   injectFonts(roomWindow);
@@ -539,6 +547,26 @@ function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
   next.show();
   next.focus();
   from.close();
+}
+
+/**
+ * 펫룸 장면을 끌어 창을 옮긴다. 장면은 펫 클릭을 받아야 해서 `-webkit-app-region: drag`를
+ * 쓰지 못하므로 렌더러가 포인터를 보내고 여기서 창을 옮긴다. 클릭과 끌기는 렌더러가 가른다.
+ */
+export function beginRoomDrag(screenX: number, screenY: number): void {
+  if (!roomWindow || roomWindow.isDestroyed()) return;
+  const [windowX, windowY] = roomWindow.getPosition();
+  roomDragOrigin = { windowX: windowX ?? 0, windowY: windowY ?? 0, screenX, screenY };
+}
+
+export function moveRoomDrag(screenX: number, screenY: number): void {
+  if (!roomWindow || roomWindow.isDestroyed() || !roomDragOrigin) return;
+  const { x, y } = windowPositionDuringDrag(roomDragOrigin, { screenX, screenY });
+  roomWindow.setPosition(x, y);
+}
+
+export function endRoomDrag(): void {
+  roomDragOrigin = undefined;
 }
 
 /** 펫룸 화면에서 뽑기·합성 화면으로 넘어간다. 펫룸 창이 없으면 `next`만 연 채로 둔다. */

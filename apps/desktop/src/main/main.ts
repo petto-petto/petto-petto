@@ -58,6 +58,9 @@ import {
   isCombineWebContents,
   createPanelWindow,
   endOverlayDrag,
+  beginRoomDrag,
+  moveRoomDrag,
+  endRoomDrag,
   focusOverlayWindow,
   markGrowthUsageReady,
   getBattleWindow,
@@ -180,6 +183,18 @@ function mountOverlayWindowIpc(): void {
     if (isOverlayPointer(point)) moveOverlayDrag(point.screenX, point.screenY);
   });
   ipcMain.on('overlay:drag-end', () => endOverlayDrag());
+  // 펫룸 장면 끌기. 펫룸 창이 보낸 것만 받는다 — 다른 창이 펫룸 창을 옮기지 못하게 한다.
+  ipcMain.on('room:drag-start', (event, point: unknown) => {
+    if (isRoomWebContents(event.sender) && isOverlayPointer(point))
+      beginRoomDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('room:drag-move', (event, point: unknown) => {
+    if (isRoomWebContents(event.sender) && isOverlayPointer(point))
+      moveRoomDrag(point.screenX, point.screenY);
+  });
+  ipcMain.on('room:drag-end', (event) => {
+    if (isRoomWebContents(event.sender)) endRoomDrag();
+  });
   ipcMain.on('overlay:quit', () => app.quit());
   ipcMain.handle('battle:open', () => {
     createBattleWindow();

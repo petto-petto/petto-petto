@@ -29,6 +29,7 @@ import {
   clipWalkAreaToViewport,
   hitTest,
   inDrawOrder,
+  isDragGesture,
   layersInDrawOrder,
   PET_SCALE,
   spawnFireflies,
@@ -49,6 +50,7 @@ import { drawFrame, fetchJson, loadImage, SpritePlayer } from './sprite.js';
 
 const api = window.petApi;
 
+const sceneEl = document.getElementById('scene');
 const stageEl = document.getElementById('stage');
 const destinationsEl = document.getElementById('destinations');
 const dexNewEl = document.getElementById('dex-new');
@@ -508,6 +510,61 @@ function renderDetail() {
 
 /** 이번 프레임의 판정 상자. 클릭은 화면에 보이는 것을 기준으로 맞아야 한다. */
 let hitBoxes = [];
+
+/**
+ * 장면을 끌면 창이 옮겨진다. 장면은 펫 클릭을 받아야 해서 `-webkit-app-region: drag`를 쓸 수
+ * 없으므로, 누른 뒤 문턱만큼 움직였을 때부터 끌기로 보고 창 이동은 main에 맡긴다. 문턱을
+ * 넘지 않은 누름은 그대로 아래 `click`이 펫 판정을 한다.
+ */
+let sceneDrag = null;
+/**
+ * 끌기로 끝난 누름 뒤에 브라우저가 보내는 `click`을 펫 선택으로 받지 않는다. 끄는 동안 포인터를
+ * 붙잡으므로 그 `click`은 캔버스가 아니라 장면에 갈 수 있어서, 창 전체의 capture 단계에서 막는다.
+ */
+let suppressNextClick = false;
+
+window.addEventListener(
+  'click',
+  (event) => {
+    if (!suppressNextClick) return;
+    suppressNextClick = false;
+    event.stopPropagation();
+  },
+  true,
+);
+
+sceneEl.addEventListener('pointerdown', (event) => {
+  // 직전 끌기 뒤에 `click`이 오지 않았더라도 다음 클릭까지 삼키지 않는다.
+  suppressNextClick = false;
+  if (event.button !== 0) return;
+  sceneDrag = { screenX: event.screenX, screenY: event.screenY, moved: false };
+});
+
+sceneEl.addEventListener('pointermove', (event) => {
+  if (!sceneDrag) return;
+  if (!sceneDrag.moved) {
+    if (!isDragGesture(sceneDrag, event)) return;
+    sceneDrag.moved = true;
+    // 클릭일 때는 붙잡지 않는다. 붙잡으면 `click`의 대상이 캔버스에서 장면으로 바뀐다.
+    // 끌기부터 붙잡아야 빠르게 끌어 포인터가 창 밖으로 나가도 계속 따라온다.
+    sceneEl.setPointerCapture(event.pointerId);
+    // 시작점은 누른 곳이다. 문턱만큼 늦게 시작하면 창이 그만큼 포인터보다 뒤처진다.
+    api.roomDragStart(sceneDrag.screenX, sceneDrag.screenY);
+  }
+  api.roomDragMove(event.screenX, event.screenY);
+});
+
+function endSceneDrag() {
+  if (!sceneDrag) return;
+  if (sceneDrag.moved) {
+    api.roomDragEnd();
+    suppressNextClick = true;
+  }
+  sceneDrag = null;
+}
+
+sceneEl.addEventListener('pointerup', endSceneDrag);
+sceneEl.addEventListener('pointercancel', endSceneDrag);
 
 canvas.addEventListener('click', (event) => {
   const rect = canvas.getBoundingClientRect();
