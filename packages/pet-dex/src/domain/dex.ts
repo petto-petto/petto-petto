@@ -2,15 +2,14 @@
  * 펫 도감 화면 모델.
  *
  * `PetClient.listDexEntries()`의 저장 값을 화면이 그대로 그릴 수 있는 모양으로 바꾼다. 슬롯
- * 상태 판정, 진행도·탭 집계, 획득 경로 문구가 전부 여기 있고 `node --test`로 검증된다. UI는
+ * 상태 판정, 진행도·탭 집계가 전부 여기 있고 `node --test`로 검증된다. UI는
  * 이 결과를 DOM에 옮기기만 한다.
  *
- * ## 에셋 경로와 확률을 주입받는 이유
+ * ## 에셋 경로를 주입받는 이유
  *
- * 경로 규칙은 `@pet/room`이, 뽑기 확률은 `@pet/gacha`가, 합성 재료 수는 `@pet/combine`이
- * 소유한다. 이 패키지가 그 셋을 import 하면 UI 번들(`dist/ui/app.js`)까지 끌려 들어가는데,
- * 창은 번들러 없이 ESM 을 읽으므로 맨 이름 import 가 브라우저에서 풀리지 않는다. 그래서 값을
- * 아는 앱이 조립할 때 넘겨 준다.
+ * 경로 규칙은 `@pet/room`이 소유한다. 이 패키지가 그것을 import 하면 UI 번들(`dist/ui/app.js`)
+ * 까지 끌려 들어가는데, 창은 번들러 없이 ESM 을 읽으므로 맨 이름 import 가 브라우저에서 풀리지
+ * 않는다. 그래서 값을 아는 앱이 조립할 때 넘겨 준다.
  */
 
 import type { DexEntry, OwnedPet, PetSpecies, Rarity } from '@pet/client';
@@ -57,8 +56,6 @@ export interface DexSlotView {
   /** 상세 무대에 그리는 단계. 도달한 가장 높은 단계, 미도달이면 1단계(실루엣)다. */
   showcase: { stage: DexStage; sprite: DexSpriteRef };
   stages: DexStageView[];
-  /** 획득 경로 안내 문구. */
-  hints: string[];
 }
 
 export interface DexCount {
@@ -83,13 +80,8 @@ export interface DexView {
   hasNew: boolean;
 }
 
-/** 뽑기 등급 가중치. `@pet/gacha`의 `STANDARD_GRADE_WEIGHTS`와 같은 모양이다. */
-export type GachaWeights = Readonly<Record<'common' | 'rare' | 'epic', number>>;
-
 export interface DexViewOptions {
   spriteOf(species: PetSpecies, stage: DexStage): DexSpriteRef;
-  gachaWeights: GachaWeights;
-  combineMaterialCount: number;
   /** 첫 만남 날짜를 쓸 시간대. 없으면 실행 환경의 지역 시간대다. */
   timeZone?: string;
 }
@@ -150,7 +142,6 @@ function slotView(entry: DexEntry, options: DexViewOptions): DexSlotView {
     sprite: options.spriteOf(species, 1),
     showcase: { stage: showcaseStage, sprite: options.spriteOf(species, showcaseStage) },
     stages,
-    hints: acquisitionHints(species.rarity, options.gachaWeights, options.combineMaterialCount),
   };
 }
 
@@ -169,34 +160,6 @@ function reachedStage(entry: DexEntry, state: DexSlotState): 0 | DexStage {
       throw new Error(`알 수 없는 도감 슬롯 상태: ${String(unreachable)}`);
     }
   }
-}
-
-/** 등급 → 그 등급을 결과로 내는 합성 재료 등급. COMMON 은 합성으로 나오지 않는다. */
-const COMBINE_SOURCE: Readonly<Record<Rarity, Rarity | null>> = {
-  COMMON: null,
-  RARE: 'COMMON',
-  EPIC: 'RARE',
-};
-
-export function acquisitionHints(
-  rarity: Rarity,
-  weights: GachaWeights,
-  combineMaterialCount: number,
-): string[] {
-  const sum = weights.common + weights.rare + weights.epic;
-  const weight = weights[rarity.toLowerCase() as keyof GachaWeights];
-  const hints = [`✨ 펫 뽑기에서 만날 수 있어요 · ${rarity} ${percentText(weight, sum)}%`];
-  const source = COMBINE_SOURCE[rarity];
-  if (source !== null) {
-    hints.push(`🔮 ${source} 펫 ${combineMaterialCount}마리를 합성해도 만날 수 있어요`);
-  }
-  return hints;
-}
-
-function percentText(weight: number, sum: number): string {
-  if (sum <= 0) return '0';
-  const tenths = Math.round((weight * 1000) / sum);
-  return tenths % 10 === 0 ? String(tenths / 10) : (tenths / 10).toFixed(1);
 }
 
 /** ISO 시각 → `YYYY.MM.DD`. 읽을 수 없는 값은 조용히 넘기지 않고 던진다. */

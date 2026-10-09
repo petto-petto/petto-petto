@@ -51,7 +51,6 @@ const detailGrade = element<HTMLElement>('detail-grade');
 const detailOwned = element<HTMLElement>('detail-owned');
 const detailMet = element<HTMLElement>('detail-met');
 const evolution = element<HTMLElement>('evolution');
-const hints = element<HTMLUListElement>('hints');
 const detailAction = element<HTMLButtonElement>('detail-action');
 const detailActionError = element<HTMLElement>('detail-action-error');
 
@@ -65,7 +64,7 @@ const dex: {
   /** 마지막으로 그린 그리드와 상세 무대. 같으면 다시 만들지 않는다(깜박임·첫 클릭 유실 방지). */
   gridKey: string;
   showcaseKey: string;
-  /** 마지막으로 그린 진화 썸네일·힌트. 같으면 다시 만들지 않는다. */
+  /** 마지막으로 그린 진화 썸네일. 같으면 다시 만들지 않는다. */
   detailKey: string;
   /** NEW 팝을 이미 보여 준 종. 그리드를 다시 만들어도 같은 표식을 또 튀기지 않는다. */
   popped: Set<string>;
@@ -338,14 +337,14 @@ function renderDetail(): void {
   detailMet.textContent = `첫 만남 ${slot.discoveredOn ?? ''}`;
 
   evolution.hidden = hidden;
-  // focus 마다 다시 읽으므로, 바뀐 것이 없으면 썸네일·힌트를 갈아 끼우지 않는다(깜박임 방지).
-  const detailKey = JSON.stringify([slot.speciesId, slot.stages, slot.hints]);
+  // focus 마다 다시 읽으므로, 바뀐 것이 없으면 썸네일을 갈아 끼우지 않는다(깜박임 방지).
+  const detailKey = JSON.stringify([slot.speciesId, slot.stages]);
   if (detailKey !== dex.detailKey) {
     dex.detailKey = detailKey;
-    renderStagesAndHints(slot);
+    renderStages(slot);
   }
 
-  detailAction.textContent = slot.state === 'owned' ? '펫룸에서 보기' : '✨ 펫 뽑기로 가기';
+  detailAction.textContent = slot.state === 'owned' ? '펫룸에서 보기' : '펫 뽑기로 가기';
   detailActionError.hidden = true;
 
   const showcaseKey = `${slot.speciesId}|${slot.state}|${slot.showcase.stage}`;
@@ -359,7 +358,7 @@ function renderDetail(): void {
   if (slot.isNew) void markSeen(slot.speciesId);
 }
 
-function renderStagesAndHints(slot: DexSlotView): void {
+function renderStages(slot: DexSlotView): void {
   evolution.replaceChildren(
     ...slot.stages.flatMap((stage, index) => {
       const box = document.createElement('span');
@@ -369,14 +368,6 @@ function renderStagesAndHints(slot: DexSlotView): void {
       void drawCard(canvas, stage.sprite, !stage.reached, () => 1);
       box.append(canvas);
       return index === 0 ? [box] : [span('evolution__arrow', '›'), box];
-    }),
-  );
-
-  hints.replaceChildren(
-    ...slot.hints.map((hint) => {
-      const item = document.createElement('li');
-      item.textContent = hint;
-      return item;
     }),
   );
 }

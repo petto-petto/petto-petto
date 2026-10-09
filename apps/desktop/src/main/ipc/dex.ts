@@ -1,9 +1,7 @@
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 
 import type { PetClient } from '@pet/client';
-import { COMBINE_MATERIAL_COUNT } from '@pet/combine';
 import { dexView, roomFocusTarget, type DexResponse, type DexView } from '@pet/dex';
-import { STANDARD_GRADE_WEIGHTS } from '@pet/gacha';
 import { petAssetPath } from '@pet/room';
 
 /** 도감이 앱 껍데기에 요구하는 것. 창을 다루는 일은 도감이 할 수 없다. */
@@ -15,8 +13,8 @@ export interface DexHost {
 }
 
 /**
- * 도감 화면 모델. 에셋 경로·뽑기 확률·합성 재료 수는 각 소유자의 값을 여기서 넘긴다
- * (`@pet/dex`가 그 패키지들을 import 하지 않는 이유는 `domain/dex.ts` 머리말 참조).
+ * 도감 화면 모델. 에셋 경로는 소유자(`@pet/room`)의 규칙을 여기서 넘긴다
+ * (`@pet/dex`가 그 패키지를 import 하지 않는 이유는 `domain/dex.ts` 머리말 참조).
  */
 export function loadDexView(pets: Pick<PetClient, 'listDexEntries'>): DexView {
   return dexView(pets.listDexEntries(), {
@@ -24,8 +22,6 @@ export function loadDexView(pets: Pick<PetClient, 'listDexEntries'>): DexView {
       card: petAssetPath(species.rarity, species.sprite, species.speciesId, stage, 'card'),
       idle: petAssetPath(species.rarity, species.sprite, species.speciesId, stage, 'idle'),
     }),
-    gachaWeights: STANDARD_GRADE_WEIGHTS,
-    combineMaterialCount: COMBINE_MATERIAL_COUNT,
   });
 }
 
