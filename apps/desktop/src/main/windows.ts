@@ -473,14 +473,13 @@ export function createBattleWindow(): BrowserWindow | undefined {
 /**
  * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
  *
- * 배경 원본은 960x360이지만 픽셀 아트는 정수 배율만 허용되므로(design.md §4) 줄여 그리지
- * 않고 1배로 두고 **잘라서** 640x240만 보여 준다. 그 규칙과 상수는 `@pet/room`의
- * `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
+ * 배경 원본 960x360의 일부를 1.25배로 키워 장면 칸 640x300을 채운다. 그 규칙과 상수는
+ * `@pet/room`의 `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
  *
  * 상세 패널은 장면을 덮지 않고 **아래 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을
- * 막지 않는 자리에). 높이 180px은 합성 창과 같은 값이다.
+ * 막지 않는 자리에). 장면을 키우려고 높이를 120px로 줄였다(2026-10-09).
  */
-const ROOM_PANEL_HEIGHT = 180;
+const ROOM_PANEL_HEIGHT = 120;
 export const ROOM_WIDTH = VIEWPORT_WIDTH;
 export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 

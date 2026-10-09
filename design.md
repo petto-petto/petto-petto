@@ -69,6 +69,7 @@ petto-petto is a pixel UI inspired by a small pet space deep in a dark forest. P
 ## 4. Pixel Rendering
 
 - Scale sprites, pixel backgrounds, and pixel icons only by integer factors.
+  - Exception: the pet-room scene renders its background and pets at 1.25x (`SCENE_SCALE` in `packages/pet-room/src/domain/scene.ts`) so the scene fills 640x300 above a 120px panel. Requester decision, 2026-10-09.
 - Apply `image-rendering: pixelated` to images and set `imageSmoothingEnabled = false` for Canvas rendering.
 - Use `#2C2438` as the shared outline color for pet sprites.
 - Keep the light source in the upper left. Place highlights toward the upper left and shadows toward the lower right.

@@ -32,6 +32,7 @@ import {
   isDragGesture,
   layersInDrawOrder,
   PET_SCALE,
+  SCENE_SCALE,
   spawnFireflies,
   spawnRoamingPet,
   spawnWeather,
@@ -663,14 +664,17 @@ async function applyBackground(background) {
   await buildLayers(background, meta);
   if (seq !== applySeq) return;
 
-  // 무대를 배경 크기로 두고 보이는 영역만큼 밀어 올린다. 캔버스와 레이어는 계속 배경
-  // 좌표계에 있으므로 배회·클릭 판정은 이 값을 몰라도 된다.
+  // 무대를 배경 크기로 두고 `SCENE_SCALE`배로 키운 뒤 보이는 영역만큼 밀어 올린다. 캔버스와
+  // 레이어는 계속 배경 좌표계에 있으므로 배회·클릭 판정은 이 값을 몰라도 된다(클릭은 캔버스
+  // 화면 크기로 되돌려 계산한다).
   const viewport = viewportOf(meta);
   room.viewport = viewport;
   stageEl.style.width = `${meta.width}px`;
   stageEl.style.height = `${meta.height}px`;
-  stageEl.style.left = `${-viewport.x}px`;
-  stageEl.style.top = `${-viewport.y}px`;
+  stageEl.style.transform = `scale(${SCENE_SCALE})`;
+  // 창 픽셀 단위로 민다. 반 픽셀 위치는 화면을 흐리게 만든다.
+  stageEl.style.left = `${-Math.round(viewport.x * SCENE_SCALE)}px`;
+  stageEl.style.top = `${-Math.round(viewport.y * SCENE_SCALE)}px`;
 
   const previous = room.walkArea;
   // 배경이 정한 배회 영역을 보이는 영역 안으로 좁힌다. 좁히지 않으면 펫이 잘린 바깥으로
