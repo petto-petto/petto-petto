@@ -161,6 +161,7 @@ panel.querySelectorAll('[data-grade]').forEach((tab) =>
     autoSelect();
     message.textContent = '';
     render();
+    grid.scrollLeft = 0;
   }),
 );
 
