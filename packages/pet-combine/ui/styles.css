@@ -54,10 +54,6 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-.pet-grid {
-  overflow: auto;
-}
-
 .token-readout {
   align-self: center;
   font-size: 11px;
@@ -119,6 +115,25 @@ body {
 }
 .pet-grid {
   grid-area: pets;
+  min-width: 0;
+  flex-wrap: nowrap;
+  overflow-x: scroll;
+  overflow-y: hidden;
+  scrollbar-color: #6b4a2e #c3a16a;
+  scrollbar-width: thin;
+}
+.pet-grid::-webkit-scrollbar {
+  height: 8px;
+}
+.pet-grid::-webkit-scrollbar-thumb {
+  background: #6b4a2e;
+}
+.pet-grid::-webkit-scrollbar-track {
+  background: #c3a16a;
+}
+.pet-grid:focus-visible {
+  outline: 2px solid #ffd166;
+  outline-offset: 2px;
 }
 .combine-tabs button,
 .combine-button {
@@ -186,13 +201,17 @@ body {
   min-width: 0;
   height: 52px;
   padding: 3px;
-  background: #4e3b70;
+  border-color: #ffd166;
+  background: #6b4a2e;
+  box-shadow:
+    inset 0 2px 0 #a5763f,
+    2px 2px 0 rgb(0 0 0 / 35%);
 }
 
 .pet-card {
-  grid-template-columns: 48px minmax(0, 1fr);
-  width: 190px;
-  height: 62px;
+  flex: 0 0 132px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  height: 50px;
   padding: 4px;
   background: #4e3b70;
 }
@@ -247,13 +266,11 @@ body {
   line-height: 1;
 }
 
-.selection-card.rare,
 .pet-card.rare {
   background: #4a3b76;
   border-color: #9a83d8;
 }
 
-.selection-card.epic,
 .pet-card.epic {
   background: #6a3f79;
   border-color: #e2a6ed;
