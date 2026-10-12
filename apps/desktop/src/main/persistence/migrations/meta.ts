@@ -164,4 +164,28 @@ export const META_MIGRATIONS: readonly SqliteMigration[] = [
       `);
     },
   },
+  {
+    scope: 'meta',
+    version: 3,
+    name: 'add battle display settings',
+    up(database) {
+      database.exec(`
+        CREATE TABLE meta_settings_next ( -- 설정 화면의 값. 한 행만 유지한다
+          id INTEGER PRIMARY KEY NOT NULL CHECK (id = 1), -- 단일 설정 행
+          overlay_visible INTEGER NOT NULL CHECK (overlay_visible IN (0, 1)), -- 오버레이 표시
+          pet_size TEXT NOT NULL, -- 펫 크기
+          autostart INTEGER NOT NULL CHECK (autostart IN (0, 1)), -- 자동 실행
+          notify_levelup INTEGER NOT NULL CHECK (notify_levelup IN (0, 1)), -- 레벨업 알림
+          notify_achievement INTEGER NOT NULL CHECK (notify_achievement IN (0, 1)), -- 업적 알림
+          notify_gacha_ready INTEGER NOT NULL CHECK (notify_gacha_ready IN (0, 1)), -- 뽑기 알림
+          battle_animations_enabled INTEGER NOT NULL DEFAULT 1 CHECK (battle_animations_enabled IN (0, 1)), -- 전투 연출 표시
+          battle_opacity INTEGER NOT NULL DEFAULT 100 CHECK (battle_opacity BETWEEN 0 AND 100) -- 전투 불투명도 백분율
+        );
+        INSERT INTO meta_settings_next (id, overlay_visible, pet_size, autostart, notify_levelup, notify_achievement, notify_gacha_ready)
+          SELECT id, overlay_visible, pet_size, autostart, notify_levelup, notify_achievement, notify_gacha_ready FROM meta_settings;
+        DROP TABLE meta_settings;
+        ALTER TABLE meta_settings_next RENAME TO meta_settings;
+      `);
+    },
+  },
 ];

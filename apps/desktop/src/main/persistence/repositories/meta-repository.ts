@@ -80,6 +80,8 @@ const TABLES = {
       'notify_levelup',
       'notify_achievement',
       'notify_gacha_ready',
+      'battle_animations_enabled',
+      'battle_opacity',
     ],
   },
 } as const satisfies Record<string, TableSpec>;
@@ -183,6 +185,8 @@ function rowsOf(snapshot: MetaSnapshot): Map<TableSpec, Row[]> {
           notify_levelup: bit(snapshot.settings.notifyLevelup),
           notify_achievement: bit(snapshot.settings.notifyAchievement),
           notify_gacha_ready: bit(snapshot.settings.notifyGachaReady),
+          battle_animations_enabled: bit(snapshot.settings.battleAnimationsEnabled ?? true),
+          battle_opacity: snapshot.settings.battleOpacity ?? 100,
         },
       ],
     ],
@@ -322,6 +326,8 @@ export class MetaRepository {
         notifyLevelup: settings['notify_levelup'] === 1,
         notifyAchievement: settings['notify_achievement'] === 1,
         notifyGachaReady: settings['notify_gacha_ready'] === 1,
+        battleAnimationsEnabled: settings['battle_animations_enabled'] === 1,
+        battleOpacity: Number(settings['battle_opacity']),
       },
     };
   }

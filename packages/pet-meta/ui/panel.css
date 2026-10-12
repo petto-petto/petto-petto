@@ -213,6 +213,29 @@ body {
   display: none;
 }
 
+.battle-opacity-slider {
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  margin: 8px 0;
+  border: 2px solid var(--wood-border);
+  background: var(--parchment-ring);
+  cursor: pointer;
+}
+
+.battle-opacity-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 18px;
+  border: 2px solid var(--wood-border);
+  background: var(--gold);
+}
+
+.battle-opacity-slider:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 .subtab {
   padding: 2px var(--space-3);
   background: var(--parchment-ring);

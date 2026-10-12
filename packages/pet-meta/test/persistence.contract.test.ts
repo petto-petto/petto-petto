@@ -40,6 +40,19 @@ import {
 
 const NOW = '2026-08-26T14:37:12+09:00';
 
+test('전투 표시 설정은 재시작 후 복원되고 옛 저장본에는 기본값을 채운다', () => {
+  const state = createMetaState();
+  state.settings.battleAnimationsEnabled = false;
+  state.settings.battleOpacity = 28;
+  const snapshot = snapshotOf(state);
+  assert.equal(stateOf(snapshot).settings.battleAnimationsEnabled, false);
+  assert.equal(stateOf(snapshot).settings.battleOpacity, 28);
+  Reflect.deleteProperty(snapshot.settings, 'battleAnimationsEnabled');
+  Reflect.deleteProperty(snapshot.settings, 'battleOpacity');
+  assert.equal(stateOf(snapshot).settings.battleAnimationsEnabled, true);
+  assert.equal(stateOf(snapshot).settings.battleOpacity, 100);
+});
+
 class Session {
   state: MetaState = createMetaState();
   collector = FixtureCollector.withEmptySnapshots();

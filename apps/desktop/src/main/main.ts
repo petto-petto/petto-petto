@@ -461,6 +461,23 @@ app.whenReady().then(async () => {
 
   const battleRoom = room;
   mountBattle(new PetClientRoomAdapter(pets), ipcMain, {
+    displaySettings: {
+      read: () => ({
+        animationsEnabled: state!.meta.settings.battleAnimationsEnabled,
+        opacity: state!.meta.settings.battleOpacity,
+      }),
+      setOpacity(percent) {
+        const previous = state!.meta.settings.battleOpacity;
+        state!.meta.settings.battleOpacity = percent;
+        try {
+          state!.persist();
+        } catch (error) {
+          state!.meta.settings.battleOpacity = previous;
+          throw error;
+        }
+        broadcast('meta:updated', undefined);
+      },
+    },
     selection: new RoomSelectionAdapter(() => battleRoom.scene().pets),
     growth,
     petAssetsDir,

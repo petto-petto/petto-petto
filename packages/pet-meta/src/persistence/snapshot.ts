@@ -366,7 +366,7 @@ export function stateOf(snapshot: MetaSnapshot): MetaState {
     equippedTitle: snapshot.profile.equippedTitle ?? undefined,
     ownedTitles: [...snapshot.profile.ownedTitles],
   };
-  state.settings = { ...snapshot.settings };
+  state.settings = { ...state.settings, ...snapshot.settings };
 
   return state;
 }

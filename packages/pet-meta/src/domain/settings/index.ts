@@ -17,6 +17,8 @@ export const isPetSize = (value: string): value is PetSize =>
   (PET_SIZES as readonly string[]).includes(value);
 
 export interface MetaSettings {
+  battleAnimationsEnabled: boolean;
+  battleOpacity: number;
   /** 오버레이 표시 — 초기값 켜짐. */
   overlayVisible: boolean;
   /** 펫 크기 — 초기값 보통. */
@@ -34,6 +36,8 @@ export interface MetaSettings {
 /** 기획서 6.2·6.3의 초기값을 한곳에 못박는다. */
 export function defaultSettings(): MetaSettings {
   return {
+    battleAnimationsEnabled: true,
+    battleOpacity: 100,
     overlayVisible: true,
     petSize: 'normal',
     autostart: false,

@@ -75,6 +75,7 @@ export interface MiscSettings {
 }
 
 export interface SettingsScreen {
+  battle: { animationsEnabled: boolean; opacity: number };
   collect: CollectCard[];
   display: DisplaySettings;
   notifications: NotificationSettings;
@@ -110,6 +111,10 @@ export function settingsScreen(
   });
 
   return {
+    battle: {
+      animationsEnabled: state.settings.battleAnimationsEnabled,
+      opacity: state.settings.battleOpacity,
+    },
     collect,
     display: {
       overlayVisible: state.settings.overlayVisible,

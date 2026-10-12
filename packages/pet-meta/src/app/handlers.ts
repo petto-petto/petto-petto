@@ -333,6 +333,31 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     state.persist();
   });
 
+  handle('settings:battle', (key, value) => {
+    const previous = { ...state.meta.settings };
+    switch (key) {
+      case 'animations_enabled':
+        if (typeof value !== 'boolean')
+          throw new Error('애니메이션 설정은 켬 또는 끔이어야 합니다');
+        state.meta.settings.battleAnimationsEnabled = value;
+        break;
+      case 'opacity':
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100)
+          throw new Error('투명도는 0~100 사이의 정수여야 합니다');
+        state.meta.settings.battleOpacity = value;
+        break;
+      default:
+        throw new Error(`알 수 없는 전투 설정: ${String(key)}`);
+    }
+    try {
+      state.persist();
+    } catch (error) {
+      state.meta.settings = previous;
+      throw error;
+    }
+    host.broadcast('meta:updated', undefined);
+  });
+
   handle('settings:notification', (key, value) => {
     switch (key) {
       case 'levelup':

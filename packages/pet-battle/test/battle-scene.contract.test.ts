@@ -9,6 +9,7 @@ import {
   enemyColorStageForColor,
   enemySizeStageForSize,
   visibleEnemyStage,
+  battleStageLabel,
   selectRandomPetSpectators,
   shouldStartEnemyHitReaction,
   type BattleState,
@@ -90,10 +91,10 @@ test('지면 연출의 공격 여부가 기존 고정 주기 대신 펫 스프�
 test('현재 보유 펫에서 활성 펫을 제외하고 중복 없이 무작위 최대 3마리를 고른다', () => {
   const pets = [
     state().activePet!,
-    { ...state().activePet!, petId: 'pet-2' },
-    { ...state().activePet!, petId: 'pet-3' },
-    { ...state().activePet!, petId: 'pet-4' },
-    { ...state().activePet!, petId: 'pet-5' },
+    { ...state().activePet!, petId: 'pet-2', sprite: 'cat' },
+    { ...state().activePet!, petId: 'pet-3', sprite: 'dog' },
+    { ...state().activePet!, petId: 'pet-4', sprite: 'fox' },
+    { ...state().activePet!, petId: 'pet-5', sprite: 'rabbit' },
   ];
 
   const selected = selectRandomPetSpectators(pets, 'mio', () => 0);
@@ -103,6 +104,38 @@ test('현재 보유 펫에서 활성 펫을 제외하고 중복 없이 무작위
     ['pet-3', 'pet-4', 'pet-5'],
   );
   assert.equal(new Set(selected.map((pet) => pet.petId)).size, 3);
+});
+
+test('종류와 진화 단계가 같은 응원 펫은 하나만 고르고 활성 펫의 모습은 제외한다', () => {
+  const active = { ...state().activePet!, evolutionStage: 1 as const };
+  const pets = [
+    active,
+    { ...active, petId: 'active-copy' },
+    { ...active, petId: 'baby', evolutionStage: 0 as const },
+    { ...active, petId: 'baby-copy', evolutionStage: 0 as const },
+    { ...active, petId: 'adult', evolutionStage: 2 as const },
+    { ...active, petId: 'cat', sprite: 'cat' },
+    { ...active, petId: 'cat-copy', sprite: 'cat' },
+  ];
+  const selected = selectRandomPetSpectators(pets, active.petId, () => 0);
+  assert.equal(selected.length, 3);
+  assert.deepEqual(
+    selected.map((pet) => [pet.sprite, pet.evolutionStage]).sort(),
+    [
+      ['cat', 1],
+      ['mole_digger', 0],
+      ['mole_digger', 2],
+    ].sort(),
+  );
+});
+
+test('응원 후보가 부족하면 중복으로 채우지 않고 활성 펫이 없으면 비운다', () => {
+  const active = state().activePet!;
+  const cat = { ...active, petId: 'cat', sprite: 'cat' };
+  const pets = [active, { ...active, petId: 'copy' }, cat, { ...cat, petId: 'cat-copy' }];
+  assert.equal(selectRandomPetSpectators(pets, active.petId).length, 1);
+  assert.deepEqual(selectRandomPetSpectators([active], active.petId), []);
+  assert.deepEqual(selectRandomPetSpectators(pets, null), []);
 });
 
 test('처치한 적이 없으면 비우고, 있으면 최근 처치 적 최대 3마리를 역순으로 보여준다', () => {
@@ -146,6 +179,59 @@ test('색마다 소·중·대를 거친 뒤 다음 색으로 넘어가고 24단�
   );
   assert.equal(rainbow.backgroundAsset, 'assets/backgrounds/v2/starlight-shrine.png');
   assert.match(rainbow.enemyAsset, /v2\/rainbow-steady\.png$/);
+});
+
+test('스테이지 번호는 색 순환 뒤에도 누적 구간으로 이어진다', () => {
+  const cases = [
+    [1, 'STAGE 1-1'],
+    [3, 'STAGE 1-3'],
+    [4, 'STAGE 2-1'],
+    [24, 'STAGE 8-3'],
+    [25, 'STAGE 9-1'],
+    [48, 'STAGE 16-3'],
+    [49, 'STAGE 17-1'],
+    [300, 'STAGE 100-3'],
+    [3000, 'STAGE 1,000-3'],
+    [0xffff_ffff, 'STAGE 1,431,655,765-3'],
+  ] as const;
+  for (const [stage, expected] of cases) {
+    assert.equal(
+      battleStageLabel(state({ activePet: { ...state().activePet!, stage } })),
+      expected,
+    );
+  }
+  for (let stage = 1; stage <= 24; stage++) {
+    const current = state({
+      activePet: { ...state().activePet!, stage },
+      enemyColor: enemyColorForStage(stage),
+    });
+    const scene = deriveBattleScene(current);
+    assert.equal(
+      battleStageLabel(current),
+      `STAGE ${scene.enemyColorStage}-${scene.enemySizeStage}`,
+    );
+  }
+});
+
+test('24단계 처치와 대기에는 8-3, 다음 적 등장부터 9-1을 표시한다', () => {
+  for (const phase of ['DEFEAT_MOTION', 'AWAITING_ADVANCE', 'SPAWNING', 'FIGHTING'] as const) {
+    const current = state({
+      activePet: { ...state().activePet!, stage: 25 },
+      overlay: { phase, elapsed: 0, defeatedStage: 24, nextStage: 25 },
+    });
+    assert.equal(
+      battleStageLabel(current),
+      phase === 'DEFEAT_MOTION' || phase === 'AWAITING_ADVANCE' ? 'STAGE 8-3' : 'STAGE 9-1',
+    );
+  }
+});
+
+test('적 색과 크기 미리보기는 누적 스테이지 번호를 바꾸지 않는다', () => {
+  const current = state({
+    activePet: { ...state().activePet!, stage: 49 },
+    preview: { ...state().preview, enemyColor: 'RAINBOW', enemySize: 'LARGE' },
+  });
+  assert.equal(battleStageLabel(current), 'STAGE 17-1');
 });
 
 test('정복 중에는 처치한 적 크기를 유지하고 다음 적 등장부터 크기를 바꾼다', () => {

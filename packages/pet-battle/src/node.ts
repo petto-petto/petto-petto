@@ -10,12 +10,15 @@ import { SpriteBattleGateway } from './app/sprite-gateway.ts';
 import { mountBattleIpc } from './platform/ipc.ts';
 import type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
 import { ElectronBattleEngine } from './app/battle-engine.ts';
+import { DisplaySettingsBattleGateway } from './app/display-settings.ts';
+import type { BattleDisplaySettingsPort } from './ports/display-settings.ts';
 
 export { FileBattleSpriteAdapter } from './platform/file-sprites.ts';
 export { mountBattleIpc } from './platform/ipc.ts';
 export type { BattleIpcRegistry, BattleLifecyclePort, BattleRuntime } from './ports/runtime.ts';
 
 export interface BattleRuntimeOptions {
+  displaySettings?: BattleDisplaySettingsPort;
   /** Optional owner-provided room selection; never changes room or common storage. */
   selection?: RoomSelectionClient;
   growth?: GrowthReadClient;
@@ -55,10 +58,13 @@ export function createBattleRuntime(
     ),
     sprites,
   );
+  const displayGateway = options.displaySettings
+    ? new DisplaySettingsBattleGateway(gateway, options.displaySettings)
+    : gateway;
   return {
     execute(command) {
       if (closed) return Promise.reject(new Error('전투 연결이 종료되었습니다'));
-      return gateway.execute(command);
+      return displayGateway.execute(command);
     },
     close() {
       if (closed) return;

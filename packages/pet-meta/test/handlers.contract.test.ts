@@ -62,6 +62,25 @@ function handlers() {
   return { state, map: metaHandlers(state, noopHost) };
 }
 
+test('전투 표시 설정은 진행 설정과 독립적이며 저장 실패를 되돌린다', () => {
+  const { state, map } = handlers();
+  assert.equal(state.meta.settings.battleAnimationsEnabled, true);
+  assert.equal(state.meta.settings.battleOpacity, 100);
+  map['settings:battle']!('animations_enabled', false);
+  map['settings:battle']!('opacity', 37);
+  assert.equal(state.meta.settings.battleAnimationsEnabled, false);
+  assert.equal(state.meta.settings.battleOpacity, 37);
+  for (const value of [-1, 101, 1.5, '50', NaN]) {
+    assert.throws(() => map['settings:battle']!('opacity', value));
+  }
+  assert.throws(() => map['settings:battle']!('animations_enabled', 'false'));
+  state.persist = () => {
+    throw new Error('save failed');
+  };
+  assert.throws(() => map['settings:battle']!('opacity', 50), /save failed/);
+  assert.equal(state.meta.settings.battleOpacity, 37);
+});
+
 test('UI: 아이콘 채널이 화면 공용 아이콘을 돌려준다', () => {
   const { map } = handlers();
   const icons = map['ui:icons'];

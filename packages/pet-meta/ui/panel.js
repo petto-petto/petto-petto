@@ -190,6 +190,7 @@ const SUBTABS = {
     ['collect', '수집'],
     ['display', '화면'],
     ['notifications', '알림'],
+    ['battle', '전투'],
     ['misc', '기타'],
   ],
   achievements: [],
@@ -210,6 +211,9 @@ const ui = {
   /** 정보 탭의 `자세히` 펼침. 저장하지 않고, 서브탭·화면이 바뀌면 접는다. */
   expanded: false,
 };
+
+let battleOpacityEditing = false;
+let battleOpacitySave = Promise.resolve();
 
 const content = document.getElementById('content');
 const subtabBar = document.getElementById('subtabs');
@@ -799,6 +803,64 @@ async function renderSettings() {
     return;
   }
 
+  if (ui.subtab === 'battle') {
+    const value = el('span', { text: `${data.battle.opacity}%` });
+    const slider = el('input', {
+      class: 'battle-opacity-slider',
+      attrs: {
+        type: 'range',
+        min: 0,
+        max: 100,
+        step: 1,
+        value: data.battle.opacity,
+        'aria-label': '전투 투명도',
+      },
+      on: {
+        input: (event) => {
+          value.textContent = `${event.target.value}%`;
+          battleOpacityEditing = true;
+          const percent = Number(event.target.value);
+          battleOpacitySave = battleOpacitySave
+            .then(() => api.setBattleSetting('opacity', percent))
+            .catch((error) => flash(String(error), true));
+        },
+        change: async () => {
+          await battleOpacitySave;
+          battleOpacityEditing = false;
+          render();
+        },
+      },
+    });
+    commit(
+      generation,
+      el('div', { class: 'card' }, [
+        el('div', { class: 'setting-row' }, [
+          el('div', { class: 'text' }, [
+            el('div', { text: '전체 전투 연출' }),
+            el('div', { class: 'note', text: '끄면 제자리 기본 공격만 표시합니다.' }),
+          ]),
+          switchButton(data.battle.animationsEnabled, async (next) => {
+            try {
+              await api.setBattleSetting('animations_enabled', next);
+            } catch (error) {
+              flash(String(error), true);
+            }
+            render();
+          }),
+        ]),
+        el('div', { class: 'setting-row' }, [
+          el('div', { class: 'text' }, [
+            el('div', { text: '투명도' }),
+            el('div', { class: 'note', text: '펫은 유지 · 나머지 0% 투명 / 100% 불투명' }),
+          ]),
+          value,
+        ]),
+        slider,
+      ]),
+    );
+    return;
+  }
+
   // 기타
   commit(
     generation,
@@ -1133,6 +1195,9 @@ document.getElementById('demo-button').addEventListener('click', () => selectScr
 api.on('panel:show', (screen) => selectScreen(screen));
 // 1분 주기 집계가 끝나면 현재 화면을 새로 그린다.
 api.on('usage:aggregated', () => render());
+api.on('meta:updated', () => {
+  if (ui.screen === 'settings' && ui.subtab === 'battle' && !battleOpacityEditing) render();
+});
 
 (async () => {
   const screen = await api.currentPanelScreen();
