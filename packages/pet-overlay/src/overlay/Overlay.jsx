@@ -6,6 +6,7 @@ import Pet from './Pet.jsx';
 import PetSprite from './PetSprite.jsx';
 import LevelUpFx from './LevelUpFx.jsx';
 import EvolutionFx from './EvolutionFx.jsx';
+import EvolveBubble from './EvolveBubble.jsx';
 import Vfx from './Vfx.jsx';
 import { dragStart, dragMove, dragEnd } from '../platform/bridge.js';
 import { useOverlayHitTest } from './useHitTest.js';
@@ -90,7 +91,7 @@ export default function Overlay({ g, activePet, roster, activeId, onSelectPet })
   return (
     <div className="overlay-root">
       <div className="pet-anchor io">
-        {menuOpen && <HangingMenu g={g} onClose={() => setMenuOpen(false)} />}
+        {menuOpen && <HangingMenu onClose={() => setMenuOpen(false)} />}
 
         {levelUpFx && <LevelUpFx key={levelUpFx.key} level={levelUpFx.level} />}
         {evolveFx && <EvolutionFx key={evolveFx.key} />}
@@ -131,13 +132,13 @@ export default function Overlay({ g, activePet, roster, activeId, onSelectPet })
             <span aria-hidden="true">◆</span>
             {activePet?.name ?? pet.name}
           </div>
-          {pet.evolutionAvailable && (
-            <div className="evo-badge" title="진화 가능">
-              ✨
-            </div>
-          )}
           {face === 'bored' && <div className="mood-zzz">💤</div>}
         </div>
+
+        {/* 진화할 때까지 남는 작은 말풍선. 누르면 진화 안내가 펼쳐진다. 메뉴와 같은 자리라 메뉴가 열리면 비킨다. */}
+        {pet.evolutionAvailable && !menuOpen && (
+          <EvolveBubble petName={activePet?.name ?? pet.name} onEvolve={() => g.doEvolve()} />
+        )}
 
         <Toasts toasts={toasts} />
         <Vfx ref={vfxRef} />
