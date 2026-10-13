@@ -11,7 +11,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
-import { VIEWPORT_HEIGHT, VIEWPORT_WIDTH } from '@pet/room';
+import {
+  VIEWPORT_HEIGHT,
+  VIEWPORT_WIDTH,
+  windowPositionDuringDrag,
+  type DragOrigin,
+} from '@pet/room';
 import battleWindowOptions from '@pet/battle/ui/window-options.json' with { type: 'json' };
 
 import {
@@ -58,6 +63,8 @@ const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).
 let overlayWindow: BrowserWindow | undefined;
 let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
+/** 펫룸 장면을 끄는 중이면 시작 시점의 창·포인터 위치. */
+let roomDragOrigin: DragOrigin | undefined;
 let gachaWindow: BrowserWindow | undefined;
 let combineWindow: BrowserWindow | undefined;
 let dexWindow: BrowserWindow | undefined;
@@ -466,14 +473,13 @@ export function createBattleWindow(): BrowserWindow | undefined {
 /**
  * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
  *
- * 배경 원본은 960x360이지만 픽셀 아트는 정수 배율만 허용되므로(design.md §4) 줄여 그리지
- * 않고 1배로 두고 **잘라서** 640x240만 보여 준다. 그 규칙과 상수는 `@pet/room`의
- * `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
+ * 배경 원본 960x360의 일부를 1.25배로 키워 장면 칸 640x300을 채운다. 그 규칙과 상수는
+ * `@pet/room`의 `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
  *
  * 상세 패널은 장면을 덮지 않고 **아래 칸**에 놓는다(design.md §7: 상세 패널은 펫 이동을
- * 막지 않는 자리에). 높이 180px은 합성 창과 같은 값이다.
+ * 막지 않는 자리에). 장면을 키우려고 높이를 120px로 줄였다(2026-10-09).
  */
-const ROOM_PANEL_HEIGHT = 180;
+const ROOM_PANEL_HEIGHT = 120;
 export const ROOM_WIDTH = VIEWPORT_WIDTH;
 export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 
@@ -512,6 +518,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
 
   roomWindow.on('closed', () => {
     roomWindow = undefined;
+    roomDragOrigin = undefined;
   });
 
   injectFonts(roomWindow);
@@ -539,6 +546,26 @@ function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
   next.show();
   next.focus();
   from.close();
+}
+
+/**
+ * 펫룸 장면을 끌어 창을 옮긴다. 장면은 펫 클릭을 받아야 해서 `-webkit-app-region: drag`를
+ * 쓰지 못하므로 렌더러가 포인터를 보내고 여기서 창을 옮긴다. 클릭과 끌기는 렌더러가 가른다.
+ */
+export function beginRoomDrag(screenX: number, screenY: number): void {
+  if (!roomWindow || roomWindow.isDestroyed()) return;
+  const [windowX, windowY] = roomWindow.getPosition();
+  roomDragOrigin = { windowX: windowX ?? 0, windowY: windowY ?? 0, screenX, screenY };
+}
+
+export function moveRoomDrag(screenX: number, screenY: number): void {
+  if (!roomWindow || roomWindow.isDestroyed() || !roomDragOrigin) return;
+  const { x, y } = windowPositionDuringDrag(roomDragOrigin, { screenX, screenY });
+  roomWindow.setPosition(x, y);
+}
+
+export function endRoomDrag(): void {
+  roomDragOrigin = undefined;
 }
 
 /** 펫룸 화면에서 뽑기·합성 화면으로 넘어간다. 펫룸 창이 없으면 `next`만 연 채로 둔다. */

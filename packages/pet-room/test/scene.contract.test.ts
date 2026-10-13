@@ -24,6 +24,7 @@ import {
   ROAM_SPEED_PX_PER_SEC,
   spawnRoamingPet,
   stepRoaming,
+  SCENE_SCALE,
   viewportOf,
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
@@ -389,20 +390,22 @@ test('빈 자리를 클릭하면 아무도 선택되지 않는다', () => {
  * 창이 보여 주는 영역
  * ------------------------------------------------------------------ */
 
-test('창은 장면 아래쪽 가운데를 640x240만 보여 준다', () => {
+test('창은 장면 아래쪽 가운데 512x240을 1.25배로 키워 640x300에 보여 준다', () => {
   const viewport = viewportOf(forestMeta());
 
-  assert.deepEqual(viewport, { x: 160, y: 120, width: 640, height: 240 });
+  assert.deepEqual(viewport, { x: 224, y: 120, width: 512, height: 240 });
   // 아래쪽을 남긴다 — 버리는 120행은 하늘이고 지면은 아래에 있다.
   assert.equal(viewport.y + viewport.height, 360, '장면 바닥이 창 바닥과 맞아야 한다');
-  assert.equal(viewport.x + viewport.width, 800);
+  assert.equal(viewport.x + viewport.width, 736);
+  assert.equal(viewport.width * SCENE_SCALE, VIEWPORT_WIDTH);
+  assert.equal(viewport.height * SCENE_SCALE, VIEWPORT_HEIGHT);
 });
 
 test('배경이 창보다 작으면 자르지 않는다', () => {
-  const small = { ...forestMeta(), width: 560, height: 240 };
+  const small = { ...forestMeta(), width: 480, height: 200 };
   const viewport = viewportOf(small);
 
-  assert.deepEqual(viewport, { x: 0, y: 0, width: 560, height: 240 });
+  assert.deepEqual(viewport, { x: 0, y: 0, width: 480, height: 200 });
 });
 
 test('여백이 홀수여도 오프셋은 정수다 — 픽셀이 반 칸 밀리면 안 된다', () => {
@@ -411,7 +414,7 @@ test('여백이 홀수여도 오프셋은 정수다 — 픽셀이 반 칸 밀리
 
   assert.equal(Number.isInteger(viewport.x), true);
   assert.equal(Number.isInteger(viewport.y), true);
-  assert.equal(viewport.x, 160);
+  assert.equal(viewport.x, 224);
 });
 
 test('배회 영역은 보이는 영역 안으로 좁혀진다 — 펫이 잘린 바깥으로 걸어가면 사라진다', () => {
@@ -421,7 +424,7 @@ test('배회 영역은 보이는 영역 안으로 좁혀진다 — 펫이 잘린
   const clipped = clipWalkAreaToViewport(walkAreaOf(meta), viewport);
 
   // 좌표는 발 위치라 스프라이트 반 폭(24)만큼 창 안쪽으로 물러선다.
-  assert.deepEqual(clipped, { x: 184, y: 316, width: 592, height: 36 });
+  assert.deepEqual(clipped, { x: 248, y: 316, width: 464, height: 36 });
   assert.ok(clipped.x >= viewport.x, '왼쪽으로 삐져나가지 않는다');
   assert.ok(
     clipped.x + clipped.width <= viewport.x + viewport.width,
@@ -449,13 +452,13 @@ test('머리가 창 위로 잘리는 자리는 배회 영역에서 뺀다', () =
 test('보이는 영역 밖에만 있는 배회 영역은 거부한다', () => {
   const viewport = viewportOf(forestMeta());
   // 잘려 나가는 왼쪽 바깥.
-  const outside: WalkArea = { x: 0, y: 316, width: 80, height: 36 };
+  const outside: WalkArea = { x: 0, y: 316, width: 200, height: 36 };
 
   assert.throws(() => clipWalkAreaToViewport(outside, viewport), InvalidWalkAreaError);
 });
 
 test('창 크기는 뽑기·합성의 640x420과 맞는다', () => {
-  // 장면 240 + 하단 패널 180 = 420. 하단 패널 높이는 앱이 갖지만 합이 맞아야 한다.
+  // 장면 300 + 하단 패널 120 = 420. 하단 패널 높이는 앱이 갖지만 합이 맞아야 한다.
   assert.equal(VIEWPORT_WIDTH, 640);
-  assert.equal(VIEWPORT_HEIGHT + 180, 420);
+  assert.equal(VIEWPORT_HEIGHT + 120, 420);
 });

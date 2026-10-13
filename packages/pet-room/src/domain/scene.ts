@@ -268,19 +268,22 @@ export function randomPointIn(area: WalkArea, random: () => number): { x: number
  * ------------------------------------------------------------------ */
 
 /**
- * 창은 장면의 **일부만** 보여 준다.
+ * 창은 장면의 **일부만** 1.25배로 키워 보여 준다.
  *
- * 배경 원본은 960x360인데 창은 640x240만 쓴다. 픽셀 아트는 정수 배율만 허용되므로
- * (design.md §4) 0.667배로 줄여 그릴 수 없어, 1배로 두고 **잘라서** 보여 준다.
- * 뽑기·합성과 같은 640x420 창에 들어가려면 장면 240 + 하단 패널 180이 되어야 한다.
+ * 배경 원본은 960x360이고, 창에서 장면이 쓰는 칸은 640x300이다(뽑기·합성과 같은 640x420
+ * 창에서 하단 패널 120을 뺀 값). 그 칸을 원본의 512x240을 1.25배로 키워 채운다. 하단 패널이
+ * 쓸데없이 크다는 요청자 결정(2026-10-09)에 따라 design.md §4의 정수 배율 규칙에 예외를 둔
+ * 것이다. 1.25배는 원본 4픽셀마다 1픽셀이 두 칸으로 그려진다.
  *
  * 좌우는 가운데를 남기고, 위아래는 **아래쪽**을 남긴다. 버리는 120행은 하늘이고 지면과
  * 배회 영역은 아래에 있다 — 위를 남기면 펫이 서는 자리가 통째로 잘린다.
  */
+export const SCENE_SCALE = 1.25;
+/** 창에서 장면이 차지하는 칸(창 픽셀). */
 export const VIEWPORT_WIDTH = 640;
-export const VIEWPORT_HEIGHT = 240;
+export const VIEWPORT_HEIGHT = 300;
 
-/** 장면 좌표계에서 창이 보여 주는 사각형. */
+/** 장면(배경 원본) 좌표계에서 창이 보여 주는 사각형. 창 픽셀로는 `SCENE_SCALE`배다. */
 export interface SceneViewport {
   x: number;
   y: number;
@@ -294,8 +297,9 @@ export interface SceneViewport {
  * 배경이 창보다 작으면 자를 것이 없으므로 배경 크기가 그대로 보이는 영역이 된다.
  */
 export function viewportOf(meta: BackgroundMeta): SceneViewport {
-  const width = Math.min(VIEWPORT_WIDTH, meta.width);
-  const height = Math.min(VIEWPORT_HEIGHT, meta.height);
+  // 창 칸을 배율로 나눈 원본 크기(512x240)만큼 자른다.
+  const width = Math.min(VIEWPORT_WIDTH / SCENE_SCALE, meta.width);
+  const height = Math.min(VIEWPORT_HEIGHT / SCENE_SCALE, meta.height);
 
   return {
     // 남는 여백이 홀수면 왼쪽에 준다. 오프셋이 정수여야 픽셀이 반 칸 밀리지 않는다.

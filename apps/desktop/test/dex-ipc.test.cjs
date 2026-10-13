@@ -63,14 +63,14 @@ test('도감 채널은 도감 창이 아닌 요청을 거부하고 아무것도 
   assert.deepEqual(calls, { seen: [], room: [], gacha: 0 });
 });
 
-test('도감 화면 모델은 에셋 경로·뽑기 확률을 실어 돌려준다', async () => {
+test('도감 화면 모델은 에셋 경로를 실어 돌려준다', async () => {
   const { call } = await setup({ entries: [entry()] });
   const response = await call('dex:load', DEX_EVENT);
   assert.equal(response.ok, true);
   const slot = response.value.sections[0].slots[0];
   assert.equal(slot.name, '???');
   assert.equal(slot.sprite.card, 'pets/common/mole_digger/stage1/pet_003_s1_card.png');
-  assert.equal(slot.hints[0], '✨ 펫 뽑기에서 만날 수 있어요 · COMMON 80%');
+  assert.equal('hints' in slot, false);
 });
 
 test('잘못된 종 ID 와 보유 개체가 없는 종의 펫룸 이동은 거부한다', async () => {

@@ -3,9 +3,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import type { DexEntry, PetSpecies, Rarity } from '@pet/client';
+import type { DexEntry, PetSpecies } from '@pet/client';
 import {
-  acquisitionHints,
   dexView,
   formatDiscoveredOn,
   initialSelection,
@@ -28,8 +27,6 @@ const OPTIONS: DexViewOptions = {
     card: `pets/${species.sprite}/s${stage}_card.png`,
     idle: `pets/${species.sprite}/s${stage}_idle.png`,
   }),
-  gachaWeights: { common: 8_000, rare: 1_700, epic: 300 },
-  combineMaterialCount: 10,
 };
 
 function entry(speciesId: string, patch: Partial<DexEntry> = {}): DexEntry {
@@ -189,25 +186,6 @@ test('6종을 모두 발견하면 100%다', () => {
     OPTIONS,
   );
   assert.deepEqual(view.progress, { found: 6, total: 6, percent: 100 });
-});
-
-test('획득 경로는 뽑기 가중치에서 확률을 계산하고 합성 경로를 덧붙인다', () => {
-  const weights = OPTIONS.gachaWeights;
-  const hints = (rarity: Rarity) => acquisitionHints(rarity, weights, 10);
-  assert.deepEqual(hints('COMMON'), ['✨ 펫 뽑기에서 만날 수 있어요 · COMMON 80%']);
-  assert.deepEqual(hints('RARE'), [
-    '✨ 펫 뽑기에서 만날 수 있어요 · RARE 17%',
-    '🔮 COMMON 펫 10마리를 합성해도 만날 수 있어요',
-  ]);
-  assert.deepEqual(hints('EPIC'), [
-    '✨ 펫 뽑기에서 만날 수 있어요 · EPIC 3%',
-    '🔮 RARE 펫 10마리를 합성해도 만날 수 있어요',
-  ]);
-  // 나누어떨어지지 않으면 소수 첫째 자리까지 쓴다.
-  assert.deepEqual(acquisitionHints('EPIC', { common: 2, rare: 0, epic: 1 }, 5), [
-    '✨ 펫 뽑기에서 만날 수 있어요 · EPIC 33.3%',
-    '🔮 RARE 펫 5마리를 합성해도 만날 수 있어요',
-  ]);
 });
 
 test('첫 만남 날짜는 YYYY.MM.DD 로 쓴다', () => {
