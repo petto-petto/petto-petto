@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { openBattle, openPanel, openPetRoom } from '../platform/bridge.js';
 
 // 커스텀 SVG 아이콘
@@ -55,27 +55,14 @@ const ITEMS = [
   { key: 'info', label: '정보', panelScreen: 'info' },
 ];
 
-export default function HangingMenu({ g, onClose }) {
-  const { pet } = g;
-  const [panel, setPanel] = useState(null);
-
+export default function HangingMenu({ onClose }) {
+  // 각 항목이 창 하나씩 연다. 예전에는 진화 가능할 때만 펫 관리가 펫룸 대신 자리 표시용
+  // 패널을 띄워서 같은 버튼이 상황마다 달랐다. 진화는 펫 머리 위 말풍선(`EvolveBubble`)이 맡는다.
   const selectItem = (item) => {
-    if (item.panelScreen) {
-      void openPanel(item.panelScreen);
-      onClose();
-      return;
-    }
-    if (item.opensBattle) {
-      void openBattle();
-      onClose();
-      return;
-    }
-    if (item.opensRoom && !pet.evolutionAvailable) {
-      void openPetRoom();
-      onClose();
-      return;
-    }
-    setPanel(item);
+    if (item.panelScreen) void openPanel(item.panelScreen);
+    else if (item.opensBattle) void openBattle();
+    else if (item.opensRoom) void openPetRoom();
+    onClose();
   };
 
   return (
@@ -90,56 +77,10 @@ export default function HangingMenu({ g, onClose }) {
                 <Icon name={it.key} />
               </span>
               <span className="hmenu-label">{it.label}</span>
-              {it.key === 'petmgmt' && pet.evolutionAvailable && (
-                <span className="hmenu-dot">✨</span>
-              )}
             </button>
           ))}
         </div>
       </div>
-
-      {panel && (
-        <div className="panel pixel-panel" onClick={(e) => e.stopPropagation()}>
-          <div className="panel-title">
-            <span className="pt-icon">
-              <Icon name={panel.key} />
-            </span>{' '}
-            {panel.label}
-          </div>
-          <div className="panel-body">
-            이 화면은 <b>{panel.label}</b> 담당 파트가 구현합니다.
-            <br />
-            (프로토타입: 오버레이는 진입 라우팅만)
-          </div>
-          {panel.key === 'petmgmt' && pet.evolutionAvailable && (
-            <>
-              <button
-                className="evo-btn"
-                onClick={() => {
-                  g.doEvolve();
-                  setPanel(null);
-                  onClose();
-                }}
-              >
-                ✨ 진화 실행
-              </button>
-              <button
-                className="panel-close"
-                onClick={() => {
-                  void openPetRoom();
-                  setPanel(null);
-                  onClose();
-                }}
-              >
-                펫룸 열기
-              </button>
-            </>
-          )}
-          <button className="panel-close" onClick={() => setPanel(null)}>
-            닫기
-          </button>
-        </div>
-      )}
     </div>
   );
 }

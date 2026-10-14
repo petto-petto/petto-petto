@@ -35,7 +35,7 @@ test('팻말 메뉴는 전투·펫 관리·정보만 두고 공통 Electron brid
  */
 test('팻말 메뉴는 레일과 걸이 위에 아이콘과 라벨을 함께 건다', () => {
   assert.match(hangingMenu, /className="hmenu-rail"/);
-  assert.match(hangingMenu, /className="hmenu-item pixel-button"/);
+  assert.match(hangingMenu, /hmenu-item pixel-button/);
   assert.match(hangingMenu, /<Icon name=\{it\.key\} \/>/);
   assert.match(hangingMenu, /className="hmenu-label"/);
   // 원형 메뉴의 각도 배치는 더 이상 쓰지 않는다.
@@ -43,10 +43,19 @@ test('팻말 메뉴는 레일과 걸이 위에 아이콘과 라벨을 함께 건
   assert.doesNotMatch(overlay, /RadialMenu/);
 });
 
-test('진화 가능할 때만 펫 관리에 배지와 진화 패널을 띄운다', () => {
-  assert.match(hangingMenu, /pet\.evolutionAvailable && \(\s*<span className="hmenu-dot">/);
-  assert.match(hangingMenu, /item\.opensRoom && !pet\.evolutionAvailable/);
-  assert.match(hangingMenu, /g\.doEvolve\(\)/);
+/**
+ * 각 팻말은 한 가지 일만 한다.
+ *
+ * 예전에는 진화 가능할 때만 펫 관리가 펫룸 대신 "담당 파트가 구현합니다" 패널을 띄우고 그
+ * 안에 진화 버튼이 있었다. 같은 버튼이 상황마다 달랐고, 처음 쓰는 사람은 진화하는 법을
+ * 찾을 수 없었다. 이제 진화는 자기 팻말을 갖는다.
+ */
+test('펫 관리는 항상 펫룸만 열고 자리 표시용 패널이 없다', () => {
+  assert.doesNotMatch(hangingMenu, /담당 파트가 구현/);
+  assert.doesNotMatch(hangingMenu, /useState/, '열고 닫을 자체 패널이 없다');
+  // 진화는 메뉴가 아니라 펫 머리 위 말풍선이 맡는다(팀 의견: 메뉴 패널은 별로).
+  assert.doesNotMatch(hangingMenu, /evolutionAvailable|doEvolve|onEvolve/);
+  assert.match(hangingMenu, /else if \(item\.opensRoom\) void openPetRoom/);
 });
 
 test('오버레이의 활성 펫은 명부가 정한다 — 이 창은 자기 값을 저장하지 않는다', () => {

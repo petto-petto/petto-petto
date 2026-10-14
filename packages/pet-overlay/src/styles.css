@@ -144,14 +144,6 @@ select {
   box-shadow: 0 0 10px rgba(56, 230, 255, 0.3);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
 }
-.evo-badge {
-  position: absolute;
-  top: 34px;
-  right: 6px;
-  font-size: 22px;
-  filter: drop-shadow(0 0 6px var(--gold));
-  animation: sparkle 1.2s ease-in-out infinite;
-}
 
 .state-reaction .pet-body {
   animation: reaction 0.6s ease;
@@ -319,14 +311,6 @@ select {
   }
 }
 
-.pt-icon {
-  display: inline-flex;
-  vertical-align: middle;
-  margin-right: 3px;
-}
-.pt-icon svg {
-  display: block;
-}
 .glow-cyan {
   border-color: var(--cyan);
   box-shadow:
@@ -344,52 +328,6 @@ select {
   box-shadow:
     0 0 14px rgba(255, 211, 90, 0.7),
     inset 0 0 8px rgba(255, 211, 90, 0.35);
-}
-
-.panel {
-  position: absolute;
-  left: 0;
-  top: 0;
-  transform: translate(-50%, -185px);
-  width: 232px;
-  background: rgba(16, 18, 30, 0.97);
-  color: #fff;
-  border-radius: 12px;
-  padding: 13px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(120, 180, 255, 0.3);
-  z-index: 8;
-}
-.panel-title {
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-.panel-body {
-  font-size: 12px;
-  color: #cbd5e1;
-  line-height: 1.55;
-}
-.evo-btn {
-  margin-top: 10px;
-  width: 100%;
-  padding: 9px;
-  border: none;
-  border-radius: 9px;
-  background: linear-gradient(180deg, #a56bff, #6d3fd6);
-  color: #fff;
-  font-weight: 800;
-  cursor: pointer;
-  box-shadow: 0 0 14px rgba(138, 92, 246, 0.6);
-}
-.panel-close {
-  margin-top: 8px;
-  width: 100%;
-  padding: 7px;
-  border: none;
-  border-radius: 9px;
-  background: #2a2f3d;
-  color: #fff;
-  cursor: pointer;
 }
 
 /* ---------- 파티클 VFX 캔버스 ---------- */
@@ -639,9 +577,6 @@ body,
     2px 2px 0 rgba(0, 0, 0, 0.35);
   text-shadow: none;
 }
-.evo-badge {
-  filter: none;
-}
 
 .toasts {
   gap: 6px;
@@ -693,50 +628,6 @@ button:focus-visible {
     inset 0 0 0 5px var(--parchment-ring),
     2px 2px 0 rgba(0, 0, 0, 0.35);
 }
-.panel {
-  padding: 14px;
-  color: var(--ink);
-  background: var(--parchment);
-  border: 3px solid var(--wood-dark);
-  border-radius: 0;
-  box-shadow:
-    inset 0 0 0 2px var(--wood-light),
-    inset 0 0 0 5px var(--parchment-ring),
-    2px 2px 0 rgba(0, 0, 0, 0.35);
-}
-.panel-title {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-bottom: 10px;
-  font-size: 13px;
-}
-.panel-body {
-  color: var(--ink);
-  font-size: 12px;
-  line-height: 1.55;
-}
-.pt-icon {
-  color: var(--wood-dark);
-}
-.evo-btn,
-.panel-close {
-  padding: 8px;
-  color: var(--cream);
-  font-size: 12px;
-  background: var(--wood);
-  border: 2px solid var(--wood-dark);
-  border-radius: 0;
-  box-shadow:
-    inset 0 2px 0 var(--wood-light),
-    inset 0 -2px 0 var(--wood-dark),
-    2px 2px 0 rgba(0, 0, 0, 0.35);
-}
-.panel-close {
-  background: #555;
-  border-color: #444;
-}
-
 .levelup-banner,
 .evolve-banner {
   padding: 8px 10px;
@@ -891,19 +782,6 @@ button:focus-visible {
   font-size: 9px;
 }
 
-.panel {
-  transform: translate(-50%, -190px);
-}
-.panel-title {
-  color: var(--ink);
-  font-family: 'Isamanru', sans-serif;
-  font-weight: 700;
-  font-size: 15px;
-}
-.panel-body {
-  color: var(--ink);
-}
-
 /* ---------- 매달린 팻말 메뉴 (시안 02) ---------- */
 /* 가로 레일에 팻말 세 개를 매단다. 펫 위쪽 중앙에서 짧게 내려온다. */
 .hmenu {
@@ -999,13 +877,6 @@ button:focus-visible {
   color: var(--cream);
   font-family: 'Isamanru', sans-serif;
   font-size: 12px;
-}
-.hmenu-dot {
-  position: absolute;
-  top: -6px;
-  right: -4px;
-  color: var(--gold);
-  font-size: 13px;
 }
 
 /* 이벤트 문구는 라벨·핵심 문구·보조 정보의 세 단계로 읽힌다. */
@@ -1290,4 +1161,158 @@ button:focus-visible {
 }
 .empty-pet-cta:hover {
   background: #795535;
+}
+
+/* ---------- 진화 말풍선 ---------- */
+/* 접힌 상태: 펫 머리 위 작은 말풍선. 진화할 때까지 남는다 — 레벨이 오르는 순간 사용자는
+   대개 다른 창에 있어서, 잠깐 뜨고 사라지면 못 본다. 작게 두어 화면을 가리지 않는다. */
+.evo-bubble {
+  position: absolute;
+  /* EXP 줄 아래, 펫 머리 오른쪽. 위로 올리면 EXP 퍼센트를 가린다. */
+  left: calc(50% + 30px);
+  top: 52px;
+  z-index: 13;
+  display: flex;
+  width: 36px;
+  height: 22px;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  border-radius: 0;
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  animation: bubble-bob 1.4s ease-in-out infinite;
+}
+/* 펫 쪽으로 향한 꼬리. */
+.evo-bubble::after {
+  position: absolute;
+  left: 2px;
+  bottom: -7px;
+  width: 8px;
+  height: 6px;
+  content: '';
+  background: var(--wood-dark);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+.evo-bubble:hover {
+  background: #fff3d6;
+}
+/* 메신저의 "입력 중…" — 친구가 무언가 말하려는 모습. 픽셀 규칙대로 각진 점. */
+.evo-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--ink);
+  animation: evo-typing 1.2s ease-in-out infinite;
+}
+.evo-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.evo-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes evo-typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+@keyframes bubble-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+/* 펼친 상태: 무슨 일인지·왜 지금인지·무엇을 누르면 되는지. */
+.evo-call {
+  position: absolute;
+  left: 50%;
+  /* 아래쪽 기준으로 붙인다. 대사가 두 줄이 되어도 말풍선이 위로 자라서 LV 배지를 덮지 않는다. */
+  bottom: calc(100% + 14px);
+  z-index: 13;
+  display: flex;
+  width: 244px;
+  padding: 10px 12px;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 2px solid var(--wood-dark);
+  box-shadow:
+    inset 0 0 0 2px var(--parchment-ring),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  transform: translateX(-50%);
+}
+.evo-call::after {
+  position: absolute;
+  left: calc(50% - 6px);
+  bottom: -8px;
+  width: 12px;
+  height: 8px;
+  content: '';
+  background: var(--parchment);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.evo-call-text {
+  font-family: Galmuri11, ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  word-break: keep-all;
+}
+.evo-call-btn {
+  white-space: nowrap;
+  padding: 7px 16px;
+  color: var(--cream);
+  font-family: Galmuri9, ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--wood);
+  border: 2px solid var(--gold);
+  border-radius: 0;
+  box-shadow:
+    inset 0 2px 0 var(--wood-light),
+    inset 0 -2px 0 var(--wood-dark),
+    2px 2px 0 rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+.evo-call-btn:hover {
+  background: #795535;
+}
+/* 펫의 부탁에 대한 두 가지 대답. */
+.evo-call-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.evo-call-later {
+  white-space: nowrap;
+  padding: 7px 12px;
+  color: var(--ink);
+  font-family: Galmuri9, ui-monospace, monospace;
+  font-size: 12px;
+  background: var(--parchment-ring);
+  border: 2px solid var(--wood-dark);
+  border-radius: 0;
+  box-shadow:
+    inset 0 2px 0 #f6ebd2,
+    inset 0 -2px 0 #b89a63,
+    2px 2px 0 rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.evo-call-later:hover {
+  background: #e8d3a6;
 }
