@@ -19,6 +19,7 @@ import {
 } from '@pet/room';
 import battleWindowOptions from '@pet/battle/ui/window-options.json' with { type: 'json' };
 
+import { overlaps } from './placement.ts';
 import {
   OVERLAY_WINDOW_HEIGHT,
   OVERLAY_WINDOW_WIDTH,
@@ -361,6 +362,7 @@ export function createGachaWindow(): BrowserWindow {
     },
   });
   injectFonts(gachaWindow);
+  liftAboveBattleWhileFocused(gachaWindow);
   void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), { query: assetsQuery() });
   // 오버레이는 alwaysOnTop 이라, 펫이 없을 때 띄우는 안내가 이 창을 덮는다. 떠 있는
   // 동안 숨기도록 표시 상태를 알린다.
@@ -396,6 +398,7 @@ export function createCombineWindow(): BrowserWindow {
     },
   });
   injectFonts(combineWindow);
+  liftAboveBattleWhileFocused(combineWindow);
   void combineWindow.loadFile(join(combineUiDir, 'index.html'), { query: assetsQuery() });
   combineWindow.on('closed', () => {
     combineWindow = undefined;
@@ -434,6 +437,7 @@ export function createDexWindow(): BrowserWindow {
     },
   });
   injectFonts(dexWindow);
+  liftAboveBattleWhileFocused(dexWindow);
   void dexWindow.loadFile(join(dexUiDir, 'index.html'), { query: assetsQuery() });
   dexWindow.on('closed', () => {
     dexWindow = undefined;
@@ -530,6 +534,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
   });
 
   injectFonts(roomWindow);
+  liftAboveBattleWhileFocused(roomWindow);
   // 도감의 `펫룸에서 보기`로 열리면 그 개체의 상세를 바로 연다.
   const query: Record<string, string> = assetsQuery();
   if (focusOwnedPetId !== undefined) query['focus'] = focusOwnedPetId;
@@ -619,6 +624,35 @@ export function openScreen(screen: Screen, focusOwnedPetId?: string): BrowserWin
   const next = screenWindow(screen, focusOwnedPetId);
   if (current && current !== next) replaceWindow(current, next);
   return next;
+}
+
+/**
+ * 640 화면이 초점을 가진 동안에는 전투 창 위로 올린다.
+ *
+ * 전투 창은 항상 위라서, 그 아래에 깔린 펫룸은 앞으로 가져와도 보이지 않는다. 전투 창의 `펫룸`을
+ * 누르면 펫룸이 그 자리 그대로 가려져 아무 일도 안 일어난 것처럼 보였다(2026-10-17 요청자 보고).
+ * 옆으로 비켜 놓기에는 노트북 화면에 640 창 두 개가 나란히 들어가지 않는다.
+ *
+ * 그래서 겹칠 때만, 초점이 있는 동안만 전투 창보다 한 단계 위에 둔다. 초점을 잃으면 보통 창으로
+ * 돌아가므로 전투 창을 누르면 전투 창이 다시 위다 — 전투의 항상 위는 그대로다.
+ */
+function liftAboveBattleWhileFocused(window: BrowserWindow): void {
+  const lift = (): void => {
+    if (window.isDestroyed()) return;
+    const battle = battleWindow;
+    const covered =
+      battle !== undefined &&
+      !battle.isDestroyed() &&
+      battle.isVisible() &&
+      overlaps(window.getBounds(), battle.getBounds());
+    if (covered) window.setAlwaysOnTop(true, 'floating', 1);
+  };
+  window.on('focus', lift);
+  window.on('blur', () => {
+    if (!window.isDestroyed() && window.isAlwaysOnTop()) window.setAlwaysOnTop(false);
+  });
+  // 이미 초점을 가진 채 다시 열려도(전투 창 `펫룸`을 두 번 누름) 올린다.
+  window.on('show', lift);
 }
 
 /** 640 화면(펫룸·뽑기·합성·도감)에서 온 요청인가. 상단 바 IPC 가 쓴다. */
