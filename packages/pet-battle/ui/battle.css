@@ -166,12 +166,13 @@ img:not([src]) {
   animation: none;
 }
 
-/* Native drag hit testing is separate from DOM z-index. Never cover the X button. */
+/* Native drag hit testing is separate from DOM z-index. Never cover the X or 펫룸 buttons. */
 .window-drag-handle {
   position: absolute;
   top: 0;
   left: 0;
-  right: 48px;
+  /* 닫기(오른쪽 10 + 28)와 그 왼쪽 `펫룸`(44 + 56)을 비운다. 덮으면 `펫룸`이 눌리지 않는다. */
+  right: 104px;
   height: 40px;
   -webkit-app-region: drag;
 }

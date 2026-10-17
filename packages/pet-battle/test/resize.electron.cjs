@@ -42,7 +42,7 @@ app.whenReady().then(async () => {
         const result = {
           root: rect('#battle-overlay'), pet: rect('#pet'), enemy: rect('#enemy'),
           identity: Boolean(document.querySelector('.pet-identity, #pet-name, #pet-level')), opacity: rect('.opacity-control'),
-          close: rect('.window-close'), hud: rect('.battle-hud'),
+          close: rect('.window-close'), hud: rect('.battle-hud'), room: rect('.window-room'),
           dragRects: [...document.querySelectorAll('*')]
             .filter(element => getComputedStyle(element).getPropertyValue('-webkit-app-region') === 'drag')
             .map(element => { const r = element.getBoundingClientRect(); return {x:r.x, y:r.y, right:r.right, bottom:r.bottom}; }),
@@ -66,14 +66,19 @@ app.whenReady().then(async () => {
       }
       assert.ok(result.hud.right < result.close.x, 'close button must not overlap HUD');
       assert.ok(result.dragRects.length > 0, 'keep a window drag handle');
+      // 앱이 띄운 창에서만 보이는 `펫룸`도 같은 규칙이다. 미리보기에서는 숨어 있어 크기가 0이다.
+      const buttons = [result.close, ...(result.room.width > 0 ? [result.room] : [])];
+      const roomSlot = { x: width - 104, y: 0, right: width - 44, bottom: 40 };
       for (const drag of result.dragRects) {
-        assert.ok(
-          drag.right <= result.close.x ||
-            drag.x >= result.close.right ||
-            drag.bottom <= result.close.y ||
-            drag.y >= result.close.bottom,
-          'native drag regions must not overlap X, even behind its no-drag button',
-        );
+        for (const button of [...buttons, roomSlot]) {
+          assert.ok(
+            drag.right <= button.x ||
+              drag.x >= button.right ||
+              drag.bottom <= button.y ||
+              drag.y >= button.bottom,
+            'native drag regions must not overlap X or 펫룸, even behind their no-drag buttons',
+          );
+        }
       }
       assert.equal(result.identity, false, 'pet name and level panel must be removed');
       console.log(`PASS responsive DOM: ${width}×${height}`);
