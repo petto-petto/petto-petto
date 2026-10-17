@@ -93,10 +93,11 @@ test('잘못된 횟수·빈 후보·조회 실패는 저장 없이 오류를 반
   assert.throws(() => gacha.load());
 });
 
-async function uiHarness(t, { failLoad = false, failDraw = false } = {}) {
+async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = {}) {
   const { readFileSync } = require('node:fs');
   const vm = require('node:vm');
-  const { client, database, gacha } = await fixture(t);
+  const { client, currency, database, gacha } = await fixture(t);
+  if (spent > 0) currency.spendOnce('test:spent', spent, '테스트 소비');
   const { registerGachaIpc } = await import('../dist/main/ipc/gacha.js');
   const handlers = new Map();
   const allowed = {};
@@ -149,6 +150,18 @@ async function uiHarness(t, { failLoad = false, failDraw = false } = {}) {
       contains: (value) => this.className.split(' ').includes(value),
       add: (value) => {
         this.className += ` ${value}`;
+      },
+      remove: (value) => {
+        this.className = this.className
+          .split(' ')
+          .filter((name) => name !== value)
+          .join(' ');
+      },
+      toggle: (value, force) => {
+        const on = force ?? !this.classList.contains(value);
+        if (on && !this.classList.contains(value)) this.classList.add(value);
+        if (!on) this.classList.remove(value);
+        return on;
       },
     };
     addEventListener(name, fn) {
@@ -252,6 +265,28 @@ test('뽑기 화면의 조회·저장 실패는 재시도할 수 있고 실패 �
   assert.equal(client.countOwnedPets(), 1);
   assert.equal(element('owned-count').textContent, '1');
   assert.equal(element('pity-counter').textContent, '1 / 100');
+});
+
+test('잔액이 모자란 소환은 누르기 전에 비활성으로 보이고 부족분과 모으는 방법을 알린다', async (t) => {
+  // 10,000,000 - 9,744,691 = 255,309
+  const { element, settle } = await uiHarness(t, { spent: 9_744_691 });
+  await settle();
+  assert.equal(element('token-balance').textContent, '255,309');
+  assert.equal(element('draw-ten').disabled, true);
+  assert.equal(element('draw-ten').classList.contains('unaffordable'), true);
+  assert.equal(element('draw-ten-cost').textContent, '1,000,000 토큰 · 744,691 부족');
+  assert.equal(element('draw-one').disabled, false);
+  assert.equal(element('draw-one-cost').textContent, '100,000 토큰');
+  assert.equal(element('token-hint').hidden, false);
+  assert.equal(element('token-hint').textContent, 'AI 도구를 쓰면 토큰이 쌓여요.');
+});
+
+test('잔액이 충분하면 토큰 안내를 보이지 않는다', async (t) => {
+  const { element, settle } = await uiHarness(t);
+  await settle();
+  assert.equal(element('draw-ten').disabled, false);
+  assert.equal(element('draw-ten-cost').textContent, '1,000,000 토큰 · RARE 이상 보장');
+  assert.equal(element('token-hint').hidden, true);
 });
 
 test('뽑기 bridge는 다른 창과 허용하지 않은 횟수의 저장을 차단한다', async (t) => {

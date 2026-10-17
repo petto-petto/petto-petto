@@ -2,6 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { FixedClock, parseLocalDate, type LocalDate } from '@pet/core';
 import {
@@ -581,4 +582,10 @@ test('갱신: 마지막 갱신이 오늘이 아니면 날짜를 함께 보여준
     usageScreen(harness.state, tomorrow, 'all').lastRefreshedLabel,
     `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`,
   );
+});
+
+test('설정 화면 문구에 기획서 번호를 쓰지 않는다', () => {
+  const panel = readFileSync(new URL('../ui/panel.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(panel, /text: '[^']*(SET|INFO|META)-\d{3}[^']*'/);
+  assert.match(panel, /사용자 지정 경로는 아직 지원하지 않아요\./);
 });

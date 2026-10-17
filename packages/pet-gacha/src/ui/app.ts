@@ -1,12 +1,15 @@
 import {
   awakeningCopy,
   cardInterval,
+  drawAffordance,
   GachaActionError,
   highestGrade,
   individualOdds,
   introDuration,
   revealCopy,
   secureRandomInt,
+  showsTokenHint,
+  TOKEN_HINT,
   unwrapGachaResponse,
   type GachaBridge,
   type GachaPet,
@@ -232,7 +235,7 @@ function closeResults(): void {
   reveal.setAttribute('aria-hidden', 'true');
   element<HTMLElement>('particle-field').replaceChildren();
   element<HTMLElement>('stage-kicker').textContent = '새로운 인연을 기다리는 숲';
-  element<HTMLElement>('stage-heading').textContent = '잠든 씨앗에 Token을 건네보세요';
+  element<HTMLElement>('stage-heading').textContent = '잠든 씨앗에 토큰을 건네보세요';
   element<HTMLElement>('pod-status').textContent = '새근 · 새근 · 새근';
   pendingDraw = undefined;
   setControlsDisabled(false);
@@ -282,12 +285,37 @@ function updateHud(): void {
 
   const progress = element<HTMLElement>('pity-track');
   progress.setAttribute('aria-valuenow', String(pityCounter));
+  renderAffordance();
 }
 
+let controlsBusy = false;
+
 function setControlsDisabled(disabled: boolean): void {
-  element<HTMLButtonElement>('draw-one').disabled = disabled;
-  element<HTMLButtonElement>('draw-ten').disabled = disabled;
+  controlsBusy = disabled;
+  renderAffordance();
   element<HTMLButtonElement>('odds-button').disabled = disabled || !catalogReady;
+}
+
+/**
+ * 잔액으로 소환 버튼과 보조 문구를 정한다. 잔액을 읽기 전(`catalogReady` 가 아님)에는 부족으로 그리지
+ * 않는다 — 0 으로 간주하면 읽기 실패가 "토큰 부족"으로 보이고, 눌러서 다시 읽는 길도 막힌다.
+ */
+function renderAffordance(): void {
+  const known = catalogReady;
+  const pairs = [
+    [1, 'draw-one', 'draw-one-cost'],
+    [10, 'draw-ten', 'draw-ten-cost'],
+  ] as const;
+  for (const [count, buttonId, costId] of pairs) {
+    const state = drawAffordance(count, known ? tokenBalance : Number.POSITIVE_INFINITY);
+    const button = element<HTMLButtonElement>(buttonId);
+    button.disabled = controlsBusy || !state.affordable;
+    button.classList.toggle('unaffordable', !state.affordable);
+    element<HTMLElement>(costId).textContent = state.label;
+  }
+  const hint = element<HTMLElement>('token-hint');
+  hint.textContent = TOKEN_HINT;
+  hint.hidden = !known || !showsTokenHint(tokenBalance);
 }
 
 function openOdds(): void {

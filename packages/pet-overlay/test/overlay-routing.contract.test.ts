@@ -15,9 +15,11 @@ const app = readFileSync(join(packageRoot, '..', 'src', 'App.jsx'), 'utf8');
 const growthHook = readFileSync(join(packageRoot, '..', 'src', 'growth', 'useGrowth.js'), 'utf8');
 const overlayDirectory = join(packageRoot, '..', 'src', 'overlay');
 
-test('팻말 메뉴는 전투·펫 관리·정보만 두고 공통 Electron bridge로 위임한다', () => {
+test('팻말 메뉴는 전투·펫룸·정보만 두고 공통 Electron bridge로 위임한다', () => {
   assert.match(hangingMenu, /key: 'battle', label: '전투', opensBattle: true/);
-  assert.match(hangingMenu, /key: 'petmgmt', label: '펫 관리', opensRoom: true/);
+  assert.match(hangingMenu, /key: 'petmgmt', label: '펫룸', opensRoom: true/);
+  // 누르면 열리는 창 이름과 같아야 한다(동선 1단계 기획서).
+  assert.doesNotMatch(hangingMenu, /label: '펫 관리'/);
   assert.match(hangingMenu, /key: 'info', label: '정보', panelScreen: 'info'/);
   assert.doesNotMatch(hangingMenu, /label: '업적'/);
   assert.doesNotMatch(hangingMenu, /label: '설정'/);

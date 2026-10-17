@@ -54,9 +54,21 @@ button:focus-visible {
   outline-offset: 2px;
 }
 
-.token-readout {
-  align-self: center;
+/* 활성 등급의 재료 수·비용(위)과 보유 잔액(아래). 28px 줄에 두 줄로 들어간다. */
+.combine-summary {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+.combine-materials {
   font-size: 11px;
+  white-space: nowrap;
+}
+.token-readout {
+  font-size: 10px;
+  white-space: nowrap;
 }
 
 body {
@@ -107,7 +119,7 @@ body {
   /* 등급명과 "합성"이 한 줄에 있어야 한다. 줄바꿈되면 탭이 높아져 아래 슬롯을 덮는다. */
   white-space: nowrap;
 }
-.token-readout {
+.combine-summary {
   grid-area: token;
 }
 .selection-slots {
@@ -144,8 +156,10 @@ body {
   color: #f5ecd8;
   padding: 6px 8px;
 }
+/* 선택은 금색(design.md §2). 보라색은 EPIC 등급 색이라 선택 표시에 쓰지 않는다. */
 .combine-tabs button.active {
-  background: #6c37a0;
+  color: #3b2a1a;
+  background: #ffd166;
 }
 .combine-message {
   position: absolute;
@@ -165,8 +179,21 @@ body {
 .combine-message:empty {
   display: none;
 }
-.combine-result {
+.combine-status {
   grid-area: result;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow: auto;
+}
+/* 합성하기를 누를 수 없는 이유. 오류(.combine-message)와 달리 경고색을 쓰지 않는 안내다. */
+.combine-requirement {
+  margin: 0;
+  color: #3b2a1a;
+  font-size: 10px;
+}
+.combine-result {
   color: #1c4a34;
   font-weight: bold;
   font-size: 10px;
@@ -175,6 +202,13 @@ body {
 .combine-button {
   grid-area: action;
   align-self: stretch;
+}
+/* design.md §6: 비활성 버튼은 회색 바탕과 낮은 대비의 글자. 누를 수 없는 이유는 .combine-requirement 가 말한다. */
+.combine-button:disabled {
+  color: #b3b3b3;
+  background: #555;
+  border-color: #3a3a3a;
+  cursor: not-allowed;
 }
 
 .selection-slots {

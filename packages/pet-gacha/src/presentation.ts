@@ -1,4 +1,4 @@
-import type { GachaGrade } from './gacha-engine.ts';
+import { drawCost, type DrawCount, type GachaGrade } from './gacha-engine.ts';
 
 export interface GradeBearing {
   readonly grade: GachaGrade;
@@ -73,6 +73,36 @@ export function revealCopy(grade: GachaGrade): RevealCopy {
     default:
       return assertNever(grade);
   }
+}
+
+export interface DrawAffordance {
+  readonly affordable: boolean;
+  /** 버튼 아래 보조 문구. */
+  readonly label: string;
+}
+
+const tokenAmount = new Intl.NumberFormat('ko-KR');
+
+/**
+ * 잔액으로 소환 버튼을 누를 수 있는지와 보조 문구를 정한다.
+ *
+ * 화면이 미리 막을 뿐이고, 최종 판정은 저장 로직의 잔액 검사가 한다. 잔액이 비용과 같으면 누를 수 있다.
+ */
+export function drawAffordance(count: DrawCount, balance: number): DrawAffordance {
+  const cost = drawCost(count);
+  const costLabel = `${tokenAmount.format(cost)} 토큰`;
+  const shortfall = cost - balance;
+  if (shortfall > 0) {
+    return { affordable: false, label: `${costLabel} · ${tokenAmount.format(shortfall)} 부족` };
+  }
+  return { affordable: true, label: count === 10 ? `${costLabel} · RARE 이상 보장` : costLabel };
+}
+
+export const TOKEN_HINT = 'AI 도구를 쓰면 토큰이 쌓여요.';
+
+/** 어느 소환이든 잔액이 모자라면 토큰을 모으는 방법을 알린다. */
+export function showsTokenHint(balance: number): boolean {
+  return !drawAffordance(1, balance).affordable || !drawAffordance(10, balance).affordable;
 }
 
 function assertNever(value: never): never {

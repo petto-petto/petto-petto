@@ -698,7 +698,7 @@ async function renderSettings() {
       el('div', { class: 'card' }, [
         el('div', {
           class: 'mono-small',
-          text: '사용자 지정 경로는 제공하지 않습니다 (기획서 SET-004)',
+          text: '사용자 지정 경로는 아직 지원하지 않아요.',
         }),
       ]),
     );
@@ -877,7 +877,7 @@ async function renderSettings() {
       el('div', {
         class: 'mono-small',
         attrs: { style: 'margin-top:6px' },
-        text: '백업·복원·초기화는 제공하지 않습니다 (SET-009)',
+        text: '백업·복원·초기화는 아직 지원하지 않아요.',
       }),
     ]),
     el('div', { class: 'card' }, [

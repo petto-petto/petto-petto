@@ -1,3 +1,5 @@
+import { combineReadiness } from '../dist/index.js';
+
 const assets = new URLSearchParams(window.location.search).get('assets');
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
 document.querySelector('.window-back')?.addEventListener('click', () => {
@@ -21,12 +23,16 @@ const result = panel.querySelector('.combine-result');
 const selection = panel.querySelector('.selection-slots');
 const grid = panel.querySelector('.pet-grid');
 const tokens = panel.querySelector('.token-readout');
+const materials = panel.querySelector('.combine-materials');
+const requirement = panel.querySelector('.combine-requirement');
 const resultCard = stage.querySelector('.forge-result-card');
 let snapshot = { species: [], ownedPets: [], balance: 0 };
 let activeGrade = 'common';
 let selectedIds = [];
 let busy = false;
 let pendingRequestId;
+/** 잔액을 한 번이라도 읽었는가. 읽기 전의 0 을 `토큰 부족`으로 그리지 않는다. */
+let loaded = false;
 
 function bridge() {
   if (!window.combine) throw new Error('앱에서 합성 창을 열어 주세요.');
@@ -56,6 +62,7 @@ function autoSelect() {
 
 function applySnapshot(next, selectAutomatically) {
   snapshot = next;
+  loaded = true;
   if (selectAutomatically) autoSelect();
   else {
     const available = new Set(eligible().map((pet) => pet.ownedPetId));
@@ -75,11 +82,17 @@ async function refresh(selectAutomatically = false) {
 }
 
 function render() {
-  tokens.textContent = `TOKEN ${snapshot.balance.toLocaleString()}`;
+  const readiness = combineReadiness(activeGrade, selectedIds.length, snapshot.balance);
+  tokens.textContent = loaded
+    ? `보유 토큰 ${snapshot.balance.toLocaleString('ko-KR')}`
+    : '보유 토큰 —';
+  materials.textContent = readiness.materials;
+  requirement.textContent = loaded ? (readiness.reason ?? '') : '';
   for (const tab of panel.querySelectorAll('[data-grade]')) {
     tab.classList.toggle('active', tab.dataset.grade === activeGrade);
   }
-  panel.querySelector('.combine-button').disabled = busy || stage.classList.contains('combining');
+  panel.querySelector('.combine-button').disabled =
+    busy || stage.classList.contains('combining') || !loaded || !readiness.ready;
   selection.replaceChildren(
     ...selectedIds.map((id, index) => {
       const pet = snapshot.ownedPets.find((candidate) => candidate.ownedPetId === id);

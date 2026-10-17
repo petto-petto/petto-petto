@@ -1,7 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { awakeningCopy, cardInterval, highestGrade, introDuration, revealCopy } from '@pet/gacha';
+import {
+  TOKEN_HINT,
+  awakeningCopy,
+  cardInterval,
+  drawAffordance,
+  drawCost,
+  highestGrade,
+  introDuration,
+  revealCopy,
+  showsTokenHint,
+} from '@pet/gacha';
 
 test('배치 연출은 가장 높은 결과 등급을 따른다', () => {
   assert.equal(highestGrade([{ grade: 'common' }, { grade: 'rare' }]), 'rare');
@@ -35,4 +45,36 @@ test('열매가 갈라지기 전에는 문구로 결과 등급을 미리 노출�
   assert.equal(awakeningCopy('common'), '열매 속 작은 숨결이 움직입니다');
   assert.equal(awakeningCopy('rare'), awakeningCopy('common'));
   assert.equal(awakeningCopy('epic'), awakeningCopy('common'));
+});
+
+test('잔액이 비용 이상인 소환만 누를 수 있고, 같으면 누를 수 있다', () => {
+  assert.deepEqual(drawAffordance(1, 100_000), { affordable: true, label: '100,000 토큰' });
+  assert.deepEqual(drawAffordance(1, 99_999), {
+    affordable: false,
+    label: '100,000 토큰 · 1 부족',
+  });
+  assert.deepEqual(drawAffordance(10, 1_000_000), {
+    affordable: true,
+    label: '1,000,000 토큰 · RARE 이상 보장',
+  });
+});
+
+test('모자란 소환은 비용과 부족분을 함께 보인다', () => {
+  assert.deepEqual(drawAffordance(10, 255_309), {
+    affordable: false,
+    label: '1,000,000 토큰 · 744,691 부족',
+  });
+  assert.equal(drawAffordance(1, 255_309).affordable, true);
+});
+
+test('어느 소환이든 모자라면 토큰을 모으는 방법을 안내한다', () => {
+  assert.equal(TOKEN_HINT, 'AI 도구를 쓰면 토큰이 쌓여요.');
+  assert.equal(showsTokenHint(255_309), true);
+  assert.equal(showsTokenHint(0), true);
+  assert.equal(showsTokenHint(1_000_000), false);
+});
+
+test('소환 비용은 한 곳에서 정한다', () => {
+  assert.equal(drawCost(1), 100_000);
+  assert.equal(drawCost(10), 1_000_000);
 });

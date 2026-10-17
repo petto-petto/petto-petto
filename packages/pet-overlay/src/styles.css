@@ -1134,13 +1134,13 @@ button:focus-visible {
   transform: translate(-50%, -50%);
 }
 .empty-pet-title {
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 700;
 }
 .empty-pet-body {
   color: #5a4733;
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   text-align: center;
 }
@@ -1148,7 +1148,7 @@ button:focus-visible {
   margin-top: 2px;
   padding: 8px 14px;
   color: var(--cream);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   background: var(--wood);
   border: 2px solid var(--wood-dark);

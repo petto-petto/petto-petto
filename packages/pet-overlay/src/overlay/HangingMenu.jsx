@@ -48,10 +48,10 @@ function Icon({ name }) {
   }
 }
 
-// 팻말은 왼쪽부터 전투 · 펫 관리 · 정보 순으로 매단다. 각 메뉴의 기존 동작은 유지한다.
+// 팻말은 왼쪽부터 전투 · 펫룸 · 정보 순으로 매단다. 각 메뉴의 기존 동작은 유지한다.
 const ITEMS = [
   { key: 'battle', label: '전투', opensBattle: true },
-  { key: 'petmgmt', label: '펫 관리', opensRoom: true },
+  { key: 'petmgmt', label: '펫룸', opensRoom: true },
   { key: 'info', label: '정보', panelScreen: 'info' },
 ];
 

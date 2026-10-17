@@ -367,13 +367,33 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     setTimeout: (callback) => callback(),
     close() {},
   };
-  vm.runInNewContext(
-    readFileSync(join(__dirname, '../../../packages/pet-combine/ui/app.mjs'), 'utf8'),
-    { document, window, URL, URLSearchParams, Error, Set },
+  // app.mjs 는 브라우저 모듈이라 `@pet/combine` 빌드를 import 한다. vm 스크립트는 import 문을 못 읽으므로
+  // 그 한 줄을 같은 모듈의 실제 export 로 바꿔 끼운다.
+  const combineModule = await import('@pet/combine');
+  const appSource = readFileSync(
+    join(__dirname, '../../../packages/pet-combine/ui/app.mjs'),
+    'utf8',
+  ).replace(
+    "import { combineReadiness } from '../dist/index.js';",
+    'const { combineReadiness } = combineModule;',
   );
+  assert.doesNotMatch(appSource, /^import /m);
+  vm.runInNewContext(appSource, {
+    document,
+    window,
+    URL,
+    URLSearchParams,
+    Error,
+    Set,
+    Intl,
+    combineModule,
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(element('.selection-slots').children.length, 10);
-  assert.equal(element('.token-readout').textContent, 'TOKEN 10,000,000');
+  assert.equal(element('.token-readout').textContent, '보유 토큰 10,000,000');
+  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30,000 토큰');
+  assert.equal(element('.combine-requirement').textContent, '');
+  assert.equal(element('.combine-button').disabled, false);
   element('.combine-button').listeners.click();
   element('.combine-button').listeners.click();
   await new Promise((resolve) => setImmediate(resolve));
@@ -387,6 +407,6 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     ),
     true,
   );
-  assert.equal(element('.token-readout').textContent, 'TOKEN 9,970,000');
+  assert.equal(element('.token-readout').textContent, '보유 토큰 9,970,000');
   assert.match(element('.combine-result').textContent, /획득/);
 });
