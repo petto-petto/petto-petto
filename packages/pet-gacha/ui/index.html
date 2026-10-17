@@ -133,9 +133,21 @@
         <p class="reveal-kicker" id="reveal-kicker">새로운 인연</p>
         <h2 id="reveal-heading">숲의 문이 열립니다</h2>
         <div class="result-grid" id="result-grid"></div>
-        <button class="pixel-button close-results" id="close-results" type="button" hidden>
-          확인
-        </button>
+        <!-- 결과 뒤 다음 행동(동선 2단계 D). 대상은 고른 카드다 — 10회 소환은 카드를 눌러 바꾼다. -->
+        <div class="result-actions" id="result-actions" hidden>
+          <button class="pixel-button result-action" id="result-overlay" type="button">
+            오버레이로 지정
+          </button>
+          <button class="pixel-button result-action" id="result-room" type="button">
+            펫룸에서 보기
+          </button>
+          <button class="pixel-button result-action" id="result-again" type="button">
+            <span>한 번 더</span>
+            <small id="result-again-cost"></small>
+          </button>
+          <button class="result-dismiss" id="close-results" type="button">닫기</button>
+        </div>
+        <p class="result-error" id="result-error" role="alert" hidden></p>
       </div>
     </section>
 

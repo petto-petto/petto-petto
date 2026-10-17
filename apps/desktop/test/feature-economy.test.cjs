@@ -304,6 +304,11 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   );
   assert.equal(handlers.get('combine:load')({}).ok, false);
   assert.equal(handlers.get('combine:combine')({}, 'common', []).ok, false);
+  // 결과 카드가 부르는 앱 채널(오버레이 펫·펫룸). 무엇을 불렀는지 남긴다.
+  const opened = [];
+  handlers.set('room:setActivePet', (_event, ownedPetId) => pets.setActivePet(ownedPetId));
+  handlers.set('screen:open', (_event, screen, focus) => opened.push({ screen, focus }));
+  let closed = 0;
 
   let exposed;
   vm.runInNewContext(readFileSync(join(__dirname, '../src/preload/combine.cjs'), 'utf8'), {
@@ -365,7 +370,9 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     matchMedia: () => ({ matches: true }),
     addEventListener() {},
     setTimeout: (callback) => callback(),
-    close() {},
+    close() {
+      closed++;
+    },
   };
   // app.mjs 는 브라우저 모듈이라 `@pet/combine` 빌드를 import 한다. vm 스크립트는 import 문을 못 읽으므로
   // 그 한 줄을 같은 모듈의 실제 export 로 바꿔 끼운다.
@@ -409,4 +416,21 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   );
   assert.equal(element('.token-readout').textContent, '보유 토큰 9,970,000');
   assert.match(element('.combine-result').textContent, /획득/);
+
+  // 결과 뒤 다음 행동(동선 2단계 D). 합성 결과는 첫 펫일 수 없어 기본 버튼이 펫룸에서 보기다.
+  const [result] = pets.listOwnedPets();
+  const actions = element('.forge-result-card').children.find(
+    (child) => child.className === 'forge-result-actions',
+  );
+  const [toOverlay, inRoom] = actions.children;
+  assert.equal(toOverlay.textContent, '오버레이로 지정');
+  assert.equal(inRoom.textContent, '펫룸에서 보기');
+  assert.match(inRoom.className, /primary/);
+  inRoom.listeners.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(opened, [{ screen: 'room', focus: result.ownedPetId }]);
+  toOverlay.listeners.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(pets.getActivePet()?.ownedPetId, result.ownedPetId);
+  assert.equal(closed, 1);
 });

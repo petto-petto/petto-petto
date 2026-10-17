@@ -99,6 +99,7 @@ async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = 
   const { client, currency, database, gacha } = await fixture(t);
   if (spent > 0) currency.spendOnce('test:spent', spent, '테스트 소비');
   const { registerGachaIpc } = await import('../dist/main/ipc/gacha.js');
+  const { ensureActivePet } = await import('../dist/main/starter-pet.js');
   const handlers = new Map();
   const allowed = {};
   let petsChanged = 0;
@@ -106,8 +107,32 @@ async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = 
     { handle: (channel, fn) => handlers.set(channel, fn) },
     gacha,
     (event) => event === allowed,
-    () => petsChanged++,
+    () => {
+      petsChanged++;
+      // 앱과 같이, 첫 펫은 뽑는 순간 오버레이 펫이 된다.
+      ensureActivePet(client);
+    },
   );
+  // 결과 화면이 부르는 앱 채널(오버레이 펫·펫룸). 무엇을 불렀는지 남긴다.
+  const opened = [];
+  handlers.set('room:scene', () => ({
+    pets: client
+      .listOwnedPets()
+      .map((pet) => ({ ownedPetId: pet.ownedPetId, isActive: pet.isActive })),
+  }));
+  handlers.set('room:setActivePet', (_event, ownedPetId) => client.setActivePet(ownedPetId));
+  handlers.set('screen:open', (_event, screen, focus) => opened.push({ screen, focus }));
+  let closed = 0;
+  let requestSeq = 0;
+  // 연출 타이머는 테스트가 원할 때 돌린다. 취소한 타이머는 돌지 않는다.
+  const timers = new Map();
+  let timerId = 0;
+  const flushTimers = () => {
+    for (const [id, fn] of [...timers]) {
+      timers.delete(id);
+      fn();
+    }
+  };
   let bridge;
   let loadFails = failLoad;
   let drawFails = failDraw;
@@ -203,13 +228,19 @@ async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = 
     Intl,
     window: {
       gacha: bridge,
-      crypto: { randomUUID: () => 'ui-gacha-request' },
+      // 요청마다 새 id 다. 실패한 요청을 다시 보낼 때만 같은 id 를 쓰는 것은 화면 코드의 일이다.
+      crypto: { randomUUID: () => `ui-gacha-request-${++requestSeq}` },
       addEventListener() {},
       matchMedia: () => ({ matches: true }),
       location: { search: '', href: 'file:///game/packages/pet-gacha/ui/index.html' },
-      setTimeout: () => 1,
-      clearTimeout() {},
-      close() {},
+      setTimeout: (fn) => {
+        timers.set(++timerId, fn);
+        return timerId;
+      },
+      clearTimeout: (id) => timers.delete(id),
+      close() {
+        closed++;
+      },
     },
   });
   const settle = () => new Promise((resolve) => setImmediate(resolve));
@@ -222,6 +253,9 @@ async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = 
     allowed,
     draws: () => draws,
     petsChanged: () => petsChanged,
+    opened,
+    closed: () => closed,
+    flushTimers,
   };
 }
 
@@ -305,4 +339,91 @@ test('Electron 런타임의 기본 난수 생성기로 실제 뽑기 결과를 �
   );
   assert.equal(saved.ownedPetIds.length, 1);
   assert.equal(client.getOwnedPet(saved.ownedPetIds[0]).speciesId, saved.results[0].pet.id);
+});
+
+test('첫 펫의 결과 화면은 오버레이에서 만나기가 기본이고, 누르면 창만 닫는다', async (t) => {
+  const { client, element, settle, closed, flushTimers } = await uiHarness(t);
+  await settle();
+  element('draw-one').listeners.click();
+  await settle();
+  element('skip-button').listeners.click();
+  flushTimers();
+  await settle();
+  assert.equal(element('result-actions').hidden, false);
+  assert.equal(element('result-overlay').textContent, '오버레이에서 만나기');
+  assert.equal(element('result-overlay').classList.contains('primary'), true);
+  assert.equal(element('result-room').classList.contains('primary'), false);
+  assert.equal(element('result-again-cost').textContent, '100,000 토큰');
+
+  const [first] = client.listOwnedPets();
+  element('result-overlay').listeners.click();
+  await settle();
+  assert.equal(closed(), 1);
+  assert.equal(client.getActivePet()?.ownedPetId, first.ownedPetId);
+});
+
+test('두 번째 펫부터는 오버레이로 지정이 그 펫을 세우고, 펫룸에서 보기는 그 펫의 상세를 연다', async (t) => {
+  const { client, element, settle, opened, closed, flushTimers } = await uiHarness(t);
+  await settle();
+  element('draw-one').listeners.click();
+  await settle();
+  element('skip-button').listeners.click();
+  element('close-results').listeners.click();
+
+  element('draw-one').listeners.click();
+  await settle();
+  element('skip-button').listeners.click();
+  flushTimers();
+  await settle();
+  assert.equal(element('result-overlay').textContent, '오버레이로 지정');
+  assert.equal(element('result-room').classList.contains('primary'), true);
+
+  const second = client.listOwnedPets().find((pet) => !pet.isActive);
+  element('result-room').listeners.click();
+  await settle();
+  assert.deepEqual(opened, [{ screen: 'room', focus: second.ownedPetId }]);
+
+  element('result-overlay').listeners.click();
+  await settle();
+  assert.equal(client.getActivePet()?.ownedPetId, second.ownedPetId);
+  assert.equal(closed(), 1);
+});
+
+test('10회 소환 결과는 가장 높은 등급의 첫 카드를 고르고, 카드를 누르면 대상이 바뀐다', async (t) => {
+  const { element, settle, flushTimers } = await uiHarness(t);
+  await settle();
+  element('draw-ten').listeners.click();
+  await settle();
+  element('skip-button').listeners.click();
+  flushTimers();
+  await settle();
+  const cards = element('result-grid').children;
+  const grades = cards.map((card) => card.className.split(' ')[1]);
+  const rank = { common: 0, rare: 1, epic: 2 };
+  const top = Math.max(...grades.map((grade) => rank[grade]));
+  const expected = grades.findIndex((grade) => rank[grade] === top);
+  assert.equal(
+    cards.findIndex((card) => card.classList.contains('selected')),
+    expected,
+  );
+
+  const other = expected === 0 ? 1 : 0;
+  cards[other].listeners.click();
+  assert.equal(
+    cards.findIndex((card) => card.classList.contains('selected')),
+    other,
+  );
+});
+
+test('잔액이 모자라면 한 번 더는 비활성이고 부족분을 쓴다', async (t) => {
+  // 잔액 1,100,000 에서 10회 소환하면 100,000 이 남아 다음 10회는 모자라다.
+  const { element, settle, flushTimers } = await uiHarness(t, { spent: 8_900_000 });
+  await settle();
+  element('draw-ten').listeners.click();
+  await settle();
+  element('skip-button').listeners.click();
+  flushTimers();
+  await settle();
+  assert.equal(element('result-again').disabled, true);
+  assert.equal(element('result-again-cost').textContent, '1,000,000 토큰 · 900,000 부족');
 });

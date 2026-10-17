@@ -225,6 +225,7 @@ function playCombineSuccess(saved) {
   resultCard.replaceChildren(
     petImage(saved.result),
     cardText(saved.result.rarity, saved.result.name),
+    resultActions(saved.result.ownedPetId),
     close,
   );
   stage.classList.add('combining');
@@ -237,6 +238,44 @@ function playCombineSuccess(saved) {
     },
     reducedMotion ? 0 : 1_500,
   );
+}
+
+/**
+ * 결과 뒤 다음 행동(동선 2단계 D). 합성 결과는 첫 펫일 수 없어서(재료 10장이 필요하다) 늘
+ * `오버레이로 지정`이고, 금색 기본 버튼은 `펫룸에서 보기`다.
+ */
+function resultActions(ownedPetId) {
+  const actions = document.createElement('div');
+  actions.className = 'forge-result-actions';
+  const toOverlay = document.createElement('button');
+  toOverlay.type = 'button';
+  toOverlay.className = 'forge-result-action';
+  toOverlay.textContent = '오버레이로 지정';
+  toOverlay.addEventListener('click', () => void bringToOverlay(ownedPetId));
+  const inRoom = document.createElement('button');
+  inRoom.type = 'button';
+  inRoom.className = 'forge-result-action primary';
+  inRoom.textContent = '펫룸에서 보기';
+  inRoom.addEventListener('click', () => void showInRoom(ownedPetId));
+  actions.append(toOverlay, inRoom);
+  return actions;
+}
+
+async function bringToOverlay(ownedPetId) {
+  try {
+    await bridge().setOverlayPet(ownedPetId);
+    window.close();
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : '오버레이로 지정하지 못했어요.';
+  }
+}
+
+async function showInRoom(ownedPetId) {
+  try {
+    await bridge().openInRoom(ownedPetId);
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : '펫룸을 열지 못했어요.';
+  }
 }
 
 function dismissForgeResult() {

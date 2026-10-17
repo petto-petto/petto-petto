@@ -568,6 +568,67 @@ export function endRoomDrag(): void {
   roomDragOrigin = undefined;
 }
 
+/** 640×420 자리를 나눠 쓰는 화면. 사용자에게는 한 창에서 화면이 바뀌는 것으로 보인다. */
+export type Screen = 'room' | 'gacha' | 'combine' | 'dex';
+
+function screenWindows(): (BrowserWindow | undefined)[] {
+  return [roomWindow, gachaWindow, combineWindow, dexWindow];
+}
+
+/** 지금 보이는 640 창. 여럿이면 앞의 것이다. */
+function currentScreenWindow(): BrowserWindow | undefined {
+  return screenWindows().find(
+    (window) => window !== undefined && !window.isDestroyed() && window.isVisible(),
+  );
+}
+
+function screenWindow(screen: Screen, focusOwnedPetId?: string): BrowserWindow {
+  switch (screen) {
+    case 'room':
+      return showRoom(focusOwnedPetId);
+    case 'gacha':
+      return createGachaWindow();
+    case 'combine':
+      return createCombineWindow();
+    case 'dex':
+      return createDexWindow();
+    default: {
+      const unreachable: never = screen;
+      throw new Error(`열 수 없는 화면입니다: ${String(unreachable)}`);
+    }
+  }
+}
+
+/**
+ * 어디서든 640 화면을 연다(동선 2단계 기획서의 화면 여는 규칙).
+ *
+ * 640 창이 이미 떠 있으면 그 자리에서 화면을 바꾸고, 없으면 새로 연다. 메뉴·말풍선·정보 패널이
+ * 저마다 창을 새로 열면 펫룸 위에 뽑기 창이 겹쳐 두 창이 된다 — 한 창처럼 보여야 하는 화면들이다.
+ * `focusOwnedPetId`는 펫룸에만 의미가 있고, 그 개체의 상세를 연다.
+ */
+export function openScreen(screen: Screen, focusOwnedPetId?: string): BrowserWindow {
+  const current = currentScreenWindow();
+  const next = screenWindow(screen, focusOwnedPetId);
+  if (current && current !== next) replaceWindow(current, next);
+  return next;
+}
+
+/** 앱이 연 창의 주 프레임에서 온 요청인가. 화면을 여는 IPC 가 쓴다. */
+export function isAppWebContents(contents: WebContents): boolean {
+  return [overlayWindow, panelWindow, battleWindow, ...screenWindows()].some(
+    (window) => window !== undefined && !window.isDestroyed() && window.webContents === contents,
+  );
+}
+
+/**
+ * 오버레이에 진화를 요청한다. 진화는 오버레이의 성장 컨트롤러만 실행한다(동선 2단계 규칙 2).
+ * 오버레이가 아직 없거나 닫혔으면 아무 일도 하지 않는다 — 진화 가능 상태는 저장소에 남아 있다.
+ */
+export function requestOverlayEvolve(ownedPetId: string): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  overlayWindow.webContents.send('overlay:evolve', ownedPetId);
+}
+
 /** 펫룸 화면에서 뽑기·합성 화면으로 넘어간다. 펫룸 창이 없으면 `next`만 연 채로 둔다. */
 export function replaceRoomWith(next: BrowserWindow): void {
   if (roomWindow) replaceWindow(roomWindow, next);

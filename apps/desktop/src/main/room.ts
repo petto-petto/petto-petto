@@ -14,7 +14,14 @@ import type { RoomDestination, RoomHost, RoomState } from './room-state.ts';
 export { RoomState, type RoomDestination, type RoomHost, type RoomScene } from './room-state.ts';
 
 function destinationFrom(value: unknown): RoomDestination {
-  if (value === 'gacha' || value === 'combine' || value === 'dex') return value;
+  if (
+    value === 'gacha' ||
+    value === 'combine' ||
+    value === 'dex' ||
+    value === 'battle' ||
+    value === 'info'
+  )
+    return value;
   throw new Error(`이동할 수 없는 화면입니다: ${String(value)}`);
 }
 
@@ -35,8 +42,13 @@ function ownedPetIdFrom(value: unknown): string {
   throw new Error(`펫 식별자가 올바르지 않습니다: ${String(value)}`);
 }
 
+/** 펫룸이 오버레이에 맡기는 일. 진화는 오버레이의 성장 컨트롤러만 실행한다. */
+export interface RoomOverlayHost {
+  requestEvolve(ownedPetId: string): void;
+}
+
 /** room 의 채널을 IPC 에 등록한다. 채널 이름은 room 이 소유한다. */
-export function mountRoom(state: RoomState, host: RoomHost): void {
+export function mountRoom(state: RoomState, host: RoomHost, overlay: RoomOverlayHost): void {
   ipcMain.handle('room:scene', () => state.scene());
   ipcMain.handle('room:open', () => {
     host.showRoom();
@@ -48,6 +60,13 @@ export function mountRoom(state: RoomState, host: RoomHost): void {
   ipcMain.handle('room:setActivePet', (_event, ownedPetId: unknown) =>
     state.setActivePet(ownedPetIdFrom(ownedPetId), host),
   );
+  // 펫룸 상세의 `진화시키기`. 그 펫을 오버레이 펫으로 세운 뒤 오버레이에 진화를 맡긴다.
+  ipcMain.handle('room:evolve', (_event, ownedPetId: unknown) => {
+    const id = ownedPetIdFrom(ownedPetId);
+    const ready = state.prepareEvolve(id, host);
+    if (ready) overlay.requestEvolve(id);
+    return ready;
+  });
   ipcMain.handle('room:previewBackground', (_event, season: unknown, phase: unknown) => {
     state.previewBackground(
       season === null ? null : { season: seasonFrom(season), phase: phaseFrom(phase) },

@@ -1,11 +1,13 @@
 import {
   awakeningCopy,
   cardInterval,
+  defaultResultIndex,
   drawAffordance,
   GachaActionError,
   highestGrade,
   individualOdds,
   introDuration,
+  resultActions,
   revealCopy,
   secureRandomInt,
   showsTokenHint,
@@ -51,7 +53,13 @@ const numberFormat = new Intl.NumberFormat('ko-KR');
 
 let tokenBalance = 0;
 let pendingRequestId: string | undefined;
-let pendingDraw: DrawResult<DisplayPet> | undefined;
+let pendingDraw: (DrawResult<DisplayPet> & { readonly ownedPetIds: readonly string[] }) | undefined;
+/** 결과 화면의 대상 카드. 10회 소환은 카드를 눌러 바꾼다. */
+let selectedResult = 0;
+/** 결과를 보이는 순간의 오버레이 펫. 첫 펫이면 방금 뽑은 펫이다. */
+let overlayPetId: string | null = null;
+/** 방금 소환한 횟수. `한 번 더`가 같은 횟수로 다시 소환한다. */
+let lastCount: DrawCount = 1;
 let revealTimers: number[] = [];
 
 const stage = element<HTMLElement>('summon-stage');
@@ -69,6 +77,9 @@ element<HTMLButtonElement>('draw-one').addEventListener('click', () => void star
 element<HTMLButtonElement>('draw-ten').addEventListener('click', () => void startDraw(10));
 element<HTMLButtonElement>('skip-button').addEventListener('click', finishReveal);
 element<HTMLButtonElement>('close-results').addEventListener('click', closeResults);
+element<HTMLButtonElement>('result-overlay').addEventListener('click', () => void bringToOverlay());
+element<HTMLButtonElement>('result-room').addEventListener('click', () => void showInRoom());
+element<HTMLButtonElement>('result-again').addEventListener('click', drawAgain);
 element<HTMLButtonElement>('odds-button').addEventListener('click', openOdds);
 element<HTMLButtonElement>('odds-close').addEventListener('click', closeOdds);
 window.addEventListener('focus', () => {
@@ -83,6 +94,7 @@ document.addEventListener('keydown', (event) => {
 
 async function startDraw(count: DrawCount): Promise<void> {
   if (pendingDraw || requesting) return;
+  lastCount = count;
   requesting = true;
   setControlsDisabled(true);
   element<HTMLElement>('stage-kicker').textContent = '새로운 친구를 만나고 있어요';
@@ -180,7 +192,8 @@ function prepareReveal(grade: GachaGrade, duration: number): void {
   portal.className = `portal awakening ${grade}`;
   portal.style.setProperty('--awaken-duration', `${Math.max(duration, 1)}ms`);
   element<HTMLButtonElement>('skip-button').hidden = false;
-  element<HTMLButtonElement>('close-results').hidden = true;
+  element<HTMLElement>('result-actions').hidden = true;
+  element<HTMLElement>('result-error').hidden = true;
   element<HTMLElement>('stage-kicker').textContent = '잠든 인연이 깨어나는 중';
   element<HTMLElement>('stage-heading').textContent = awakeningCopy(grade);
   element<HTMLElement>('pod-status').textContent = '깨어나는 중 · · ·';
@@ -204,9 +217,19 @@ function revealCards(skipped: boolean): void {
   element<HTMLElement>('reveal-heading').textContent =
     pendingDraw.results.length === 10 ? '열 마리의 새로운 친구' : '새로운 친구를 만났습니다';
   resultGrid.dataset['count'] = String(pendingDraw.results.length);
+  selectedResult = defaultResultIndex(pendingDraw.results);
+  const selectable = pendingDraw.results.length > 1;
 
   pendingDraw.results.forEach((result, index) => {
     const card = createResultCard(result.grade, result.pet);
+    if (selectable) {
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.addEventListener('click', () => selectResult(index));
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') selectResult(index);
+      });
+    }
     resultGrid.append(card);
     const delay = skipped || reducedMotion ? 0 : index * cardInterval(grade);
     revealTimers.push(window.setTimeout(() => card.classList.add('visible'), delay));
@@ -218,11 +241,90 @@ function revealCards(skipped: boolean): void {
       : Math.max(0, pendingDraw.results.length - 1) * cardInterval(grade) + 220;
   revealTimers.push(
     window.setTimeout(() => {
-      const closeButton = element<HTMLButtonElement>('close-results');
-      closeButton.hidden = false;
-      closeButton.focus();
+      element<HTMLElement>('result-actions').hidden = false;
+      renderResultActions();
+      element<HTMLButtonElement>(primaryActionId()).focus();
     }, completeDelay),
   );
+  // 첫 펫인지는 메인이 정한다(뽑은 직후 자동으로 오버레이 펫이 된다). 결과를 그리는 동안 묻는다.
+  void bridge()
+    .overlayPetId()
+    .then((id) => {
+      overlayPetId = id;
+      renderResultActions();
+    })
+    .catch(() => undefined);
+}
+
+function selectResult(index: number): void {
+  selectedResult = index;
+  renderResultActions();
+}
+
+function selectedOwnedPetId(): string | undefined {
+  return pendingDraw?.ownedPetIds[selectedResult];
+}
+
+function primaryActionId(): string {
+  const target = selectedOwnedPetId();
+  return target !== undefined && target === overlayPetId ? 'result-overlay' : 'result-room';
+}
+
+/** 고른 카드와 잔액으로 결과 뒤 버튼을 그린다. 금색 기본 버튼은 하나다. */
+function renderResultActions(): void {
+  if (!pendingDraw) return;
+  const target = selectedOwnedPetId();
+  const actions = resultActions({
+    targetIsOverlayPet: target !== undefined && target === overlayPetId,
+    count: lastCount,
+    balance: tokenBalance,
+  });
+  const overlayButton = element<HTMLButtonElement>('result-overlay');
+  overlayButton.textContent = actions.overlay.label;
+  overlayButton.classList.toggle('primary', actions.overlay.primary);
+  element<HTMLButtonElement>('result-room').classList.toggle('primary', actions.roomPrimary);
+  const again = element<HTMLButtonElement>('result-again');
+  again.disabled = !actions.again.enabled;
+  again.classList.toggle('unaffordable', !actions.again.enabled);
+  element<HTMLElement>('result-again-cost').textContent = actions.again.label;
+  Array.from(resultGrid.children).forEach((card, index) =>
+    card.classList.toggle('selected', pendingDraw!.results.length > 1 && index === selectedResult),
+  );
+}
+
+/** `오버레이로 지정` — 고른 펫을 오버레이 펫으로 세우고 창을 닫는다. 이미 오버레이 펫이면 닫기만 한다. */
+async function bringToOverlay(): Promise<void> {
+  const target = selectedOwnedPetId();
+  if (target === undefined) return;
+  try {
+    if (target !== overlayPetId) await bridge().setOverlayPet(target);
+    window.close();
+  } catch (error) {
+    showResultError(error, '오버레이로 지정하지 못했어요. 다시 시도해 주세요.');
+  }
+}
+
+/** `펫룸에서 보기` — 이 창 자리에 펫룸을 열고 고른 펫의 상세를 띄운다. */
+async function showInRoom(): Promise<void> {
+  const target = selectedOwnedPetId();
+  if (target === undefined) return;
+  try {
+    await bridge().openInRoom(target);
+  } catch (error) {
+    showResultError(error, '펫룸을 열지 못했어요. 다시 시도해 주세요.');
+  }
+}
+
+function drawAgain(): void {
+  const count = lastCount;
+  closeResults();
+  void startDraw(count);
+}
+
+function showResultError(error: unknown, fallback: string): void {
+  const message = element<HTMLElement>('result-error');
+  message.textContent = error instanceof Error && error.message ? error.message : fallback;
+  message.hidden = false;
 }
 
 function finishReveal(): void {
@@ -238,6 +340,9 @@ function closeResults(): void {
   element<HTMLElement>('stage-heading').textContent = '잠든 씨앗에 토큰을 건네보세요';
   element<HTMLElement>('pod-status').textContent = '새근 · 새근 · 새근';
   pendingDraw = undefined;
+  overlayPetId = null;
+  element<HTMLElement>('result-actions').hidden = true;
+  element<HTMLElement>('result-error').hidden = true;
   setControlsDisabled(false);
   element<HTMLButtonElement>('draw-one').focus();
 }

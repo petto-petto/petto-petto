@@ -6,13 +6,14 @@ import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 
 import { systemClock } from '@pet/core';
-import { createPersistentGacha } from '@pet/gacha';
+import { GACHA_DRAW_COST, createPersistentGacha } from '@pet/gacha';
 import { createPersistentCombine } from '@pet/combine';
 
 import {
   FixtureCollector,
   MetaAppState,
-  tickBubble,
+  claimableRewards,
+  tickBubbles,
   type AggregationRun,
   type UsageCollector,
 } from '@pet/meta';
@@ -49,7 +50,6 @@ import {
   createBattleWindow,
   createOverlayWindow,
   createCombineWindow,
-  createDexWindow,
   createGachaWindow,
   isGachaWindowVisible,
   isDexWebContents,
@@ -64,15 +64,15 @@ import {
   focusOverlayWindow,
   markGrowthUsageReady,
   getBattleWindow,
+  isAppWebContents,
   petAssetsDir,
   moveOverlayDrag,
-  replaceRoomWith,
-  replaceWindowWith,
-  returnToRoom,
+  openScreen,
+  requestOverlayEvolve,
   setOverlayInteractive,
   showPanel,
-  showRoom,
   subscribeBattleWindowClosed,
+  type Screen,
 } from './windows.ts';
 
 /** 기획서 8.3: 수집은 앱 시작, 실행 중 매 1분, 카드별 수동 재스캔에서 실행한다. */
@@ -131,9 +131,11 @@ async function aggregateTick(roomHost: RoomHost): Promise<void> {
     broadcastGrowthUsage(run);
     // 주기 집계에서도 펫이 할 말을 보낸다. 재화는 주로 여기서 쌓이므로, 뽑기 가능 알림이 나갈
     // 자리도 여기다. 알림 설정과 오버레이 숨김은 `tickBubble` 이 본다.
+    const bubbles = tickBubbles(state, outcome, gachaReady);
     broadcast('usage:aggregated', {
       activityMinuteAdded: run.activityMinuteAdded,
-      bubble: tickBubble(state, outcome, gachaReady),
+      bubble: bubbles.length === 0 ? undefined : bubbles.map((bubble) => bubble.text).join(' · '),
+      bubbles,
       newlyUnlocked: outcome.newlyUnlocked,
     });
   } catch (error) {
@@ -199,10 +201,9 @@ function mountOverlayWindowIpc(): void {
   ipcMain.handle('battle:open', () => {
     createBattleWindow();
   });
-  // 보유 펫이 0마리일 때 오버레이가 여기로 보낸다. 뽑기 창을 닫아도 돌아올 길이 있어야
-  // 한다 — 메뉴에도 트레이에도 뽑기 진입점이 없다.
+  // 오버레이의 빈 상태 안내·펫 우클릭 메뉴·뽑기 말풍선이 여기로 보낸다.
   ipcMain.handle('gacha:open', () => {
-    createGachaWindow();
+    openScreen('gacha');
   });
   ipcMain.handle('gacha:is-visible', () => isGachaWindowVisible());
   // 뽑기·합성·도감 화면의 "펫룸" 버튼. 그 세 창에서 온 요청만 받는다.
@@ -213,27 +214,81 @@ function mountOverlayWindowIpc(): void {
       !isDexWebContents(event.sender)
     )
       return;
-    const from = BrowserWindow.fromWebContents(event.sender);
-    if (from) returnToRoom(from);
+    openScreen('room');
+  });
+  // 어느 창에서든 640 화면을 연다. 정보 패널의 카드 링크, 결과 화면의 `펫룸에서 보기`, 전투 창의
+  // `펫룸`이 쓴다. `focus`가 `'active'`면 오버레이 펫의 상세를, 개체 id 면 그 개체의 상세를 연다.
+  ipcMain.handle('screen:open', (event, screen: unknown, focus: unknown) => {
+    if (!isAppWebContents(event.sender) || event.senderFrame !== event.sender.mainFrame) return;
+    const target = screenFrom(screen);
+    const focusOwnedPetId =
+      focus === 'active'
+        ? (room?.activeView()?.ownedPetId ?? undefined)
+        : typeof focus === 'string' && focus.length > 0
+          ? focus
+          : undefined;
+    openScreen(target, target === 'room' ? focusOwnedPetId : undefined);
+  });
+}
+
+function screenFrom(value: unknown): Screen {
+  if (value === 'room' || value === 'gacha' || value === 'combine' || value === 'dex') return value;
+  throw new Error(`열 수 없는 화면입니다: ${String(value)}`);
+}
+
+/** 정보 패널을 펫 옆에 열고 그 화면을 보인다. 트레이·앱 메뉴·펫룸이 같은 길을 쓴다. */
+function openPanelScreen(screen: string): void {
+  if (!state) return;
+  state.panelScreen = screen;
+  showPanel();
+  broadcast('panel:show', screen);
+}
+
+/**
+ * 펫 우클릭 메뉴 배지(동선 2단계 B). 메뉴를 열 때마다 읽는다.
+ *
+ * 하나를 읽지 못해도 다른 배지는 그린다. 못 읽은 배지는 `null` 이고 화면은 그리지 않는다 — 0 이나
+ * `false` 로 바꾸면 "할 일 없음"과 "모름"이 섞인다.
+ */
+function mountOverlayMenuIpc(tokens: TokenClient): void {
+  ipcMain.handle('overlay:menu-state', () => {
+    let gachaAffordable: boolean | null = null;
+    let claimableRewardCount: number | null = null;
+    try {
+      gachaAffordable = tokens.balance() >= GACHA_DRAW_COST;
+    } catch (error) {
+      console.log(`[OVERLAY] 메뉴 배지 — 잔액을 읽지 못했습니다: ${String(error)}`);
+    }
+    try {
+      if (state) claimableRewardCount = claimableRewards(state.meta).length;
+    } catch (error) {
+      console.log(`[OVERLAY] 메뉴 배지 — 업적 보상을 읽지 못했습니다: ${String(error)}`);
+    }
+    return { gachaAffordable, claimableRewardCount };
   });
 }
 
 /** 펫룸이 앱 껍데기에 요구하는 것. 창을 다루는 일은 `@pet/room`이 할 수 없다. */
 const roomHost: RoomHost = {
-  showRoom,
+  showRoom: () => {
+    openScreen('room');
+  },
   // room 은 어느 화면으로 갈지만 말하고, 창을 갈아 끼우는 일은 앱이 한다.
   navigate: (destination, sender) => {
     // 펫룸 창의 버튼만 이 길을 쓴다. 다른 창이 부르면 펫룸 없이 뽑기·합성 창만 열린다.
     if (!isRoomWebContents(sender)) return;
     switch (destination) {
       case 'gacha':
-        replaceRoomWith(createGachaWindow());
-        return;
       case 'combine':
-        replaceRoomWith(createCombineWindow());
-        return;
       case 'dex':
-        replaceRoomWith(createDexWindow());
+        openScreen(destination);
+        return;
+      // 전투와 정보는 640 자리를 쓰지 않는다. 펫룸은 그대로 두고 따로 띄운다(결정 2·3).
+      case 'battle':
+        createBattleWindow();
+        return;
+      case 'info':
+        openPanelScreen('info');
         return;
       default: {
         const unreachable: never = destination;
@@ -289,7 +344,7 @@ function buildTray(current: MetaAppState): void {
       { type: 'separator' },
       {
         label: '펫룸',
-        click: () => showRoom(),
+        click: () => openScreen('room'),
       },
       { type: 'separator' },
       {
@@ -325,7 +380,7 @@ function buildAppMenu(current: MetaAppState): void {
       {
         label: '펫',
         submenu: [
-          { label: '펫룸', accelerator: 'CommandOrControl+1', click: () => showRoom() },
+          { label: '펫룸', accelerator: 'CommandOrControl+1', click: () => openScreen('room') },
           { type: 'separator' },
           { label: '정보', accelerator: 'CommandOrControl+2', click: openPanel('info') },
           { label: '설정', accelerator: 'CommandOrControl+3', click: openPanel('settings') },
@@ -428,13 +483,17 @@ app.whenReady().then(async () => {
     (event) => isDexWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
     (event) => isRoomWebContents(event.sender) && event.senderFrame === event.sender.mainFrame,
     {
-      openInRoom: (event, ownedPetId) => {
-        const from = BrowserWindow.fromWebContents(event.sender);
-        if (from) returnToRoom(from, ownedPetId);
+      openInRoom: (_event, ownedPetId) => {
+        openScreen('room', ownedPetId);
       },
-      goGacha: (event) => {
-        const from = BrowserWindow.fromWebContents(event.sender);
-        if (from) replaceWindowWith(from, createGachaWindow());
+      goGacha: () => {
+        openScreen('gacha');
+      },
+      evolvableCountOf: (speciesId) => {
+        const growth = growthRepository.growth();
+        return pets
+          .listOwnedPets(speciesId)
+          .filter((pet) => growth.get(pet.ownedPetId)?.evolutionAvailable === true).length;
       },
     },
   );
@@ -511,8 +570,9 @@ app.whenReady().then(async () => {
     },
   });
   mountMeta(state);
-  mountRoom(room, roomHost);
+  mountRoom(room, roomHost, { requestEvolve: requestOverlayEvolve });
   mountOverlayWindowIpc();
+  mountOverlayMenuIpc(tokens);
 
   createOverlayWindow();
   createPanelWindow();

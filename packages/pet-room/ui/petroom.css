@@ -180,9 +180,11 @@ body {
 #destinations {
   grid-column: 1;
   grid-row: 1;
-  display: flex;
-  flex-wrap: wrap;
-  /* 세 버튼과 간격이 하단 패널 안쪽 높이(101px)를 넘으면 상세 칸까지 아래로 밀린다. */
+  display: grid;
+  /* 다섯 버튼을 두 칸 세 줄로 놓는다. 한 칸으로 쌓으면 하단 패널 안쪽 높이(101px)를 넘어 아래 버튼이
+     잘린다. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: var(--space-1);
 }
 
@@ -402,9 +404,15 @@ body {
 }
 
 /* 하단 패널 높이에 맞춘 버튼. 공용 `.pixel-button` 의 여백은 여기서 과하다. */
-#detail-activate {
+#detail-activate,
+#detail-evolve {
   padding: var(--space-2) var(--space-1);
   font-size: 11px;
+}
+
+/* 지금 챙길 수 있는 행동이라 금색 테두리로 강조한다(design.md §2). */
+#detail-evolve {
+  border-color: var(--gold);
 }
 
 /* ---------- 빈 펫룸 ---------- */

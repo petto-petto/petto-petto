@@ -5,10 +5,12 @@ import {
   TOKEN_HINT,
   awakeningCopy,
   cardInterval,
+  defaultResultIndex,
   drawAffordance,
   drawCost,
   highestGrade,
   introDuration,
+  resultActions,
   revealCopy,
   showsTokenHint,
 } from '@pet/gacha';
@@ -77,4 +79,36 @@ test('어느 소환이든 모자라면 토큰을 모으는 방법을 안내한�
 test('소환 비용은 한 곳에서 정한다', () => {
   assert.equal(drawCost(1), 100_000);
   assert.equal(drawCost(10), 1_000_000);
+});
+
+test('결과 화면은 가장 높은 등급의 첫 카드를 대상으로 고른다', () => {
+  assert.equal(defaultResultIndex([{ grade: 'common' }]), 0);
+  assert.equal(
+    defaultResultIndex([
+      { grade: 'common' },
+      { grade: 'rare' },
+      { grade: 'epic' },
+      { grade: 'epic' },
+    ]),
+    2,
+  );
+  assert.throws(() => defaultResultIndex([]), /결과가 없습니다/);
+});
+
+test('첫 펫이면 오버레이에서 만나기가 기본, 아니면 펫룸에서 보기가 기본이다', () => {
+  // 첫 펫은 뽑는 순간 오버레이 펫이 된다. 지정할 것이 없으니 만나러 가는 버튼이다.
+  assert.deepEqual(resultActions({ targetIsOverlayPet: true, count: 1, balance: 0 }).overlay, {
+    label: '오버레이에서 만나기',
+    primary: true,
+  });
+  const later = resultActions({ targetIsOverlayPet: false, count: 1, balance: 500_000 });
+  assert.deepEqual(later.overlay, { label: '오버레이로 지정', primary: false });
+  assert.equal(later.roomPrimary, true);
+});
+
+test('한 번 더는 같은 횟수의 비용과 부족분을 쓰고, 모자라면 누를 수 없다', () => {
+  const ok = resultActions({ targetIsOverlayPet: false, count: 1, balance: 100_000 }).again;
+  assert.deepEqual(ok, { enabled: true, label: '100,000 토큰' });
+  const short = resultActions({ targetIsOverlayPet: false, count: 10, balance: 255_309 }).again;
+  assert.deepEqual(short, { enabled: false, label: '1,000,000 토큰 · 744,691 부족' });
 });

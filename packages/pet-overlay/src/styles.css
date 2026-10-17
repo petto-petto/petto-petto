@@ -783,7 +783,7 @@ button:focus-visible {
 }
 
 /* ---------- 매달린 팻말 메뉴 (시안 02) ---------- */
-/* 가로 레일에 팻말 세 개를 매단다. 펫 위쪽 중앙에서 짧게 내려온다. */
+/* 가로 레일에 팻말 네 개를 매단다. 펫 위쪽 중앙에서 짧게 내려온다. */
 .hmenu {
   position: absolute;
   left: 50%;
@@ -801,7 +801,7 @@ button:focus-visible {
   position: absolute;
   left: 0;
   top: 0;
-  width: 292px;
+  width: 324px;
   transform: translate(-50%, calc(-100% - 12px));
 }
 .hmenu-rail {
@@ -811,7 +811,7 @@ button:focus-visible {
 }
 .hmenu-items {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-top: 26px;
 }
@@ -877,6 +877,23 @@ button:focus-visible {
   color: var(--cream);
   font-family: 'Isamanru', sans-serif;
   font-size: 12px;
+}
+/* 할 일이 있다는 표시. 금색은 바로 챙길 보상·행동에만 쓴다(design.md §2). 문구가 함께라 색만으로
+   구분하지 않는다. */
+.hmenu-badge {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  z-index: 1;
+  padding: 2px 4px;
+  color: var(--ink);
+  font-family: 'Isamanru', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--gold);
+  border: 2px solid var(--wood-dark);
+  box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
 }
 
 /* 이벤트 문구는 라벨·핵심 문구·보조 정보의 세 단계로 읽힌다. */
@@ -1267,7 +1284,7 @@ button:focus-visible {
   clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 .evo-call-text {
-  font-family: Galmuri11, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.5;
@@ -1278,7 +1295,7 @@ button:focus-visible {
   white-space: nowrap;
   padding: 7px 16px;
   color: var(--cream);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   background: var(--wood);
   border: 2px solid var(--gold);
@@ -1302,7 +1319,7 @@ button:focus-visible {
   white-space: nowrap;
   padding: 7px 12px;
   color: var(--ink);
-  font-family: Galmuri9, ui-monospace, monospace;
+  font-family: 'Isamanru', sans-serif;
   font-size: 12px;
   background: var(--parchment-ring);
   border: 2px solid var(--wood-dark);

@@ -173,6 +173,21 @@ test('INFO-001: 오늘 획득은 오늘 지급된 양만 더하고 소비와 어
   assert.equal(summary.availableTokens.value, 530_000);
 });
 
+test('토큰 카드는 지금 잔액으로 뽑기를 몇 번 할 수 있는지 알려 준다', () => {
+  const harness = new Harness();
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 255_309]]);
+  // 뽑기 1회 100,000 — 몫만 센다. 정보 패널의 `뽑기 N회 가능 · 뽑으러 가기 ›` 링크가 쓴다.
+  assert.equal(harness.summary().drawsAvailable.value, 2);
+
+  const poor = new Harness();
+  poor.seed([['claude_code', '2026-08-24', 'claude-opus-5', 99_999]]);
+  assert.equal(poor.summary().drawsAvailable.value, 0);
+
+  const broken = new Harness();
+  broken.tokens.setQueryFailure(true);
+  assert.ok(broken.summary().drawsAvailable.error, '잔액을 모르면 횟수도 모른다');
+});
+
 test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', () => {
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 7_000]]);

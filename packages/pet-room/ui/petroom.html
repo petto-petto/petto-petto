@@ -54,8 +54,8 @@
 
   <aside id="side">
     <!--
-      뽑기·합성·도감으로 건너가는 길. 펫룸 창이 그 화면으로 바뀐다 — 창을 다루는 일은 main 이
-      한다(`room:navigate`).
+      펫룸은 집이라 모든 화면으로 가는 길이 여기 있다(동선 2단계 E). 뽑기·합성·도감은 펫룸 창이 그
+      화면으로 바뀌고, 전투·정보는 펫룸을 두고 따로 뜬다 — 창을 다루는 일은 main 이 한다(`room:navigate`).
     -->
     <nav id="destinations">
       <button class="pixel-button" type="button" data-destination="gacha">펫 뽑기</button>
@@ -63,6 +63,8 @@
       <button class="pixel-button" type="button" data-destination="dex" id="dex-button">
         펫 도감<span class="destination-new" id="dex-new" hidden>NEW</span>
       </button>
+      <button class="pixel-button" type="button" data-destination="battle">전투</button>
+      <button class="pixel-button" type="button" data-destination="info">정보</button>
     </nav>
 
     <div id="detail" class="pixel-panel" hidden>
@@ -81,6 +83,8 @@
 
         <div id="detail-actions">
           <button id="detail-activate" class="pixel-button" type="button"></button>
+          <!-- 진화는 오버레이 펫에서 연출과 함께 일어난다. 누르면 이 펫을 오버레이로 지정한다. -->
+          <button id="detail-evolve" class="pixel-button" type="button" hidden>진화시키기</button>
         </div>
       </div>
     </div>

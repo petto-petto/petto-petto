@@ -108,3 +108,44 @@ export function showsTokenHint(balance: number): boolean {
 function assertNever(value: never): never {
   throw new Error(`알 수 없는 가챠 등급: ${String(value)}`);
 }
+
+/** 결과 화면이 처음 고르는 카드. 가장 높은 등급의 첫 카드다 — 보통 가장 반가운 친구다. */
+export function defaultResultIndex(results: readonly GradeBearing[]): number {
+  const top = highestGrade(results);
+  return results.findIndex((result) => result.grade === top);
+}
+
+export interface ResultActionsInput {
+  /** 고른 결과 펫이 이미 오버레이 펫인가. 첫 펫은 뽑는 순간 오버레이 펫이 된다. */
+  targetIsOverlayPet: boolean;
+  /** 방금 소환한 횟수. `한 번 더`가 같은 횟수로 다시 소환한다. */
+  count: DrawCount;
+  balance: number;
+}
+
+export interface ResultActions {
+  overlay: { label: string; primary: boolean };
+  /** `펫룸에서 보기`가 금색 기본 버튼인가. */
+  roomPrimary: boolean;
+  again: { enabled: boolean; label: string };
+}
+
+/**
+ * 결과 뒤 다음 행동(동선 2단계 D). 첫 펫이면 오버레이로 데려가는 것이 다음 할 일이고, 그 밖에는
+ * 펫룸에서 새 친구를 보는 것이 다음 할 일이다.
+ */
+export function resultActions({
+  targetIsOverlayPet,
+  count,
+  balance,
+}: ResultActionsInput): ResultActions {
+  const again = drawAffordance(count, balance);
+  return {
+    overlay: {
+      label: targetIsOverlayPet ? '오버레이에서 만나기' : '오버레이로 지정',
+      primary: targetIsOverlayPet,
+    },
+    roomPrimary: !targetIsOverlayPet,
+    again: { enabled: again.affordable, label: again.label },
+  };
+}

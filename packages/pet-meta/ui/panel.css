@@ -1214,6 +1214,38 @@ main.no-scroll {
   opacity: 0.8;
 }
 
+/* 카드가 다른 화면의 입구가 된다(동선 2단계 G). 카드 안의 보조 정보라 글자 단추로 둔다. */
+.card-link {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 2px 0;
+  color: var(--ink);
+  font-family: 'Isamanru', sans-serif;
+  font-size: 10px;
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.card-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* 짙은 숲 카드 위에서는 밝은 글자로. */
+.hero-link {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--light-text);
+}
+
+.card-cta {
+  margin-top: var(--space-2);
+  width: 100%;
+  font-size: 12px;
+}
+
 /* 기록이 없는 설치의 안내. 0 만 보이면 고장처럼 읽힌다(기획서 5.4). */
 .card-note {
   margin-top: var(--space-1);

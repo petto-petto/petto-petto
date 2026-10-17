@@ -39,6 +39,23 @@ export function openGacha() {
   return api?.openGacha?.() ?? Promise.resolve();
 }
 
+/** 펫 우클릭 메뉴 배지. 읽지 못하면 `null` 이고, 메뉴는 배지 없이 그린다. */
+export function menuState() {
+  return (api?.menuState?.() ?? Promise.resolve(null)).catch(() => null);
+}
+
+/** 1분 집계 뒤 펫이 할 말(`[{ kind, text }]`). */
+export function onBubbles(cb) {
+  if (api?.onBubbles) return api.onBubbles(cb);
+  return () => {};
+}
+
+/** 펫룸의 `진화시키기`가 맡긴 진화 요청(개체 id). */
+export function onEvolveRequest(cb) {
+  if (api?.onEvolveRequest) return api.onEvolveRequest(cb);
+  return () => {};
+}
+
 export function isGachaOpen() {
   return api?.isGachaOpen?.() ?? Promise.resolve(false);
 }

@@ -103,7 +103,17 @@ export interface TickReport {
   failures: string[];
   /** 기획서 6.3·ACH-007의 말풍선 문구. 표시할 것이 없으면 `undefined`. */
   bubble: string | undefined;
+  /** 같은 말풍선을 종류별로 나눈 것. 오버레이가 하나씩 보이며 종류에 맞는 버튼을 단다. */
+  bubbles: PetBubble[];
   newlyUnlocked: string[];
+}
+
+/** 펫이 할 말의 종류. 오버레이는 종류를 보고 어느 화면으로 보낼지 정한다. */
+export type PetBubbleKind = 'achievement' | 'gacha-ready';
+
+export interface PetBubble {
+  kind: PetBubbleKind;
+  text: string;
 }
 
 function providerFromKey(value: unknown): Provider {
@@ -166,13 +176,32 @@ export function tickBubble(
   outcome: EvaluationOutcome,
   gachaReady: boolean,
 ): string | undefined {
+  return joinBubbles(tickBubbles(state, outcome, gachaReady));
+}
+
+/**
+ * `tickBubble`과 같은 판정을 종류별로 나눠 돌려준다. 업적이 먼저다 — 업적 보상을 받아야 잔액이
+ * 오르는 경우가 흔해서, 오버레이가 하나씩 보일 때 그 순서가 자연스럽다.
+ */
+export function tickBubbles(
+  state: MetaAppState,
+  outcome: EvaluationOutcome,
+  gachaReady: boolean,
+): PetBubble[] {
   const settings = state.meta.settings;
-  if (!settings.overlayVisible) return undefined;
-  const parts = [
-    settings.notifyAchievement ? bubbleMessage(outcome, state.catalog) : undefined,
-    gachaReady && settings.notifyGachaReady ? GACHA_READY_BUBBLE : undefined,
-  ].filter((part) => part !== undefined);
-  return parts.length === 0 ? undefined : parts.join(' · ');
+  if (!settings.overlayVisible) return [];
+  const bubbles: PetBubble[] = [];
+  const achievement = settings.notifyAchievement
+    ? bubbleMessage(outcome, state.catalog)
+    : undefined;
+  if (achievement !== undefined) bubbles.push({ kind: 'achievement', text: achievement });
+  if (gachaReady && settings.notifyGachaReady)
+    bubbles.push({ kind: 'gacha-ready', text: GACHA_READY_BUBBLE });
+  return bubbles;
+}
+
+function joinBubbles(bubbles: readonly PetBubble[]): string | undefined {
+  return bubbles.length === 0 ? undefined : bubbles.map((bubble) => bubble.text).join(' · ');
 }
 
 function report(
@@ -180,18 +209,24 @@ function report(
   host: MetaHost,
   { run, outcome, gachaReady }: AggregationResult,
 ): TickReport {
-  const bubble = tickBubble(state, outcome, gachaReady);
+  const bubbles = tickBubbles(state, outcome, gachaReady);
+  const bubble = joinBubbles(bubbles);
 
   const tick: TickReport = {
     activityMinuteAdded: run.activityMinuteAdded,
     sourceNotes: describe(run),
     failures: failuresOf(run),
     bubble,
+    bubbles,
     newlyUnlocked: outcome.newlyUnlocked,
   };
 
   // 말풍선은 펫 창이 그린다. 패널이 아니라 펫이 알림 표면이기 때문이다(기획서 6.3).
-  host.broadcast('usage:aggregated', { activityMinuteAdded: tick.activityMinuteAdded, bubble });
+  host.broadcast('usage:aggregated', {
+    activityMinuteAdded: tick.activityMinuteAdded,
+    bubble,
+    bubbles,
+  });
   for (const event of run.events) {
     if (event.payload.eventType !== 'usage.aggregated' || event.payload.growthTokenDelta <= 0)
       continue;
@@ -275,7 +310,11 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     const outcome = state.claimRewards(achievementId);
     state.persist();
     // 잔액과 누적 토큰이 바뀌었다. 열려 있는 다른 화면도 다시 그리게 한다.
-    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble: undefined });
+    host.broadcast('usage:aggregated', {
+      activityMinuteAdded: false,
+      bubble: undefined,
+      bubbles: [],
+    });
     return outcome;
   });
 
@@ -452,12 +491,15 @@ export function metaHandlers(state: MetaAppState, host: MetaHost): MetaHandlers 
     );
     state.persist();
     const bubble = bubbleMessage(outcome, state.catalog);
-    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble });
+    const bubbles: PetBubble[] =
+      bubble === undefined ? [] : [{ kind: 'achievement', text: bubble }];
+    host.broadcast('usage:aggregated', { activityMinuteAdded: false, bubble, bubbles });
     return {
       activityMinuteAdded: false,
       sourceNotes: [],
       failures: [],
       bubble,
+      bubbles,
       newlyUnlocked: outcome.newlyUnlocked,
     };
   });

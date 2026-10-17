@@ -420,7 +420,25 @@ async function renderSummary() {
         // 펫이 없으면 경험치를 물어볼 대상도 없다. 빈 막대를 그리지 않는다.
         ...(activePet.value ? [expRow({ value: activePet.value.experience })] : []),
       ]),
+      // 펫 카드는 펫룸의 입구다. 오버레이 펫의 상세를 연다(동선 2단계 G).
+      activePet.value
+        ? el('button', {
+            class: 'card-link',
+            text: '펫룸 ›',
+            attrs: { type: 'button' },
+            on: { click: () => api.openScreen('room', 'active') },
+          })
+        : null,
     ]),
+    // 펫이 0마리면 다음 할 일은 첫 펫을 만나는 것이다.
+    activePet.value === null && !activePet.error
+      ? el('button', {
+          class: 'pixel-button card-cta',
+          text: '펫 뽑으러 가기',
+          attrs: { type: 'button' },
+          on: { click: () => api.openScreen('gacha') },
+        })
+      : null,
   ]);
 
   /*
@@ -449,6 +467,15 @@ async function renderSummary() {
             el('span', { text: `+${num(data.todayEarnedTokens.value)}` }),
           ]),
     ]),
+    // 쓸 수 있는 곳을 바로 알려 준다. 1회도 못 뽑으면 링크를 두지 않는다(동선 2단계 G).
+    !data.drawsAvailable.error && data.drawsAvailable.value > 0
+      ? el('button', {
+          class: 'card-link hero-link',
+          text: `뽑기 ${num(data.drawsAvailable.value)}회 가능 · 뽑으러 가기 ›`,
+          attrs: { type: 'button' },
+          on: { click: () => api.openScreen('gacha') },
+        })
+      : null,
     // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
     data.hasNoRecords
       ? el('div', {

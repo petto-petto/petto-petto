@@ -51,8 +51,11 @@ export interface RoomHost {
   broadcast(channel: string, payload: unknown): void;
 }
 
-/** 펫룸에서 건너갈 수 있는 화면. */
-export type RoomDestination = 'gacha' | 'combine' | 'dex';
+/**
+ * 펫룸에서 건너갈 수 있는 화면. 뽑기·합성·도감은 펫룸 자리에서 바뀌고, 전투·정보는 펫룸을 두고
+ * 따로 뜬다.
+ */
+export type RoomDestination = 'gacha' | 'combine' | 'dex' | 'battle' | 'info';
 
 /** 렌더러가 받는 장면 정보. 배경 파일은 렌더러가 이 값으로 조립해 읽는다. */
 export interface RoomScene {
@@ -135,6 +138,21 @@ export class RoomState {
     if (active) console.log(`[ROOM] 활성 펫 → ${active.name} (${active.ownedPetId})`);
     host.broadcast('room:activePetChanged', active);
     return active;
+  }
+
+  /**
+   * 펫룸의 `진화시키기`를 받을 준비를 한다. 진화할 수 있으면 그 펫을 오버레이 펫으로 세우고
+   * `true`를 돌려준다. 진화 자체는 오버레이가 한다 — 성장 컨트롤러가 거기 있다.
+   *
+   * 진화 조건이 이미 사라졌으면(다른 곳에서 진화함) `false`다. 화면은 다음 push 로 최신 상태를
+   * 받으므로 여기서 던지지 않는다.
+   */
+  prepareEvolve(ownedPetId: string, host: RoomHost): boolean {
+    const view = roomPetViews(this.#collection).find((pet) => pet.ownedPetId === ownedPetId);
+    if (!view) throw new Error(`보유하지 않은 펫입니다: ${ownedPetId}`);
+    if (!view.evolutionAvailable) return false;
+    if (!view.isActive) this.setActivePet(ownedPetId, host);
+    return true;
   }
 
   /**

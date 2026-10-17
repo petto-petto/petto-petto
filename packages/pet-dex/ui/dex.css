@@ -571,6 +571,11 @@ canvas {
   display: none;
 }
 
+/* 지금 할 수 있는 일이라 굵게 둔다. 금색 글자는 양피지 위에서 읽히지 않는다. */
+.detail-evolvable {
+  font-weight: 700;
+}
+
 /* 상세 폭을 다 쓴다. 세 칸이 남는 폭을 똑같이 나눠 갖는다. */
 .evolution {
   display: flex;

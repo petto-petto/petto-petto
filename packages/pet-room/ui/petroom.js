@@ -66,6 +66,7 @@ const detailName = document.getElementById('detail-name');
 const detailGrade = document.getElementById('detail-grade');
 const detailLevel = document.getElementById('detail-level');
 const detailActivate = document.getElementById('detail-activate');
+const detailEvolve = document.getElementById('detail-evolve');
 const detailClose = document.getElementById('detail-close');
 
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -500,11 +501,15 @@ function renderDetail() {
   // 등급은 COMMON·RARE·EPIC 영문 대문자로 쓴다(design.md §2).
   detailGrade.append(gem, document.createTextNode(view.rarity));
 
-  detailLevel.textContent = `Lv.${view.level} · ${view.stage}단계`;
+  // 진화 가능 여부는 성장 저장소가 정한 값이다. 레벨을 보고 여기서 판단하지 않는다.
+  detailLevel.textContent = `Lv.${view.level} · ${view.stage}단계${
+    view.evolutionAvailable ? ' · ✨ 진화 가능' : ''
+  }`;
 
   const isActive = view.ownedPetId === room.activePetId;
   detailActivate.textContent = isActive ? '오버레이 활성 중' : '오버레이로 지정';
   detailActivate.disabled = isActive;
+  detailEvolve.hidden = !view.evolutionAvailable;
 }
 
 /* ---------- 입력 ---------- */
@@ -606,6 +611,14 @@ detailActivate.addEventListener('click', () => {
   if (!room.selectedPetId) return;
   // 호출만 한다. 화면은 `room:activePetChanged`를 받고 나서 바뀐다.
   api.setActivePet(room.selectedPetId);
+});
+
+detailEvolve.addEventListener('click', () => {
+  if (!room.selectedPetId) return;
+  // 진화는 오버레이가 한다. 이 펫이 오버레이 펫이 되고, 진화가 저장되면 push 로 새 모습을 받는다.
+  api
+    .evolvePet(room.selectedPetId)
+    .catch((error) => showError(`진화를 맡기지 못했습니다 — ${error.message}`));
 });
 
 /* ---------- 공유 루프 ---------- */
