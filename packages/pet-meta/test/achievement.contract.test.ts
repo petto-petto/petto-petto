@@ -564,15 +564,15 @@ test('보상은 종류를 달고 나간다 — 화면이 토큰 · 칭호 · 트
   const harness = new Harness();
   const screen = achievementScreen(harness.state, harness.catalog, undefined);
 
-  // 눈에 보이는 글자(label)는 짧게, 무엇인지는 설명(description)에 온전히 둔다. 아이콘이 종류를
+  // 눈에 보이는 글자(label)는 짧게(모든 화면과 같은 축약 표기), 무엇인지는 설명(description)에 온전히 둔다. 아이콘이 종류를
   // 말해 주므로 "토큰" · "칭호" 라는 말을 글자에서 되풀이하지 않는다.
   assert.deepEqual(screen.rows.find((row) => row.id === 'collection.first_pet')?.rewards, [
-    { kind: 'token', label: '100,000', description: '토큰 100,000' },
+    { kind: 'token', label: '100K', description: '토큰 100,000' },
     { kind: 'title', label: '초보 조련사', description: '칭호 초보 조련사' },
     { kind: 'trophy', label: '트로피', description: '트로피' },
   ]);
   assert.deepEqual(screen.rows.find((row) => row.id === 'collection.dex_5')?.rewards, [
-    { kind: 'token', label: '300,000', description: '토큰 300,000' },
+    { kind: 'token', label: '300K', description: '토큰 300,000' },
   ]);
 });
 

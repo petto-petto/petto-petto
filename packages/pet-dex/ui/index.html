@@ -4,14 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>petto-petto | 펫 도감</title>
+    <link rel="stylesheet" href="../../pet-shell/ui/tokens.css" />
+    <link rel="stylesheet" href="../../pet-shell/ui/topbar.css" />
     <link rel="stylesheet" href="dex.css" />
   </head>
   <body>
-    <!-- 뽑기·합성과 같은 자리에 같은 버튼을 둔다. 세 화면이 한 창처럼 보여야 한다. -->
-    <div class="window-controls">
-      <button class="window-back" type="button" aria-label="펫룸으로 돌아가기">← 펫룸</button>
-      <button class="window-close" type="button" aria-label="창 닫기">×</button>
-    </div>
+    <!-- 640 화면 공통 상단 바(`@pet/shell`). 다른 화면으로 가는 길과 토큰, 닫기가 여기 있다. -->
+    <header class="petto-topbar" data-current="dex"></header>
 
     <header class="dex-header">
       <h1 class="dex-title">펫 도감</h1>
@@ -58,5 +57,6 @@
     </main>
 
     <script type="module" src="../dist/ui/app.js"></script>
+    <script type="module" src="../../pet-shell/dist/ui/topbar.js"></script>
   </body>
 </html>

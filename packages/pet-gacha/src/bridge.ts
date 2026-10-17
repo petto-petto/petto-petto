@@ -8,8 +8,6 @@ export type GachaResponse<T> =
 export interface GachaBridge {
   load(): Promise<GachaResponse<GachaSnapshot>>;
   draw(count: DrawCount, requestId: string): Promise<GachaResponse<SavedGachaDraw>>;
-  /** 이 창을 닫고 그 자리에 펫룸을 띄운다. */
-  backToRoom(): Promise<void>;
   /** 결과 화면의 `오버레이로 지정`. 오버레이 펫의 정본을 거친다. */
   setOverlayPet(ownedPetId: string): Promise<unknown>;
   /** 지금 오버레이 펫의 개체 id. 없으면 `null`. */

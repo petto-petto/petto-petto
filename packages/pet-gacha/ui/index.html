@@ -4,18 +4,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>petto-petto | 숲의 소환소</title>
+    <link rel="stylesheet" href="../../pet-shell/ui/tokens.css" />
+    <link rel="stylesheet" href="../../pet-shell/ui/topbar.css" />
     <link rel="stylesheet" href="styles.css" />
+    <!-- 패키지 빌드가 `@pet/shell`을 bare specifier 로 읽는다. 번들러가 없어 import map 으로 풀어 준다. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@pet/shell": "../../pet-shell/dist/index.js"
+        }
+      }
+    </script>
   </head>
   <body>
-    <div class="window-controls">
-      <button class="window-back" type="button" aria-label="펫룸으로 돌아가기">← 펫룸</button>
-      <button class="window-close" type="button" aria-label="창 닫기">×</button>
-    </div>
+    <!-- 640 화면 공통 상단 바(`@pet/shell`). 다른 화면으로 가는 길과 토큰, 닫기가 여기 있다. -->
+    <header class="petto-topbar" data-current="gacha"></header>
     <main class="gacha-shell">
       <section class="summon-stage" id="summon-stage" aria-live="polite" aria-label="숲의 소환소">
-        <div class="token-box pixel-panel" aria-label="보유 토큰">
-          <span>보유 토큰 · 펫 <span id="owned-count">—</span>마리</span>
-          <strong id="token-balance">9,999,999,999</strong>
+        <!-- 토큰 잔액은 공통 상단 바가 보인다. 여기는 이 화면에서만 의미 있는 펫 수만 둔다. -->
+        <div class="token-box pixel-panel" aria-label="보유 펫">
+          <span>보유 펫</span>
+          <strong><span id="owned-count">—</span>마리</strong>
         </div>
         <div class="stage-copy pixel-panel">
           <p id="stage-kicker">새로운 인연을 기다리는 숲</p>
@@ -152,5 +161,6 @@
     </section>
 
     <script type="module" src="../dist/ui/app.js"></script>
+    <script type="module" src="../../pet-shell/dist/ui/topbar.js"></script>
   </body>
 </html>

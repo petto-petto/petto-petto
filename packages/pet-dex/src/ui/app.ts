@@ -80,10 +80,6 @@ const dex: {
   popped: new Set(),
 };
 
-document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-document.querySelector('.window-back')?.addEventListener('click', () => {
-  void bridge().backToRoom();
-});
 element<HTMLButtonElement>('error-retry').addEventListener('click', () => void load());
 detailAction.addEventListener('click', () => void runDetailAction());
 grid.addEventListener('keydown', moveFocus);

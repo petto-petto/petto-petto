@@ -154,8 +154,9 @@ async function uiHarness(t, { failLoad = false, failDraw = false, spent = 0 } = 
   vm.runInNewContext(readFileSync(join(__dirname, '../src/preload/gacha.cjs'), 'utf8'), {
     require: () => ({
       contextBridge: {
-        exposeInMainWorld: (_name, value) => {
-          bridge = value;
+        // preload 는 상단 바용 `shell`도 노출한다. 화면 코드가 쓰는 `gacha`만 잡는다.
+        exposeInMainWorld: (name, value) => {
+          if (name === 'gacha') bridge = value;
         },
       },
       ipcRenderer: { invoke },
@@ -274,7 +275,6 @@ test('뽑기 화면은 preload와 main을 거쳐 저장하고 연속 클릭을 �
   // 보유 펫이 바뀌었으니 펫룸·오버레이가 다시 읽도록 한 번 알린다.
   assert.equal(petsChanged(), 1);
   assert.equal(element('owned-count').textContent, '10');
-  assert.equal(element('token-balance').textContent, '9,000,000');
   element('skip-button').listeners.click();
   assert.equal(element('result-grid').children.length, 10);
   element('close-results').listeners.click();
@@ -291,7 +291,8 @@ test('뽑기 화면의 조회·저장 실패는 재시도할 수 있고 실패 �
   await settle();
   assert.equal(element('stage-heading').textContent, '저장 실패');
   assert.equal(client.countOwnedPets(), 0);
-  assert.equal(element('token-balance').textContent, '10,000,000');
+  // 잔액은 상단 바가 보인다. 실패한 소환이 차감하지 않았으니 10회 소환이 그대로 가능하다.
+  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · RARE 이상 보장');
   assert.equal(element('pity-counter').textContent, '0 / 100');
   assert.equal(element('draw-one').disabled, false);
   element('draw-one').listeners.click();
@@ -305,12 +306,11 @@ test('잔액이 모자란 소환은 누르기 전에 비활성으로 보이고 �
   // 10,000,000 - 9,744,691 = 255,309
   const { element, settle } = await uiHarness(t, { spent: 9_744_691 });
   await settle();
-  assert.equal(element('token-balance').textContent, '255,309');
   assert.equal(element('draw-ten').disabled, true);
   assert.equal(element('draw-ten').classList.contains('unaffordable'), true);
-  assert.equal(element('draw-ten-cost').textContent, '1,000,000 토큰 · 744,691 부족');
+  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · 745K 부족');
   assert.equal(element('draw-one').disabled, false);
-  assert.equal(element('draw-one-cost').textContent, '100,000 토큰');
+  assert.equal(element('draw-one-cost').textContent, '100K 토큰');
   assert.equal(element('token-hint').hidden, false);
   assert.equal(element('token-hint').textContent, 'AI 도구를 쓰면 토큰이 쌓여요.');
 });
@@ -319,7 +319,7 @@ test('잔액이 충분하면 토큰 안내를 보이지 않는다', async (t) =>
   const { element, settle } = await uiHarness(t);
   await settle();
   assert.equal(element('draw-ten').disabled, false);
-  assert.equal(element('draw-ten-cost').textContent, '1,000,000 토큰 · RARE 이상 보장');
+  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · RARE 이상 보장');
   assert.equal(element('token-hint').hidden, true);
 });
 
@@ -353,7 +353,7 @@ test('첫 펫의 결과 화면은 오버레이에서 만나기가 기본이고, 
   assert.equal(element('result-overlay').textContent, '오버레이에서 만나기');
   assert.equal(element('result-overlay').classList.contains('primary'), true);
   assert.equal(element('result-room').classList.contains('primary'), false);
-  assert.equal(element('result-again-cost').textContent, '100,000 토큰');
+  assert.equal(element('result-again-cost').textContent, '100K 토큰');
 
   const [first] = client.listOwnedPets();
   element('result-overlay').listeners.click();
@@ -425,5 +425,5 @@ test('잔액이 모자라면 한 번 더는 비활성이고 부족분을 쓴다'
   flushTimers();
   await settle();
   assert.equal(element('result-again').disabled, true);
-  assert.equal(element('result-again-cost').textContent, '1,000,000 토큰 · 900,000 부족');
+  assert.equal(element('result-again-cost').textContent, '1M 토큰 · 900K 부족');
 });

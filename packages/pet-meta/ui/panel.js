@@ -1,3 +1,6 @@
+// 토큰 금액은 모든 화면이 같은 함수를 지난다(`@pet/shell`, 동선 3단계). 규칙은 그 함수의 주석에 있다.
+import { compactAmount as compact } from '../../pet-shell/dist/format.js';
+
 // 메타 패널 프론트엔드.
 //
 // 규칙은 한 줄도 없다. Rust가 만들어 준 화면 모델을 DOM으로 옮기기만 한다.
@@ -36,43 +39,6 @@ function el(tag, options = {}, children = []) {
 
 const nf = new Intl.NumberFormat('ko-KR');
 const num = (value) => nf.format(value ?? 0);
-
-/**
- * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다. 화면의 모든 큰 수가 이
- * 함수 하나를 지난다 — 같은 화면에 `5K`와 `5,000`이 섞이지 않게 한다.
- *
- * 토큰 수치는 도구가 보고하는 값이고, 그 도구들이 쓰는 단위가 K · M · B다. 한글 단위로
- * 바꾸면 사용자가 다른 화면에서 본 숫자와 머릿속으로 환산해야 한다.
- *
- * 1,000 미만은 그대로다. 그 이상은 100 미만이면 소수 한 자리(`.0` 생략), 100 이상이면 정수로
- * 400px 폭에서 자리수가 넘치지 않게 한다. 반올림으로 1000 에 닿으면 다음 단위로 올린다
- * (999,949 → `1M`, `1000K`가 아니라).
- */
-const COMPACT_UNITS = [
-  [1_000_000_000, 'B'],
-  [1_000_000, 'M'],
-  [1_000, 'K'],
-];
-
-function compact(value) {
-  const n = Number(value ?? 0);
-  const sign = n < 0 ? '-' : '';
-  const abs = Math.abs(n);
-  const format = (scaled, unit) => {
-    const text = scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
-    return `${sign}${text.replace(/\.0$/, '')}${unit}`;
-  };
-  for (let index = 0; index < COMPACT_UNITS.length; index += 1) {
-    const [divisor, unit] = COMPACT_UNITS[index];
-    if (abs < divisor) continue;
-    const scaled = abs / divisor;
-    const rounded = Number(scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1));
-    const larger = COMPACT_UNITS[index - 1];
-    if (rounded >= 1_000 && larger) return format(abs / larger[0], larger[1]);
-    return format(scaled, unit);
-  }
-  return nf.format(n);
-}
 
 /** `Field<T>`를 그린다. 오류면 그 자리에만 오류를 표시한다(INFO-007). */
 function fieldValue(field, format = num) {
@@ -464,7 +430,10 @@ async function renderSummary() {
         : el('span', { class: 'hero-sub with-token' }, [
             el('span', { text: '오늘' }),
             tokenIcon(),
-            el('span', { text: `+${num(data.todayEarnedTokens.value)}` }),
+            el('span', {
+              text: `+${compact(data.todayEarnedTokens.value)}`,
+              title: `${num(data.todayEarnedTokens.value)} 토큰`,
+            }),
           ]),
     ]),
     // 쓸 수 있는 곳을 바로 알려 준다. 1회도 못 뽑으면 링크를 두지 않는다(동선 2단계 G).

@@ -38,7 +38,7 @@ import { RoomState, mountRoom, type RoomHost } from './room.ts';
 import { registerOverlayGrowthIpc, type OverlayGrowthHost } from './ipc/overlay-growth.ts';
 import { registerGachaIpc } from './ipc/gacha.ts';
 import { registerCombineIpc } from './ipc/combine.ts';
-import { registerDexIpc } from './ipc/dex.ts';
+import { loadDexView, registerDexIpc } from './ipc/dex.ts';
 import { APP_MIGRATIONS } from './persistence/migrations/index.ts';
 import { PetGrowthRepository } from './persistence/repositories/pet-growth-repository.ts';
 import { SqliteFileDatabase } from './persistence/sqlite-file.ts';
@@ -65,6 +65,7 @@ import {
   markGrowthUsageReady,
   getBattleWindow,
   isAppWebContents,
+  isScreenWebContents,
   petAssetsDir,
   moveOverlayDrag,
   openScreen,
@@ -206,18 +207,8 @@ function mountOverlayWindowIpc(): void {
     openScreen('gacha');
   });
   ipcMain.handle('gacha:is-visible', () => isGachaWindowVisible());
-  // 뽑기·합성·도감 화면의 "펫룸" 버튼. 그 세 창에서 온 요청만 받는다.
-  ipcMain.handle('window:backToRoom', (event) => {
-    if (
-      !isGachaWebContents(event.sender) &&
-      !isCombineWebContents(event.sender) &&
-      !isDexWebContents(event.sender)
-    )
-      return;
-    openScreen('room');
-  });
-  // 어느 창에서든 640 화면을 연다. 정보 패널의 카드 링크, 결과 화면의 `펫룸에서 보기`, 전투 창의
-  // `펫룸`이 쓴다. `focus`가 `'active'`면 오버레이 펫의 상세를, 개체 id 면 그 개체의 상세를 연다.
+  // 어느 창에서든 640 화면을 연다. 상단 바의 탭, 정보 패널의 카드 링크, 결과 화면의 `펫룸에서
+  // 보기`, 전투 창의 `펫룸`이 쓴다. `focus`가 `'active'`면 오버레이 펫의 상세를, 개체 id 면 그 개체의 상세를 연다.
   ipcMain.handle('screen:open', (event, screen: unknown, focus: unknown) => {
     if (!isAppWebContents(event.sender) || event.senderFrame !== event.sender.mainFrame) return;
     const target = screenFrom(screen);
@@ -245,26 +236,40 @@ function openPanelScreen(screen: string): void {
 }
 
 /**
- * 펫 우클릭 메뉴 배지(동선 2단계 B). 메뉴를 열 때마다 읽는다.
+ * 펫 우클릭 메뉴 배지(동선 2단계 B)와 640 화면 상단 바(동선 3단계)가 읽는 값. 열 때마다 읽는다.
  *
- * 하나를 읽지 못해도 다른 배지는 그린다. 못 읽은 배지는 `null` 이고 화면은 그리지 않는다 — 0 이나
+ * 하나를 읽지 못해도 나머지는 그린다. 못 읽은 값은 `null` 이고 화면은 그리지 않는다 — 0 이나
  * `false` 로 바꾸면 "할 일 없음"과 "모름"이 섞인다.
  */
-function mountOverlayMenuIpc(tokens: TokenClient): void {
+function readBadges(tokens: TokenClient, dexHasNew: () => boolean) {
+  const read = <T>(label: string, work: () => T): T | null => {
+    try {
+      return work();
+    } catch (error) {
+      console.log(`[SHELL] ${label}을(를) 읽지 못했습니다 — ${String(error)}`);
+      return null;
+    }
+  };
+  const balance = read('잔액', () => tokens.balance());
+  return {
+    balance,
+    gachaAffordable: balance === null ? null : balance >= GACHA_DRAW_COST,
+    claimableRewardCount: read('업적 보상', () =>
+      state ? claimableRewards(state.meta).length : null,
+    ),
+    dexHasNew: read('도감 신규 발견', dexHasNew),
+  };
+}
+
+function mountBadgeIpc(tokens: TokenClient, dexHasNew: () => boolean): void {
   ipcMain.handle('overlay:menu-state', () => {
-    let gachaAffordable: boolean | null = null;
-    let claimableRewardCount: number | null = null;
-    try {
-      gachaAffordable = tokens.balance() >= GACHA_DRAW_COST;
-    } catch (error) {
-      console.log(`[OVERLAY] 메뉴 배지 — 잔액을 읽지 못했습니다: ${String(error)}`);
-    }
-    try {
-      if (state) claimableRewardCount = claimableRewards(state.meta).length;
-    } catch (error) {
-      console.log(`[OVERLAY] 메뉴 배지 — 업적 보상을 읽지 못했습니다: ${String(error)}`);
-    }
+    const { gachaAffordable, claimableRewardCount } = readBadges(tokens, dexHasNew);
     return { gachaAffordable, claimableRewardCount };
+  });
+  // 상단 바는 640 화면에만 있다.
+  ipcMain.handle('shell:state', (event) => {
+    if (!isScreenWebContents(event.sender)) throw new Error('640 화면에서만 읽을 수 있습니다.');
+    return readBadges(tokens, dexHasNew);
   });
 }
 
@@ -272,29 +277,6 @@ function mountOverlayMenuIpc(tokens: TokenClient): void {
 const roomHost: RoomHost = {
   showRoom: () => {
     openScreen('room');
-  },
-  // room 은 어느 화면으로 갈지만 말하고, 창을 갈아 끼우는 일은 앱이 한다.
-  navigate: (destination, sender) => {
-    // 펫룸 창의 버튼만 이 길을 쓴다. 다른 창이 부르면 펫룸 없이 뽑기·합성 창만 열린다.
-    if (!isRoomWebContents(sender)) return;
-    switch (destination) {
-      case 'gacha':
-      case 'combine':
-      case 'dex':
-        openScreen(destination);
-        return;
-      // 전투와 정보는 640 자리를 쓰지 않는다. 펫룸은 그대로 두고 따로 띄운다(결정 2·3).
-      case 'battle':
-        createBattleWindow();
-        return;
-      case 'info':
-        openPanelScreen('info');
-        return;
-      default: {
-        const unreachable: never = destination;
-        throw new Error(`이동할 수 없는 화면입니다: ${String(unreachable)}`);
-      }
-    }
   },
   broadcast,
 };
@@ -461,6 +443,8 @@ app.whenReady().then(async () => {
       ensureActivePet(pets);
       room.reload(roomHost);
       room.applyGrowth(growthRepository.adoptRoster(room.growthSeeds()), roomHost);
+      // 잔액·도감 신규 발견이 바뀌었다. 열려 있는 상단 바가 다시 읽는다.
+      broadcast('shell:changed', undefined);
     } catch (error) {
       console.log(`[ROOM] 바뀐 보유 펫을 펫룸에 반영하지 못했습니다 — ${String(error)}`);
     }
@@ -489,6 +473,7 @@ app.whenReady().then(async () => {
       goGacha: () => {
         openScreen('gacha');
       },
+      seenChanged: () => broadcast('shell:changed', undefined),
       evolvableCountOf: (speciesId) => {
         const growth = growthRepository.growth();
         return pets
@@ -572,7 +557,7 @@ app.whenReady().then(async () => {
   mountMeta(state);
   mountRoom(room, roomHost, { requestEvolve: requestOverlayEvolve });
   mountOverlayWindowIpc();
-  mountOverlayMenuIpc(tokens);
+  mountBadgeIpc(tokens, () => loadDexView(pets).hasNew);
 
   createOverlayWindow();
   createPanelWindow();

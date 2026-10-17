@@ -1,10 +1,6 @@
 import { combineReadiness } from '../dist/index.js';
 
 const assets = new URLSearchParams(window.location.search).get('assets');
-document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-document.querySelector('.window-back')?.addEventListener('click', () => {
-  void bridge().backToRoom();
-});
 
 if (!assets) throw new Error('Combine UI requires the assets query parameter.');
 
@@ -22,7 +18,6 @@ const message = panel.querySelector('.combine-message');
 const result = panel.querySelector('.combine-result');
 const selection = panel.querySelector('.selection-slots');
 const grid = panel.querySelector('.pet-grid');
-const tokens = panel.querySelector('.token-readout');
 const materials = panel.querySelector('.combine-materials');
 const requirement = panel.querySelector('.combine-requirement');
 const resultCard = stage.querySelector('.forge-result-card');
@@ -83,9 +78,8 @@ async function refresh(selectAutomatically = false) {
 
 function render() {
   const readiness = combineReadiness(activeGrade, selectedIds.length, snapshot.balance);
-  tokens.textContent = loaded
-    ? `보유 토큰 ${snapshot.balance.toLocaleString('ko-KR')}`
-    : '보유 토큰 —';
+  // 잔액은 공통 상단 바가 보인다(`@pet/shell`). 합성 중에는 탭과 닫기를 막는다.
+  signalBusy(busy || stage.classList.contains('combining'));
   materials.textContent = readiness.materials;
   requirement.textContent = loaded ? (readiness.reason ?? '') : '';
   for (const tab of panel.querySelectorAll('[data-grade]')) {
@@ -276,6 +270,11 @@ async function showInRoom(ownedPetId) {
   } catch (error) {
     message.textContent = error instanceof Error ? error.message : '펫룸을 열지 못했어요.';
   }
+}
+
+function signalBusy(value) {
+  if (typeof CustomEvent !== 'function') return;
+  document.dispatchEvent(new CustomEvent('petto:busy', { detail: value }));
 }
 
 function dismissForgeResult() {

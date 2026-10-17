@@ -604,3 +604,16 @@ test('설정 화면 문구에 기획서 번호를 쓰지 않는다', () => {
   assert.doesNotMatch(panel, /text: '[^']*(SET|INFO|META)-\d{3}[^']*'/);
   assert.match(panel, /사용자 지정 경로는 아직 지원하지 않아요\./);
 });
+
+test('정보 패널은 토큰 금액 축약을 따로 갖지 않고 공통 함수를 쓴다', () => {
+  // 화면마다 축약 규칙을 따로 두면 같은 금액이 화면마다 다르게 보인다(동선 3단계).
+  const panel = readFileSync(new URL('../ui/panel.js', import.meta.url), 'utf8');
+  assert.match(
+    panel,
+    /import \{ compactAmount as compact \} from '\.\.\/\.\.\/pet-shell\/dist\/format\.js'/,
+  );
+  assert.doesNotMatch(panel, /function compact\(/);
+  assert.doesNotMatch(panel, /COMPACT_UNITS/);
+  const html = readFileSync(new URL('../ui/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<script type="module" src="panel\.js"><\/script>/);
+});

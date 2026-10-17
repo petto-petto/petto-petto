@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@pet/core": "*",
-    "@pet/client": "*"
+    "@pet/client": "*",
+    "@pet/shell": "*"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts"

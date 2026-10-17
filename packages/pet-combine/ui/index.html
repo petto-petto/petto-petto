@@ -4,13 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Petto Petto — 비전 합성소</title>
+    <link rel="stylesheet" href="../../pet-shell/ui/tokens.css" />
+    <link rel="stylesheet" href="../../pet-shell/ui/topbar.css" />
     <link rel="stylesheet" href="./styles.css" />
+    <!-- 패키지 빌드가 `@pet/shell`을 bare specifier 로 읽는다. 번들러가 없어 import map 으로 풀어 준다. -->
+    <script type="importmap">
+      {
+        "imports": {
+          "@pet/shell": "../../pet-shell/dist/index.js"
+        }
+      }
+    </script>
   </head>
   <body>
-    <div class="window-controls">
-      <button class="window-back" type="button" aria-label="펫룸으로 돌아가기">← 펫룸</button>
-      <button class="window-close" type="button" aria-label="창 닫기">×</button>
-    </div>
+    <!-- 640 화면 공통 상단 바(`@pet/shell`). 다른 화면으로 가는 길과 토큰, 닫기가 여기 있다. -->
+    <header class="petto-topbar" data-current="combine"></header>
     <main class="combine-shell">
       <section class="combine-stage" aria-labelledby="combine-title">
         <div class="stage-copy">
@@ -35,7 +43,6 @@
         </div>
         <div class="combine-summary">
           <strong class="combine-materials"></strong>
-          <span class="token-readout"></span>
         </div>
         <p class="combine-message" role="status"></p>
         <div class="selection-slots"></div>
@@ -48,5 +55,6 @@
       </section>
     </main>
     <script type="module" src="./app.mjs"></script>
+    <script type="module" src="../../pet-shell/dist/ui/topbar.js"></script>
   </body>
 </html>

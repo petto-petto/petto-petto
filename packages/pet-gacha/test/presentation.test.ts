@@ -50,21 +50,21 @@ test('열매가 갈라지기 전에는 문구로 결과 등급을 미리 노출�
 });
 
 test('잔액이 비용 이상인 소환만 누를 수 있고, 같으면 누를 수 있다', () => {
-  assert.deepEqual(drawAffordance(1, 100_000), { affordable: true, label: '100,000 토큰' });
+  assert.deepEqual(drawAffordance(1, 100_000), { affordable: true, label: '100K 토큰' });
   assert.deepEqual(drawAffordance(1, 99_999), {
     affordable: false,
-    label: '100,000 토큰 · 1 부족',
+    label: '100K 토큰 · 1 부족',
   });
   assert.deepEqual(drawAffordance(10, 1_000_000), {
     affordable: true,
-    label: '1,000,000 토큰 · RARE 이상 보장',
+    label: '1M 토큰 · RARE 이상 보장',
   });
 });
 
 test('모자란 소환은 비용과 부족분을 함께 보인다', () => {
   assert.deepEqual(drawAffordance(10, 255_309), {
     affordable: false,
-    label: '1,000,000 토큰 · 744,691 부족',
+    label: '1M 토큰 · 745K 부족',
   });
   assert.equal(drawAffordance(1, 255_309).affordable, true);
 });
@@ -108,7 +108,12 @@ test('첫 펫이면 오버레이에서 만나기가 기본, 아니면 펫룸에�
 
 test('한 번 더는 같은 횟수의 비용과 부족분을 쓰고, 모자라면 누를 수 없다', () => {
   const ok = resultActions({ targetIsOverlayPet: false, count: 1, balance: 100_000 }).again;
-  assert.deepEqual(ok, { enabled: true, label: '100,000 토큰' });
+  assert.deepEqual(ok, { enabled: true, label: '100K 토큰' });
   const short = resultActions({ targetIsOverlayPet: false, count: 10, balance: 255_309 }).again;
-  assert.deepEqual(short, { enabled: false, label: '1,000,000 토큰 · 744,691 부족' });
+  assert.deepEqual(short, { enabled: false, label: '1M 토큰 · 745K 부족' });
+});
+
+test('축약은 표시에만 쓰고 판정은 정확한 값으로 한다', () => {
+  // 잔액 99,960 은 `100K`로 보이지만 1회 소환은 할 수 없다. 부족분은 정확한 값 그대로 작다.
+  assert.deepEqual(drawAffordance(1, 99_960), { affordable: false, label: '100K 토큰 · 40 부족' });
 });

@@ -313,7 +313,12 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   let exposed;
   vm.runInNewContext(readFileSync(join(__dirname, '../src/preload/combine.cjs'), 'utf8'), {
     require: () => ({
-      contextBridge: { exposeInMainWorld: (_name, bridge) => (exposed = bridge) },
+      // preload 는 상단 바용 `shell`도 노출한다. 화면 코드가 쓰는 `combine`만 잡는다.
+      contextBridge: {
+        exposeInMainWorld: (name, bridge) => {
+          if (name === 'combine') exposed = bridge;
+        },
+      },
       ipcRenderer: { invoke: async (channel, ...args) => handlers.get(channel)(allowed, ...args) },
     }),
   });
@@ -397,8 +402,7 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(element('.selection-slots').children.length, 10);
-  assert.equal(element('.token-readout').textContent, '보유 토큰 10,000,000');
-  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30,000 토큰');
+  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30K 토큰');
   assert.equal(element('.combine-requirement').textContent, '');
   assert.equal(element('.combine-button').disabled, false);
   element('.combine-button').listeners.click();
@@ -414,7 +418,6 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     ),
     true,
   );
-  assert.equal(element('.token-readout').textContent, '보유 토큰 9,970,000');
   assert.match(element('.combine-result').textContent, /획득/);
 
   // 결과 뒤 다음 행동(동선 2단계 D). 합성 결과는 첫 펫일 수 없어 기본 버튼이 펫룸에서 보기다.

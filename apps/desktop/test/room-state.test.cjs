@@ -27,7 +27,6 @@ async function fixture(t) {
   const broadcasts = [];
   const host = {
     showRoom() {},
-    navigate() {},
     broadcast: (channel, payload) => broadcasts.push({ channel, payload }),
   };
   const clock = { now: () => new Date('2026-10-04T12:00:00') };

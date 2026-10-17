@@ -17,7 +17,8 @@
   --parchment-ring: #e0c894;
   --ink: #3b2a1a;
   --paper: #f5ecd8;
-  --gold: #ffd166;
+  /* 금색은 공통 디자인 토큰(`@pet/shell/ui/tokens.css`)을 따른다. */
+  --gold: var(--petto-gold);
   --outline: #2c2438;
   --disabled: #999999;
   --disabled-dark: #555555;
@@ -36,11 +37,18 @@
   box-sizing: border-box;
 }
 
-html,
+/* 공통 상단 바(`@pet/shell`) 아래 640×420. 창은 바 높이만큼 크다. */
+html {
+  width: 640px;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
 body {
   width: 640px;
   height: 420px;
-  margin: 0;
+  margin: var(--petto-bar-height) 0 0;
   overflow: hidden;
 }
 
@@ -62,54 +70,6 @@ canvas {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--outline);
-}
-
-/* ---------- 창 버튼: 뽑기·합성과 같은 자리 ---------- */
-
-.window-controls {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 10;
-  display: flex;
-  gap: 6px;
-  -webkit-app-region: no-drag;
-}
-
-.window-back,
-.window-close {
-  height: 28px;
-  -webkit-app-region: no-drag;
-  border: 2px solid var(--wood-border);
-  background: var(--wood);
-  color: var(--paper);
-  cursor: pointer;
-  box-shadow:
-    inset 0 2px 0 var(--wood-light),
-    inset 0 -2px 0 var(--wood-border);
-}
-
-.window-back {
-  padding: 0 8px;
-  font:
-    700 12px/1 'Isamanru',
-    sans-serif;
-}
-
-.window-close {
-  width: 28px;
-  padding: 0;
-  font:
-    20px/1 'Isamanru',
-    sans-serif;
-}
-
-.window-back:hover {
-  background: #8a6340;
-}
-
-.window-close:hover {
-  background: #762f35;
 }
 
 /* ---------- 머리줄: 제목과 수집 진행도 ---------- */

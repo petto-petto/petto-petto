@@ -1,3 +1,4 @@
+import { compactAmount } from '@pet/shell';
 import { drawCost, type DrawCount, type GachaGrade } from './gacha-engine.ts';
 
 export interface GradeBearing {
@@ -81,8 +82,6 @@ export interface DrawAffordance {
   readonly label: string;
 }
 
-const tokenAmount = new Intl.NumberFormat('ko-KR');
-
 /**
  * 잔액으로 소환 버튼을 누를 수 있는지와 보조 문구를 정한다.
  *
@@ -90,10 +89,11 @@ const tokenAmount = new Intl.NumberFormat('ko-KR');
  */
 export function drawAffordance(count: DrawCount, balance: number): DrawAffordance {
   const cost = drawCost(count);
-  const costLabel = `${tokenAmount.format(cost)} 토큰`;
+  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`). 판정은 정확한 값으로 한다.
+  const costLabel = `${compactAmount(cost)} 토큰`;
   const shortfall = cost - balance;
   if (shortfall > 0) {
-    return { affordable: false, label: `${costLabel} · ${tokenAmount.format(shortfall)} 부족` };
+    return { affordable: false, label: `${costLabel} · ${compactAmount(shortfall)} 부족` };
   }
   return { affordable: true, label: count === 10 ? `${costLabel} · RARE 이상 보장` : costLabel };
 }

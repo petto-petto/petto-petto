@@ -33,10 +33,6 @@ declare global {
   }
 }
 
-document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-document.querySelector('.window-back')?.addEventListener('click', () => {
-  void bridge().backToRoom();
-});
 const pityBox = document.querySelector('.pity-box');
 if (pityBox) document.querySelector('.summon-stage')?.append(pityBox);
 
@@ -242,6 +238,8 @@ function revealCards(skipped: boolean): void {
   revealTimers.push(
     window.setTimeout(() => {
       element<HTMLElement>('result-actions').hidden = false;
+      // 저장과 연출이 끝났다. 결과를 보는 동안에는 상단 바로 다른 화면에 가도 된다.
+      signalBusy(false);
       renderResultActions();
       element<HTMLButtonElement>(primaryActionId()).focus();
     }, completeDelay),
@@ -384,7 +382,6 @@ function updateHud(): void {
   const { pityCounter } = gachaState;
   element<HTMLElement>('owned-count').textContent =
     ownedCount === undefined ? '—' : numberFormat.format(ownedCount);
-  element<HTMLElement>('token-balance').textContent = numberFormat.format(tokenBalance);
   element<HTMLElement>('pity-counter').textContent = `${pityCounter} / 100`;
   element<HTMLElement>('pity-fill').style.width = `${pityCounter}%`;
 
@@ -397,6 +394,8 @@ let controlsBusy = false;
 
 function setControlsDisabled(disabled: boolean): void {
   controlsBusy = disabled;
+  // 연출·저장 중에는 상단 바의 탭과 닫기를 막는다(`@pet/shell`). 결과를 보기 전에 창이 바뀌지 않게 한다.
+  signalBusy(disabled);
   renderAffordance();
   element<HTMLButtonElement>('odds-button').disabled = disabled || !catalogReady;
 }
@@ -421,6 +420,11 @@ function renderAffordance(): void {
   const hint = element<HTMLElement>('token-hint');
   hint.textContent = TOKEN_HINT;
   hint.hidden = !known || !showsTokenHint(tokenBalance);
+}
+
+function signalBusy(busy: boolean): void {
+  if (typeof CustomEvent !== 'function') return;
+  document.dispatchEvent(new CustomEvent('petto:busy', { detail: busy }));
 }
 
 function openOdds(): void {

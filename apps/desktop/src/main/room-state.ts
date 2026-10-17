@@ -16,8 +16,6 @@
  * 그리면 그 창의 로컬 상태와 push 로 받은 상태가 경쟁해 진실의 원천이 둘로 쪼개진다.
  */
 
-import type { WebContents } from 'electron';
-
 import type { OwnedPet as PetClientOwnedPet, PetClient } from '@pet/client';
 import type { Clock } from '@pet/core';
 import {
@@ -45,17 +43,9 @@ import type { OwnedPetGrowth } from './persistence/repositories/pet-growth-repos
 export interface RoomHost {
   /** 펫룸 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
   showRoom(): void;
-  /** 펫룸 창을 닫고 그 자리에 다른 화면을 띄운다. 새 창을 하나 더 여는 것이 아니다. */
-  navigate(destination: RoomDestination, sender: WebContents): void;
   /** 열려 있는 **모든** 창에 같은 이벤트를 보낸다. 발신 창도 포함이다. */
   broadcast(channel: string, payload: unknown): void;
 }
-
-/**
- * 펫룸에서 건너갈 수 있는 화면. 뽑기·합성·도감은 펫룸 자리에서 바뀌고, 전투·정보는 펫룸을 두고
- * 따로 뜬다.
- */
-export type RoomDestination = 'gacha' | 'combine' | 'dex' | 'battle' | 'info';
 
 /** 렌더러가 받는 장면 정보. 배경 파일은 렌더러가 이 값으로 조립해 읽는다. */
 export interface RoomScene {

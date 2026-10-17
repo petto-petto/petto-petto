@@ -66,6 +66,14 @@ let roomWindow: BrowserWindow | undefined;
 /** 펫룸 장면을 끄는 중이면 시작 시점의 창·포인터 위치. */
 let roomDragOrigin: DragOrigin | undefined;
 let gachaWindow: BrowserWindow | undefined;
+
+/**
+ * 640 화면 공통 상단 바 높이(동선 3단계). 창을 이만큼 키우고 화면 내용은 그 아래 640×420에 둔다.
+ * 값은 `@pet/shell`의 `--petto-bar-height`와 같아야 한다.
+ */
+const SHELL_BAR_HEIGHT = 32;
+const SCREEN_WIDTH = 640;
+const SCREEN_HEIGHT = 420 + SHELL_BAR_HEIGHT;
 let combineWindow: BrowserWindow | undefined;
 let dexWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
@@ -338,8 +346,8 @@ export function createGachaWindow(): BrowserWindow {
   }
 
   gachaWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -373,8 +381,8 @@ export function createCombineWindow(): BrowserWindow {
     return combineWindow;
   }
   combineWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -411,8 +419,8 @@ export function createDexWindow(): BrowserWindow {
     return dexWindow;
   }
   dexWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -471,7 +479,7 @@ export function createBattleWindow(): BrowserWindow | undefined {
 }
 
 /**
- * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
+ * 펫룸 창 크기. 뽑기·합성과 같은 640x452 — 공통 상단 바 32px 아래 640x420이다.
  *
  * 배경 원본 960x360의 일부를 1.25배로 키워 장면 칸 640x300을 채운다. 그 규칙과 상수는
  * `@pet/room`의 `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
@@ -481,14 +489,14 @@ export function createBattleWindow(): BrowserWindow | undefined {
  */
 const ROOM_PANEL_HEIGHT = 120;
 export const ROOM_WIDTH = VIEWPORT_WIDTH;
-export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
+export const ROOM_HEIGHT = SHELL_BAR_HEIGHT + VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 
 /**
  * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
  *
  * 뽑기·합성 창과 같은 프레임 없는 창이다. 세 화면이 같은 자리에서 갈아 끼워지므로 창 모양과
- * 닫기 버튼 자리가 같아야 한 창처럼 보인다. 닫기는 화면 오른쪽 위 버튼이, 옮기기는 하단
- * 패널의 빈 바탕이 맡는다(`petroom.css`).
+ * 상단 바가 같아야 한 창처럼 보인다. 닫기와 다른 화면으로 가는 탭은 공통 상단 바(`@pet/shell`)가,
+ * 옮기기는 상단 바와 하단 패널의 빈 바탕이 맡는다(`petroom.css`).
  */
 export function showRoom(focusOwnedPetId?: string): BrowserWindow {
   if (roomWindow && !roomWindow.isDestroyed()) {
@@ -535,7 +543,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
  * 사용자에게는 같은 창에서 화면이 바뀌는 것처럼 보여야 한다. 한 창에서 `loadFile`로 갈아
  * 끼우지 않는 이유: 뽑기·합성은 전용 preload 를 쓰고 IPC 도 자기 창에서 온 요청만 받는데,
  * preload 는 창을 만들 때 정해져 바꿀 수 없다. 그래서 창은 바꾸되 이전 화면이 있던 자리에
- * 띄운다. 크기는 셋 다 640x420이고 모두 프레임 없는 창이다. 창 위치가 아니라 **내용 영역**을
+ * 띄운다. 크기는 넷 다 640x452(상단 바 포함)이고 모두 프레임 없는 창이다. 창 위치가 아니라 **내용 영역**을
  * 맞추는 것은 어느 한쪽에 프레임이 다시 생겨도 화면이 어긋나지 않게 하려는 것이다.
  */
 function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
@@ -611,6 +619,13 @@ export function openScreen(screen: Screen, focusOwnedPetId?: string): BrowserWin
   const next = screenWindow(screen, focusOwnedPetId);
   if (current && current !== next) replaceWindow(current, next);
   return next;
+}
+
+/** 640 화면(펫룸·뽑기·합성·도감)에서 온 요청인가. 상단 바 IPC 가 쓴다. */
+export function isScreenWebContents(contents: WebContents): boolean {
+  return screenWindows().some(
+    (window) => window !== undefined && !window.isDestroyed() && window.webContents === contents,
+  );
 }
 
 /** 앱이 연 창의 주 프레임에서 온 요청인가. 화면을 여는 IPC 가 쓴다. */

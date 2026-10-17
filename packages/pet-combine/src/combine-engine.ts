@@ -1,3 +1,5 @@
+import { compactAmount } from '@pet/shell';
+
 export const COMBINE_GRADES = ['common', 'rare'] as const;
 export type CombineGrade = (typeof COMBINE_GRADES)[number];
 export type ResultGrade = 'rare' | 'epic';
@@ -52,8 +54,6 @@ export interface CombineReadiness {
   readonly reason: string | undefined;
 }
 
-const tokenAmount = new Intl.NumberFormat('ko-KR');
-
 /**
  * 선택한 재료 수와 잔액으로 합성 버튼 상태를 정한다.
  *
@@ -66,14 +66,15 @@ export function combineReadiness(
   balance: number,
 ): CombineReadiness {
   const cost = combineCost(grade);
-  const materials = `재료 ${selectedCount} / ${COMBINE_MATERIAL_COUNT} · ${tokenAmount.format(cost)} 토큰`;
+  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`). 판정은 정확한 값으로 한다.
+  const materials = `재료 ${selectedCount} / ${COMBINE_MATERIAL_COUNT} · ${compactAmount(cost)} 토큰`;
   const missing = COMBINE_MATERIAL_COUNT - selectedCount;
   if (missing > 0) return { ready: false, materials, reason: `재료가 ${missing}장 더 필요해요.` };
   if (balance < cost) {
     return {
       ready: false,
       materials,
-      reason: `토큰이 ${tokenAmount.format(cost - balance)} 부족해요.`,
+      reason: `토큰이 ${compactAmount(cost - balance)} 부족해요.`,
     };
   }
   return { ready: true, materials, reason: undefined };

@@ -9,21 +9,9 @@ import { ipcMain } from 'electron';
 
 import { BACKGROUND_PHASES, SEASONS, type BackgroundPhase, type Season } from '@pet/room';
 
-import type { RoomDestination, RoomHost, RoomState } from './room-state.ts';
+import type { RoomHost, RoomState } from './room-state.ts';
 
-export { RoomState, type RoomDestination, type RoomHost, type RoomScene } from './room-state.ts';
-
-function destinationFrom(value: unknown): RoomDestination {
-  if (
-    value === 'gacha' ||
-    value === 'combine' ||
-    value === 'dex' ||
-    value === 'battle' ||
-    value === 'info'
-  )
-    return value;
-  throw new Error(`이동할 수 없는 화면입니다: ${String(value)}`);
-}
+export { RoomState, type RoomHost, type RoomScene } from './room-state.ts';
 
 function seasonFrom(value: unknown): Season {
   const found = SEASONS.find((season) => season === value);
@@ -53,10 +41,7 @@ export function mountRoom(state: RoomState, host: RoomHost, overlay: RoomOverlay
   ipcMain.handle('room:open', () => {
     host.showRoom();
   });
-  // 펫룸에서 뽑기·합성·도감으로 건너가는 길. 창을 다루는 일은 앱이 하고, room 은 요청만 한다.
-  ipcMain.handle('room:navigate', (event, destination: unknown) => {
-    host.navigate(destinationFrom(destination), event.sender);
-  });
+  // 다른 화면으로 가는 길은 공통 상단 바가 `screen:open`으로 연다(동선 3단계). room 은 갖지 않는다.
   ipcMain.handle('room:setActivePet', (_event, ownedPetId: unknown) =>
     state.setActivePet(ownedPetIdFrom(ownedPetId), host),
   );
