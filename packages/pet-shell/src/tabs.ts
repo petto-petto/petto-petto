@@ -2,15 +2,15 @@
  * 640 화면들의 공통 상단 바(동선 3단계).
  *
  * 펫룸·뽑기·합성·도감은 같은 자리에서 갈아 끼워지는 한 창이다. 위쪽 막대가 같아야 한 창으로 읽히고,
- * 어느 화면에서든 한 번에 다른 화면으로 간다. 전투와 정보는 640 자리를 쓰지 않고 따로 뜬다(결정 2·3)
- * — 탭에 `↗`를 붙여 화면이 바뀌지 않는다는 것을 보인다.
+ * 어느 화면에서든 한 번에 다른 화면으로 간다. 정보도 640 창의 한 화면이다(동선 4단계). 전투만 640 자리를
+ * 쓰지 않고 따로 뜬다(결정 2) — 탭에 `↗`를 붙여 화면이 바뀌지 않는다는 것을 보인다.
  */
 
 import { compactAmount, exactAmount } from './format.ts';
 
 /** 640 자리를 나눠 쓰는 화면. */
-export type ShellScreen = 'room' | 'gacha' | 'combine' | 'dex';
-export type ShellTabKey = ShellScreen | 'battle' | 'info';
+export type ShellScreen = 'room' | 'gacha' | 'combine' | 'dex' | 'info';
+export type ShellTabKey = ShellScreen | 'battle';
 
 export interface ShellTab {
   key: ShellTabKey;
@@ -24,8 +24,8 @@ export const SHELL_TABS: readonly ShellTab[] = [
   { key: 'gacha', label: '뽑기', external: false },
   { key: 'combine', label: '합성', external: false },
   { key: 'dex', label: '도감', external: false },
+  { key: 'info', label: '정보', external: false },
   { key: 'battle', label: '전투', external: true },
-  { key: 'info', label: '정보', external: true },
 ];
 
 /** 메인이 주는 막대 상태. 읽지 못한 값은 `null` 이다 — 0 이나 `false` 로 바꾸지 않는다. */

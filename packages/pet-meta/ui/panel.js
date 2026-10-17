@@ -265,6 +265,8 @@ function render() {
 
 async function renderNow() {
   content.classList.remove('no-scroll');
+  // 화면마다 배치가 다르다(정보 요약만 두 칸). CSS 가 이 값을 본다.
+  content.dataset.view = ui.screen === 'info' ? `info/${ui.subtab}` : ui.screen;
   try {
     await iconsReady;
     if (ui.screen === 'info') {
@@ -454,11 +456,8 @@ async function renderSummary() {
       : null,
   ]);
 
-  if (!ui.expanded) {
-    commit(generation, profile, hero, expandButton());
-    return;
-  }
-
+  // 640 창에서는 접지 않는다(동선 4단계). 왼쪽에 펫·토큰, 오른쪽에 함께한 기록을 늘 둔다 — 세로 패널
+  // 시절에는 높이가 모자라 `자세히`로 접었지만, 두 칸이면 한 화면에 들어간다.
   const records = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
     el('div', { class: 'stat-grid record-grid' }, [
@@ -501,7 +500,11 @@ async function renderSummary() {
     ]),
   ]);
 
-  commit(generation, profile, hero, records, expandButton());
+  commit(
+    generation,
+    el('div', { class: 'summary-col' }, [profile, hero]),
+    el('div', { class: 'summary-col' }, [records]),
+  );
 }
 
 /* ---------- 정보 · 사용량 ---------- */
@@ -1182,7 +1185,6 @@ function flash(message, isError = false) {
 for (const tab of document.querySelectorAll('[data-screen]')) {
   tab.addEventListener('click', () => selectScreen(tab.dataset.screen));
 }
-document.getElementById('close-button').addEventListener('click', () => api.closePanel());
 document.getElementById('back-button').addEventListener('click', () => selectScreen('info'));
 
 document.getElementById('demo-button').addEventListener('click', () => selectScreen('demo'));
@@ -1235,34 +1237,21 @@ async function selftestInfoLayout() {
     `서브탭이 ${labels.join(',')}`,
   );
 
-  // 요약: 접힘으로 시작하고 스크롤이 없다.
+  // 요약: 두 칸(왼쪽 펫·토큰, 오른쪽 함께한 기록)이고 접지 않으며 스크롤이 없다(동선 4단계).
   const noScroll = content.scrollHeight <= content.clientHeight;
-  const collapsedSummary = !content.querySelector('.record-grid') && !ui.expanded;
-  await report(
-    collapsedSummary && noScroll,
-    '요약 접힘        함께한 기록 숨김 · 스크롤 없음',
-    `요약 접힘 ${collapsedSummary}, 스크롤 없음 ${noScroll}`,
-  );
-
-  await clickExpand();
+  const columns = content.querySelectorAll(':scope > .summary-col').length;
   const stats = [...content.querySelectorAll('.record-grid .stat .label')].map(
     (node) => node.textContent,
   );
   await report(
-    stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
-    `요약 펼침        함께한 기록 ${stats.length}칸`,
-    `요약 펼침 칸 ${stats.join(',')}`,
+    columns === 2 &&
+      noScroll &&
+      !content.querySelector('.expand-button') &&
+      stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
+    `요약 두 칸       함께한 기록 ${stats.length}칸 · 스크롤 없음`,
+    `요약 칸 ${columns}, 스크롤 없음 ${noScroll}, 기록 ${stats.join(',')}`,
   );
 
-  await clickExpand();
-  await report(
-    !content.querySelector('.record-grid'),
-    '요약 접기        다시 접힘',
-    '접기를 눌러도 펼친 채다',
-  );
-
-  // 펼친 채 사용량으로 옮기면 접힌 상태여야 한다.
-  await clickExpand();
   subtabButton('사용량')?.click();
   await renderDone;
   const filters = [...content.querySelectorAll('.period-filter button')].map(

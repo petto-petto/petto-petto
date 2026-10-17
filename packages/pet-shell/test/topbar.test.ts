@@ -10,10 +10,19 @@ const known: ShellState = {
   dexHasNew: true,
 };
 
-test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 전투 ↗ · 정보 ↗ 순이다', () => {
+test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 정보 · 전투 ↗ 순이다', () => {
+  // 정보도 640 창의 한 화면이다(동선 4단계). 따로 뜨는 것은 전투뿐이다.
   assert.deepEqual(
     SHELL_TABS.map((tab) => `${tab.label}${tab.external ? ' ↗' : ''}`),
-    ['펫룸', '뽑기', '합성', '도감', '전투 ↗', '정보 ↗'],
+    ['펫룸', '뽑기', '합성', '도감', '정보', '전투 ↗'],
+  );
+});
+
+test('정보 화면에서는 정보 탭이 현재 탭이다', () => {
+  const view = topBarView('info', known);
+  assert.deepEqual(
+    view.tabs.filter((tab) => tab.current).map((tab) => tab.key),
+    ['info'],
   );
 });
 

@@ -28,7 +28,7 @@ const UNREAD: ShellState = {
   dexHasNew: null,
 };
 
-const SCREENS: readonly ShellScreen[] = ['room', 'gacha', 'combine', 'dex'];
+const SCREENS: readonly ShellScreen[] = ['room', 'gacha', 'combine', 'dex', 'info'];
 
 function isScreen(value: string | undefined): value is ShellScreen {
   return SCREENS.some((screen) => screen === value);

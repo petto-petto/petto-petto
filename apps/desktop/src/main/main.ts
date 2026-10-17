@@ -56,7 +56,6 @@ import {
   isGachaWebContents,
   isRoomWebContents,
   isCombineWebContents,
-  createPanelWindow,
   endOverlayDrag,
   beginRoomDrag,
   moveRoomDrag,
@@ -560,7 +559,6 @@ app.whenReady().then(async () => {
   mountBadgeIpc(tokens, () => loadDexView(pets).hasNew);
 
   createOverlayWindow();
-  createPanelWindow();
   buildTray(state);
   buildAppMenu(state);
   applyOverlayVisibility(state.meta.settings.overlayVisible);
@@ -600,7 +598,6 @@ app.whenReady().then(async () => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
       createOverlayWindow();
-      createPanelWindow();
       if (shouldOpenGachaPrototype()) createGachaWindow();
       if (shouldOpenCombinePrototype()) createCombineWindow();
     }

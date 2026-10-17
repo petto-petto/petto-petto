@@ -1,9 +1,13 @@
 <meta charset="utf-8" />
-<title>메타 패널</title>
+<title>Petto Petto — 정보</title>
+<link rel="stylesheet" href="../../pet-shell/ui/tokens.css" />
+<link rel="stylesheet" href="../../pet-shell/ui/topbar.css" />
 <link rel="stylesheet" href="panel.css" />
 
+<!-- 640 화면 공통 상단 바(`@pet/shell`). 정보는 640 창의 한 화면이다(동선 4단계). -->
+<header class="petto-topbar" data-current="info"></header>
+
 <header id="titlebar">
-  <span id="grip" title="드래그해서 창 옮기기" aria-hidden="true"></span>
   <button class="screen-tab" data-screen="info" aria-selected="true">정보</button>
   <button class="screen-tab" data-screen="achievements" aria-selected="false">업적</button>
   <!--
@@ -17,7 +21,6 @@
   <button class="icon-button" id="demo-button" aria-label="시연" title="프로토타입 시연용">
     ⚗&#xFE0E;
   </button>
-  <button class="icon-button" id="close-button" aria-label="닫기" title="닫기">✕</button>
 </header>
 
 <nav id="subtabs"></nav>
@@ -42,3 +45,4 @@
 </footer>
 
 <script type="module" src="panel.js"></script>
+<script type="module" src="../../pet-shell/dist/ui/topbar.js"></script>

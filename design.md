@@ -148,8 +148,8 @@ Use a 2px base unit and the following values for layout.
 
 ### Shared Top Bar
 
-- The pet room, summon, combine, and collection screens share one 32px top bar from `@pet/shell` (`packages/pet-shell/ui/topbar.css`). Each window is 640x452: the bar on top, the screen's own 640x420 below it.
-- The bar holds the tabs (`펫룸 · 뽑기 · 합성 · 도감 · 전투 ↗ · 정보 ↗`), the token chip, and the close button. Mark the current tab in gold. `↗` tabs open another window and keep the current screen.
+- The app has three windows: the overlay pet, one 640 window, and the separate battle window. The pet room, summon, combine, collection, and info screens take turns in the 640 window and share one 32px top bar from `@pet/shell` (`packages/pet-shell/ui/topbar.css`). The window is 640x452: the bar on top, the screen's own 640x420 below it.
+- The bar holds the tabs (`펫룸 · 뽑기 · 합성 · 도감 · 정보 · 전투 ↗`), the token chip, and the close button. Mark the current tab in gold. The `↗` tab opens the battle window and keeps the current screen.
 - Screens do not draw their own back or close buttons and do not repeat the token balance.
 - Shared values (font, gold, disabled gray, wood, parchment, ink) come from `packages/pet-shell/ui/tokens.css`. Background palettes stay with each screen.
 - Write every token amount with `compactAmount` from `@pet/shell` (K · M · B). Show the exact value as a tooltip where there is room.

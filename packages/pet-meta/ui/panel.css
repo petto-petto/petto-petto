@@ -78,9 +78,14 @@ body {
   display: none !important;
 }
 
+/*
+ * 640 창의 한 화면이다(동선 4단계). 공통 상단 바(`@pet/shell`) 아래 640×420을 쓴다. 예전에는 펫 옆
+ * 400×544 세로 패널이었다.
+ */
 body {
-  width: 400px;
-  height: 544px;
+  width: 640px;
+  height: 420px;
+  margin-top: var(--petto-bar-height);
   background: var(--parchment);
   color: var(--ink);
   /*
@@ -128,17 +133,6 @@ body {
     inset 0 -2px 0 var(--wood-border);
   /* Electron이 이 영역을 타이틀 바처럼 다룬다. 잡으면 창이 따라온다. */
   -webkit-app-region: drag;
-}
-
-/* 점 여섯 개짜리 손잡이 — 여기가 드래그 지점이라는 표시. */
-#grip {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 16px;
-  margin-right: 2px;
-  background-image: radial-gradient(circle, var(--wood-highlight) 1px, transparent 1px);
-  background-size: 5px 5px;
-  background-position: 0 2px;
 }
 
 .screen-tab {
@@ -285,7 +279,22 @@ main {
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-2) var(--space-3) var(--space-3);
+  /* 한 칸 화면은 가운데 560px 기둥에 둔다. 640 폭을 다 쓰면 글줄이 너무 길다. */
+  padding: var(--space-2) max(var(--space-3), calc(50% - 280px)) var(--space-3);
+}
+
+/* 정보 요약은 두 칸이다. 왼쪽 펫·토큰, 오른쪽 함께한 기록(동선 4단계). */
+main[data-view='info/summary'] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: start;
+  gap: var(--space-4);
+  padding-inline: var(--space-3);
+}
+
+.summary-col {
+  min-width: 0;
 }
 
 main::-webkit-scrollbar {
