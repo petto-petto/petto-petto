@@ -15,18 +15,23 @@ const app = readFileSync(join(packageRoot, '..', 'src', 'App.jsx'), 'utf8');
 const growthHook = readFileSync(join(packageRoot, '..', 'src', 'growth', 'useGrowth.js'), 'utf8');
 const overlayDirectory = join(packageRoot, '..', 'src', 'overlay');
 
-test('팻말 메뉴는 전투·펫 관리·정보만 두고 공통 Electron bridge로 위임한다', () => {
-  assert.match(hangingMenu, /key: 'battle', label: '전투', opensBattle: true/);
-  assert.match(hangingMenu, /key: 'petmgmt', label: '펫 관리', opensRoom: true/);
-  assert.match(hangingMenu, /key: 'info', label: '정보', panelScreen: 'info'/);
+test('팻말 메뉴는 펫룸·뽑기·전투·정보를 두고 공통 Electron bridge로 위임한다', () => {
+  // 항목과 순서는 `menu-model.ts`가 정한다(`overlay-speech.contract.test.ts`).
+  assert.match(hangingMenu, /MENU_ITEMS\.map/);
+  // 누르면 열리는 창 이름과 같아야 한다(동선 1단계 기획서).
+  assert.doesNotMatch(hangingMenu, /'펫 관리'/);
   assert.doesNotMatch(hangingMenu, /label: '업적'/);
   assert.doesNotMatch(hangingMenu, /label: '설정'/);
-  assert.match(hangingMenu, /openPanel\(item\.panelScreen\)/);
-  assert.match(hangingMenu, /openPetRoom\(\)/);
-  assert.match(hangingMenu, /openBattle\(\)/);
+  assert.match(hangingMenu, /item\.key === 'room'\) void openPetRoom\(\)/);
+  assert.match(hangingMenu, /item\.key === 'gacha'\) void openGacha\(\)/);
+  assert.match(hangingMenu, /item\.key === 'battle'\) void openBattle\(\)/);
+  // 받을 보상이 있으면 업적 화면으로 바로 간다(동선 2단계 B).
+  assert.match(hangingMenu, /openPanel\(infoScreenFor\(state\)\)/);
   assert.match(bridge, /export function openPanel/);
   assert.match(bridge, /export function openPetRoom/);
   assert.match(bridge, /export function openBattle/);
+  assert.match(bridge, /export function openGacha/);
+  assert.match(bridge, /export function menuState/);
 });
 
 /**
@@ -50,12 +55,14 @@ test('팻말 메뉴는 레일과 걸이 위에 아이콘과 라벨을 함께 건
  * 안에 진화 버튼이 있었다. 같은 버튼이 상황마다 달랐고, 처음 쓰는 사람은 진화하는 법을
  * 찾을 수 없었다. 이제 진화는 자기 팻말을 갖는다.
  */
-test('펫 관리는 항상 펫룸만 열고 자리 표시용 패널이 없다', () => {
+test('펫룸 팻말은 항상 펫룸만 열고 자리 표시용 패널이 없다', () => {
   assert.doesNotMatch(hangingMenu, /담당 파트가 구현/);
-  assert.doesNotMatch(hangingMenu, /useState/, '열고 닫을 자체 패널이 없다');
+  // 상태는 배지 값 하나뿐이다. 열고 닫을 자체 패널을 두지 않는다.
+  assert.match(hangingMenu, /const \[state, setState\] = useState\(null\)/);
+  assert.doesNotMatch(hangingMenu, /useState\((true|false)\)/, '열고 닫을 자체 패널이 없다');
   // 진화는 메뉴가 아니라 펫 머리 위 말풍선이 맡는다(팀 의견: 메뉴 패널은 별로).
   assert.doesNotMatch(hangingMenu, /evolutionAvailable|doEvolve|onEvolve/);
-  assert.match(hangingMenu, /else if \(item\.opensRoom\) void openPetRoom/);
+  assert.match(hangingMenu, /if \(item\.key === 'room'\) void openPetRoom/);
 });
 
 test('오버레이의 활성 펫은 명부가 정한다 — 이 창은 자기 값을 저장하지 않는다', () => {

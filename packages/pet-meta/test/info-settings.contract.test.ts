@@ -2,6 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import { FixedClock, parseLocalDate, type LocalDate } from '@pet/core';
 import {
@@ -170,6 +171,21 @@ test('INFO-001: 오늘 획득은 오늘 지급된 양만 더하고 소비와 어
 
   assert.equal(summary.todayEarnedTokens.value, 130_000, '자정 정각의 지급은 오늘 것이다');
   assert.equal(summary.availableTokens.value, 530_000);
+});
+
+test('토큰 카드는 지금 잔액으로 뽑기를 몇 번 할 수 있는지 알려 준다', () => {
+  const harness = new Harness();
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 255_309]]);
+  // 뽑기 1회 100,000 — 몫만 센다. 정보 패널의 `뽑기 N회 가능 · 뽑으러 가기 ›` 링크가 쓴다.
+  assert.equal(harness.summary().drawsAvailable.value, 2);
+
+  const poor = new Harness();
+  poor.seed([['claude_code', '2026-08-24', 'claude-opus-5', 99_999]]);
+  assert.equal(poor.summary().drawsAvailable.value, 0);
+
+  const broken = new Harness();
+  broken.tokens.setQueryFailure(true);
+  assert.ok(broken.summary().drawsAvailable.error, '잔액을 모르면 횟수도 모른다');
 });
 
 test('INFO-007: 잔액 조회가 실패해도 요약의 나머지는 산다', () => {
@@ -581,4 +597,23 @@ test('갱신: 마지막 갱신이 오늘이 아니면 날짜를 함께 보여준
     usageScreen(harness.state, tomorrow, 'all').lastRefreshedLabel,
     `${pad(at.getMonth() + 1)}-${pad(at.getDate())} ${pad(at.getHours())}:${pad(at.getMinutes())}`,
   );
+});
+
+test('설정 화면 문구에 기획서 번호를 쓰지 않는다', () => {
+  const panel = readFileSync(new URL('../ui/panel.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(panel, /text: '[^']*(SET|INFO|META)-\d{3}[^']*'/);
+  assert.match(panel, /사용자 지정 경로는 아직 지원하지 않아요\./);
+});
+
+test('정보 패널은 토큰 금액 축약을 따로 갖지 않고 공통 함수를 쓴다', () => {
+  // 화면마다 축약 규칙을 따로 두면 같은 금액이 화면마다 다르게 보인다(동선 3단계).
+  const panel = readFileSync(new URL('../ui/panel.js', import.meta.url), 'utf8');
+  assert.match(
+    panel,
+    /import \{ compactAmount as compact \} from '\.\.\/\.\.\/pet-shell\/dist\/format\.js'/,
+  );
+  assert.doesNotMatch(panel, /function compact\(/);
+  assert.doesNotMatch(panel, /COMPACT_UNITS/);
+  const html = readFileSync(new URL('../ui/index.html', import.meta.url), 'utf8');
+  assert.match(html, /<script type="module" src="panel\.js"><\/script>/);
 });

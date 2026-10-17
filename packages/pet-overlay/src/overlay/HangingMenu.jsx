@@ -1,5 +1,6 @@
-import React from 'react';
-import { openBattle, openPanel, openPetRoom } from '../platform/bridge.js';
+import React, { useEffect, useState } from 'react';
+import { menuState, openBattle, openGacha, openPanel, openPetRoom } from '../platform/bridge.js';
+import { MENU_ITEMS, infoScreenFor, menuBadges } from './menu-model.ts';
 
 // 커스텀 SVG 아이콘
 function Icon({ name }) {
@@ -22,7 +23,7 @@ function Icon({ name }) {
           <circle cx="12" cy="7.6" r="1.15" fill="currentColor" stroke="none" />
         </svg>
       );
-    case 'petmgmt':
+    case 'room':
       return (
         <svg {...c}>
           <ellipse cx="12" cy="15.5" rx="4.2" ry="3.3" fill="currentColor" stroke="none" />
@@ -30,6 +31,16 @@ function Icon({ name }) {
           <circle cx="16.7" cy="10.5" r="1.8" fill="currentColor" stroke="none" />
           <circle cx="9.6" cy="6.6" r="1.6" fill="currentColor" stroke="none" />
           <circle cx="14.4" cy="6.6" r="1.6" fill="currentColor" stroke="none" />
+        </svg>
+      );
+    case 'gacha':
+      // 소환의 숲의 씨앗에서 돋는 새싹.
+      return (
+        <svg {...c}>
+          <path d="M12 21v-8" />
+          <path d="M12 13c0-3.5-2.6-5.6-6.5-5.6 0 3.6 2.6 5.6 6.5 5.6z" fill="currentColor" />
+          <path d="M12 11c0-3.2 2.3-5.3 6-5.3 0 3.3-2.3 5.3-6 5.3z" fill="currentColor" />
+          <ellipse cx="12" cy="20.5" rx="5" ry="1.6" />
         </svg>
       );
     case 'battle':
@@ -48,20 +59,27 @@ function Icon({ name }) {
   }
 }
 
-// 팻말은 왼쪽부터 전투 · 펫 관리 · 정보 순으로 매단다. 각 메뉴의 기존 동작은 유지한다.
-const ITEMS = [
-  { key: 'battle', label: '전투', opensBattle: true },
-  { key: 'petmgmt', label: '펫 관리', opensRoom: true },
-  { key: 'info', label: '정보', panelScreen: 'info' },
-];
-
+// 팻말은 왼쪽부터 펫룸 · 뽑기 · 전투 · 정보 순으로 매단다(동선 2단계 B). 합성·도감은 펫룸에서 간다.
 export default function HangingMenu({ onClose }) {
-  // 각 항목이 창 하나씩 연다. 예전에는 진화 가능할 때만 펫 관리가 펫룸 대신 자리 표시용
-  // 패널을 띄워서 같은 버튼이 상황마다 달랐다. 진화는 펫 머리 위 말풍선(`EvolveBubble`)이 맡는다.
+  // 배지는 메뉴를 열 때마다 새로 읽는다. 읽기 전·실패하면 배지 없이 그린다.
+  const [state, setState] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    void menuState().then((next) => {
+      if (alive) setState(next);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const badges = menuBadges(state);
+
+  // 각 팻말은 창 하나씩 연다. 진화는 펫 머리 위 말풍선(`EvolveBubble`)이 맡는다.
   const selectItem = (item) => {
-    if (item.panelScreen) void openPanel(item.panelScreen);
-    else if (item.opensBattle) void openBattle();
-    else if (item.opensRoom) void openPetRoom();
+    if (item.key === 'room') void openPetRoom();
+    else if (item.key === 'gacha') void openGacha();
+    else if (item.key === 'battle') void openBattle();
+    else if (item.key === 'info') void openPanel(infoScreenFor(state));
     onClose();
   };
 
@@ -71,14 +89,23 @@ export default function HangingMenu({ onClose }) {
       <div className="hmenu-board" aria-label="펫 제어 메뉴">
         <div className="hmenu-rail" aria-hidden="true" />
         <div className="hmenu-items">
-          {ITEMS.map((it) => (
-            <button key={it.key} className="hmenu-item pixel-button" onClick={() => selectItem(it)}>
-              <span className="hmenu-icon">
-                <Icon name={it.key} />
-              </span>
-              <span className="hmenu-label">{it.label}</span>
-            </button>
-          ))}
+          {MENU_ITEMS.map((it) => {
+            const badge = badges[it.key] ?? null;
+            return (
+              <button
+                key={it.key}
+                className="hmenu-item pixel-button"
+                onClick={() => selectItem(it)}
+                aria-label={badge ? `${it.label} · ${badge}` : it.label}
+              >
+                {badge && <span className="hmenu-badge">{badge}</span>}
+                <span className="hmenu-icon">
+                  <Icon name={it.key} />
+                </span>
+                <span className="hmenu-label">{it.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

@@ -49,6 +49,7 @@ const detailName = element<HTMLElement>('detail-name');
 const detailNumber = element<HTMLElement>('detail-number');
 const detailGrade = element<HTMLElement>('detail-grade');
 const detailOwned = element<HTMLElement>('detail-owned');
+const detailEvolvable = element<HTMLElement>('detail-evolvable');
 const detailMet = element<HTMLElement>('detail-met');
 const evolution = element<HTMLElement>('evolution');
 const detailAction = element<HTMLButtonElement>('detail-action');
@@ -79,10 +80,6 @@ const dex: {
   popped: new Set(),
 };
 
-document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-document.querySelector('.window-back')?.addEventListener('click', () => {
-  void bridge().backToRoom();
-});
 element<HTMLButtonElement>('error-retry').addEventListener('click', () => void load());
 detailAction.addEventListener('click', () => void runDetailAction());
 grid.addEventListener('keydown', moveFocus);
@@ -333,6 +330,8 @@ function renderDetail(): void {
     slot.state === 'owned'
       ? `보유 ${slot.ownedCount}마리 · 최고 Lv.${slot.highestLevel}`
       : '지금은 함께하는 펫이 없어요';
+  detailEvolvable.hidden = slot.evolvableCount === 0;
+  detailEvolvable.textContent = `✨ 진화 가능한 개체 ${slot.evolvableCount}마리`;
   detailMet.hidden = slot.discoveredOn === null;
   detailMet.textContent = `첫 만남 ${slot.discoveredOn ?? ''}`;
 

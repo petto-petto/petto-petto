@@ -29,7 +29,7 @@ async function fixture(t, species = ['003', '006']) {
   const owned = pets.createOwnedPets(species);
   if (owned[0]) pets.setActivePet(owned[0].ownedPetId);
   const growthRepository = new PetGrowthRepository(db);
-  const host = { showRoom() {}, navigate() {}, broadcast() {} };
+  const host = { showRoom() {}, broadcast() {} };
   const createRoom = () =>
     new RoomState(
       { now: () => new Date('2026-10-05T12:00:00') },

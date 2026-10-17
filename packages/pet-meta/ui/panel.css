@@ -78,9 +78,14 @@ body {
   display: none !important;
 }
 
+/*
+ * 640 창의 한 화면이다(동선 4단계). 공통 상단 바(`@pet/shell`) 아래 640×420을 쓴다. 예전에는 펫 옆
+ * 400×544 세로 패널이었다.
+ */
 body {
-  width: 400px;
-  height: 544px;
+  width: 640px;
+  height: 420px;
+  margin-top: var(--petto-bar-height);
   background: var(--parchment);
   color: var(--ink);
   /*
@@ -128,17 +133,6 @@ body {
     inset 0 -2px 0 var(--wood-border);
   /* Electron이 이 영역을 타이틀 바처럼 다룬다. 잡으면 창이 따라온다. */
   -webkit-app-region: drag;
-}
-
-/* 점 여섯 개짜리 손잡이 — 여기가 드래그 지점이라는 표시. */
-#grip {
-  flex: 0 0 auto;
-  width: 10px;
-  height: 16px;
-  margin-right: 2px;
-  background-image: radial-gradient(circle, var(--wood-highlight) 1px, transparent 1px);
-  background-size: 5px 5px;
-  background-position: 0 2px;
 }
 
 .screen-tab {
@@ -257,22 +251,7 @@ body {
 
 /* ---------- 본문 ---------- */
 
-/*
- * 하단 설정 줄.
- *
- * 떠 있는 버튼으로 두지 않은 이유: 요약은 패널을 꽉 채우므로 겹치면 업적 막대를
- * 가린다. 자기 줄을 차지하게 하고 그만큼 패널을 키웠다.
- */
-#panel-footer {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--space-1) var(--space-3) var(--space-2);
-  /* 버튼을 뺀 나머지는 창을 잡아 끄는 여백으로 쓴다. */
-  -webkit-app-region: drag;
-}
-
-/* 설정 모드에서 감춘 탭을 대신하는 제목. 남는 폭을 먹어 오른쪽 버튼을 밀어낸다. */
+/* 지금 화면 이름. 남는 폭을 먹어 오른쪽 버튼을 밀어낸다. */
 #mode-title {
   flex: 1;
   color: var(--light-text);
@@ -285,7 +264,63 @@ main {
   flex: 1 1 auto;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: var(--space-2) var(--space-3) var(--space-3);
+  /* 한 칸 화면은 가운데 560px 기둥에 둔다. 640 폭을 다 쓰면 글줄이 너무 길다. */
+  padding: var(--space-2) max(var(--space-3), calc(50% - 280px)) var(--space-3);
+}
+
+/* 정보 요약은 두 칸이다. 왼쪽 펫·토큰, 오른쪽 함께한 기록(동선 4단계). */
+main[data-view='info/summary'] {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  align-items: start;
+  gap: var(--space-4);
+  padding-inline: var(--space-3);
+}
+
+.summary-col {
+  min-width: 0;
+}
+
+/* 두 칸 아래 가로 한 줄. 640 창에서 남던 아랫공간을 최근 12주 사용 흐름으로 채운다. */
+.summary-wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.grass-summary-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.grass-summary .grass {
+  flex: 0 0 auto;
+}
+
+.grass-summary .grass-cell {
+  width: 11px;
+  height: 11px;
+}
+
+.grass-facts {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.grass-facts dt {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.grass-facts dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }
 
 main::-webkit-scrollbar {
@@ -1212,6 +1247,38 @@ main.no-scroll {
   color: var(--ink);
   font-size: 10px;
   opacity: 0.8;
+}
+
+/* 카드가 다른 화면의 입구가 된다(동선 2단계 G). 카드 안의 보조 정보라 글자 단추로 둔다. */
+.card-link {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 2px 0;
+  color: var(--ink);
+  font-family: 'Isamanru', sans-serif;
+  font-size: 10px;
+  background: transparent;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.card-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+/* 짙은 숲 카드 위에서는 밝은 글자로. */
+.hero-link {
+  display: block;
+  margin-top: var(--space-2);
+  color: var(--light-text);
+}
+
+.card-cta {
+  margin-top: var(--space-2);
+  width: 100%;
+  font-size: 12px;
 }
 
 /* 기록이 없는 설치의 안내. 0 만 보이면 고장처럼 읽힌다(기획서 5.4). */

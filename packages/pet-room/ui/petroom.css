@@ -4,7 +4,7 @@
  * 팀 디자인 가이드(`design.md`)를 따른다 — 둥근 모서리 없음, 블러 없는 2px 그림자,
  * 정보는 양피지 패널, 조작은 나무 버튼, 선택은 금색.
  *
- * 창은 뽑기·합성과 같은 640x420이다. 배경 원본 960x360에서 512x240을 잘라 1.25배로 키워
+ * 창은 뽑기·합성과 같다. 공통 상단 바 32px 아래 640x420이다. 배경 원본 960x360에서 512x240을 잘라 1.25배로 키워
  * 장면 640x300을 채운다(가이드 §4의 정수 배율 예외, 2026-10-09 요청자 결정). 남은 120px은
  * 하단 패널이 쓴다 — 상세 패널을 장면 위에 얹지 않는 이유는 `#side` 주석에 있다. 잘라내는
  * 규칙과 배율은 `scene.ts`의 `viewportOf`·`SCENE_SCALE`이 갖는다.
@@ -23,7 +23,8 @@
   --parchment-ring: #e0c894;
   --ink: #3b2a1a;
   --light-text: #f5ecd8;
-  --gold: #ffd166;
+  /* 금색은 공통 디자인 토큰(`@pet/shell/ui/tokens.css`)을 따른다. */
+  --gold: var(--petto-gold);
   --outline: #2c2438;
   --disabled: #999999;
   --disabled-dark: #555555;
@@ -72,47 +73,13 @@ body {
   display: none !important;
 }
 
-/*
- * 창 버튼. 뽑기·합성 창(`@pet/gacha`·`@pet/combine`의 `.window-controls`)과 같은 자리·모양이다.
- * 세 화면이 한 창처럼 갈아 끼워지므로 버튼이 같은 곳에 있어야 한다.
- */
-.window-controls {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 100;
-  display: flex;
-  gap: 6px;
-  -webkit-app-region: no-drag;
-}
-
-.window-close {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 2px solid #3a2a1c;
-  background: #6b4a2e;
-  color: #f5ecd8;
-  font:
-    20px/1 'Isamanru',
-    sans-serif;
-  cursor: pointer;
-}
-
-.window-close:hover {
-  background: #762f35;
-}
-
-.window-close:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-}
-
+/* 공통 상단 바 아래 640×420. 창은 바 높이만큼 크다(`@pet/shell`). */
 #room {
   display: flex;
   flex-direction: column;
   width: 100%;
-  height: 100%;
+  height: calc(100% - var(--petto-bar-height));
+  margin-top: var(--petto-bar-height);
   overflow: hidden;
 }
 
@@ -147,14 +114,15 @@ body {
  * 칸이었지만 창이 640으로 좁아져 옆에 264px을 둘 자리가 없다.
  *
  * 높이는 120px이다. 합성 창과 같던 180px이 장면에 비해 커 보여 줄였다(2026-10-09).
- * 두 칸으로 나눈다 — 이동 버튼·안내 / 상세.
+ * 상세 한 칸이다. 다른 화면으로 가는 버튼은 공통 상단 바에 있다(동선 3단계).
  */
 #side {
   flex: none;
   height: 120px;
   padding: var(--space-3) var(--space-4);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  /* 다른 화면으로 가는 버튼은 상단 바로 올라갔다. 상세가 가로 전체를 쓴다(동선 3단계). */
+  grid-template-columns: minmax(0, 1fr);
   /* 한 줄이다. 줄을 나누면 상세 칸이 쓰지도 않는 줄 간격만큼 패널 밖으로 늘어난다. */
   grid-template-rows: minmax(0, 1fr);
   gap: var(--space-2) var(--space-4);
@@ -177,45 +145,9 @@ body {
   -webkit-app-region: no-drag;
 }
 
-#destinations {
+#detail {
   grid-column: 1;
   grid-row: 1;
-  display: flex;
-  flex-wrap: wrap;
-  /* 세 버튼과 간격이 하단 패널 안쪽 높이(101px)를 넘으면 상세 칸까지 아래로 밀린다. */
-  gap: var(--space-1);
-}
-
-/* 120px 하단 패널에 세 버튼을 세로로 쌓으려면 공용 `.pixel-button`의 위아래 여백을 줄여야 한다. */
-#destinations .pixel-button {
-  padding: var(--space-2) var(--space-3);
-}
-
-#detail {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-/* 도감에 아직 확인하지 않은 신규 발견이 있다. 색만이 아니라 글자로도 알린다. */
-#dex-button {
-  position: relative;
-}
-
-.destination-new {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  padding: 1px 3px;
-  background: var(--gold);
-  color: #3b2a1a;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1.2;
-  box-shadow: 2px 2px 0 rgb(0 0 0 / 35%);
-}
-
-.destination-new[hidden] {
-  display: none;
 }
 
 /*
@@ -402,9 +334,15 @@ body {
 }
 
 /* 하단 패널 높이에 맞춘 버튼. 공용 `.pixel-button` 의 여백은 여기서 과하다. */
-#detail-activate {
+#detail-activate,
+#detail-evolve {
   padding: var(--space-2) var(--space-1);
   font-size: 11px;
+}
+
+/* 지금 챙길 수 있는 행동이라 금색 테두리로 강조한다(design.md §2). */
+#detail-evolve {
+  border-color: var(--petto-gold);
 }
 
 /* ---------- 빈 펫룸 ---------- */

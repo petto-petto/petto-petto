@@ -71,6 +71,35 @@ img:not([src]) {
   background: var(--danger);
 }
 
+/* 싸우는 펫과 전투가 진행되는 원리. 스테이지 표시 아래 한 줄이다. */
+.battle-pet-hud {
+  position: absolute;
+  z-index: 6;
+  top: 36px;
+  left: 16px;
+  display: flex;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  align-items: baseline;
+  gap: 6px;
+  color: var(--cream);
+  font-family: 'Isamanru', sans-serif;
+  font-size: 10px;
+  text-shadow: 1px 1px 0 var(--outline);
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.battle-pet-hud strong {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.battle-pet-hud[hidden] {
+  display: none;
+}
+
 .window-close:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;

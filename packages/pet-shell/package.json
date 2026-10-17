@@ -1,0 +1,17 @@
+{
+  "name": "@pet/shell",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "640 화면들이 함께 쓰는 틀 — 상단 바, 공통 디자인 토큰, 토큰 금액 축약 표기",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json",
+    "./ui/*": "./ui/*"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}
