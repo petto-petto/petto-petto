@@ -8,16 +8,14 @@
 <header class="petto-topbar" data-current="info"></header>
 
 <header id="titlebar">
-  <button class="screen-tab" data-screen="info" aria-selected="true">정보</button>
-  <button class="screen-tab" data-screen="achievements" aria-selected="false">업적</button>
   <!--
-    설정은 전용 화면이라 탭 자리에 두지 않는다. 들어가면 아래 둘이 탭을 대신한다.
+    정보와 업적은 공통 상단 바의 탭이다(동선 4단계). 여기에는 지금 화면 이름과, 설정에서 나가는 길만 둔다.
     아이콘만 있는 버튼은 보이는 이름이 없으므로 `aria-label`로 이름을 준다.
   -->
   <button class="icon-button" id="back-button" aria-label="설정 나가기" title="설정 나가기" hidden>
     ←
   </button>
-  <span id="mode-title" hidden>설정</span>
+  <span id="mode-title">정보</span>
   <button class="icon-button" id="demo-button" aria-label="시연" title="프로토타입 시연용">
     ⚗&#xFE0E;
   </button>

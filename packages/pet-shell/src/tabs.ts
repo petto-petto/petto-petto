@@ -2,7 +2,7 @@
  * 640 화면들의 공통 상단 바(동선 3단계).
  *
  * 펫룸·뽑기·합성·도감은 같은 자리에서 갈아 끼워지는 한 창이다. 위쪽 막대가 같아야 한 창으로 읽히고,
- * 어느 화면에서든 한 번에 다른 화면으로 간다. 정보도 640 창의 한 화면이다(동선 4단계). 전투만 640 자리를
+ * 어느 화면에서든 한 번에 다른 화면으로 간다. 정보·업적도 640 창의 한 화면이다(동선 4단계). 전투만 640 자리를
  * 쓰지 않고 따로 뜬다(결정 2) — 탭에 `↗`를 붙여 화면이 바뀌지 않는다는 것을 보인다.
  */
 
@@ -10,7 +10,11 @@ import { compactAmount, exactAmount } from './format.ts';
 
 /** 640 자리를 나눠 쓰는 화면. */
 export type ShellScreen = 'room' | 'gacha' | 'combine' | 'dex' | 'info';
-export type ShellTabKey = ShellScreen | 'battle';
+/**
+ * 탭. 업적은 정보 창(`info`)이 보이는 다른 화면이라 창은 따로 없다 — 정보 창이 지금 어느 화면인지 알려
+ * 주면(`petto:current`) 상단 바가 그 탭을 금색으로 표시한다.
+ */
+export type ShellTabKey = ShellScreen | 'achievements' | 'battle';
 
 export interface ShellTab {
   key: ShellTabKey;
@@ -25,6 +29,7 @@ export const SHELL_TABS: readonly ShellTab[] = [
   { key: 'combine', label: '합성', external: false },
   { key: 'dex', label: '도감', external: false },
   { key: 'info', label: '정보', external: false },
+  { key: 'achievements', label: '업적', external: false },
   { key: 'battle', label: '전투', external: true },
 ];
 
@@ -58,7 +63,7 @@ function badgeOf(key: ShellTabKey, state: ShellState): ShellBadge | null {
       return state.gachaAffordable === true ? { kind: 'dot', label: '뽑기 가능' } : null;
     case 'dex':
       return state.dexHasNew === true ? { kind: 'new', label: 'NEW' } : null;
-    case 'info':
+    case 'achievements':
       return (state.claimableRewardCount ?? 0) > 0
         ? { kind: 'dot', label: '받을 보상 있음' }
         : null;
@@ -67,7 +72,7 @@ function badgeOf(key: ShellTabKey, state: ShellState): ShellBadge | null {
   }
 }
 
-export function topBarView(current: ShellScreen, state: ShellState): TopBarView {
+export function topBarView(current: ShellTabKey, state: ShellState): TopBarView {
   return {
     tabs: SHELL_TABS.map((tab) => ({
       ...tab,

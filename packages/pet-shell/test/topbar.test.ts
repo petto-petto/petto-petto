@@ -10,11 +10,20 @@ const known: ShellState = {
   dexHasNew: true,
 };
 
-test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 정보 · 전투 ↗ 순이다', () => {
-  // 정보도 640 창의 한 화면이다(동선 4단계). 따로 뜨는 것은 전투뿐이다.
+test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 정보 · 업적 · 전투 ↗ 순이다', () => {
+  // 정보·업적도 640 창의 한 화면이다(동선 4단계). 따로 뜨는 것은 전투뿐이다.
   assert.deepEqual(
     SHELL_TABS.map((tab) => `${tab.label}${tab.external ? ' ↗' : ''}`),
-    ['펫룸', '뽑기', '합성', '도감', '정보', '전투 ↗'],
+    ['펫룸', '뽑기', '합성', '도감', '정보', '업적', '전투 ↗'],
+  );
+});
+
+test('업적 화면에서는 업적 탭이 현재 탭이다', () => {
+  assert.deepEqual(
+    topBarView('achievements', known)
+      .tabs.filter((tab) => tab.current)
+      .map((tab) => tab.key),
+    ['achievements'],
   );
 });
 
@@ -40,7 +49,9 @@ test('배지는 할 일이 있을 때만, 글자로도 읽힌다', () => {
   );
   assert.deepEqual(badges['gacha'], { kind: 'dot', label: '뽑기 가능' });
   assert.deepEqual(badges['dex'], { kind: 'new', label: 'NEW' });
-  assert.deepEqual(badges['info'], { kind: 'dot', label: '받을 보상 있음' });
+  // 받을 보상은 업적 탭이 알린다.
+  assert.deepEqual(badges['achievements'], { kind: 'dot', label: '받을 보상 있음' });
+  assert.equal(badges['info'], null);
   assert.equal(badges['room'], null);
 
   const quiet = topBarView('room', {

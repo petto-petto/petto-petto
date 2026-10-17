@@ -200,20 +200,27 @@ function selectScreen(screen, { resetSubtab = true } = {}) {
   render();
 }
 
+const SCREEN_TITLES = { info: '정보', achievements: '업적', settings: '설정', demo: '시연' };
+
 /**
- * 화면에 맞춰 창 테두리(탭·제목·설정 입구)를 바꾼다.
+ * 화면에 맞춰 창 테두리(제목·설정 입구)를 바꾸고, 상단 바에 지금 탭을 알린다.
  *
- * 설정은 전용 화면이다. 들어가면 다른 화면의 탭을 감추고 설정만 남긴다. 대신
- * 나가는 길(`←`)을 반드시 함께 띄운다 — 이게 없으면 설정에 갇힌다.
+ * 정보와 업적은 공통 상단 바의 탭이다(동선 4단계). 설정과 시연은 정보 안의 화면이라 상단 바에서는
+ * `정보`가 지금 탭이다. 설정은 전용 화면이라 나가는 길(`←`)을 반드시 함께 띄운다 — 이게 없으면
+ * 설정에 갇힌다.
  */
 function applyChrome(screen) {
   const settingsMode = screen === 'settings';
-  for (const tab of document.querySelectorAll('.screen-tab')) {
-    tab.hidden = settingsMode;
-  }
   document.getElementById('settings-button').hidden = settingsMode;
   document.getElementById('back-button').hidden = !settingsMode;
-  document.getElementById('mode-title').hidden = !settingsMode;
+  document.getElementById('mode-title').textContent = SCREEN_TITLES[screen] ?? '';
+  if (typeof CustomEvent === 'function') {
+    document.dispatchEvent(
+      new CustomEvent('petto:current', {
+        detail: screen === 'achievements' ? 'achievements' : 'info',
+      }),
+    );
+  }
 }
 
 function renderSubtabs() {
@@ -1459,15 +1466,15 @@ async function runSelftest() {
    * 여기서 확인한다.
    */
   selectScreen('settings');
-  const tabsHidden = [...document.querySelectorAll('.screen-tab')].every((tab) => tab.hidden);
+  const titled = document.getElementById('mode-title').textContent === '설정';
   const escapeShown = !document.getElementById('back-button').hidden;
   document.getElementById('back-button').click();
   const returned = ui.screen === 'info';
-  const tabsBack = [...document.querySelectorAll('.screen-tab')].every((tab) => !tab.hidden);
+  const titleBack = document.getElementById('mode-title').textContent === '정보';
   await api.debugLog(
-    tabsHidden && escapeShown && returned && tabsBack
-      ? '[SELFTEST] 설정 전용 모드   탭 감춤·나가기 표시·복귀 정상'
-      : `[SELFTEST] 설정 전용 모드 실패 — 감춤 ${tabsHidden}, 나가기 ${escapeShown}, 복귀 ${returned}, 탭 복원 ${tabsBack}`,
+    titled && escapeShown && returned && titleBack
+      ? '[SELFTEST] 설정 전용 모드   제목·나가기 표시·복귀 정상'
+      : `[SELFTEST] 설정 전용 모드 실패 — 제목 ${titled}, 나가기 ${escapeShown}, 복귀 ${returned}, 제목 복원 ${titleBack}`,
   );
 
   selectScreen('info');

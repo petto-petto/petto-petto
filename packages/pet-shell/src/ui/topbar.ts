@@ -6,7 +6,7 @@
  * 닫기를 막는다 — 저장이 끝나기 전에 창이 바뀌거나 닫히면 결과를 보지 못한다.
  */
 
-import { topBarView, type ShellScreen, type ShellState, type ShellTabKey } from '../tabs.ts';
+import { SHELL_TABS, topBarView, type ShellState, type ShellTabKey } from '../tabs.ts';
 
 export interface ShellBridge {
   state(): Promise<ShellState>;
@@ -28,16 +28,14 @@ const UNREAD: ShellState = {
   dexHasNew: null,
 };
 
-const SCREENS: readonly ShellScreen[] = ['room', 'gacha', 'combine', 'dex', 'info'];
-
-function isScreen(value: string | undefined): value is ShellScreen {
-  return SCREENS.some((screen) => screen === value);
+function isTab(value: unknown): value is ShellTabKey {
+  return SHELL_TABS.some((tab) => tab.key === value);
 }
 
 export function mountTopBar(host: HTMLElement, bridge: ShellBridge | undefined): void {
-  const current = host.dataset['current'];
-  if (!isScreen(current))
-    throw new Error(`상단 바의 현재 화면을 알 수 없습니다: ${String(current)}`);
+  const initial = host.dataset['current'];
+  if (!isTab(initial)) throw new Error(`상단 바의 현재 화면을 알 수 없습니다: ${String(initial)}`);
+  let current: ShellTabKey = initial;
 
   let state: ShellState = UNREAD;
   /** 처음 읽기 전에는 칩을 비워 둔다. `—`는 읽지 못했다는 뜻이라 읽는 중과 섞지 않는다. */
@@ -105,6 +103,13 @@ export function mountTopBar(host: HTMLElement, bridge: ShellBridge | undefined):
     render();
   };
 
+  // 한 창이 여러 탭을 보이는 경우(정보 창의 정보·업적) 창이 지금 탭을 알려 준다.
+  document.addEventListener('petto:current', (event) => {
+    const next = (event as CustomEvent<unknown>).detail;
+    if (!isTab(next) || next === current) return;
+    current = next;
+    render();
+  });
   document.addEventListener('petto:busy', (event) => {
     busy = (event as CustomEvent<unknown>).detail === true;
     render();

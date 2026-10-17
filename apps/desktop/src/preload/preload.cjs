@@ -200,8 +200,8 @@ contextBridge.exposeInMainWorld('shell', {
   open: (key) =>
     key === 'battle'
       ? ipcRenderer.invoke('battle:open')
-      : key === 'info'
-        ? ipcRenderer.invoke('panel:open', 'info')
+      : key === 'info' || key === 'achievements'
+        ? ipcRenderer.invoke('panel:open', key)
         : ipcRenderer.invoke('screen:open', key),
   onChanged: (listener) => {
     const wrapped = () => listener();
