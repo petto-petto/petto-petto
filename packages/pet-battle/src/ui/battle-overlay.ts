@@ -39,8 +39,6 @@ import { squirrelBodyProjection } from '../view/squirrel-combat.ts';
 declare global {
   interface Window {
     petBattle?: BattleClient;
-    /** 앱이 띄운 전투 창에만 있다. 앱 밖 미리보기에는 펫룸이 없다. */
-    petBattleHost?: { openRoom(): Promise<void> };
   }
 }
 
@@ -975,13 +973,6 @@ function commandFor(action: ButtonAction): { command: BattleClientCommand; messa
 required<HTMLButtonElement>('.window-close').addEventListener('click', (event) => {
   event.stopPropagation();
   window.close();
-});
-
-const roomButton = required<HTMLButtonElement>('.window-room');
-roomButton.hidden = window.petBattleHost === undefined;
-roomButton.addEventListener('click', (event) => {
-  event.stopPropagation();
-  void window.petBattleHost?.openRoom();
 });
 
 document.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {

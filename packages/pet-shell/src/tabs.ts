@@ -14,13 +14,17 @@ export type ShellScreen = 'room' | 'gacha' | 'combine' | 'dex' | 'info';
  * 탭. 업적은 정보 창(`info`)이 보이는 다른 화면이라 창은 따로 없다 — 정보 창이 지금 어느 화면인지 알려
  * 주면(`petto:current`) 상단 바가 그 탭을 금색으로 표시한다.
  */
-export type ShellTabKey = ShellScreen | 'achievements' | 'battle';
+export type ShellTabKey = ShellScreen | 'achievements' | 'settings' | 'battle';
 
 export interface ShellTab {
   key: ShellTabKey;
   label: string;
   /** 지금 화면을 바꾸지 않고 따로 띄운다. */
   external: boolean;
+  /** 글자 앞 아이콘. 아이콘만으로는 무엇인지 모르므로 늘 글자와 함께 쓴다. */
+  icon?: string;
+  /** 화면 탭 줄과 떨어뜨려 오른쪽에 둔다(설정). */
+  trailing?: boolean;
 }
 
 export const SHELL_TABS: readonly ShellTab[] = [
@@ -31,6 +35,8 @@ export const SHELL_TABS: readonly ShellTab[] = [
   { key: 'info', label: '정보', external: false },
   { key: 'achievements', label: '업적', external: false },
   { key: 'battle', label: '전투', external: true },
+  // 설정도 정보 창이 보이는 화면이다. 예전에는 정보 창 바닥의 작은 ⚙ 하나라 무엇인지 알기 어려웠다.
+  { key: 'settings', label: '설정', external: false, icon: '⚙', trailing: true },
 ];
 
 /** 메인이 주는 막대 상태. 읽지 못한 값은 `null` 이다 — 0 이나 `false` 로 바꾸지 않는다. */

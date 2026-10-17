@@ -191,10 +191,6 @@ function selectScreen(screen, { resetSubtab = true } = {}) {
   // 패널을 다시 열거나 화면을 바꾸면 항상 접힌 상태로 시작한다.
   ui.expanded = false;
   if (resetSubtab) ui.subtab = DEFAULT_SUBTAB[screen] ?? '';
-  // 탭(정보·업적)과 하단 설정 아이콘이 같은 선택 상태를 공유한다.
-  for (const tab of document.querySelectorAll('[data-screen]')) {
-    tab.setAttribute('aria-selected', String(tab.dataset.screen === screen));
-  }
   applyChrome(screen);
   renderSubtabs();
   render();
@@ -202,24 +198,21 @@ function selectScreen(screen, { resetSubtab = true } = {}) {
 
 const SCREEN_TITLES = { info: '정보', achievements: '업적', settings: '설정', demo: '시연' };
 
+/** 상단 바의 지금 탭. 시연은 정보 안의 화면이라 `정보`가 지금 탭이다. */
+function currentTabOf(screen) {
+  return screen === 'achievements' || screen === 'settings' ? screen : 'info';
+}
+
 /**
- * 화면에 맞춰 창 테두리(제목·설정 입구)를 바꾸고, 상단 바에 지금 탭을 알린다.
+ * 화면 이름을 바꾸고 상단 바에 지금 탭을 알린다.
  *
- * 정보와 업적은 공통 상단 바의 탭이다(동선 4단계). 설정과 시연은 정보 안의 화면이라 상단 바에서는
- * `정보`가 지금 탭이다. 설정은 전용 화면이라 나가는 길(`←`)을 반드시 함께 띄운다 — 이게 없으면
- * 설정에 갇힌다.
+ * 정보 · 업적 · 설정은 공통 상단 바의 탭이다(동선 4단계). 다른 화면으로 가는 길은 늘 상단 바에 있어서,
+ * 설정에서 나가는 `←`를 따로 두지 않는다.
  */
 function applyChrome(screen) {
-  const settingsMode = screen === 'settings';
-  document.getElementById('settings-button').hidden = settingsMode;
-  document.getElementById('back-button').hidden = !settingsMode;
   document.getElementById('mode-title').textContent = SCREEN_TITLES[screen] ?? '';
   if (typeof CustomEvent === 'function') {
-    document.dispatchEvent(
-      new CustomEvent('petto:current', {
-        detail: screen === 'achievements' ? 'achievements' : 'info',
-      }),
-    );
+    document.dispatchEvent(new CustomEvent('petto:current', { detail: currentTabOf(screen) }));
   }
 }
 
@@ -1189,11 +1182,6 @@ function flash(message, isError = false) {
  * 버튼 클릭이 드래그로 먹히지 않게 한다(app.css 참고). JS가 관여할 일이 없다.
  */
 
-for (const tab of document.querySelectorAll('[data-screen]')) {
-  tab.addEventListener('click', () => selectScreen(tab.dataset.screen));
-}
-document.getElementById('back-button').addEventListener('click', () => selectScreen('info'));
-
 document.getElementById('demo-button').addEventListener('click', () => selectScreen('demo'));
 
 // 펫 메뉴나 트레이에서 패널을 열면 기본 서브탭으로 진입한다(기획서 4.2).
@@ -1413,25 +1401,6 @@ async function runSelftest() {
   await selftestRefreshButton();
 
   /*
-   * 화면 버튼이 실제로 화면을 바꾸는지 확인한다.
-   *
-   * 렌더러는 순수 JS라 선택자가 어긋나도 타입 검사가 잡지 못한다. 정보는 텍스트 탭,
-   * 설정·업적은 아이콘 버튼이라 둘이 같은 배선을 공유하는지 눈으로 볼 수 없는
-   * 환경에서 확인할 수단이 필요하다.
-   */
-  for (const button of document.querySelectorAll('[data-screen]')) {
-    const target = button.dataset.screen;
-    button.click();
-    const moved = ui.screen === target;
-    const marked = button.getAttribute('aria-selected') === 'true';
-    await api.debugLog(
-      moved && marked
-        ? `[SELFTEST] 화면 버튼 ${target.padEnd(13)} 이동·선택 표시 정상`
-        : `[SELFTEST] 화면 버튼 ${target} 실패 — 화면 ${ui.screen}, 선택 ${button.getAttribute('aria-selected')}`,
-    );
-  }
-
-  /*
    * 프로필 초상화가 실제 에셋으로 그려졌는지 확인한다.
    *
    * 주소는 앱이 만들어 창을 넘어온다. 순수 JS 렌더러라 타입 검사가 닿지 않고, 경로가
@@ -1460,21 +1429,20 @@ async function runSelftest() {
   );
 
   /*
-   * 설정 전용 모드가 실제로 다른 탭을 감추고, 되돌아올 수 있는지 확인한다.
-   *
-   * 나가는 길이 끊기면 사용자가 설정에 갇힌다. 화면을 눈으로 볼 수 없으므로
-   * 여기서 확인한다.
+   * 설정·업적으로 옮기면 상단 바가 그 탭을 금색으로 표시하도록 알린다. 상단 바와 정보 창이 서로 다른
+   * 스크립트라 타입 검사가 잇지 못한다.
    */
+  const announced = [];
+  const listen = (event) => announced.push(event.detail);
+  document.addEventListener('petto:current', listen);
   selectScreen('settings');
-  const titled = document.getElementById('mode-title').textContent === '설정';
-  const escapeShown = !document.getElementById('back-button').hidden;
-  document.getElementById('back-button').click();
-  const returned = ui.screen === 'info';
-  const titleBack = document.getElementById('mode-title').textContent === '정보';
+  selectScreen('achievements');
+  selectScreen('demo');
+  document.removeEventListener('petto:current', listen);
   await api.debugLog(
-    titled && escapeShown && returned && titleBack
-      ? '[SELFTEST] 설정 전용 모드   제목·나가기 표시·복귀 정상'
-      : `[SELFTEST] 설정 전용 모드 실패 — 제목 ${titled}, 나가기 ${escapeShown}, 복귀 ${returned}, 제목 복원 ${titleBack}`,
+    announced.join(',') === 'settings,achievements,info'
+      ? '[SELFTEST] 상단 바 지금 탭    설정·업적·정보 알림 정상'
+      : `[SELFTEST] 상단 바 지금 탭 실패 — ${announced.join(',')}`,
   );
 
   selectScreen('info');

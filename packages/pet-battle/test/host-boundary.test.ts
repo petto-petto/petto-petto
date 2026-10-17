@@ -23,8 +23,8 @@ test('공통 preload는 더 이상 다른 기능 창에 전투 명령 권한을 
   assert.match(common, /openBattle:.*battle:open/);
 });
 
-test('전투 전용 sandbox preload는 Electron만 읽고 command 포트와 펫룸 열기만 노출한다', async () => {
-  const exposed = new Map<string, Record<string, (...args: unknown[]) => Promise<unknown>>>();
+test('전투 전용 sandbox preload는 Electron만 읽고 command 포트만 노출한다', async () => {
+  const exposed = new Map<string, { execute(command: unknown): Promise<unknown> }>();
   const calls: unknown[][] = [];
   runInNewContext(read('../ui/host-preload.cjs'), {
     require(name: string) {
@@ -42,17 +42,10 @@ test('전투 전용 sandbox preload는 Electron만 읽고 command 포트와 펫�
       };
     },
   });
-  assert.deepEqual([...exposed.keys()], ['petBattle', 'petBattleHost']);
+  assert.deepEqual([...exposed.keys()], ['petBattle']);
   const bridge = exposed.get('petBattle')!;
   assert.deepEqual(Object.keys(bridge), ['execute']);
   const command = { type: 'GET_STATE' };
-  assert.deepEqual(await bridge.execute!(command), { ok: true });
-  // 전투 창의 `펫룸` 버튼(동선 2단계 H). 전투 창은 그대로 두고 펫룸 창을 연다 — 창은 앱이 다룬다.
-  const host = exposed.get('petBattleHost')!;
-  assert.deepEqual(Object.keys(host), ['openRoom']);
-  await host.openRoom!();
-  assert.deepEqual(calls, [
-    ['battle:command', command],
-    ['screen:open', 'room'],
-  ]);
+  assert.deepEqual(await bridge.execute(command), { ok: true });
+  assert.deepEqual(calls, [['battle:command', command]]);
 });

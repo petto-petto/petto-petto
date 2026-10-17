@@ -251,22 +251,7 @@ body {
 
 /* ---------- 본문 ---------- */
 
-/*
- * 하단 설정 줄.
- *
- * 떠 있는 버튼으로 두지 않은 이유: 요약은 패널을 꽉 채우므로 겹치면 업적 막대를
- * 가린다. 자기 줄을 차지하게 하고 그만큼 패널을 키웠다.
- */
-#panel-footer {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: flex-end;
-  padding: var(--space-1) var(--space-3) var(--space-2);
-  /* 버튼을 뺀 나머지는 창을 잡아 끄는 여백으로 쓴다. */
-  -webkit-app-region: drag;
-}
-
-/* 설정 모드에서 감춘 탭을 대신하는 제목. 남는 폭을 먹어 오른쪽 버튼을 밀어낸다. */
+/* 지금 화면 이름. 남는 폭을 먹어 오른쪽 버튼을 밀어낸다. */
 #mode-title {
   flex: 1;
   color: var(--light-text);

@@ -67,8 +67,10 @@ export function mountTopBar(host: HTMLElement, bridge: ShellBridge | undefined):
         button.dataset['key'] = tab.key;
         button.disabled = busy && !tab.current;
         if (tab.current) button.setAttribute('aria-current', 'page');
+        if (tab.trailing) button.classList.add('trailing');
         const label = document.createElement('span');
-        label.textContent = tab.external ? `${tab.label} ↗` : tab.label;
+        const text = tab.external ? `${tab.label} ↗` : tab.label;
+        label.textContent = tab.icon ? `${tab.icon}\uFE0E ${text}` : text;
         button.append(label);
         if (tab.badge) {
           const badge = document.createElement('span');

@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld('shell', {
   open: (key) =>
     key === 'battle'
       ? ipcRenderer.invoke('battle:open')
-      : key === 'info' || key === 'achievements'
+      : key === 'info' || key === 'achievements' || key === 'settings'
         ? ipcRenderer.invoke('panel:open', key)
         : ipcRenderer.invoke('screen:open', key),
   onChanged: (listener) => {

@@ -62,6 +62,11 @@
   transform: translate(2px, 2px);
 }
 
+/* 설정은 화면 탭 줄과 떨어뜨려 둔다. 화면이 아니라 도구라는 것을 자리로 보인다. */
+.petto-tab.trailing {
+  margin-left: 10px;
+}
+
 /* 지금 화면. 금색은 지금 선택에 쓴다(design.md §2). 눌러도 아무 일도 하지 않는다. */
 .petto-tab.current {
   color: var(--petto-ink);

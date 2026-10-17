@@ -10,11 +10,26 @@ const known: ShellState = {
   dexHasNew: true,
 };
 
-test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 정보 · 업적 · 전투 ↗ 순이다', () => {
-  // 정보·업적도 640 창의 한 화면이다(동선 4단계). 따로 뜨는 것은 전투뿐이다.
+test('상단 바 탭은 펫룸 · 뽑기 · 합성 · 도감 · 정보 · 업적 · 전투 ↗ 순이고 설정이 그 오른쪽에 있다', () => {
+  // 정보·업적·설정도 640 창의 한 화면이다(동선 4단계). 따로 뜨는 것은 전투뿐이다.
   assert.deepEqual(
     SHELL_TABS.map((tab) => `${tab.label}${tab.external ? ' ↗' : ''}`),
-    ['펫룸', '뽑기', '합성', '도감', '정보', '업적', '전투 ↗'],
+    ['펫룸', '뽑기', '합성', '도감', '정보', '업적', '전투 ↗', '설정'],
+  );
+  // 설정은 화면이 아니라 도구라 탭 줄 끝에 떨어뜨려 두고, 아이콘만으로는 모르니 글자를 함께 쓴다.
+  const settings = SHELL_TABS.find((tab) => tab.key === 'settings');
+  assert.deepEqual(
+    { icon: settings?.icon, trailing: settings?.trailing },
+    { icon: '⚙', trailing: true },
+  );
+});
+
+test('설정 화면에서는 설정이 지금 탭이다', () => {
+  assert.deepEqual(
+    topBarView('settings', known)
+      .tabs.filter((tab) => tab.current)
+      .map((tab) => tab.key),
+    ['settings'],
   );
 });
 
