@@ -282,6 +282,47 @@ main[data-view='info/summary'] {
   min-width: 0;
 }
 
+/* 두 칸 아래 가로 한 줄. 640 창에서 남던 아랫공간을 최근 12주 사용 흐름으로 채운다. */
+.summary-wide {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.grass-summary-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.grass-summary .grass {
+  flex: 0 0 auto;
+}
+
+.grass-summary .grass-cell {
+  width: 11px;
+  height: 11px;
+}
+
+.grass-facts {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.grass-facts dt {
+  font-size: 10px;
+  opacity: 0.8;
+}
+
+.grass-facts dd {
+  margin: 2px 0 0;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 main::-webkit-scrollbar {
   width: 6px;
 }

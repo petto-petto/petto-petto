@@ -251,7 +251,8 @@ let renderGeneration = 0;
 
 function commit(generation, ...nodes) {
   if (generation !== renderGeneration) return;
-  content.replaceChildren(...nodes);
+  // 읽지 못해 빠진 칸(`null`)은 그리지 않는다.
+  content.replaceChildren(...nodes.filter(Boolean));
 }
 
 /** 가장 최근에 시작한 렌더. 클릭 뒤 화면이 다 그려지기를 기다려야 하는 쪽(self-test)이 쓴다. */
@@ -500,10 +501,15 @@ async function renderSummary() {
     ]),
   ]);
 
+  // 아래 한 줄은 최근 12주 사용 흐름이다. 읽지 못하면 그 줄만 빼고 요약은 그대로 보인다.
+  const usage = await api.infoUsage('all').catch(() => undefined);
   commit(
     generation,
     el('div', { class: 'summary-col' }, [profile, hero]),
     el('div', { class: 'summary-col' }, [records]),
+    usage
+      ? el('div', { class: 'summary-wide' }, [grassCardOf(usage.grass, { withFacts: true })])
+      : null,
   );
 }
 
@@ -516,6 +522,64 @@ const PERIODS = [
   ['week', '주'],
   ['month', '달'],
 ];
+
+/**
+ * 최근 12주 잔디. 기간 필터와 상관없이 늘 같은 12주다(INFO-004). 사용량 화면과 정보 요약이 같이 쓴다.
+ *
+ * `withFacts`면 잔디 옆에 두 줄을 붙인다. 정보 요약은 640 창에서 두 칸 아래가 비어, 한눈에 볼 만한
+ * 사용 흐름으로 채운다 — 활동한 날 수와 가장 많이 쓴 날. 둘 다 잔디 칸에서 바로 센다.
+ */
+function grassCardOf(grass, { withFacts = false } = {}) {
+  const board = el(
+    'div',
+    { class: 'grass' },
+    grass.map((week) =>
+      el(
+        'div',
+        { class: 'grass-week' },
+        week.cells.map((cell) =>
+          el('div', {
+            class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
+            title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
+            // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
+            attrs: cell.future
+              ? {}
+              : {
+                  tabindex: '0',
+                  role: 'img',
+                  'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
+                },
+          }),
+        ),
+      ),
+    ),
+  );
+  if (!withFacts) {
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
+      board,
+    ]);
+  }
+  const cells = grass.flatMap((week) => week.cells).filter((cell) => !cell.future);
+  const activeDays = cells.filter((cell) => cell.tokens > 0).length;
+  const best = cells.reduce((top, cell) => (cell.tokens > (top?.tokens ?? 0) ? cell : top), null);
+  return el('div', { class: 'card grass-summary' }, [
+    el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
+    el('div', { class: 'grass-summary-body' }, [
+      board,
+      el('dl', { class: 'grass-facts' }, [
+        el('div', {}, [el('dt', { text: '함께 일한 날' }), el('dd', { text: `${activeDays}일` })]),
+        el('div', {}, [
+          el('dt', { text: '가장 많이 쓴 날' }),
+          el('dd', {
+            text: best ? `${best.date.slice(5).replace('-', '.')} · ${compact(best.tokens)}` : '—',
+            title: best ? `${best.date} · ${num(best.tokens)} 토큰` : '',
+          }),
+        ]),
+      ]),
+    ]),
+  ]);
+}
 
 async function renderUsage() {
   const generation = renderGeneration;
@@ -606,33 +670,7 @@ async function renderUsage() {
 
   // 기획서 5.2: 제목 옆에 `최근 12주`를 명시해 기간 필터와 혼동하지 않게 한다. 범례는 두지
   // 않는다 — 칸에 마우스를 올리면 날짜와 토큰이 보인다(INFO-004).
-  const grassCard = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
-    el(
-      'div',
-      { class: 'grass' },
-      data.grass.map((week) =>
-        el(
-          'div',
-          { class: 'grass-week' },
-          week.cells.map((cell) =>
-            el('div', {
-              class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
-              title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
-              // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
-              attrs: cell.future
-                ? {}
-                : {
-                    tabindex: '0',
-                    role: 'img',
-                    'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
-                  },
-            }),
-          ),
-        ),
-      ),
-    ),
-  ]);
+  const grassCard = grassCardOf(data.grass);
 
   commit(generation, usageCard, modelsCard, grassCard, expandButton());
 }
@@ -1181,8 +1219,6 @@ function flash(message, isError = false) {
  * 붙은 영역을 타이틀 바처럼 다룬다. 헤더에 그 속성을 주고 버튼에는 `no-drag`를 줘서
  * 버튼 클릭이 드래그로 먹히지 않게 한다(app.css 참고). JS가 관여할 일이 없다.
  */
-
-document.getElementById('demo-button').addEventListener('click', () => selectScreen('demo'));
 
 // 펫 메뉴나 트레이에서 패널을 열면 기본 서브탭으로 진입한다(기획서 4.2).
 api.on('panel:show', (screen) => selectScreen(screen));
