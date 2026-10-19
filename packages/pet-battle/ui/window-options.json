@@ -6,6 +6,9 @@
   "useContentSize": true,
   "frame": false,
   "transparent": true,
+  "backgroundColor": "#00000000",
+  "hasShadow": false,
+  "thickFrame": false,
   "resizable": true,
   "alwaysOnTop": true,
   "show": false
