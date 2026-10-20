@@ -225,3 +225,19 @@ test('처음 열 때는 NEW, 없으면 발견한 칸, 없으면 아무것도 고
   assert.equal(initialSelection(all({ '005': found() })), '005');
   assert.equal(initialSelection(all({})), null);
 });
+
+test('진화 가능한 개체 수는 앱이 알려 준 값 그대로 상세에 쓴다', () => {
+  // 도감은 진화 규칙을 모른다. 성장 정본(앱)이 종마다 몇 마리인지 알려 준다.
+  const view = dexView([entry('003', { ownedCount: 3, discoveredAt: '2026-10-01T00:00:00Z' })], {
+    ...OPTIONS,
+    evolvableCountOf: (speciesId) => (speciesId === '003' ? 2 : 0),
+  });
+  const slot = view.sections.flatMap((section) => section.slots)[0];
+  assert.equal(slot?.evolvableCount, 2);
+
+  const without = dexView(
+    [entry('003', { ownedCount: 3, discoveredAt: '2026-10-01T00:00:00Z' })],
+    OPTIONS,
+  );
+  assert.equal(without.sections.flatMap((section) => section.slots)[0]?.evolvableCount, 0);
+});

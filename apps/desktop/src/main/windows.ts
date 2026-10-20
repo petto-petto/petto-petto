@@ -1,8 +1,8 @@
 /**
  * 창 생성과 배치.
  *
- * 기획서 4.2의 좌표 계산은 `@pet/meta`의 `placePanel`이 하고, 여기서는 그 결과를 실제
- * 창에 적용한다. 규칙이 이 파일에 섞이면 창을 띄우지 않고는 테스트할 수 없어진다.
+ * 앱의 창은 셋이다(동선 4단계): 오버레이 펫, 640 창 하나(펫룸·뽑기·합성·도감·정보가 같은 자리에서
+ * 갈아 끼워진다), 따로 뜨는 전투 창.
  */
 
 import { BrowserWindow, app, screen, type WebContents } from 'electron';
@@ -10,7 +10,6 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
-import { PANEL_HEIGHT, PANEL_WIDTH, placePanel, type Rect } from '@pet/meta';
 import {
   VIEWPORT_HEIGHT,
   VIEWPORT_WIDTH,
@@ -19,6 +18,7 @@ import {
 } from '@pet/room';
 import battleWindowOptions from '@pet/battle/ui/window-options.json' with { type: 'json' };
 
+import { overlaps } from './placement.ts';
 import {
   OVERLAY_WINDOW_HEIGHT,
   OVERLAY_WINDOW_WIDTH,
@@ -61,20 +61,27 @@ const battleUiDir = dirname(fileURLToPath(import.meta.resolve('@pet/battle/ui'))
 const assetsQuery = () => ({ assets: pathToFileURL(join(rendererDir, 'assets')).href });
 
 let overlayWindow: BrowserWindow | undefined;
-let panelWindow: BrowserWindow | undefined;
 let roomWindow: BrowserWindow | undefined;
 /** 펫룸 장면을 끄는 중이면 시작 시점의 창·포인터 위치. */
 let roomDragOrigin: DragOrigin | undefined;
 let gachaWindow: BrowserWindow | undefined;
+
+/**
+ * 640 화면 공통 상단 바 높이(동선 3단계). 창을 이만큼 키우고 화면 내용은 그 아래 640×420에 둔다.
+ * 값은 `@pet/shell`의 `--petto-bar-height`와 같아야 한다.
+ */
+const SHELL_BAR_HEIGHT = 32;
+const SCREEN_WIDTH = 640;
+const SCREEN_HEIGHT = 420 + SHELL_BAR_HEIGHT;
 let combineWindow: BrowserWindow | undefined;
 let dexWindow: BrowserWindow | undefined;
+let infoWindow: BrowserWindow | undefined;
 let battleWindow: BrowserWindow | undefined;
 let growthUsageReadyWebContentsId: number | undefined;
 const pendingGrowthUsage: unknown[] = [];
 const battleWindowClosedListeners = new Set<() => void>();
 
 export const getOverlayWindow = (): BrowserWindow | undefined => overlayWindow;
-export const getPanelWindow = (): BrowserWindow | undefined => panelWindow;
 export const getRoomWindow = (): BrowserWindow | undefined => roomWindow;
 export const getBattleWindow = (): BrowserWindow | undefined => battleWindow;
 
@@ -119,24 +126,6 @@ export function markGrowthUsageReady(sender: WebContents): void {
   if (!overlayWindow || overlayWindow.isDestroyed() || overlayWindow.webContents !== sender) return;
   growthUsageReadyWebContentsId = sender.id;
   for (const payload of pendingGrowthUsage.splice(0)) sender.send('growth:usage', payload);
-}
-
-function commonOptions() {
-  return {
-    transparent: true,
-    frame: false,
-    resizable: false,
-    hasShadow: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    webPreferences: {
-      preload: preloadPath,
-      // 렌더러가 Node에 직접 닿지 못하게 한다. 렌더러는 `window.petApi`만 본다.
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: true,
-    },
-  } as const;
 }
 
 interface OverlayWindowState {
@@ -299,18 +288,6 @@ function injectFonts(window: BrowserWindow): void {
   });
 }
 
-export function createPanelWindow(): BrowserWindow {
-  panelWindow = new BrowserWindow({
-    ...commonOptions(),
-    width: PANEL_WIDTH,
-    height: PANEL_HEIGHT,
-    show: false,
-  });
-  injectFonts(panelWindow);
-  void panelWindow.loadFile(join(metaUiDir, 'index.html'));
-  return panelWindow;
-}
-
 export function isRoomWebContents(contents: WebContents): boolean {
   return (
     roomWindow !== undefined && !roomWindow.isDestroyed() && roomWindow.webContents === contents
@@ -338,8 +315,8 @@ export function createGachaWindow(): BrowserWindow {
   }
 
   gachaWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -353,6 +330,7 @@ export function createGachaWindow(): BrowserWindow {
     },
   });
   injectFonts(gachaWindow);
+  liftAboveBattleWhileFocused(gachaWindow);
   void gachaWindow.loadFile(join(gachaUiDir, 'index.html'), { query: assetsQuery() });
   // 오버레이는 alwaysOnTop 이라, 펫이 없을 때 띄우는 안내가 이 창을 덮는다. 떠 있는
   // 동안 숨기도록 표시 상태를 알린다.
@@ -373,8 +351,8 @@ export function createCombineWindow(): BrowserWindow {
     return combineWindow;
   }
   combineWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -388,6 +366,7 @@ export function createCombineWindow(): BrowserWindow {
     },
   });
   injectFonts(combineWindow);
+  liftAboveBattleWhileFocused(combineWindow);
   void combineWindow.loadFile(join(combineUiDir, 'index.html'), { query: assetsQuery() });
   combineWindow.on('closed', () => {
     combineWindow = undefined;
@@ -411,8 +390,8 @@ export function createDexWindow(): BrowserWindow {
     return dexWindow;
   }
   dexWindow = new BrowserWindow({
-    width: 640,
-    height: 420,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
     useContentSize: true,
     frame: false,
     resizable: false,
@@ -426,11 +405,58 @@ export function createDexWindow(): BrowserWindow {
     },
   });
   injectFonts(dexWindow);
+  liftAboveBattleWhileFocused(dexWindow);
   void dexWindow.loadFile(join(dexUiDir, 'index.html'), { query: assetsQuery() });
   dexWindow.on('closed', () => {
     dexWindow = undefined;
   });
   return dexWindow;
+}
+
+/**
+ * 정보 화면(`@pet/meta`의 정보·업적·설정). 다른 640 화면과 같은 창이다(동선 4단계). 예전에는 오버레이
+ * 펫 옆에 붙는 400×544 세로 패널이었는데, 펫 우클릭 메뉴로 정보만 열면 다른 화면으로 갈 길이 없었다.
+ *
+ * 어느 화면을 보일지는 메타가 정한다(`panel:show`). 이 창은 열리고 닫힐 뿐이다.
+ */
+function createInfoWindow(): BrowserWindow {
+  if (infoWindow && !infoWindow.isDestroyed()) {
+    infoWindow.show();
+    infoWindow.focus();
+    return infoWindow;
+  }
+  infoWindow = new BrowserWindow({
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    useContentSize: true,
+    frame: false,
+    resizable: false,
+    backgroundColor: '#f3e3c0',
+    title: 'Petto Petto — 정보',
+    webPreferences: {
+      preload: preloadPath,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  injectFonts(infoWindow);
+  liftAboveBattleWhileFocused(infoWindow);
+  void infoWindow.loadFile(join(metaUiDir, 'index.html'));
+  infoWindow.on('closed', () => {
+    infoWindow = undefined;
+  });
+  return infoWindow;
+}
+
+/** 정보 화면을 연다. 메타가 `panelScreen`을 정한 뒤 부른다. */
+export function showPanel(): void {
+  openScreen('info');
+}
+
+/** 정보 화면을 닫는다. */
+export function hidePanel(): void {
+  if (infoWindow && !infoWindow.isDestroyed()) infoWindow.close();
 }
 
 export function isDexWebContents(contents: WebContents): boolean {
@@ -471,7 +497,7 @@ export function createBattleWindow(): BrowserWindow | undefined {
 }
 
 /**
- * 펫룸 창 크기. 뽑기·합성과 같은 640x420이다.
+ * 펫룸 창 크기. 뽑기·합성과 같은 640x452 — 공통 상단 바 32px 아래 640x420이다.
  *
  * 배경 원본 960x360의 일부를 1.25배로 키워 장면 칸 640x300을 채운다. 그 규칙과 상수는
  * `@pet/room`의 `viewportOf`가 갖는다 — 여기서 숫자를 다시 적으면 두 곳이 갈라진다.
@@ -481,14 +507,14 @@ export function createBattleWindow(): BrowserWindow | undefined {
  */
 const ROOM_PANEL_HEIGHT = 120;
 export const ROOM_WIDTH = VIEWPORT_WIDTH;
-export const ROOM_HEIGHT = VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
+export const ROOM_HEIGHT = SHELL_BAR_HEIGHT + VIEWPORT_HEIGHT + ROOM_PANEL_HEIGHT;
 
 /**
  * 펫룸 창을 열거나 이미 열려 있으면 앞으로 가져온다.
  *
  * 뽑기·합성 창과 같은 프레임 없는 창이다. 세 화면이 같은 자리에서 갈아 끼워지므로 창 모양과
- * 닫기 버튼 자리가 같아야 한 창처럼 보인다. 닫기는 화면 오른쪽 위 버튼이, 옮기기는 하단
- * 패널의 빈 바탕이 맡는다(`petroom.css`).
+ * 상단 바가 같아야 한 창처럼 보인다. 닫기와 다른 화면으로 가는 탭은 공통 상단 바(`@pet/shell`)가,
+ * 옮기기는 상단 바와 하단 패널의 빈 바탕이 맡는다(`petroom.css`).
  */
 export function showRoom(focusOwnedPetId?: string): BrowserWindow {
   if (roomWindow && !roomWindow.isDestroyed()) {
@@ -522,6 +548,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
   });
 
   injectFonts(roomWindow);
+  liftAboveBattleWhileFocused(roomWindow);
   // 도감의 `펫룸에서 보기`로 열리면 그 개체의 상세를 바로 연다.
   const query: Record<string, string> = assetsQuery();
   if (focusOwnedPetId !== undefined) query['focus'] = focusOwnedPetId;
@@ -535,7 +562,7 @@ export function showRoom(focusOwnedPetId?: string): BrowserWindow {
  * 사용자에게는 같은 창에서 화면이 바뀌는 것처럼 보여야 한다. 한 창에서 `loadFile`로 갈아
  * 끼우지 않는 이유: 뽑기·합성은 전용 preload 를 쓰고 IPC 도 자기 창에서 온 요청만 받는데,
  * preload 는 창을 만들 때 정해져 바꿀 수 없다. 그래서 창은 바꾸되 이전 화면이 있던 자리에
- * 띄운다. 크기는 셋 다 640x420이고 모두 프레임 없는 창이다. 창 위치가 아니라 **내용 영역**을
+ * 띄운다. 크기는 넷 다 640x452(상단 바 포함)이고 모두 프레임 없는 창이다. 창 위치가 아니라 **내용 영역**을
  * 맞추는 것은 어느 한쪽에 프레임이 다시 생겨도 화면이 어긋나지 않게 하려는 것이다.
  */
 function replaceWindow(from: BrowserWindow, next: BrowserWindow): void {
@@ -568,6 +595,105 @@ export function endRoomDrag(): void {
   roomDragOrigin = undefined;
 }
 
+/** 640×420 자리를 나눠 쓰는 화면. 사용자에게는 한 창에서 화면이 바뀌는 것으로 보인다. */
+export type Screen = 'room' | 'gacha' | 'combine' | 'dex' | 'info';
+
+function screenWindows(): (BrowserWindow | undefined)[] {
+  return [roomWindow, gachaWindow, combineWindow, dexWindow, infoWindow];
+}
+
+/** 지금 보이는 640 창. 여럿이면 앞의 것이다. */
+function currentScreenWindow(): BrowserWindow | undefined {
+  return screenWindows().find(
+    (window) => window !== undefined && !window.isDestroyed() && window.isVisible(),
+  );
+}
+
+function screenWindow(screen: Screen, focusOwnedPetId?: string): BrowserWindow {
+  switch (screen) {
+    case 'room':
+      return showRoom(focusOwnedPetId);
+    case 'gacha':
+      return createGachaWindow();
+    case 'combine':
+      return createCombineWindow();
+    case 'dex':
+      return createDexWindow();
+    case 'info':
+      return createInfoWindow();
+    default: {
+      const unreachable: never = screen;
+      throw new Error(`열 수 없는 화면입니다: ${String(unreachable)}`);
+    }
+  }
+}
+
+/**
+ * 어디서든 640 화면을 연다(동선 2단계 기획서의 화면 여는 규칙).
+ *
+ * 640 창이 이미 떠 있으면 그 자리에서 화면을 바꾸고, 없으면 새로 연다. 메뉴·말풍선·정보 패널이
+ * 저마다 창을 새로 열면 펫룸 위에 뽑기 창이 겹쳐 두 창이 된다 — 한 창처럼 보여야 하는 화면들이다.
+ * `focusOwnedPetId`는 펫룸에만 의미가 있고, 그 개체의 상세를 연다.
+ */
+export function openScreen(screen: Screen, focusOwnedPetId?: string): BrowserWindow {
+  const current = currentScreenWindow();
+  const next = screenWindow(screen, focusOwnedPetId);
+  if (current && current !== next) replaceWindow(current, next);
+  return next;
+}
+
+/**
+ * 640 화면이 초점을 가진 동안에는 전투 창 위로 올린다.
+ *
+ * 전투 창은 항상 위라서, 그 아래에 깔린 펫룸은 앞으로 가져와도 보이지 않는다. 전투 창의 `펫룸`을
+ * 누르면 펫룸이 그 자리 그대로 가려져 아무 일도 안 일어난 것처럼 보였다(2026-10-17 요청자 보고).
+ * 옆으로 비켜 놓기에는 노트북 화면에 640 창 두 개가 나란히 들어가지 않는다.
+ *
+ * 그래서 겹칠 때만, 초점이 있는 동안만 전투 창보다 한 단계 위에 둔다. 초점을 잃으면 보통 창으로
+ * 돌아가므로 전투 창을 누르면 전투 창이 다시 위다 — 전투의 항상 위는 그대로다.
+ */
+function liftAboveBattleWhileFocused(window: BrowserWindow): void {
+  const lift = (): void => {
+    if (window.isDestroyed()) return;
+    const battle = battleWindow;
+    const covered =
+      battle !== undefined &&
+      !battle.isDestroyed() &&
+      battle.isVisible() &&
+      overlaps(window.getBounds(), battle.getBounds());
+    if (covered) window.setAlwaysOnTop(true, 'floating', 1);
+  };
+  window.on('focus', lift);
+  window.on('blur', () => {
+    if (!window.isDestroyed() && window.isAlwaysOnTop()) window.setAlwaysOnTop(false);
+  });
+  // 이미 초점을 가진 채 다시 열려도(전투 창 `펫룸`을 두 번 누름) 올린다.
+  window.on('show', lift);
+}
+
+/** 640 화면(펫룸·뽑기·합성·도감)에서 온 요청인가. 상단 바 IPC 가 쓴다. */
+export function isScreenWebContents(contents: WebContents): boolean {
+  return screenWindows().some(
+    (window) => window !== undefined && !window.isDestroyed() && window.webContents === contents,
+  );
+}
+
+/** 앱이 연 창의 주 프레임에서 온 요청인가. 화면을 여는 IPC 가 쓴다. */
+export function isAppWebContents(contents: WebContents): boolean {
+  return [overlayWindow, battleWindow, ...screenWindows()].some(
+    (window) => window !== undefined && !window.isDestroyed() && window.webContents === contents,
+  );
+}
+
+/**
+ * 오버레이에 진화를 요청한다. 진화는 오버레이의 성장 컨트롤러만 실행한다(동선 2단계 규칙 2).
+ * 오버레이가 아직 없거나 닫혔으면 아무 일도 하지 않는다 — 진화 가능 상태는 저장소에 남아 있다.
+ */
+export function requestOverlayEvolve(ownedPetId: string): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  overlayWindow.webContents.send('overlay:evolve', ownedPetId);
+}
+
 /** 펫룸 화면에서 뽑기·합성 화면으로 넘어간다. 펫룸 창이 없으면 `next`만 연 채로 둔다. */
 export function replaceRoomWith(next: BrowserWindow): void {
   if (roomWindow) replaceWindow(roomWindow, next);
@@ -583,47 +709,6 @@ export function replaceWindowWith(from: BrowserWindow, next: BrowserWindow): voi
   replaceWindow(from, next);
 }
 
-/** 창의 논리 픽셀 사각형. */
-function windowRect(window: BrowserWindow): Rect {
-  const [x, y] = window.getPosition();
-  const [width, height] = window.getSize();
-  return { x: x ?? 0, y: y ?? 0, width: width ?? 0, height: height ?? 0 };
-}
-
-/**
- * 펫이 있는 모니터의 작업 영역.
- *
- * Electron의 `workArea`는 메뉴 바와 독을 이미 제외한 값이라, Tauri에서 하던 수동 보정이
- * 필요 없다.
- */
-function workAreaFor(window: BrowserWindow): Rect {
-  const rect = windowRect(window);
-  const display = screen.getDisplayNearestPoint({
-    x: Math.round(rect.x + rect.width / 2),
-    y: Math.round(rect.y + rect.height / 2),
-  });
-  return display.workArea;
-}
-
-/**
- * 패널을 펫 옆에 배치하고 보여준다.
- *
- * 패널 창이 하나뿐이므로 "동시에 둘 이상의 메타 패널이 보이지 않는다"(META-001)가
- * 구조적으로 성립한다. 화면을 바꾸는 것은 같은 창의 내용을 갈아 끼우는 일이다.
- */
-export function showPanel(): void {
-  if (!overlayWindow || !panelWindow) return;
-  const anchorWindow = overlayWindow;
-  const placement = placePanel(windowRect(anchorWindow), workAreaFor(anchorWindow));
-  panelWindow.setPosition(Math.round(placement.x), Math.round(placement.y));
-  panelWindow.show();
-  panelWindow.focus();
-}
-
-export function hidePanel(): void {
-  panelWindow?.hide();
-}
-
 /**
  * 오버레이 표시 설정을 창에 적용한다(기획서 6.2).
  *
@@ -634,8 +719,8 @@ export function applyOverlayVisibility(visible: boolean): void {
   if (visible) {
     overlayWindow.show();
   } else {
+    // 정보 화면은 640 창이라 펫에 붙어 있지 않다. 오버레이를 숨겨도 그대로 둔다(동선 4단계).
     overlayWindow.hide();
-    hidePanel();
   }
 }
 

@@ -75,3 +75,15 @@ test('빈 상태 패널도 끌어서 창을 옮길 수 있다', () => {
   // 버튼 위에서 드래그를 시작하면 포인터 캡처가 클릭을 삼킨다.
   assert.match(emptyPet, /e\.target\.closest\?\.\('\.empty-pet-cta'\)/);
 });
+
+/** design.md §3: 모든 글자는 이사만루체. Galmuri 는 프로젝트에 없어 시스템 글꼴로 떨어진다. */
+test('빈 상태 카드는 이사만루체로 그린다', () => {
+  const emptyRules = [...styles.matchAll(/\.empty-pet[\w-]*\s*\{[^}]*\}/g)].map(
+    (match) => match[0],
+  );
+  assert.ok(emptyRules.length > 0);
+  for (const rule of emptyRules) {
+    assert.doesNotMatch(rule, /Galmuri/);
+    if (/font-family/.test(rule)) assert.match(rule, /font-family: 'Isamanru', sans-serif;/);
+  }
+});

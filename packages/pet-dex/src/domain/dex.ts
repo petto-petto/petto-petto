@@ -48,6 +48,8 @@ export interface DexSlotView {
   name: string;
   ownedCount: number;
   highestLevel: number;
+  /** 지금 진화할 수 있는 보유 개체 수. 상세의 `✨ 진화 가능한 개체 N마리`가 쓴다. */
+  evolvableCount: number;
   /** `2026.09.28`. 미발견이면 null. */
   discoveredOn: string | null;
   isNew: boolean;
@@ -84,6 +86,11 @@ export interface DexViewOptions {
   spriteOf(species: PetSpecies, stage: DexStage): DexSpriteRef;
   /** 첫 만남 날짜를 쓸 시간대. 없으면 실행 환경의 지역 시간대다. */
   timeZone?: string;
+  /**
+   * 종마다 지금 진화할 수 있는 보유 개체 수. 진화 규칙은 성장 정본이 갖고 있어서 도감은 답만 받는다.
+   * 없으면 0이다.
+   */
+  evolvableCountOf?(speciesId: string): number;
 }
 
 export function slotState(entry: DexEntry): DexSlotState {
@@ -136,6 +143,7 @@ function slotView(entry: DexEntry, options: DexViewOptions): DexSlotView {
     name: state === 'undiscovered' ? HIDDEN_NAME : species.name,
     ownedCount: entry.ownedCount,
     highestLevel: entry.highestLevel,
+    evolvableCount: state === 'owned' ? (options.evolvableCountOf?.(species.speciesId) ?? 0) : 0,
     discoveredOn:
       entry.discoveredAt === null ? null : formatDiscoveredOn(entry.discoveredAt, options.timeZone),
     isNew: entry.isNew,

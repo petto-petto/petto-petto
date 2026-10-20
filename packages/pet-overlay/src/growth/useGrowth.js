@@ -240,6 +240,10 @@ export function useGrowth(activePet) {
 
   return {
     pet,
+    // 성장 기록을 다 읽었는가. 펫룸이 맡긴 진화는 이 뒤에야 실행할 수 있다(`doEvolve` 참조).
+    hydrated,
+    // 지금 화면에 그리는 개체. 펫룸이 맡긴 진화가 그 개체에게 가는지 확인할 때 쓴다.
+    activeId,
     overlayState,
     toasts,
     session,

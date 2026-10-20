@@ -10,18 +10,26 @@ export interface DexHost {
   openInRoom(event: IpcMainInvokeEvent, ownedPetId: string): void;
   /** 도감 창을 닫고 그 자리에 뽑기 창을 띄운다. */
   goGacha(event: IpcMainInvokeEvent): void;
+  /** 신규 발견을 확인했다. 상단 바의 `도감 NEW`가 다시 읽는다. */
+  seenChanged?(): void;
+  /** 이 종의 보유 개체 중 지금 진화할 수 있는 수. 진화 규칙은 성장 저장소가 갖는다. */
+  evolvableCountOf?(speciesId: string): number;
 }
 
 /**
  * 도감 화면 모델. 에셋 경로는 소유자(`@pet/room`)의 규칙을 여기서 넘긴다
  * (`@pet/dex`가 그 패키지를 import 하지 않는 이유는 `domain/dex.ts` 머리말 참조).
  */
-export function loadDexView(pets: Pick<PetClient, 'listDexEntries'>): DexView {
+export function loadDexView(
+  pets: Pick<PetClient, 'listDexEntries'>,
+  evolvableCountOf?: (speciesId: string) => number,
+): DexView {
   return dexView(pets.listDexEntries(), {
     spriteOf: (species, stage) => ({
       card: petAssetPath(species.rarity, species.sprite, species.speciesId, stage, 'card'),
       idle: petAssetPath(species.rarity, species.sprite, species.speciesId, stage, 'idle'),
     }),
+    ...(evolvableCountOf === undefined ? {} : { evolvableCountOf }),
   });
 }
 
@@ -44,10 +52,13 @@ export function registerDexIpc(
     }
   }
 
-  ipc.handle('dex:load', (event) => respond(event, () => loadDexView(pets)));
+  ipc.handle('dex:load', (event) =>
+    respond(event, () => loadDexView(pets, host.evolvableCountOf?.bind(host))),
+  );
   ipc.handle('dex:markSeen', (event, speciesId: unknown) =>
     respond(event, () => {
       pets.markDexSeen(speciesIdFrom(speciesId));
+      host.seenChanged?.();
       return null;
     }),
   );

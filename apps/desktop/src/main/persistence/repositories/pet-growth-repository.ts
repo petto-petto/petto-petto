@@ -174,6 +174,8 @@ export class PetGrowthRepository {
       growth.set(ownedPetId, {
         level: snapshot.pet.level,
         evolutionStage: evolutionStageOf(snapshot.pet.evolutionStage),
+        // 진화 레벨 규칙은 이 저장소가 읽을 때 계산한다(`evolutionAvailable`). 펫룸은 답만 받는다.
+        evolutionAvailable: snapshot.pet.evolutionAvailable,
         totalXp: snapshot.pet.totalXp,
         xpIntoLevel: snapshot.pet.xpIntoLevel,
       });

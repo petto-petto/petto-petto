@@ -8,6 +8,9 @@
   "references": [
     {
       "path": "../pet-client"
+    },
+    {
+      "path": "../pet-shell"
     }
   ]
 }

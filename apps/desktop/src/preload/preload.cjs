@@ -54,10 +54,9 @@ contextBridge.exposeInMainWorld('petApi', {
   // 펫룸
   roomScene: () => ipcRenderer.invoke('room:scene'),
   openRoom: () => ipcRenderer.invoke('room:open'),
-  navigateFromRoom: (destination) => ipcRenderer.invoke('room:navigate', destination),
   setActivePet: (ownedPetId) => ipcRenderer.invoke('room:setActivePet', ownedPetId),
-  /** 도감에 확인하지 않은 신규 발견이 있는가. 펫룸 도감 버튼의 NEW 표식이 쓴다. */
-  dexHasNew: () => ipcRenderer.invoke('dex:hasNew'),
+  /** 펫룸 상세의 `진화시키기`. 진화는 오버레이가 한다. 진화를 맡겼으면 `true`. */
+  evolvePet: (ownedPetId) => ipcRenderer.invoke('room:evolve', ownedPetId),
   /** 장면을 끌어 펫룸 창을 옮긴다. 장면은 펫 클릭을 받아야 해서 OS 끌기 영역을 쓰지 못한다. */
   roomDragStart: (screenX, screenY) => ipcRenderer.send('room:drag-start', { screenX, screenY }),
   roomDragMove: (screenX, screenY) => ipcRenderer.send('room:drag-move', { screenX, screenY }),
@@ -65,6 +64,11 @@ contextBridge.exposeInMainWorld('petApi', {
 
   // 창
   openPanel: (screen) => ipcRenderer.invoke('panel:open', screen),
+  /**
+   * 640 화면(`room`·`gacha`·`combine`·`dex`)을 연다. 이미 떠 있는 640 창이 있으면 그 자리에서 바뀐다.
+   * `focus` 가 `'active'` 면 펫룸에서 오버레이 펫의 상세를 연다.
+   */
+  openScreen: (screen, focus) => ipcRenderer.invoke('screen:open', screen, focus),
   closePanel: () => ipcRenderer.invoke('panel:close'),
   currentPanelScreen: () => ipcRenderer.invoke('panel:current'),
   openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
@@ -112,6 +116,24 @@ contextBridge.exposeInMainWorld('overlay', {
   openPetRoom: () => ipcRenderer.invoke('room:open'),
   openBattle: () => ipcRenderer.invoke('battle:open'),
   openGacha: () => ipcRenderer.invoke('gacha:open'),
+  /** 펫 우클릭 메뉴 배지. 읽지 못한 값은 `null` 이다. */
+  menuState: () => ipcRenderer.invoke('overlay:menu-state'),
+  /** 1분 집계 뒤 펫이 할 말. 종류(`achievement`·`gacha-ready`)가 붙은 목록이다. */
+  onBubbles: (listener) => {
+    const wrapped = (_event, payload) => {
+      if (Array.isArray(payload?.bubbles) && payload.bubbles.length > 0) listener(payload.bubbles);
+    };
+    ipcRenderer.on('usage:aggregated', wrapped);
+    return () => ipcRenderer.removeListener('usage:aggregated', wrapped);
+  },
+  /** 펫룸이 맡긴 진화. 받은 개체가 오버레이 펫이 된 뒤에 실행한다. */
+  onEvolveRequest: (listener) => {
+    const wrapped = (_event, ownedPetId) => {
+      if (typeof ownedPetId === 'string') listener(ownedPetId);
+    };
+    ipcRenderer.on('overlay:evolve', wrapped);
+    return () => ipcRenderer.removeListener('overlay:evolve', wrapped);
+  },
   isGachaOpen: () => ipcRenderer.invoke('gacha:is-visible'),
   /** 뽑기 창이 떠 있는 동안 오버레이 안내가 그 창을 가리지 않도록 표시 상태를 받는다. */
   onGachaVisibility: (listener) => {
@@ -166,5 +188,28 @@ contextBridge.exposeInMainWorld('overlay', {
     const wrapped = () => listener();
     ipcRenderer.on('overlay:menu-close', wrapped);
     return () => ipcRenderer.removeListener('overlay:menu-close', wrapped);
+  },
+});
+
+/**
+ * 640 화면 공통 상단 바(`@pet/shell`). 탭은 640 화면이면 이 창 자리에서 바꾸고, 전투·정보는 따로 띄운다.
+ * sandbox preload 는 다른 파일을 읽지 못해 네 preload 에 같은 블록을 둔다.
+ */
+contextBridge.exposeInMainWorld('shell', {
+  state: () => ipcRenderer.invoke('shell:state'),
+  open: (key) =>
+    key === 'battle'
+      ? ipcRenderer.invoke('battle:open')
+      : key === 'info' || key === 'achievements' || key === 'settings'
+        ? ipcRenderer.invoke('panel:open', key)
+        : ipcRenderer.invoke('screen:open', key),
+  onChanged: (listener) => {
+    const wrapped = () => listener();
+    ipcRenderer.on('shell:changed', wrapped);
+    ipcRenderer.on('usage:aggregated', wrapped);
+    return () => {
+      ipcRenderer.removeListener('shell:changed', wrapped);
+      ipcRenderer.removeListener('usage:aggregated', wrapped);
+    };
   },
 });

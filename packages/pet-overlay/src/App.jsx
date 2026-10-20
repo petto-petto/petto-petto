@@ -6,6 +6,7 @@ import { getPet, DEFAULT_PET_KEY } from './pets/catalog.ts';
 import {
   isElectron,
   onActivePetChanged,
+  onEvolveRequest,
   isGachaOpen,
   onGachaVisibility,
   onRosterChanged,
@@ -46,6 +47,8 @@ export default function App() {
   const [rosterLoaded, setRosterLoaded] = useState(!isElectron);
   // 오버레이는 alwaysOnTop 이라 안내가 뽑기 창을 덮는다. 떠 있는 동안은 그리지 않는다.
   const [gachaOpen, setGachaOpen] = useState(false);
+  // 펫룸의 `진화시키기`가 맡긴 개체. 메인이 그 개체를 오버레이 펫으로 세운 뒤 보낸다.
+  const [evolveRequest, setEvolveRequest] = useState(null);
 
   useEffect(() => {
     let alive = true;
@@ -90,12 +93,14 @@ export default function App() {
       })
       .catch(() => undefined);
     const offGacha = onGachaVisibility(setGachaOpen);
+    const offEvolve = onEvolveRequest(setEvolveRequest);
 
     return () => {
       alive = false;
       off();
       offRoster();
       offGacha();
+      offEvolve();
     };
   }, []);
 
@@ -105,6 +110,16 @@ export default function App() {
       ? { ownedPetId: activeView.ownedPetId, petKey: activeView.slug, name: activeView.name }
       : null,
   );
+
+  // 펫룸이 맡긴 진화. 요청한 개체가 이 창의 성장 컨트롤러에 올라온 뒤에만 실행한다 — 활성 펫
+  // push 보다 요청이 먼저 오면, 바로 실행할 때 이전 펫이 진화한다. 진화 조건이 이미 사라졌으면
+  // `doEvolve`가 아무것도 하지 않는다.
+  const { hydrated, activeId: growthActiveId, doEvolve } = g;
+  useEffect(() => {
+    if (!evolveRequest || !hydrated || growthActiveId !== evolveRequest) return;
+    setEvolveRequest(null);
+    doEvolve();
+  }, [evolveRequest, hydrated, growthActiveId, doEvolve]);
 
   // 보유 펫이 0마리다. 첫 펫은 뽑기로만 생기는데, 뽑기 창을 닫고 나면 그 창을 다시 열
   // 길이 여기뿐이라 안내를 띄운다. 뽑기 창이 떠 있는 동안은 가리지 않도록 비운다.

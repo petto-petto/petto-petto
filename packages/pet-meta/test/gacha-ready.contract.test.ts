@@ -106,9 +106,13 @@ test('6.3: 사용량 보상으로 뽑기 비용을 넘기면 말풍선이 한 �
     broadcasts.findLast((event) => event.channel === 'usage:aggregated'),
     {
       channel: 'usage:aggregated',
-      payload: { activityMinuteAdded: crossed.activityMinuteAdded, bubble: READY },
+      payload: {
+        activityMinuteAdded: crossed.activityMinuteAdded,
+        bubble: READY,
+        bubbles: [{ kind: 'gacha-ready', text: READY }],
+      },
     },
-    '말풍선은 펫 창이 받는 채널로도 나간다',
+    '말풍선은 펫 창이 받는 채널로도 나간다. 오버레이는 종류를 보고 버튼을 단다',
   );
 
   const still = await earn(60_000);
@@ -130,7 +134,9 @@ test('6.3: 알림이 꺼져 있거나 오버레이가 숨겨져 있으면 표시
   const off = app();
   await off.earn(0);
   assert.equal(off.state.meta.settings.notifyGachaReady, false, '초기값은 꺼짐이다');
-  assert.equal((await off.earn(120_000)).bubble, undefined);
+  const suppressed = await off.earn(120_000);
+  assert.equal(suppressed.bubble, undefined);
+  assert.deepEqual(suppressed.bubbles, []);
   off.state.meta.settings.notifyGachaReady = true;
   assert.equal((await off.earn(10_000)).bubble, undefined, '억제된 알림은 재생하지 않는다');
 
@@ -169,6 +175,14 @@ test('6.3: 사용량으로 비용을 넘긴 집계에서 업적도 달성하면 
   const report = await earn(120_000);
 
   assert.equal(report.bubble, `첫 만남 달성! 보상을 받아 가! · ${READY}`);
+  assert.deepEqual(
+    report.bubbles,
+    [
+      { kind: 'achievement', text: '첫 만남 달성! 보상을 받아 가!' },
+      { kind: 'gacha-ready', text: READY },
+    ],
+    '오버레이는 말풍선을 하나씩, 업적부터 보인다',
+  );
 });
 
 test('6.3: 잔액을 읽지 못한 집계는 알리지 않고, 다음 집계가 이어서 판단한다', async () => {

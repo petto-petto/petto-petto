@@ -7,6 +7,7 @@
  * 가려야 할 값은 애초에 경계를 넘지 않게 한다.
  */
 
+import { compactAmount } from '@pet/shell';
 import {
   categoryName,
   tokenRewardLabel,
@@ -145,7 +146,8 @@ export function achievementScreen(
         if (definition.token > 0) {
           rewards.push({
             kind: 'token',
-            label: definition.token.toLocaleString('ko-KR'),
+            // 금액은 모든 화면과 같은 축약 표기다(`@pet/shell`). 정확한 값은 설명이 갖는다.
+            label: compactAmount(definition.token),
             description: tokenRewardLabel(definition.token),
           });
         }

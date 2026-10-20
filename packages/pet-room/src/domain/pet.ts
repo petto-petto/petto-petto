@@ -99,6 +99,8 @@ export interface OwnedPet {
   level: number;
   /** 성장 저장소의 투영. 진화는 오버레이에서 명시적으로 실행된다. */
   evolutionStage: EvolutionStage;
+  /** 성장 저장소의 투영. 성장 기록이 없으면 알 수 없으므로 진화 가능으로 보이지 않는다. */
+  evolutionAvailable?: boolean;
   nickname?: string;
 }
 
@@ -195,6 +197,11 @@ export function withActivePet(collection: RoomCollection, ownedPetId: string): R
 export interface PetGrowth {
   level: number;
   evolutionStage: EvolutionStage;
+  /**
+   * 지금 진화할 수 있는가. 규칙(진화 레벨)은 성장 저장소가 갖고, 명부는 그 답만 받아 적는다 —
+   * 펫룸이 레벨을 보고 따로 판단하면 규칙이 두 곳에 생긴다.
+   */
+  evolutionAvailable?: boolean;
 }
 
 /**
@@ -211,8 +218,18 @@ export function withPetGrowth(
     pets: collection.pets.map((pet) => {
       const next = growth.get(pet.id);
       if (next === undefined) return pet;
-      if (next.level === pet.level && next.evolutionStage === pet.evolutionStage) return pet;
-      return { ...pet, level: next.level, evolutionStage: next.evolutionStage };
+      if (
+        next.level === pet.level &&
+        next.evolutionStage === pet.evolutionStage &&
+        (next.evolutionAvailable === true) === (pet.evolutionAvailable === true)
+      )
+        return pet;
+      return {
+        ...pet,
+        level: next.level,
+        evolutionStage: next.evolutionStage,
+        evolutionAvailable: next.evolutionAvailable === true,
+      };
     }),
     activePetId: collection.activePetId,
   };
@@ -260,6 +277,8 @@ export interface RoomPetView {
   rarity: Rarity;
   level: number;
   stage: PetStage;
+  /** 지금 진화할 수 있는가. 펫룸 상세의 `진화시키기`가 이 값으로 보인다. */
+  evolutionAvailable: boolean;
   isActive: boolean;
 }
 
@@ -274,6 +293,7 @@ export function roomPetView(collection: RoomCollection, pet: OwnedPet): RoomPetV
     level: pet.level,
     // 레벨이 아니라 진화 횟수가 모습을 정한다(`stageForEvolution` 주석 참조).
     stage: stageForEvolution(pet.evolutionStage),
+    evolutionAvailable: pet.evolutionAvailable === true,
     isActive: pet.id === collection.activePetId,
   };
 }

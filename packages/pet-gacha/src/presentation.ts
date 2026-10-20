@@ -1,4 +1,5 @@
-import type { GachaGrade } from './gacha-engine.ts';
+import { compactAmount } from '@pet/shell';
+import { drawCost, type DrawCount, type GachaGrade } from './gacha-engine.ts';
 
 export interface GradeBearing {
   readonly grade: GachaGrade;
@@ -75,6 +76,76 @@ export function revealCopy(grade: GachaGrade): RevealCopy {
   }
 }
 
+export interface DrawAffordance {
+  readonly affordable: boolean;
+  /** 버튼 아래 보조 문구. */
+  readonly label: string;
+}
+
+/**
+ * 잔액으로 소환 버튼을 누를 수 있는지와 보조 문구를 정한다.
+ *
+ * 화면이 미리 막을 뿐이고, 최종 판정은 저장 로직의 잔액 검사가 한다. 잔액이 비용과 같으면 누를 수 있다.
+ */
+export function drawAffordance(count: DrawCount, balance: number): DrawAffordance {
+  const cost = drawCost(count);
+  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`). 판정은 정확한 값으로 한다.
+  const costLabel = `${compactAmount(cost)} 토큰`;
+  const shortfall = cost - balance;
+  if (shortfall > 0) {
+    return { affordable: false, label: `${costLabel} · ${compactAmount(shortfall)} 부족` };
+  }
+  return { affordable: true, label: count === 10 ? `${costLabel} · RARE 이상 보장` : costLabel };
+}
+
+export const TOKEN_HINT = 'AI 도구를 쓰면 토큰이 쌓여요.';
+
+/** 어느 소환이든 잔액이 모자라면 토큰을 모으는 방법을 알린다. */
+export function showsTokenHint(balance: number): boolean {
+  return !drawAffordance(1, balance).affordable || !drawAffordance(10, balance).affordable;
+}
+
 function assertNever(value: never): never {
   throw new Error(`알 수 없는 가챠 등급: ${String(value)}`);
+}
+
+/** 결과 화면이 처음 고르는 카드. 가장 높은 등급의 첫 카드다 — 보통 가장 반가운 친구다. */
+export function defaultResultIndex(results: readonly GradeBearing[]): number {
+  const top = highestGrade(results);
+  return results.findIndex((result) => result.grade === top);
+}
+
+export interface ResultActionsInput {
+  /** 고른 결과 펫이 이미 오버레이 펫인가. 첫 펫은 뽑는 순간 오버레이 펫이 된다. */
+  targetIsOverlayPet: boolean;
+  /** 방금 소환한 횟수. `한 번 더`가 같은 횟수로 다시 소환한다. */
+  count: DrawCount;
+  balance: number;
+}
+
+export interface ResultActions {
+  overlay: { label: string; primary: boolean };
+  /** `펫룸에서 보기`가 금색 기본 버튼인가. */
+  roomPrimary: boolean;
+  again: { enabled: boolean; label: string };
+}
+
+/**
+ * 결과 뒤 다음 행동(동선 2단계 D). 첫 펫이면 오버레이로 데려가는 것이 다음 할 일이고, 그 밖에는
+ * 펫룸에서 새 친구를 보는 것이 다음 할 일이다.
+ */
+export function resultActions({
+  targetIsOverlayPet,
+  count,
+  balance,
+}: ResultActionsInput): ResultActions {
+  const again = drawAffordance(count, balance);
+  return {
+    overlay: {
+      label: targetIsOverlayPet ? '오버레이에서 만나기' : '오버레이로 지정',
+      primary: targetIsOverlayPet,
+    },
+    roomPrimary: !targetIsOverlayPet,
+    again: { enabled: again.affordable, label: again.label },
+  };
 }

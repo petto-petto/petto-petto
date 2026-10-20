@@ -1,0 +1,40 @@
+/*
+ * 공통 디자인 토큰(동선 3단계). `design.md` §2·§3의 공통 값 한 벌이다.
+ *
+ * 화면마다 같은 금색·회색·글꼴을 값으로 다시 적으면 한 곳을 고칠 때 다른 곳이 어긋난다. 그래서 틀과
+ * 상태 표시(선택, 비활성)에 쓰는 값만 여기 모은다. 배경 팔레트와 세계관 색은 각 화면의 것이다(결정 4).
+ */
+:root {
+  --petto-font: 'Isamanru', sans-serif;
+
+  /* 나무 — 조작 */
+  --petto-wood-border: #3a2a1c;
+  --petto-wood: #6b4a2e;
+  --petto-wood-highlight: #a5763f;
+
+  /* 양피지 — 정보 */
+  --petto-parchment: #f3e3c0;
+  --petto-parchment-ring: #e0c894;
+
+  /* 글자 */
+  --petto-ink: #3b2a1a;
+  --petto-light-text: #f5ecd8;
+
+  /* 금색은 지금 선택, 업적, 바로 챙길 보상에만 쓴다. */
+  --petto-gold: #ffd166;
+  --petto-gold-highlight: #ffe7a0;
+
+  /* 비활성 — 회색 면과 낮은 대비의 글자. 눌림 효과를 주지 않는다. */
+  --petto-disabled: #555555;
+  --petto-disabled-text: #c4c4c4;
+  --petto-disabled-shade: #333333;
+
+  /* 할 일이 있다는 빨간 점. design.md §2의 오류 색(밝은 쪽)이다. 늘 글자·접근성 이름과 함께 쓴다. */
+  --petto-alert: #f08a8a;
+
+  --petto-outline: #2c2438;
+  --petto-drop: 2px 2px 0 rgb(0 0 0 / 35%);
+
+  /* 상단 바 높이. 화면은 이만큼 아래에서 시작한다. */
+  --petto-bar-height: 32px;
+}

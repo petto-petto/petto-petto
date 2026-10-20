@@ -61,6 +61,8 @@ export interface SummaryScreen {
   availableTokens: Field<number>;
   /** 오늘 얻은 재화. 사용량 보상과 업적 보상의 합이다. */
   todayEarnedTokens: Field<number>;
+  /** 지금 잔액으로 뽑기를 몇 번 할 수 있는가(잔액 ÷ 1회 비용의 몫). 토큰 카드의 뽑기 링크가 쓴다. */
+  drawsAvailable: Field<number>;
 
   /* 함께한 기록 — 요약을 펼쳤을 때만 보인다. */
   /**
@@ -151,6 +153,7 @@ export function summaryScreen(
     },
     availableTokens: fieldOf(() => tokens.balance()),
     todayEarnedTokens: fieldOf(() => tokens.earnedSince(startOfLocalDay(today))),
+    drawsAvailable: fieldOf(() => Math.floor(tokens.balance() / gacha.drawCost())),
     totalEarnedTokens: fieldOf(() => tokens.earnedSince(LEDGER_BEGINNING)),
     drawCount: fieldOf(() => gacha.drawCount()),
     ownedPets: fieldOf(() => pets.countOwnedPets()),

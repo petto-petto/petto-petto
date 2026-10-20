@@ -27,7 +27,6 @@ async function fixture(t) {
   const broadcasts = [];
   const host = {
     showRoom() {},
-    navigate() {},
     broadcast: (channel, payload) => broadcasts.push({ channel, payload }),
   };
   const clock = { now: () => new Date('2026-10-04T12:00:00') };
@@ -112,4 +111,45 @@ test('성장 저장소의 레벨·경험치를 PetClient 에도 적는다 — me
   assert.equal(grown?.level, 21);
   assert.equal(grown?.xpIntoLevel, 2);
   assert.equal(grown?.totalXp, 510);
+});
+
+test('펫룸의 진화시키기 — 진화할 수 있는 펫을 오버레이 펫으로 세운 뒤에야 오버레이에 맡긴다', async (t) => {
+  const { pets, growth, host, broadcasts, createRoom } = await fixture(t);
+  const [mole, wizard] = pets.createOwnedPets(['003', '006']);
+  growth.set(wizard.ownedPetId, {
+    level: 16,
+    evolutionStage: 0,
+    evolutionAvailable: true,
+    totalXp: 300,
+    xpIntoLevel: 2,
+  });
+  const room = createRoom();
+  room.setActivePet(mole.ownedPetId, host);
+
+  assert.equal(
+    room.scene().pets.find((view) => view.ownedPetId === wizard.ownedPetId)?.evolutionAvailable,
+    true,
+  );
+  assert.equal(room.prepareEvolve(wizard.ownedPetId, host), true);
+  // 오버레이는 자기 펫에게만 진화를 실행한다. 그래서 먼저 오버레이 펫을 바꾸고 알린다.
+  assert.equal(room.activeView()?.ownedPetId, wizard.ownedPetId);
+  assert.equal(broadcasts.at(-1)?.channel, 'room:activePetChanged');
+});
+
+test('펫룸의 진화시키기 — 진화 조건이 이미 사라졌으면 오버레이 펫을 바꾸지 않는다', async (t) => {
+  const { pets, growth, host, createRoom } = await fixture(t);
+  const [mole, wizard] = pets.createOwnedPets(['003', '006']);
+  growth.set(wizard.ownedPetId, {
+    level: 16,
+    evolutionStage: 1,
+    evolutionAvailable: false,
+    totalXp: 300,
+    xpIntoLevel: 2,
+  });
+  const room = createRoom();
+  room.setActivePet(mole.ownedPetId, host);
+
+  assert.equal(room.prepareEvolve(wizard.ownedPetId, host), false);
+  assert.equal(room.activeView()?.ownedPetId, mole.ownedPetId);
+  assert.throws(() => room.prepareEvolve('nope', host), /보유하지 않은 펫/);
 });
