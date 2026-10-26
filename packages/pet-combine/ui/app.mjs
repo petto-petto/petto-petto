@@ -1,3 +1,5 @@
+import { combineButtonState } from './button-state.mjs';
+
 const assets = new URLSearchParams(window.location.search).get('assets');
 document.querySelector('.window-close')?.addEventListener('click', () => window.close());
 document.querySelector('.window-back')?.addEventListener('click', () => {
@@ -79,7 +81,10 @@ function render() {
   for (const tab of panel.querySelectorAll('[data-grade]')) {
     tab.classList.toggle('active', tab.dataset.grade === activeGrade);
   }
-  panel.querySelector('.combine-button').disabled = busy || stage.classList.contains('combining');
+  const button = panel.querySelector('.combine-button');
+  const buttonState = combineButtonState(activeGrade, snapshot.balance, selectedIds.length);
+  button.textContent = buttonState.label;
+  button.disabled = buttonState.disabled || busy || stage.classList.contains('combining');
   selection.replaceChildren(
     ...selectedIds.map((id, index) => {
       const pet = snapshot.ownedPets.find((candidate) => candidate.ownedPetId === id);
@@ -171,7 +176,12 @@ window.addEventListener('focus', () => {
 });
 
 async function submit() {
-  if (busy || stage.classList.contains('combining')) return;
+  if (
+    busy ||
+    stage.classList.contains('combining') ||
+    combineButtonState(activeGrade, snapshot.balance, selectedIds.length).disabled
+  )
+    return;
   busy = true;
   render();
   try {
