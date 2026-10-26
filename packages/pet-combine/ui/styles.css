@@ -177,6 +177,12 @@ body {
   align-self: stretch;
 }
 
+.combine-button:disabled {
+  background: #555555;
+  color: #e1e1e1;
+  cursor: default;
+}
+
 .selection-slots {
   align-content: flex-start;
 }
