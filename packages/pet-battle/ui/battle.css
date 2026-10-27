@@ -123,6 +123,12 @@ img:not([src]) {
   opacity: var(--battle-display-opacity);
 }
 
+/* Opacity belongs to the environment. A translucent window has no separate frame. */
+#battle-overlay.translucent {
+  border-color: transparent;
+  box-shadow: none;
+}
+
 .simple-animation .combat-effects,
 .simple-animation .enemy-slam,
 .simple-animation .defeat-burst,
@@ -500,7 +506,8 @@ img:not([src]) {
 
 .character:focus-visible,
 .character:hover {
-  filter: drop-shadow(0 0 1px var(--gold)) drop-shadow(1px 0 0 var(--gold));
+  filter: drop-shadow(0 0 1px rgb(255 209 102 / var(--battle-display-opacity)))
+    drop-shadow(1px 0 0 rgb(255 209 102 / var(--battle-display-opacity)));
 }
 
 .pet {
@@ -528,7 +535,7 @@ img:not([src]) {
   right: 22%;
   bottom: 0;
   height: 8px;
-  background: rgba(21, 17, 35, 0.62);
+  background: rgb(21 17 35 / calc(0.62 * var(--battle-display-opacity)));
   clip-path: polygon(12% 0, 88% 0, 100% 50%, 88% 100%, 12% 100%, 0 50%);
 }
 

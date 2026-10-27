@@ -130,21 +130,8 @@ body {
 .combine-message:empty {
   display: none;
 }
-.combine-status {
-  grid-area: result;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-height: 0;
-  overflow: auto;
-}
-/* 합성하기를 누를 수 없는 이유. 오류(.combine-message)와 달리 경고색을 쓰지 않는 안내다. */
-.combine-requirement {
-  margin: 0;
-  color: #3b2a1a;
-  font-size: 10px;
-}
 .combine-result {
+  grid-area: result;
   color: #1c4a34;
   font-weight: bold;
   font-size: 10px;
@@ -154,7 +141,7 @@ body {
   grid-area: action;
   align-self: stretch;
 }
-/* design.md §6: 비활성 버튼은 회색 바탕과 낮은 대비의 글자. 누를 수 없는 이유는 .combine-requirement 가 말한다. */
+/* design.md §6: 비활성 버튼은 회색 바탕과 낮은 대비의 글자. 누를 수 없는 이유는 버튼 글자가 말한다. */
 .combine-button:disabled {
   color: var(--petto-disabled-text);
   background: var(--petto-disabled);

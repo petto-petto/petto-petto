@@ -1,4 +1,5 @@
-import { combineReadiness } from '../dist/index.js';
+import { combineMaterialsLabel } from '../dist/index.js';
+import { combineButtonState } from './button-state.mjs';
 
 const assets = new URLSearchParams(window.location.search).get('assets');
 
@@ -19,7 +20,6 @@ const result = panel.querySelector('.combine-result');
 const selection = panel.querySelector('.selection-slots');
 const grid = panel.querySelector('.pet-grid');
 const materials = panel.querySelector('.combine-materials');
-const requirement = panel.querySelector('.combine-requirement');
 const resultCard = stage.querySelector('.forge-result-card');
 let snapshot = { species: [], ownedPets: [], balance: 0 };
 let activeGrade = 'common';
@@ -77,16 +77,19 @@ async function refresh(selectAutomatically = false) {
 }
 
 function render() {
-  const readiness = combineReadiness(activeGrade, selectedIds.length, snapshot.balance);
   // 잔액은 공통 상단 바가 보인다(`@pet/shell`). 합성 중에는 탭과 닫기를 막는다.
   signalBusy(busy || stage.classList.contains('combining'));
-  materials.textContent = readiness.materials;
-  requirement.textContent = loaded ? (readiness.reason ?? '') : '';
+  materials.textContent = combineMaterialsLabel(activeGrade, selectedIds.length);
   for (const tab of panel.querySelectorAll('[data-grade]')) {
     tab.classList.toggle('active', tab.dataset.grade === activeGrade);
   }
-  panel.querySelector('.combine-button').disabled =
-    busy || stage.classList.contains('combining') || !loaded || !readiness.ready;
+  // 누를 수 없는 이유는 버튼 글자가 말한다(`5/10`, `토큰 부족`).
+  const button = panel.querySelector('.combine-button');
+  const buttonState = loaded
+    ? combineButtonState(activeGrade, snapshot.balance, selectedIds.length)
+    : { disabled: true, label: '불러오는 중' };
+  button.textContent = buttonState.label;
+  button.disabled = buttonState.disabled || busy || stage.classList.contains('combining');
   selection.replaceChildren(
     ...selectedIds.map((id, index) => {
       const pet = snapshot.ownedPets.find((candidate) => candidate.ownedPetId === id);
@@ -178,7 +181,12 @@ window.addEventListener('focus', () => {
 });
 
 async function submit() {
-  if (busy || stage.classList.contains('combining')) return;
+  if (
+    busy ||
+    stage.classList.contains('combining') ||
+    combineButtonState(activeGrade, snapshot.balance, selectedIds.length).disabled
+  )
+    return;
   busy = true;
   render();
   try {

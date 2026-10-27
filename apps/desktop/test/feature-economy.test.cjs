@@ -379,16 +379,22 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
       closed++;
     },
   };
-  // app.mjs 는 브라우저 모듈이라 `@pet/combine` 빌드를 import 한다. vm 스크립트는 import 문을 못 읽으므로
-  // 그 한 줄을 같은 모듈의 실제 export 로 바꿔 끼운다.
+  // app.mjs 는 브라우저 모듈이라 `@pet/combine` 빌드와 버튼 상태 모듈을 import 한다. vm 스크립트는 import 문을
+  // 못 읽으므로 그 줄들을 같은 모듈의 실제 export 로 바꿔 끼운다.
   const combineModule = await import('@pet/combine');
+  const buttonStateModule = await import('@pet/combine/ui/button-state.mjs');
   const appSource = readFileSync(
     join(__dirname, '../../../packages/pet-combine/ui/app.mjs'),
     'utf8',
-  ).replace(
-    "import { combineReadiness } from '../dist/index.js';",
-    'const { combineReadiness } = combineModule;',
-  );
+  )
+    .replace(
+      "import { combineMaterialsLabel } from '../dist/index.js';",
+      'const { combineMaterialsLabel } = combineModule;',
+    )
+    .replace(
+      "import { combineButtonState } from './button-state.mjs';",
+      'const { combineButtonState } = buttonStateModule;',
+    );
   assert.doesNotMatch(appSource, /^import /m);
   vm.runInNewContext(appSource, {
     document,
@@ -399,11 +405,12 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     Set,
     Intl,
     combineModule,
+    buttonStateModule,
   });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(element('.selection-slots').children.length, 10);
   assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30K 토큰');
-  assert.equal(element('.combine-requirement').textContent, '');
+  assert.equal(element('.combine-button').textContent, '합성하기');
   assert.equal(element('.combine-button').disabled, false);
   element('.combine-button').listeners.click();
   element('.combine-button').listeners.click();

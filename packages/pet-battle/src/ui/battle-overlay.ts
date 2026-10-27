@@ -273,6 +273,7 @@ function render(next: BattleState, previous?: BattleState): void {
     '--battle-display-opacity',
     String(scene.displayOpacity),
   );
+  root.classList.toggle('translucent', scene.displayOpacity < 1);
   root.classList.toggle('simple-animation', next.preview.animationsEnabled === false);
   setImageSource(background, assetUrl(scene.backgroundAsset));
   petGrounding.setSource(hasPet ? assetUrl(scene.petIdleAsset) : null);

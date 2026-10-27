@@ -45,39 +45,15 @@ export function combineCost(grade: CombineGrade): number {
   return COST[grade];
 }
 
-export interface CombineReadiness {
-  /** 합성하기 버튼을 누를 수 있는가. */
-  readonly ready: boolean;
-  /** `재료 n / 10 · 비용 토큰`. 늘 보인다. */
-  readonly materials: string;
-  /** 누를 수 없는 이유. 누를 수 있으면 없다. */
-  readonly reason: string | undefined;
-}
-
 /**
- * 선택한 재료 수와 잔액으로 합성 버튼 상태를 정한다.
+ * 활성 등급 옆에 늘 보이는 `재료 n / 10 · 비용 토큰`.
  *
- * 재료와 토큰이 둘 다 모자라면 재료를 먼저 알린다. 재료는 화면에서 바로 채울 수 있지만 토큰은 그렇지 않다.
- * 화면이 미리 막을 뿐이고, 최종 판정은 저장 로직이 한다.
+ * 누를 수 있는지와 그 이유는 합성 버튼 글자가 말한다(`ui/button-state.mjs`). 최종 판정은 저장 로직이 한다.
  */
-export function combineReadiness(
-  grade: CombineGrade,
-  selectedCount: number,
-  balance: number,
-): CombineReadiness {
-  const cost = combineCost(grade);
-  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`). 판정은 정확한 값으로 한다.
-  const materials = `재료 ${selectedCount} / ${COMBINE_MATERIAL_COUNT} · ${compactAmount(cost)} 토큰`;
-  const missing = COMBINE_MATERIAL_COUNT - selectedCount;
-  if (missing > 0) return { ready: false, materials, reason: `재료가 ${missing}장 더 필요해요.` };
-  if (balance < cost) {
-    return {
-      ready: false,
-      materials,
-      reason: `토큰이 ${compactAmount(cost - balance)} 부족해요.`,
-    };
-  }
-  return { ready: true, materials, reason: undefined };
+export function combineMaterialsLabel(grade: CombineGrade, selectedCount: number): string {
+  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`).
+  const cost = compactAmount(combineCost(grade));
+  return `재료 ${selectedCount} / ${COMBINE_MATERIAL_COUNT} · ${cost} 토큰`;
 }
 
 export function createCombineEngine<Pet extends CombinePet>(

@@ -3,8 +3,10 @@ const assert = require('node:assert/strict');
 const { mkdtempSync, writeFileSync } = require('node:fs');
 const { tmpdir } = require('node:os');
 const path = require('node:path');
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeImage } = require('electron');
+const { pathToFileURL } = require('node:url');
 const repo = path.resolve(__dirname, '../../..');
+const battleWindowOptions = require('../../../packages/pet-battle/ui/window-options.json');
 const profile = mkdtempSync(path.join(tmpdir(), 'petto-display-'));
 app.setPath('userData', profile);
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,7 +60,16 @@ app
       }),
       setOpacity: (value) => handlers['settings:battle']('opacity', value),
     });
-    ipcMain.handle('battle:command', (_event, command) => gateway.execute(command));
+    let visualPet;
+    ipcMain.handle('battle:command', async (_event, command) => {
+      const result = await gateway.execute(command);
+      if (!visualPet) return result;
+      const activePet = { ...result.state.activePet, evolutionStage: visualPet.evolutionStage };
+      return {
+        ...result,
+        state: { ...result.state, activePet, petSprites: { [activePet.petId]: visualPet.sprites } },
+      };
+    });
     const panel = new BrowserWindow({
       width: 400,
       height: 544,
@@ -70,18 +81,31 @@ app
       },
     });
     const battle = new BrowserWindow({
-      width: 640,
-      height: 420,
-      show: false,
-      transparent: true,
-      backgroundColor: '#00000000',
-      frame: false,
+      ...battleWindowOptions,
       webPreferences: {
         preload: path.join(repo, 'packages/pet-battle/ui/host-preload.cjs'),
         offscreen: true,
         backgroundThrottling: false,
       },
     });
+    assert.equal(
+      battle.hasShadow(),
+      false,
+      'transparent battle windows must not have an OS shadow',
+    );
+    assert.equal(
+      battleWindowOptions.thickFrame,
+      false,
+      'Windows must not draw its own non-client frame',
+    );
+    const originalSize = battle.getContentSize();
+    battle.setContentSize(540, 360);
+    const resized = battle.getContentSize();
+    assert.ok(
+      resized.every((size, index) => Math.abs(size - [540, 360][index]) <= 1),
+      'window size controls must work within one pixel of Windows DPI rounding',
+    );
+    battle.setContentSize(...originalSize);
     await Promise.all([
       panel.loadFile(path.join(repo, 'packages/pet-meta/ui/index.html')),
       battle.loadFile(path.join(repo, 'packages/pet-battle/dist/ui/index.html')),
@@ -139,7 +163,7 @@ app
     for (let index = 3; index < pixels.length; index += 4)
       maximumAlpha = Math.max(maximumAlpha, pixels[index]);
     assert.ok(
-      maximumAlpha === 255 && pixels[3] > 0 && pixels[3] <= 95,
+      maximumAlpha === 255 && pixels[3] === 0,
       `pet must stay opaque while the border fades: max alpha ${maximumAlpha}, border ${pixels[3]}`,
     );
     const position = () =>
@@ -176,6 +200,13 @@ app
     assert.equal(petOnly[3], 0, 'the frame must disappear at zero opacity');
     assert.equal(petOnlyAlpha, 255, 'the combat pet must remain visible at zero opacity');
     assert.equal(
+      await battle.webContents.executeJavaScript(
+        "getComputedStyle(document.querySelector('#pet > .ground-shadow')).backgroundColor",
+      ),
+      'rgba(21, 17, 35, 0)',
+      'pet decoration must not leave an opaque shadow on a transparent scene',
+    );
+    assert.equal(
       await panel.webContents.executeJavaScript('getComputedStyle(document.body).opacity'),
       '1',
     );
@@ -206,6 +237,57 @@ app
       battle,
       "getComputedStyle(document.querySelector('#battle-environment')).opacity === '1'",
     );
+    for (const evolutionStage of [0, 2]) {
+      const stage = evolutionStage + 1;
+      const sprites = Object.fromEntries(
+        ['idle', 'attack'].map((action) => {
+          const file = path.join(
+            repo,
+            `apps/desktop/renderer/assets/pets/common/mole_digger/stage${stage}/pet_003_s${stage}_${action}.png`,
+          );
+          const size = nativeImage.createFromPath(file).getSize();
+          assert.equal(size.height, 32);
+          return [
+            action,
+            { asset: pathToFileURL(file).href, frameCount: size.width / size.height },
+          ];
+        }),
+      );
+      visualPet = { evolutionStage, sprites };
+      await panel.webContents.executeJavaScript("window.petApi.setBattleSetting('opacity',0)");
+      await waitFor(
+        battle,
+        "document.querySelector('#battle-overlay').dataset.petAnimation === 'mole' && document.querySelector('.mole-native-sprite').style.opacity === '1'",
+      );
+      const frame = await battle.webContents.capturePage();
+      const bitmap = frame.toBitmap();
+      assert.equal(
+        bitmap[3],
+        0,
+        'the client corner remains transparent during a native mole attack',
+      );
+      assert.equal(
+        await battle.webContents.executeJavaScript(
+          "getComputedStyle(document.querySelector('#pet > .ground-shadow')).backgroundColor",
+        ),
+        'rgba(21, 17, 35, 0)',
+      );
+      for (const background of ['white', 'black']) {
+        const composite = await battle.webContents.executeJavaScript(`(async () => {
+          const image = new Image(); image.src = ${JSON.stringify(frame.toDataURL())}; await image.decode();
+          const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+          const context = canvas.getContext('2d'); context.fillStyle = ${JSON.stringify(background)};
+          context.fillRect(0, 0, canvas.width, canvas.height); context.drawImage(image, 0, 0);
+          return canvas.toDataURL('image/png');
+        })()`);
+        writeFileSync(
+          path.join(profile, `mole-${stage}-${background}.png`),
+          Buffer.from(composite.split(',')[1], 'base64'),
+        );
+      }
+    }
+    visualPet = undefined;
+    await panel.webContents.executeJavaScript("window.petApi.setBattleSetting('opacity',100)");
     writeFileSync(
       path.join(profile, 'settings.png'),
       (await panel.webContents.capturePage()).toPNG(),
