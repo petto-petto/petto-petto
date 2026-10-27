@@ -282,6 +282,8 @@ const roomHost: RoomHost = {
 
 const shouldOpenGachaPrototype = (): boolean => process.env['GACHA_PROTO_OPEN'] !== undefined;
 const shouldOpenCombinePrototype = (): boolean => process.env['COMBINE_PROTO_OPEN'] !== undefined;
+/** 오버레이의 ⚙ 개발 패널. `PETTO_DEV_PANEL=1 npm start`로 띄울 때만 보인다. `0`을 켠 것으로 읽지 않게 `1`만 본다. */
+const shouldShowDevPanel = (): boolean => process.env['PETTO_DEV_PANEL'] === '1';
 
 /**
  * 트레이 진입점. 기획서 2.1은 트레이를 MVP에 포함한다.
@@ -558,7 +560,7 @@ app.whenReady().then(async () => {
   mountOverlayWindowIpc();
   mountBadgeIpc(tokens, () => loadDexView(pets).hasNew);
 
-  createOverlayWindow();
+  createOverlayWindow({ devPanel: shouldShowDevPanel() });
   buildTray(state);
   buildAppMenu(state);
   applyOverlayVisibility(state.meta.settings.overlayVisible);
@@ -597,7 +599,7 @@ app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0 && state) {
-      createOverlayWindow();
+      createOverlayWindow({ devPanel: shouldShowDevPanel() });
       if (shouldOpenGachaPrototype()) createGachaWindow();
       if (shouldOpenCombinePrototype()) createCombineWindow();
     }

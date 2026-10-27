@@ -13,10 +13,12 @@ import {
   dragStart,
   dragMove,
   dragEnd,
+  isElectron,
   onBubbles,
   openGacha,
   openPanel,
 } from '../platform/bridge.js';
+import { showsDevPanel } from './dev-panel.ts';
 import { MENU_HINT_STORAGE_KEY, MENU_HINT_TEXT, currentSpeech, enqueueNotices } from './speech.ts';
 
 /** 첫 펫 우클릭 안내를 본 적이 있는가. 저장소를 못 쓰면 본 것으로 친다 — 매번 뜨는 것보다 낫다. */
@@ -37,6 +39,9 @@ function markMenuHintSeen() {
 }
 import { useOverlayHitTest } from './useHitTest.js';
 import { stageForEvolution, randomClick } from '../pets/catalog.ts';
+
+/** ⚙ 개발 패널은 `PETTO_DEV_PANEL=1 npm start`로 띄웠을 때만 그린다(`dev-panel.ts`). 실행 중에는 바뀌지 않는다. */
+const devPanelVisible = showsDevPanel(window.location.search, isElectron);
 
 export default function Overlay({ g, activePet, roster, activeId, onSelectPet }) {
   const { pet, overlayState, toasts, levelUpFx, evolveFx, xpFx, attackFx, mood } = g;
@@ -217,14 +222,16 @@ export default function Overlay({ g, activePet, roster, activeId, onSelectPet })
         <Vfx ref={vfxRef} />
       </div>
 
-      <DevPanel
-        g={g}
-        open={devOpen}
-        onToggle={() => setDevOpen((v) => !v)}
-        roster={roster}
-        activeId={activeId}
-        onSelectPet={onSelectPet}
-      />
+      {devPanelVisible && (
+        <DevPanel
+          g={g}
+          open={devOpen}
+          onToggle={() => setDevOpen((v) => !v)}
+          roster={roster}
+          activeId={activeId}
+          onSelectPet={onSelectPet}
+        />
+      )}
     </div>
   );
 }
