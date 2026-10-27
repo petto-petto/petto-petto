@@ -194,8 +194,13 @@ function initialOverlayPosition(): OverlayWindowState {
   return restored && overlayPositionIsVisible(restored) ? restored : fallback;
 }
 
-/** 공통 데스크톱 앱이 여는 첫 번째 투명 오버레이 창. */
-export function createOverlayWindow(): BrowserWindow {
+/**
+ * 공통 데스크톱 앱이 여는 첫 번째 투명 오버레이 창.
+ *
+ * `devPanel`이면 주소에 `devPanel=1`을 붙여 ⚙ 개발 패널을 그리게 한다. 그 값을 읽는 쪽은
+ * `@pet/main-overlay`의 `src/overlay/dev-panel.ts`다.
+ */
+export function createOverlayWindow(options: { readonly devPanel: boolean }): BrowserWindow {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
     overlayWindow.show();
     overlayWindow.focus();
@@ -210,7 +215,8 @@ export function createOverlayWindow(): BrowserWindow {
   });
   overlayWindow.setIgnoreMouseEvents(true, { forward: true });
   injectFonts(overlayWindow);
-  void overlayWindow.loadFile(join(overlayUiDir, 'index.html'));
+  const query: Record<string, string> = options.devPanel ? { devPanel: '1' } : {};
+  void overlayWindow.loadFile(join(overlayUiDir, 'index.html'), { query });
   overlayWindow.on('blur', () => {
     overlayWindow?.webContents.send('overlay:menu-close');
   });
