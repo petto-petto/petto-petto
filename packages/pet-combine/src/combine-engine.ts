@@ -1,3 +1,5 @@
+import { compactAmount } from '@pet/shell';
+
 export const COMBINE_GRADES = ['common', 'rare'] as const;
 export type CombineGrade = (typeof COMBINE_GRADES)[number];
 export type ResultGrade = 'rare' | 'epic';
@@ -41,6 +43,17 @@ const RESULT_GRADE: Readonly<Record<CombineGrade, ResultGrade>> = { common: 'rar
 
 export function combineCost(grade: CombineGrade): number {
   return COST[grade];
+}
+
+/**
+ * 활성 등급 옆에 늘 보이는 `재료 n / 10 · 비용 토큰`.
+ *
+ * 누를 수 있는지와 그 이유는 합성 버튼 글자가 말한다(`ui/button-state.mjs`). 최종 판정은 저장 로직이 한다.
+ */
+export function combineMaterialsLabel(grade: CombineGrade, selectedCount: number): string {
+  // 금액은 모든 화면이 같은 축약 표기를 쓴다(`@pet/shell`).
+  const cost = compactAmount(combineCost(grade));
+  return `재료 ${selectedCount} / ${COMBINE_MATERIAL_COUNT} · ${cost} 토큰`;
 }
 
 export function createCombineEngine<Pet extends CombinePet>(

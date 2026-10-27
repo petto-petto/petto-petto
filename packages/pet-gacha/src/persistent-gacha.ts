@@ -2,6 +2,7 @@ import type { TokenClient, PetClient, Rarity } from '@pet/client';
 
 import {
   createGachaEngine,
+  drawCost,
   secureRandomInt,
   type DrawCount,
   type DrawResult,
@@ -34,7 +35,7 @@ export class GachaActionError extends Error {
   readonly code: 'tokens' | 'duplicate';
 
   constructor(code: 'tokens' | 'duplicate') {
-    super(code === 'tokens' ? 'Token이 부족합니다.' : '이미 처리된 소환 요청입니다.');
+    super(code === 'tokens' ? '토큰이 부족합니다.' : '이미 처리된 소환 요청입니다.');
     this.code = code;
   }
 }
@@ -86,7 +87,7 @@ export function createPersistentGacha(
       const saved = transaction(() => {
         const snapshot = load();
         const next = createGachaEngine(snapshot.pets, randomInt, state).draw(count);
-        const spend = currency.spendOnce(`gacha:${requestId}`, count * 100_000, '펫 뽑기');
+        const spend = currency.spendOnce(`gacha:${requestId}`, drawCost(count), '펫 뽑기');
         if (spend === 'insufficient') throw new GachaActionError('tokens');
         if (spend === 'already_spent') throw new GachaActionError('duplicate');
         const acquired = pets.createOwnedPets(next.results.map(({ pet }) => pet.id));

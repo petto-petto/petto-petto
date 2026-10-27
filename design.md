@@ -69,7 +69,7 @@ petto-petto is a pixel UI inspired by a small pet space deep in a dark forest. P
 ## 4. Pixel Rendering
 
 - Scale sprites, pixel backgrounds, and pixel icons only by integer factors.
-  - Exception: the pet-room scene renders its background and pets at 1.25x (`SCENE_SCALE` in `packages/pet-room/src/domain/scene.ts`) so the scene fills 640x300 above a 120px panel. Requester decision, 2026-10-09.
+  - Exception: the pet-room scene renders its background and pets at 1.25x (`SCENE_SCALE` in `packages/pet-room/src/domain/scene.ts`) so the scene fills 640x300 above a 120px panel. Requester decision, 2026-10-09. The window adds the shared 32px top bar above the scene (640x452 in total, 2026-10-17).
 - Apply `image-rendering: pixelated` to images and set `imageSmoothingEnabled = false` for Canvas rendering.
 - Use `#2C2438` as the shared outline color for pet sprites.
 - Keep the light source in the upper left. Place highlights toward the upper left and shadows toward the lower right.
@@ -145,6 +145,14 @@ Use a 2px base unit and the following values for layout.
 - Use a small elliptical ground shadow without obscuring the pet outline or essential information.
 
 ## 7. Screen Layout
+
+### Shared Top Bar
+
+- The app has three windows: the overlay pet, one 640 window, and the separate battle window. The pet room, summon, combine, collection, info, and achievement screens take turns in the 640 window and share one 32px top bar from `@pet/shell` (`packages/pet-shell/ui/topbar.css`). The window is 640x452: the bar on top, the screen's own 640x420 below it.
+- The bar holds the tabs (`펫룸 · 뽑기 · 합성 · 도감 · 정보 · 업적 · 전투 ↗`), then `⚙ 설정` set apart to their right, the token chip, and the close button. Always pair an icon with its text label. Mark the current tab in gold. The `↗` tab opens the battle window and keeps the current screen.
+- Screens do not draw their own back or close buttons and do not repeat the token balance.
+- Shared values (font, gold, disabled gray, wood, parchment, ink) come from `packages/pet-shell/ui/tokens.css`. Background palettes stay with each screen.
+- Write every token amount with `compactAmount` from `@pet/shell` (K · M · B). Show the exact value as a tooltip where there is room.
 
 ### Pet Room
 

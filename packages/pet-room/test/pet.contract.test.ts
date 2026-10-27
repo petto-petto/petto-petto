@@ -147,6 +147,31 @@ test('레벨과 진화 단계는 성장 저장소가 정하고 명부는 그 값
   );
 });
 
+test('진화 가능 여부도 성장 저장소가 정하고 펫룸 뷰가 그대로 보인다', () => {
+  // p6 은 Lv.16 · 진화 0회다. 펫룸이 레벨을 보고 따로 판단하지 않는다 — 성장 저장소가 말한 값뿐이다.
+  const before = roomPetViews(sampleCollection());
+  assert.equal(before.find((view) => view.ownedPetId === 'p6')?.evolutionAvailable, false);
+
+  const growth = new Map<string, PetGrowth>([
+    ['p6', { level: 16, evolutionStage: 0, evolutionAvailable: true }],
+  ]);
+  const views = roomPetViews(withPetGrowth(sampleCollection(), growth));
+  assert.equal(views.find((view) => view.ownedPetId === 'p6')?.evolutionAvailable, true);
+  assert.equal(views.find((view) => view.ownedPetId === 'p1')?.evolutionAvailable, false);
+
+  // 진화하면 같은 레벨에서도 가능이 풀린다.
+  const evolved = withPetGrowth(
+    withPetGrowth(sampleCollection(), growth),
+    new Map<string, PetGrowth>([
+      ['p6', { level: 16, evolutionStage: 1, evolutionAvailable: false }],
+    ]),
+  );
+  assert.equal(
+    roomPetViews(evolved).find((view) => view.ownedPetId === 'p6')?.evolutionAvailable,
+    false,
+  );
+});
+
 test('성장 저장소에 넘기는 씨앗은 종 slug 를 펫 key 로 쓴다', () => {
   const seeds = growthSeeds(sampleCollection());
   assert.equal(seeds.length, 6);

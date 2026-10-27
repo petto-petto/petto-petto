@@ -21,7 +21,7 @@ export type CombineActionCode = 'selection' | 'tokens' | 'candidates' | 'duplica
 
 const ACTION_MESSAGES: Readonly<Record<CombineActionCode, string>> = {
   selection: '같은 등급의 비활성 펫 10마리를 재료로 선택해 주세요.',
-  tokens: 'Token이 부족합니다.',
+  tokens: '토큰이 부족합니다.',
   candidates: '결과 펫 풀이 비어 있습니다.',
   duplicate: '이미 처리된 합성 요청입니다.',
 };

@@ -304,11 +304,21 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   );
   assert.equal(handlers.get('combine:load')({}).ok, false);
   assert.equal(handlers.get('combine:combine')({}, 'common', []).ok, false);
+  // 결과 카드가 부르는 앱 채널(오버레이 펫·펫룸). 무엇을 불렀는지 남긴다.
+  const opened = [];
+  handlers.set('room:setActivePet', (_event, ownedPetId) => pets.setActivePet(ownedPetId));
+  handlers.set('screen:open', (_event, screen, focus) => opened.push({ screen, focus }));
+  let closed = 0;
 
   let exposed;
   vm.runInNewContext(readFileSync(join(__dirname, '../src/preload/combine.cjs'), 'utf8'), {
     require: () => ({
-      contextBridge: { exposeInMainWorld: (_name, bridge) => (exposed = bridge) },
+      // preload 는 상단 바용 `shell`도 노출한다. 화면 코드가 쓰는 `combine`만 잡는다.
+      contextBridge: {
+        exposeInMainWorld: (name, bridge) => {
+          if (name === 'combine') exposed = bridge;
+        },
+      },
       ipcRenderer: { invoke: async (channel, ...args) => handlers.get(channel)(allowed, ...args) },
     }),
   });
@@ -365,15 +375,43 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     matchMedia: () => ({ matches: true }),
     addEventListener() {},
     setTimeout: (callback) => callback(),
-    close() {},
+    close() {
+      closed++;
+    },
   };
-  vm.runInNewContext(
-    readFileSync(join(__dirname, '../../../packages/pet-combine/ui/app.mjs'), 'utf8'),
-    { document, window, URL, URLSearchParams, Error, Set },
-  );
+  // app.mjs 는 브라우저 모듈이라 `@pet/combine` 빌드와 버튼 상태 모듈을 import 한다. vm 스크립트는 import 문을
+  // 못 읽으므로 그 줄들을 같은 모듈의 실제 export 로 바꿔 끼운다.
+  const combineModule = await import('@pet/combine');
+  const buttonStateModule = await import('@pet/combine/ui/button-state.mjs');
+  const appSource = readFileSync(
+    join(__dirname, '../../../packages/pet-combine/ui/app.mjs'),
+    'utf8',
+  )
+    .replace(
+      "import { combineMaterialsLabel } from '../dist/index.js';",
+      'const { combineMaterialsLabel } = combineModule;',
+    )
+    .replace(
+      "import { combineButtonState } from './button-state.mjs';",
+      'const { combineButtonState } = buttonStateModule;',
+    );
+  assert.doesNotMatch(appSource, /^import /m);
+  vm.runInNewContext(appSource, {
+    document,
+    window,
+    URL,
+    URLSearchParams,
+    Error,
+    Set,
+    Intl,
+    combineModule,
+    buttonStateModule,
+  });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(element('.selection-slots').children.length, 10);
-  assert.equal(element('.token-readout').textContent, 'TOKEN 10,000,000');
+  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30K 토큰');
+  assert.equal(element('.combine-button').textContent, '합성하기');
+  assert.equal(element('.combine-button').disabled, false);
   element('.combine-button').listeners.click();
   element('.combine-button').listeners.click();
   await new Promise((resolve) => setImmediate(resolve));
@@ -387,6 +425,22 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
     ),
     true,
   );
-  assert.equal(element('.token-readout').textContent, 'TOKEN 9,970,000');
   assert.match(element('.combine-result').textContent, /획득/);
+
+  // 결과 뒤 다음 행동(동선 2단계 D). 합성 결과는 첫 펫일 수 없어 기본 버튼이 펫룸에서 보기다.
+  const [result] = pets.listOwnedPets();
+  const actions = element('.forge-result-card').children.find(
+    (child) => child.className === 'forge-result-actions',
+  );
+  const [toOverlay, inRoom] = actions.children;
+  assert.equal(toOverlay.textContent, '오버레이로 지정');
+  assert.equal(inRoom.textContent, '펫룸에서 보기');
+  assert.match(inRoom.className, /primary/);
+  inRoom.listeners.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(opened, [{ screen: 'room', focus: result.ownedPetId }]);
+  toOverlay.listeners.click();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(pets.getActivePet()?.ownedPetId, result.ownedPetId);
+  assert.equal(closed, 1);
 });

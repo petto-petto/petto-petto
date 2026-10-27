@@ -1,3 +1,6 @@
+// 토큰 금액은 모든 화면이 같은 함수를 지난다(`@pet/shell`, 동선 3단계). 규칙은 그 함수의 주석에 있다.
+import { compactAmount as compact } from '../../pet-shell/dist/format.js';
+
 // 메타 패널 프론트엔드.
 //
 // 규칙은 한 줄도 없다. Rust가 만들어 준 화면 모델을 DOM으로 옮기기만 한다.
@@ -36,43 +39,6 @@ function el(tag, options = {}, children = []) {
 
 const nf = new Intl.NumberFormat('ko-KR');
 const num = (value) => nf.format(value ?? 0);
-
-/**
- * 큰 수를 짧게 쓴다. `만`·`억` 대신 표준 단위(K · M · B)를 쓴다. 화면의 모든 큰 수가 이
- * 함수 하나를 지난다 — 같은 화면에 `5K`와 `5,000`이 섞이지 않게 한다.
- *
- * 토큰 수치는 도구가 보고하는 값이고, 그 도구들이 쓰는 단위가 K · M · B다. 한글 단위로
- * 바꾸면 사용자가 다른 화면에서 본 숫자와 머릿속으로 환산해야 한다.
- *
- * 1,000 미만은 그대로다. 그 이상은 100 미만이면 소수 한 자리(`.0` 생략), 100 이상이면 정수로
- * 400px 폭에서 자리수가 넘치지 않게 한다. 반올림으로 1000 에 닿으면 다음 단위로 올린다
- * (999,949 → `1M`, `1000K`가 아니라).
- */
-const COMPACT_UNITS = [
-  [1_000_000_000, 'B'],
-  [1_000_000, 'M'],
-  [1_000, 'K'],
-];
-
-function compact(value) {
-  const n = Number(value ?? 0);
-  const sign = n < 0 ? '-' : '';
-  const abs = Math.abs(n);
-  const format = (scaled, unit) => {
-    const text = scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1);
-    return `${sign}${text.replace(/\.0$/, '')}${unit}`;
-  };
-  for (let index = 0; index < COMPACT_UNITS.length; index += 1) {
-    const [divisor, unit] = COMPACT_UNITS[index];
-    if (abs < divisor) continue;
-    const scaled = abs / divisor;
-    const rounded = Number(scaled >= 100 ? scaled.toFixed(0) : scaled.toFixed(1));
-    const larger = COMPACT_UNITS[index - 1];
-    if (rounded >= 1_000 && larger) return format(abs / larger[0], larger[1]);
-    return format(scaled, unit);
-  }
-  return nf.format(n);
-}
 
 /** `Field<T>`를 그린다. 오류면 그 자리에만 오류를 표시한다(INFO-007). */
 function fieldValue(field, format = num) {
@@ -225,29 +191,29 @@ function selectScreen(screen, { resetSubtab = true } = {}) {
   // 패널을 다시 열거나 화면을 바꾸면 항상 접힌 상태로 시작한다.
   ui.expanded = false;
   if (resetSubtab) ui.subtab = DEFAULT_SUBTAB[screen] ?? '';
-  // 탭(정보·업적)과 하단 설정 아이콘이 같은 선택 상태를 공유한다.
-  for (const tab of document.querySelectorAll('[data-screen]')) {
-    tab.setAttribute('aria-selected', String(tab.dataset.screen === screen));
-  }
   applyChrome(screen);
   renderSubtabs();
   render();
 }
 
+const SCREEN_TITLES = { info: '정보', achievements: '업적', settings: '설정', demo: '시연' };
+
+/** 상단 바의 지금 탭. 시연은 정보 안의 화면이라 `정보`가 지금 탭이다. */
+function currentTabOf(screen) {
+  return screen === 'achievements' || screen === 'settings' ? screen : 'info';
+}
+
 /**
- * 화면에 맞춰 창 테두리(탭·제목·설정 입구)를 바꾼다.
+ * 화면 이름을 바꾸고 상단 바에 지금 탭을 알린다.
  *
- * 설정은 전용 화면이다. 들어가면 다른 화면의 탭을 감추고 설정만 남긴다. 대신
- * 나가는 길(`←`)을 반드시 함께 띄운다 — 이게 없으면 설정에 갇힌다.
+ * 정보 · 업적 · 설정은 공통 상단 바의 탭이다(동선 4단계). 다른 화면으로 가는 길은 늘 상단 바에 있어서,
+ * 설정에서 나가는 `←`를 따로 두지 않는다.
  */
 function applyChrome(screen) {
-  const settingsMode = screen === 'settings';
-  for (const tab of document.querySelectorAll('.screen-tab')) {
-    tab.hidden = settingsMode;
+  document.getElementById('mode-title').textContent = SCREEN_TITLES[screen] ?? '';
+  if (typeof CustomEvent === 'function') {
+    document.dispatchEvent(new CustomEvent('petto:current', { detail: currentTabOf(screen) }));
   }
-  document.getElementById('settings-button').hidden = settingsMode;
-  document.getElementById('back-button').hidden = !settingsMode;
-  document.getElementById('mode-title').hidden = !settingsMode;
 }
 
 function renderSubtabs() {
@@ -285,7 +251,8 @@ let renderGeneration = 0;
 
 function commit(generation, ...nodes) {
   if (generation !== renderGeneration) return;
-  content.replaceChildren(...nodes);
+  // 읽지 못해 빠진 칸(`null`)은 그리지 않는다.
+  content.replaceChildren(...nodes.filter(Boolean));
 }
 
 /** 가장 최근에 시작한 렌더. 클릭 뒤 화면이 다 그려지기를 기다려야 하는 쪽(self-test)이 쓴다. */
@@ -299,6 +266,8 @@ function render() {
 
 async function renderNow() {
   content.classList.remove('no-scroll');
+  // 화면마다 배치가 다르다(정보 요약만 두 칸). CSS 가 이 값을 본다.
+  content.dataset.view = ui.screen === 'info' ? `info/${ui.subtab}` : ui.screen;
   try {
     await iconsReady;
     if (ui.screen === 'info') {
@@ -420,7 +389,25 @@ async function renderSummary() {
         // 펫이 없으면 경험치를 물어볼 대상도 없다. 빈 막대를 그리지 않는다.
         ...(activePet.value ? [expRow({ value: activePet.value.experience })] : []),
       ]),
+      // 펫 카드는 펫룸의 입구다. 오버레이 펫의 상세를 연다(동선 2단계 G).
+      activePet.value
+        ? el('button', {
+            class: 'card-link',
+            text: '펫룸 ›',
+            attrs: { type: 'button' },
+            on: { click: () => api.openScreen('room', 'active') },
+          })
+        : null,
     ]),
+    // 펫이 0마리면 다음 할 일은 첫 펫을 만나는 것이다.
+    activePet.value === null && !activePet.error
+      ? el('button', {
+          class: 'pixel-button card-cta',
+          text: '펫 뽑으러 가기',
+          attrs: { type: 'button' },
+          on: { click: () => api.openScreen('gacha') },
+        })
+      : null,
   ]);
 
   /*
@@ -446,9 +433,21 @@ async function renderSummary() {
         : el('span', { class: 'hero-sub with-token' }, [
             el('span', { text: '오늘' }),
             tokenIcon(),
-            el('span', { text: `+${num(data.todayEarnedTokens.value)}` }),
+            el('span', {
+              text: `+${compact(data.todayEarnedTokens.value)}`,
+              title: `${num(data.todayEarnedTokens.value)} 토큰`,
+            }),
           ]),
     ]),
+    // 쓸 수 있는 곳을 바로 알려 준다. 1회도 못 뽑으면 링크를 두지 않는다(동선 2단계 G).
+    !data.drawsAvailable.error && data.drawsAvailable.value > 0
+      ? el('button', {
+          class: 'card-link hero-link',
+          text: `뽑기 ${num(data.drawsAvailable.value)}회 가능 · 뽑으러 가기 ›`,
+          attrs: { type: 'button' },
+          on: { click: () => api.openScreen('gacha') },
+        })
+      : null,
     // 기획서 5.4: 기록이 없는 설치는 오류가 아니라 빈 상태다. 0 만 보이면 고장처럼 읽힌다.
     data.hasNoRecords
       ? el('div', {
@@ -458,11 +457,8 @@ async function renderSummary() {
       : null,
   ]);
 
-  if (!ui.expanded) {
-    commit(generation, profile, hero, expandButton());
-    return;
-  }
-
+  // 640 창에서는 접지 않는다(동선 4단계). 왼쪽에 펫·토큰, 오른쪽에 함께한 기록을 늘 둔다 — 세로 패널
+  // 시절에는 높이가 모자라 `자세히`로 접었지만, 두 칸이면 한 화면에 들어간다.
   const records = el('div', { class: 'card' }, [
     el('h2', { class: 'section-title' }, [el('span', { text: '함께한 기록' })]),
     el('div', { class: 'stat-grid record-grid' }, [
@@ -505,7 +501,16 @@ async function renderSummary() {
     ]),
   ]);
 
-  commit(generation, profile, hero, records, expandButton());
+  // 아래 한 줄은 최근 12주 사용 흐름이다. 읽지 못하면 그 줄만 빼고 요약은 그대로 보인다.
+  const usage = await api.infoUsage('all').catch(() => undefined);
+  commit(
+    generation,
+    el('div', { class: 'summary-col' }, [profile, hero]),
+    el('div', { class: 'summary-col' }, [records]),
+    usage
+      ? el('div', { class: 'summary-wide' }, [grassCardOf(usage.grass, { withFacts: true })])
+      : null,
+  );
 }
 
 /* ---------- 정보 · 사용량 ---------- */
@@ -517,6 +522,64 @@ const PERIODS = [
   ['week', '주'],
   ['month', '달'],
 ];
+
+/**
+ * 최근 12주 잔디. 기간 필터와 상관없이 늘 같은 12주다(INFO-004). 사용량 화면과 정보 요약이 같이 쓴다.
+ *
+ * `withFacts`면 잔디 옆에 두 줄을 붙인다. 정보 요약은 640 창에서 두 칸 아래가 비어, 한눈에 볼 만한
+ * 사용 흐름으로 채운다 — 활동한 날 수와 가장 많이 쓴 날. 둘 다 잔디 칸에서 바로 센다.
+ */
+function grassCardOf(grass, { withFacts = false } = {}) {
+  const board = el(
+    'div',
+    { class: 'grass' },
+    grass.map((week) =>
+      el(
+        'div',
+        { class: 'grass-week' },
+        week.cells.map((cell) =>
+          el('div', {
+            class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
+            title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
+            // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
+            attrs: cell.future
+              ? {}
+              : {
+                  tabindex: '0',
+                  role: 'img',
+                  'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
+                },
+          }),
+        ),
+      ),
+    ),
+  );
+  if (!withFacts) {
+    return el('div', { class: 'card' }, [
+      el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
+      board,
+    ]);
+  }
+  const cells = grass.flatMap((week) => week.cells).filter((cell) => !cell.future);
+  const activeDays = cells.filter((cell) => cell.tokens > 0).length;
+  const best = cells.reduce((top, cell) => (cell.tokens > (top?.tokens ?? 0) ? cell : top), null);
+  return el('div', { class: 'card grass-summary' }, [
+    el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
+    el('div', { class: 'grass-summary-body' }, [
+      board,
+      el('dl', { class: 'grass-facts' }, [
+        el('div', {}, [el('dt', { text: '함께 일한 날' }), el('dd', { text: `${activeDays}일` })]),
+        el('div', {}, [
+          el('dt', { text: '가장 많이 쓴 날' }),
+          el('dd', {
+            text: best ? `${best.date.slice(5).replace('-', '.')} · ${compact(best.tokens)}` : '—',
+            title: best ? `${best.date} · ${num(best.tokens)} 토큰` : '',
+          }),
+        ]),
+      ]),
+    ]),
+  ]);
+}
 
 async function renderUsage() {
   const generation = renderGeneration;
@@ -607,33 +670,7 @@ async function renderUsage() {
 
   // 기획서 5.2: 제목 옆에 `최근 12주`를 명시해 기간 필터와 혼동하지 않게 한다. 범례는 두지
   // 않는다 — 칸에 마우스를 올리면 날짜와 토큰이 보인다(INFO-004).
-  const grassCard = el('div', { class: 'card' }, [
-    el('h2', { class: 'section-title' }, [el('span', { text: '최근 12주' })]),
-    el(
-      'div',
-      { class: 'grass' },
-      data.grass.map((week) =>
-        el(
-          'div',
-          { class: 'grass-week' },
-          week.cells.map((cell) =>
-            el('div', {
-              class: `grass-cell l${cell.level}${cell.future ? ' future' : ''}`,
-              title: cell.future ? cell.date : `${cell.date} · ${num(cell.tokens)} 토큰`,
-              // 범례가 없으므로 키보드로도 칸마다 날짜와 토큰에 닿아야 한다(INFO-004).
-              attrs: cell.future
-                ? {}
-                : {
-                    tabindex: '0',
-                    role: 'img',
-                    'aria-label': `${cell.date} ${num(cell.tokens)} 토큰`,
-                  },
-            }),
-          ),
-        ),
-      ),
-    ),
-  ]);
+  const grassCard = grassCardOf(data.grass);
 
   commit(generation, usageCard, modelsCard, grassCard, expandButton());
 }
@@ -698,7 +735,7 @@ async function renderSettings() {
       el('div', { class: 'card' }, [
         el('div', {
           class: 'mono-small',
-          text: '사용자 지정 경로는 제공하지 않습니다 (기획서 SET-004)',
+          text: '사용자 지정 경로는 아직 지원하지 않아요.',
         }),
       ]),
     );
@@ -877,7 +914,7 @@ async function renderSettings() {
       el('div', {
         class: 'mono-small',
         attrs: { style: 'margin-top:6px' },
-        text: '백업·복원·초기화는 제공하지 않습니다 (SET-009)',
+        text: '백업·복원·초기화는 아직 지원하지 않아요.',
       }),
     ]),
     el('div', { class: 'card' }, [
@@ -1183,14 +1220,6 @@ function flash(message, isError = false) {
  * 버튼 클릭이 드래그로 먹히지 않게 한다(app.css 참고). JS가 관여할 일이 없다.
  */
 
-for (const tab of document.querySelectorAll('[data-screen]')) {
-  tab.addEventListener('click', () => selectScreen(tab.dataset.screen));
-}
-document.getElementById('close-button').addEventListener('click', () => api.closePanel());
-document.getElementById('back-button').addEventListener('click', () => selectScreen('info'));
-
-document.getElementById('demo-button').addEventListener('click', () => selectScreen('demo'));
-
 // 펫 메뉴나 트레이에서 패널을 열면 기본 서브탭으로 진입한다(기획서 4.2).
 api.on('panel:show', (screen) => selectScreen(screen));
 // 1분 주기 집계가 끝나면 현재 화면을 새로 그린다.
@@ -1239,34 +1268,21 @@ async function selftestInfoLayout() {
     `서브탭이 ${labels.join(',')}`,
   );
 
-  // 요약: 접힘으로 시작하고 스크롤이 없다.
+  // 요약: 두 칸(왼쪽 펫·토큰, 오른쪽 함께한 기록)이고 접지 않으며 스크롤이 없다(동선 4단계).
   const noScroll = content.scrollHeight <= content.clientHeight;
-  const collapsedSummary = !content.querySelector('.record-grid') && !ui.expanded;
-  await report(
-    collapsedSummary && noScroll,
-    '요약 접힘        함께한 기록 숨김 · 스크롤 없음',
-    `요약 접힘 ${collapsedSummary}, 스크롤 없음 ${noScroll}`,
-  );
-
-  await clickExpand();
+  const columns = content.querySelectorAll(':scope > .summary-col').length;
   const stats = [...content.querySelectorAll('.record-grid .stat .label')].map(
     (node) => node.textContent,
   );
   await report(
-    stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
-    `요약 펼침        함께한 기록 ${stats.length}칸`,
-    `요약 펼침 칸 ${stats.join(',')}`,
+    columns === 2 &&
+      noScroll &&
+      !content.querySelector('.expand-button') &&
+      stats.join(',') === '누적 토큰,함께한 시간,뽑은 횟수,보유 펫,도감,업적',
+    `요약 두 칸       함께한 기록 ${stats.length}칸 · 스크롤 없음`,
+    `요약 칸 ${columns}, 스크롤 없음 ${noScroll}, 기록 ${stats.join(',')}`,
   );
 
-  await clickExpand();
-  await report(
-    !content.querySelector('.record-grid'),
-    '요약 접기        다시 접힘',
-    '접기를 눌러도 펼친 채다',
-  );
-
-  // 펼친 채 사용량으로 옮기면 접힌 상태여야 한다.
-  await clickExpand();
   subtabButton('사용량')?.click();
   await renderDone;
   const filters = [...content.querySelectorAll('.period-filter button')].map(
@@ -1421,25 +1437,6 @@ async function runSelftest() {
   await selftestRefreshButton();
 
   /*
-   * 화면 버튼이 실제로 화면을 바꾸는지 확인한다.
-   *
-   * 렌더러는 순수 JS라 선택자가 어긋나도 타입 검사가 잡지 못한다. 정보는 텍스트 탭,
-   * 설정·업적은 아이콘 버튼이라 둘이 같은 배선을 공유하는지 눈으로 볼 수 없는
-   * 환경에서 확인할 수단이 필요하다.
-   */
-  for (const button of document.querySelectorAll('[data-screen]')) {
-    const target = button.dataset.screen;
-    button.click();
-    const moved = ui.screen === target;
-    const marked = button.getAttribute('aria-selected') === 'true';
-    await api.debugLog(
-      moved && marked
-        ? `[SELFTEST] 화면 버튼 ${target.padEnd(13)} 이동·선택 표시 정상`
-        : `[SELFTEST] 화면 버튼 ${target} 실패 — 화면 ${ui.screen}, 선택 ${button.getAttribute('aria-selected')}`,
-    );
-  }
-
-  /*
    * 프로필 초상화가 실제 에셋으로 그려졌는지 확인한다.
    *
    * 주소는 앱이 만들어 창을 넘어온다. 순수 JS 렌더러라 타입 검사가 닿지 않고, 경로가
@@ -1468,21 +1465,20 @@ async function runSelftest() {
   );
 
   /*
-   * 설정 전용 모드가 실제로 다른 탭을 감추고, 되돌아올 수 있는지 확인한다.
-   *
-   * 나가는 길이 끊기면 사용자가 설정에 갇힌다. 화면을 눈으로 볼 수 없으므로
-   * 여기서 확인한다.
+   * 설정·업적으로 옮기면 상단 바가 그 탭을 금색으로 표시하도록 알린다. 상단 바와 정보 창이 서로 다른
+   * 스크립트라 타입 검사가 잇지 못한다.
    */
+  const announced = [];
+  const listen = (event) => announced.push(event.detail);
+  document.addEventListener('petto:current', listen);
   selectScreen('settings');
-  const tabsHidden = [...document.querySelectorAll('.screen-tab')].every((tab) => tab.hidden);
-  const escapeShown = !document.getElementById('back-button').hidden;
-  document.getElementById('back-button').click();
-  const returned = ui.screen === 'info';
-  const tabsBack = [...document.querySelectorAll('.screen-tab')].every((tab) => !tab.hidden);
+  selectScreen('achievements');
+  selectScreen('demo');
+  document.removeEventListener('petto:current', listen);
   await api.debugLog(
-    tabsHidden && escapeShown && returned && tabsBack
-      ? '[SELFTEST] 설정 전용 모드   탭 감춤·나가기 표시·복귀 정상'
-      : `[SELFTEST] 설정 전용 모드 실패 — 감춤 ${tabsHidden}, 나가기 ${escapeShown}, 복귀 ${returned}, 탭 복원 ${tabsBack}`,
+    announced.join(',') === 'settings,achievements,info'
+      ? '[SELFTEST] 상단 바 지금 탭    설정·업적·정보 알림 정상'
+      : `[SELFTEST] 상단 바 지금 탭 실패 — ${announced.join(',')}`,
   );
 
   selectScreen('info');

@@ -15,6 +15,7 @@
     "./ui/*": "./ui/*"
   },
   "dependencies": {
-    "@pet/client": "*"
+    "@pet/client": "*",
+    "@pet/shell": "*"
   }
 }

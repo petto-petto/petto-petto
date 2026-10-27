@@ -1,0 +1,160 @@
+/*
+ * 640 화면 공통 상단 바(동선 3단계). 화면 위 32px을 차지하고, 화면 내용은 그 아래 640×420에 그대로
+ * 놓인다 — 창 높이를 32px 늘렸다. 막대의 빈 곳을 끌면 창이 움직인다.
+ */
+.petto-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  height: var(--petto-bar-height);
+  padding: 0 6px;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  color: var(--petto-light-text);
+  font-family: var(--petto-font);
+  background: var(--petto-wood-border);
+  box-shadow: inset 0 -2px 0 var(--petto-wood-highlight);
+  user-select: none;
+  -webkit-app-region: drag;
+}
+
+.petto-tabs {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  gap: 4px;
+}
+
+.petto-tab,
+.petto-close {
+  -webkit-app-region: no-drag;
+}
+
+.petto-tab {
+  position: relative;
+  display: inline-flex;
+  height: 24px;
+  padding: 0 10px;
+  align-items: center;
+  gap: 4px;
+  color: var(--petto-light-text);
+  font-family: var(--petto-font);
+  font-size: 12px;
+  background: var(--petto-wood);
+  border: 2px solid var(--petto-wood-border);
+  border-radius: 0;
+  box-shadow:
+    inset 0 2px 0 var(--petto-wood-highlight),
+    inset 0 -2px 0 var(--petto-wood-border);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.petto-tab:hover:not(:disabled) {
+  background: #795535;
+}
+
+.petto-tab:active:not(:disabled):not(.current) {
+  transform: translate(2px, 2px);
+}
+
+/* 설정은 화면 탭 줄과 떨어뜨려 둔다. 화면이 아니라 도구라는 것을 자리로 보인다. */
+.petto-tab.trailing {
+  margin-left: 10px;
+}
+
+/* 지금 화면. 금색은 지금 선택에 쓴다(design.md §2). 눌러도 아무 일도 하지 않는다. */
+.petto-tab.current {
+  color: var(--petto-ink);
+  background: var(--petto-gold);
+  box-shadow:
+    inset 0 2px 0 var(--petto-gold-highlight),
+    inset 0 -2px 0 var(--petto-wood-highlight);
+  cursor: default;
+}
+
+.petto-tab:disabled:not(.current),
+.petto-close:disabled {
+  color: var(--petto-disabled-text);
+  background: var(--petto-disabled);
+  box-shadow: inset 0 -2px 0 var(--petto-disabled-shade);
+  cursor: wait;
+}
+
+/* 빨간 점은 색만으로 읽히지 않는다. 버튼의 접근성 이름에 같은 뜻을 넣는다(`topbar.ts`). */
+.petto-badge--dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 8px;
+  height: 8px;
+  background: var(--petto-alert);
+  border: 2px solid var(--petto-wood-border);
+}
+
+.petto-badge--new {
+  padding: 1px 3px;
+  color: var(--petto-ink);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  background: var(--petto-gold);
+}
+
+.petto-token {
+  display: inline-flex;
+  min-width: 56px;
+  height: 22px;
+  padding: 0 8px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--petto-ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  background: var(--petto-parchment);
+  border: 2px solid var(--petto-wood-border);
+  box-shadow: inset 0 0 0 1px var(--petto-parchment-ring);
+}
+
+/* 토큰 동전. 금색 칸 하나라 이미지 없이 그린다. */
+.petto-token::before {
+  width: 8px;
+  height: 8px;
+  content: '';
+  background: var(--petto-gold);
+  border: 1px solid var(--petto-wood-highlight);
+}
+
+.petto-close {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--petto-light-text);
+  font: 16px/1 var(--petto-font);
+  background: var(--petto-wood);
+  border: 2px solid var(--petto-wood-border);
+  cursor: pointer;
+}
+
+.petto-close:hover:not(:disabled) {
+  background: #8a3a32;
+}
+
+.petto-tab:focus-visible,
+.petto-close:focus-visible {
+  outline: 2px solid var(--petto-gold);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 3px var(--petto-outline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .petto-tab:active:not(:disabled):not(.current) {
+    transform: none;
+  }
+}

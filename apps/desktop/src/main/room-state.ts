@@ -16,8 +16,6 @@
  * 그리면 그 창의 로컬 상태와 push 로 받은 상태가 경쟁해 진실의 원천이 둘로 쪼개진다.
  */
 
-import type { WebContents } from 'electron';
-
 import type { OwnedPet as PetClientOwnedPet, PetClient } from '@pet/client';
 import type { Clock } from '@pet/core';
 import {
@@ -45,14 +43,9 @@ import type { OwnedPetGrowth } from './persistence/repositories/pet-growth-repos
 export interface RoomHost {
   /** 펫룸 창을 열거나, 이미 열려 있으면 앞으로 가져온다. */
   showRoom(): void;
-  /** 펫룸 창을 닫고 그 자리에 다른 화면을 띄운다. 새 창을 하나 더 여는 것이 아니다. */
-  navigate(destination: RoomDestination, sender: WebContents): void;
   /** 열려 있는 **모든** 창에 같은 이벤트를 보낸다. 발신 창도 포함이다. */
   broadcast(channel: string, payload: unknown): void;
 }
-
-/** 펫룸에서 건너갈 수 있는 화면. */
-export type RoomDestination = 'gacha' | 'combine' | 'dex';
 
 /** 렌더러가 받는 장면 정보. 배경 파일은 렌더러가 이 값으로 조립해 읽는다. */
 export interface RoomScene {
@@ -135,6 +128,21 @@ export class RoomState {
     if (active) console.log(`[ROOM] 활성 펫 → ${active.name} (${active.ownedPetId})`);
     host.broadcast('room:activePetChanged', active);
     return active;
+  }
+
+  /**
+   * 펫룸의 `진화시키기`를 받을 준비를 한다. 진화할 수 있으면 그 펫을 오버레이 펫으로 세우고
+   * `true`를 돌려준다. 진화 자체는 오버레이가 한다 — 성장 컨트롤러가 거기 있다.
+   *
+   * 진화 조건이 이미 사라졌으면(다른 곳에서 진화함) `false`다. 화면은 다음 push 로 최신 상태를
+   * 받으므로 여기서 던지지 않는다.
+   */
+  prepareEvolve(ownedPetId: string, host: RoomHost): boolean {
+    const view = roomPetViews(this.#collection).find((pet) => pet.ownedPetId === ownedPetId);
+    if (!view) throw new Error(`보유하지 않은 펫입니다: ${ownedPetId}`);
+    if (!view.evolutionAvailable) return false;
+    if (!view.isActive) this.setActivePet(ownedPetId, host);
+    return true;
   }
 
   /**

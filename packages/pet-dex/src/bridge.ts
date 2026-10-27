@@ -11,8 +11,6 @@ export interface DexBridge {
   openInRoom(speciesId: string): Promise<DexResponse<null>>;
   /** 이 창을 닫고 그 자리에 뽑기 화면을 띄운다. */
   goGacha(): Promise<void>;
-  /** 이 창을 닫고 그 자리에 펫룸을 띄운다. */
-  backToRoom(): Promise<void>;
 }
 
 export function unwrapDexResponse<T>(response: DexResponse<T>): T {

@@ -1,10 +1,7 @@
+import { combineMaterialsLabel } from '../dist/index.js';
 import { combineButtonState } from './button-state.mjs';
 
 const assets = new URLSearchParams(window.location.search).get('assets');
-document.querySelector('.window-close')?.addEventListener('click', () => window.close());
-document.querySelector('.window-back')?.addEventListener('click', () => {
-  void bridge().backToRoom();
-});
 
 if (!assets) throw new Error('Combine UI requires the assets query parameter.');
 
@@ -22,13 +19,15 @@ const message = panel.querySelector('.combine-message');
 const result = panel.querySelector('.combine-result');
 const selection = panel.querySelector('.selection-slots');
 const grid = panel.querySelector('.pet-grid');
-const tokens = panel.querySelector('.token-readout');
+const materials = panel.querySelector('.combine-materials');
 const resultCard = stage.querySelector('.forge-result-card');
 let snapshot = { species: [], ownedPets: [], balance: 0 };
 let activeGrade = 'common';
 let selectedIds = [];
 let busy = false;
 let pendingRequestId;
+/** 잔액을 한 번이라도 읽었는가. 읽기 전의 0 을 `토큰 부족`으로 그리지 않는다. */
+let loaded = false;
 
 function bridge() {
   if (!window.combine) throw new Error('앱에서 합성 창을 열어 주세요.');
@@ -58,6 +57,7 @@ function autoSelect() {
 
 function applySnapshot(next, selectAutomatically) {
   snapshot = next;
+  loaded = true;
   if (selectAutomatically) autoSelect();
   else {
     const available = new Set(eligible().map((pet) => pet.ownedPetId));
@@ -77,12 +77,17 @@ async function refresh(selectAutomatically = false) {
 }
 
 function render() {
-  tokens.textContent = `TOKEN ${snapshot.balance.toLocaleString()}`;
+  // 잔액은 공통 상단 바가 보인다(`@pet/shell`). 합성 중에는 탭과 닫기를 막는다.
+  signalBusy(busy || stage.classList.contains('combining'));
+  materials.textContent = combineMaterialsLabel(activeGrade, selectedIds.length);
   for (const tab of panel.querySelectorAll('[data-grade]')) {
     tab.classList.toggle('active', tab.dataset.grade === activeGrade);
   }
+  // 누를 수 없는 이유는 버튼 글자가 말한다(`5/10`, `토큰 부족`).
   const button = panel.querySelector('.combine-button');
-  const buttonState = combineButtonState(activeGrade, snapshot.balance, selectedIds.length);
+  const buttonState = loaded
+    ? combineButtonState(activeGrade, snapshot.balance, selectedIds.length)
+    : { disabled: true, label: '불러오는 중' };
   button.textContent = buttonState.label;
   button.disabled = buttonState.disabled || busy || stage.classList.contains('combining');
   selection.replaceChildren(
@@ -222,6 +227,7 @@ function playCombineSuccess(saved) {
   resultCard.replaceChildren(
     petImage(saved.result),
     cardText(saved.result.rarity, saved.result.name),
+    resultActions(saved.result.ownedPetId),
     close,
   );
   stage.classList.add('combining');
@@ -234,6 +240,49 @@ function playCombineSuccess(saved) {
     },
     reducedMotion ? 0 : 1_500,
   );
+}
+
+/**
+ * 결과 뒤 다음 행동(동선 2단계 D). 합성 결과는 첫 펫일 수 없어서(재료 10장이 필요하다) 늘
+ * `오버레이로 지정`이고, 금색 기본 버튼은 `펫룸에서 보기`다.
+ */
+function resultActions(ownedPetId) {
+  const actions = document.createElement('div');
+  actions.className = 'forge-result-actions';
+  const toOverlay = document.createElement('button');
+  toOverlay.type = 'button';
+  toOverlay.className = 'forge-result-action';
+  toOverlay.textContent = '오버레이로 지정';
+  toOverlay.addEventListener('click', () => void bringToOverlay(ownedPetId));
+  const inRoom = document.createElement('button');
+  inRoom.type = 'button';
+  inRoom.className = 'forge-result-action primary';
+  inRoom.textContent = '펫룸에서 보기';
+  inRoom.addEventListener('click', () => void showInRoom(ownedPetId));
+  actions.append(toOverlay, inRoom);
+  return actions;
+}
+
+async function bringToOverlay(ownedPetId) {
+  try {
+    await bridge().setOverlayPet(ownedPetId);
+    window.close();
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : '오버레이로 지정하지 못했어요.';
+  }
+}
+
+async function showInRoom(ownedPetId) {
+  try {
+    await bridge().openInRoom(ownedPetId);
+  } catch (error) {
+    message.textContent = error instanceof Error ? error.message : '펫룸을 열지 못했어요.';
+  }
+}
+
+function signalBusy(value) {
+  if (typeof CustomEvent !== 'function') return;
+  document.dispatchEvent(new CustomEvent('petto:busy', { detail: value }));
 }
 
 function dismissForgeResult() {
