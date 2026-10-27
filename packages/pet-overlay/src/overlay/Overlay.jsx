@@ -188,7 +188,7 @@ export default function Overlay({ g, activePet, roster, activeId, onSelectPet })
           {face === 'bored' && <div className="mood-zzz">💤</div>}
         </div>
 
-        {/* 펫이 하는 말은 한 번에 하나다. 순서(첫 안내 > 진화 > 알림)와 메뉴가 열리면 비키는 규칙은 `speech.ts`. */}
+        {/* 펫이 하는 말은 한 번에 하나다. 순서(첫 안내 > 알림 > 진화)와 메뉴가 열리면 비키는 규칙은 `speech.ts`. */}
         {speech?.kind === 'menu-hint' && (
           <SpeechBubble
             label={`${activePet?.name ?? pet.name}의 인사`}

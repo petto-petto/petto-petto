@@ -22,14 +22,19 @@ test('같은 종류의 알림은 마지막 것 하나만 기다린다', () => {
   assert.deepEqual(enqueueNotices([achievement, gacha], [later]), [later, gacha]);
 });
 
-test('말풍선 우선순위 — 메뉴가 열리면 비키고, 첫 안내 > 진화 > 알림', () => {
+test('말풍선 우선순위 — 메뉴가 열리면 비키고, 첫 안내 > 알림 > 진화', () => {
   const base = { menuOpen: false, menuHintPending: false, evolutionAvailable: false, notices: [] };
   assert.equal(currentSpeech(base), null);
   assert.deepEqual(currentSpeech({ ...base, notices: [gacha] }), { kind: 'notice', notice: gacha });
   assert.deepEqual(
-    currentSpeech({ ...base, evolutionAvailable: true, notices: [gacha] }),
+    currentSpeech({ ...base, evolutionAvailable: true, notices: [achievement] }),
+    { kind: 'notice', notice: achievement },
+    '진화를 미뤄도 보상 알림은 뜬다',
+  );
+  assert.deepEqual(
+    currentSpeech({ ...base, evolutionAvailable: true, notices: [] }),
     { kind: 'evolve' },
-    '진화 말풍선이 떠 있으면 알림은 기다린다',
+    '알림을 닫으면 진화 말풍선이 돌아온다',
   );
   assert.deepEqual(
     currentSpeech({ ...base, menuHintPending: true, evolutionAvailable: true, notices: [gacha] }),

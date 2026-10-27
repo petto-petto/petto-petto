@@ -92,8 +92,6 @@ const hpBar = required<HTMLElement>('.enemy-hp');
 const hpFill = required<HTMLElement>('#enemy-hp-fill');
 const hpLabel = required<HTMLElement>('#enemy-hp-label');
 const stageLabel = required<HTMLElement>('#stage-label');
-const petHud = required<HTMLElement>('#battle-pet-hud');
-const petHudName = required<HTMLElement>('#battle-pet-name');
 const combatEffects = required<HTMLElement>('.combat-effects');
 const enemySlam = required<HTMLElement>('.enemy-slam');
 const defeatBurst = required<HTMLElement>('.defeat-burst');
@@ -256,9 +254,6 @@ function render(next: BattleState, previous?: BattleState): void {
   enemy.hidden = !hasPet;
   hpBar.hidden = !hasPet;
   stageLabel.hidden = !hasPet;
-  petHud.hidden = !hasPet;
-  const petText = next.activePet ? `${next.activePet.displayName} Lv.${next.activePet.level}` : '';
-  if (petHudName.textContent !== petText) petHudName.textContent = petText;
   combatEffects.hidden = !hasPet;
   notice.textContent = !hasPet
     ? next.selectionSource === 'ROOM'

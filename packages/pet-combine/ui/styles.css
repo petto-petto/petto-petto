@@ -80,7 +80,8 @@ body {
   grid-area: pets;
   min-width: 0;
   flex-wrap: nowrap;
-  overflow-x: scroll;
+  /* 카드가 칸을 넘칠 때만 스크롤바를 보인다. 등급마다 종이 둘뿐이라 지금은 넘치지 않는다. */
+  overflow-x: auto;
   overflow-y: hidden;
   scrollbar-color: #6b4a2e #c3a16a;
   scrollbar-width: thin;

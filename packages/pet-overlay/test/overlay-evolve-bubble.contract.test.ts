@@ -31,7 +31,7 @@ test('레벨이 올라도 저절로 진화하지 않는다', () => {
  * 본다. 접힌 말풍선은 진화할 때까지 남아 있어야 한다.
  */
 test('진화할 수 있는 동안 접힌 말풍선이 남아 있다', () => {
-  // 진화 가능하고 메뉴가 닫혀 있으면 진화 말풍선이다(첫 펫 안내만 앞선다 — `speech.ts`).
+  // 진화 가능하고 메뉴가 닫혀 있으면 진화 말풍선이다(첫 펫 안내와 알림만 앞선다 — `speech.ts`).
   assert.match(overlay, /evolutionAvailable: pet\.evolutionAvailable/);
   assert.match(overlay, /speech\?\.kind === 'evolve' && \(\s*<EvolveBubble/);
   // 고른 대사가 없으면 접힌 상태다. 처음엔 없다.

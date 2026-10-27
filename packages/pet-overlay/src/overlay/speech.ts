@@ -43,14 +43,14 @@ export type Speech =
 /**
  * 지금 보일 말풍선. 메뉴가 열리면 모두 비킨다(메뉴와 같은 자리다).
  *
- * 첫 안내가 가장 먼저다 — 메뉴를 알아야 나머지 말풍선의 목적지도 다시 찾아갈 수 있다. 진화는 알림보다
- * 앞선다. 진화 말풍선은 진화할 때까지 남는 것이 규칙이라(`EvolveBubble`), 알림이 그 자리를 빼앗으면
- * 진화를 놓친다.
+ * 첫 안내가 가장 먼저다 — 메뉴를 알아야 나머지 말풍선의 목적지도 다시 찾아갈 수 있다. 알림은 진화보다
+ * 앞선다. 진화 말풍선은 진화할 때까지 남는 것이 규칙이라(`EvolveBubble`), 진화를 미루는 동안 그 뒤에
+ * 줄 세우면 알림은 영영 뜨지 않는다. 알림은 닫으면 끝나므로, 닫는 순간 진화 말풍선이 돌아와 놓칠 일이 없다.
  */
 export function currentSpeech(input: SpeechInput): Speech | null {
   if (input.menuOpen) return null;
   if (input.menuHintPending) return { kind: 'menu-hint' };
-  if (input.evolutionAvailable) return { kind: 'evolve' };
   const notice = input.notices[0];
-  return notice ? { kind: 'notice', notice } : null;
+  if (notice) return { kind: 'notice', notice };
+  return input.evolutionAvailable ? { kind: 'evolve' } : null;
 }
