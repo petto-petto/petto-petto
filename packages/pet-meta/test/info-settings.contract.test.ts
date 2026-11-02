@@ -147,7 +147,7 @@ test('INFO-001: 누적 토큰은 써도 줄지 않고 업적 보상도 포함한
   const harness = new Harness();
   harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 150_000]]);
   harness.tokens.grantOnce('achievement:collection.first_pet', 100_000, '첫 만남');
-  harness.tokens.spend(100_000); // 뽑기 한 번
+  harness.tokens.spend(100_000); // 누적·잔액 계산을 위한 소비
 
   const summary = harness.summary();
 
@@ -175,12 +175,12 @@ test('INFO-001: 오늘 획득은 오늘 지급된 양만 더하고 소비와 어
 
 test('토큰 카드는 지금 잔액으로 뽑기를 몇 번 할 수 있는지 알려 준다', () => {
   const harness = new Harness();
-  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 255_309]]);
-  // 뽑기 1회 100,000 — 몫만 센다. 정보 패널의 `뽑기 N회 가능 · 뽑으러 가기 ›` 링크가 쓴다.
+  harness.seed([['claude_code', '2026-08-24', 'claude-opus-5', 2_255_309]]);
+  // 뽑기 1회 1,000,000 — 몫만 센다. 정보 패널의 `뽑기 N회 가능 · 뽑으러 가기 ›` 링크가 쓴다.
   assert.equal(harness.summary().drawsAvailable.value, 2);
 
   const poor = new Harness();
-  poor.seed([['claude_code', '2026-08-24', 'claude-opus-5', 99_999]]);
+  poor.seed([['claude_code', '2026-08-24', 'claude-opus-5', 999_999]]);
   assert.equal(poor.summary().drawsAvailable.value, 0);
 
   const broken = new Harness();

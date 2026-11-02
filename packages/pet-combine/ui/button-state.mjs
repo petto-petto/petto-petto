@@ -1,4 +1,4 @@
-const costs = { common: 30_000, rare: 100_000 };
+const costs = { common: 300_000, rare: 1_000_000 };
 const requiredMaterials = 10;
 
 export function combineButtonState(grade, balance, selectedCount) {

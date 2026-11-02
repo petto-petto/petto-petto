@@ -203,7 +203,7 @@ export class StubGacha implements GachaPort {
   readonly #fusions: number;
   readonly #drawCost: number;
 
-  constructor(draws: number | null, fusions: number, drawCost = 100_000) {
+  constructor(draws: number | null, fusions: number, drawCost = 1_000_000) {
     this.#draws = draws;
     this.#fusions = fusions;
     this.#drawCost = drawCost;

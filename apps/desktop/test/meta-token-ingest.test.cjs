@@ -93,15 +93,15 @@ test('수집한 증가분이 토큰 표에 쌓이고 보상 대상 토큰이 그
 test('사용량 보상으로 쌓인 재화로 뽑기 1회 값을 치를 수 있다', async (t) => {
   const { meta, collector, tokens, run } = await fixture(t);
   run();
-  collector.accumulate('claude_code', '2026-10-05', 'claude-opus-5', meta.tokenCounts(120_000));
+  collector.accumulate('claude_code', '2026-10-05', 'claude-opus-5', meta.tokenCounts(1_200_000));
   run();
 
-  // 뽑기 1회는 100,000이다. 예전의 1/10,000 환산에서는 12밖에 쌓이지 않아 치를 수 없었다.
-  assert.equal(tokens.spendOnce('gacha:test-request', 100_000, '펫 뽑기'), 'spent');
-  assert.equal(tokens.balance(), 20_000);
+  // 뽑기 1회는 1,000,000이다. 사용량 1,200,000을 1:1로 적립해 비용을 치른다.
+  assert.equal(tokens.spendOnce('gacha:test-request', 1_000_000, '펫 뽑기'), 'spent');
+  assert.equal(tokens.balance(), 200_000);
   assert.deepEqual(
     tokens.totals(),
-    { observed: 120_000, reward: 120_000 },
+    { observed: 1_200_000, reward: 1_200_000 },
     '사용량은 소비해도 줄지 않는다',
   );
 });

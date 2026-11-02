@@ -39,8 +39,8 @@ test('TokenClient는 신규 지급을 한 번만 기록하고 잔액보다 많�
   assert.equal(currency.grantOnce('test:funds', 10_000_000, '테스트 지급'), false);
   assert.equal(currency.spend(10_000_001, '뽑기'), false);
   assert.equal(currency.balance(), 10_000_000);
-  assert.equal(currency.spend(100_000, '뽑기'), true);
-  assert.equal(currency.balance(), 9_900_000);
+  assert.equal(currency.spend(1_000_000, '뽑기'), true);
+  assert.equal(currency.balance(), 9_000_000);
   assert.throws(() => currency.spend(-1, '뽑기'));
 });
 
@@ -112,12 +112,12 @@ test('뽑기는 재화 차감과 펫 생성을 함께 확정하고 펫 저장 �
   currency.grantOnce('test:funds', 10_000_000, '테스트 지급');
   const gacha = createPersistentGacha(pets, currency, transaction, () => 0);
   const result = gacha.draw(1);
-  assert.equal(result.balance, 9_900_000);
+  assert.equal(result.balance, 9_000_000);
   assert.equal(pets.countOwnedPets(), 1);
   database.exec(`CREATE TRIGGER fail_feature_pet BEFORE INSERT ON owned_pets
     BEGIN SELECT RAISE(ABORT, 'pet save failed'); END`);
   assert.throws(() => gacha.draw(1), /pet save failed/);
-  assert.equal(currency.balance(), 9_900_000);
+  assert.equal(currency.balance(), 9_000_000);
   assert.equal(pets.countOwnedPets(), 1);
   assert.equal(gacha.load().totalDrawCount, 1);
 });
@@ -133,7 +133,7 @@ test('합성은 실제 개체 10개와 비용을 함께 바꾸고 결과 실패 
     materials.slice(0, 10).map((pet) => pet.ownedPetId),
   );
   assert.equal(first.result.rarity, 'RARE');
-  assert.equal(first.balance, 9_970_000);
+  assert.equal(first.balance, 9_700_000);
   assert.equal(pets.countOwnedPets(), 11);
   database.exec(`CREATE TRIGGER fail_feature_result BEFORE INSERT ON owned_pets
     WHEN NEW.species_id IN ('002', '005') BEGIN SELECT RAISE(ABORT, 'result failed'); END`);
@@ -145,7 +145,7 @@ test('합성은 실제 개체 10개와 비용을 함께 바꾸고 결과 실패 
       ),
     /result failed/,
   );
-  assert.equal(currency.balance(), 9_970_000);
+  assert.equal(currency.balance(), 9_700_000);
   assert.equal(pets.countOwnedPets(), 11);
 });
 
@@ -157,14 +157,14 @@ test('부족한 재화와 잘못된 합성 재료는 어떤 원장도 바꾸지 
   assert.throws(() => gacha.draw(1), GachaActionError);
   assert.equal(gacha.load().totalDrawCount, 0);
   assert.equal(pets.countOwnedPets(), 0);
-  currency.grantOnce('small', 30_000, '테스트');
+  currency.grantOnce('small', 300_000, '테스트');
   const materials = pets.createOwnedPets(Array(10).fill('003'));
   const combine = createPersistentCombine(pets, currency, transaction, () => 0);
   assert.throws(
     () => combine.combine('common', Array(10).fill(materials[0].ownedPetId)),
     CombineActionError,
   );
-  assert.equal(currency.balance(), 30_000);
+  assert.equal(currency.balance(), 300_000);
   pets.setActivePet(materials[0].ownedPetId);
   assert.throws(
     () =>
@@ -174,7 +174,7 @@ test('부족한 재화와 잘못된 합성 재료는 어떤 원장도 바꾸지 
       ),
     CombineActionError,
   );
-  assert.equal(currency.balance(), 30_000);
+  assert.equal(currency.balance(), 300_000);
   const other = pets.createOwnedPets(['003'])[0];
   const validMaterials = [...materials.slice(1), other];
   currency.spend(1, '다른 기능');
@@ -186,7 +186,7 @@ test('부족한 재화와 잘못된 합성 재료는 어떤 원장도 바꾸지 
       ),
     CombineActionError,
   );
-  assert.equal(currency.balance(), 29_999);
+  assert.equal(currency.balance(), 299_999);
   assert.equal(pets.countOwnedPets(), 11);
 });
 
@@ -202,10 +202,10 @@ test('RARE 합성은 실제 개체 10개를 EPIC 1개로 바꾸고 잔액을 재
   );
   assert.equal(saved.result.rarity, 'EPIC');
   assert.equal(saved.result.level, 1);
-  assert.equal(saved.balance, 9_900_000);
+  assert.equal(saved.balance, 9_000_000);
   database.close();
   database.open();
-  assert.equal(currency.balance(), 9_900_000);
+  assert.equal(currency.balance(), 9_000_000);
   assert.deepEqual(
     pets.listOwnedPets().map((pet) => pet.ownedPetId),
     [saved.result.ownedPetId],
@@ -245,11 +245,11 @@ test('뽑기와 합성은 같은 펫 명부와 재화 잔액을 다음 조회에
   const combine = createPersistentCombine(pets, currency, transaction, () => 0);
   assert.equal(combine.load().balance, 10_000_000);
   const draw = gacha.draw(1);
-  assert.equal(combine.load().balance, 9_900_000);
+  assert.equal(combine.load().balance, 9_000_000);
   assert.equal(combine.load().ownedPets[0].ownedPetId, draw.ownedPetIds[0]);
   const more = pets.createOwnedPets(Array(9).fill('003'));
   combine.combine('common', [draw.ownedPetIds[0], ...more.map((pet) => pet.ownedPetId)]);
-  assert.equal(gacha.load().balance, 9_870_000);
+  assert.equal(gacha.load().balance, 8_700_000);
   assert.equal(gacha.load().ownedCount, 1);
 });
 
@@ -265,7 +265,7 @@ test('같은 요청 ID를 다시 보내거나 재시작해도 두 번 차감하�
   database.open();
   const restartedGacha = createPersistentGacha(pets, currency, transaction, () => 0);
   assert.throws(() => restartedGacha.draw(1, 'same-draw'));
-  assert.equal(currency.balance(), 9_900_000);
+  assert.equal(currency.balance(), 9_000_000);
   assert.equal(pets.countOwnedPets(), 1);
   const materials = pets.createOwnedPets(Array(10).fill('003'));
   const combine = createPersistentCombine(pets, currency, transaction, () => 0);
@@ -282,7 +282,7 @@ test('같은 요청 ID를 다시 보내거나 재시작해도 두 번 차감하�
       'same-combine',
     ),
   );
-  assert.equal(currency.balance(), 9_870_000);
+  assert.equal(currency.balance(), 8_700_000);
   assert.equal(pets.countOwnedPets(), 12);
 });
 
@@ -409,13 +409,13 @@ test('합성 화면은 preload와 IPC로 실제 보유 개체 10개를 보내고
   });
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(element('.selection-slots').children.length, 10);
-  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 30K 토큰');
+  assert.equal(element('.combine-materials').textContent, '재료 10 / 10 · 300K 토큰');
   assert.equal(element('.combine-button').textContent, '합성하기');
   assert.equal(element('.combine-button').disabled, false);
   element('.combine-button').listeners.click();
   element('.combine-button').listeners.click();
   await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(currency.balance(), 9_970_000);
+  assert.equal(currency.balance(), 9_700_000);
   assert.equal(pets.countOwnedPets(), 1);
   // 보유 펫이 바뀌었으니 펫룸·오버레이가 다시 읽도록 한 번 알린다.
   assert.equal(petsChanged, 1);
