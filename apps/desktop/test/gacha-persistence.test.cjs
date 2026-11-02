@@ -30,7 +30,7 @@ async function fixture(t) {
     new TokenRepository(database),
     new CurrencyRepository(database),
   );
-  currency.grantOnce('test:funds', 10_000_000, '테스트 지급');
+  currency.grantOnce('test:funds', 11_000_000, '테스트 지급');
   const gacha = createPersistentGacha(
     client,
     currency,
@@ -292,7 +292,7 @@ test('뽑기 화면의 조회·저장 실패는 재시도할 수 있고 실패 �
   assert.equal(element('stage-heading').textContent, '저장 실패');
   assert.equal(client.countOwnedPets(), 0);
   // 잔액은 상단 바가 보인다. 실패한 소환이 차감하지 않았으니 10회 소환이 그대로 가능하다.
-  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · RARE 이상 보장');
+  assert.equal(element('draw-ten-cost').textContent, '10M 토큰 · RARE 이상 보장');
   assert.equal(element('pity-counter').textContent, '0 / 100');
   assert.equal(element('draw-one').disabled, false);
   element('draw-one').listeners.click();
@@ -303,14 +303,14 @@ test('뽑기 화면의 조회·저장 실패는 재시도할 수 있고 실패 �
 });
 
 test('잔액이 모자란 소환은 누르기 전에 비활성으로 보이고 부족분과 모으는 방법을 알린다', async (t) => {
-  // 10,000,000 - 9,744,691 = 255,309
-  const { element, settle } = await uiHarness(t, { spent: 9_744_691 });
+  // 11,000,000 - 1,744,691 = 9,255,309
+  const { element, settle } = await uiHarness(t, { spent: 1_744_691 });
   await settle();
   assert.equal(element('draw-ten').disabled, true);
   assert.equal(element('draw-ten').classList.contains('unaffordable'), true);
-  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · 745K 부족');
+  assert.equal(element('draw-ten-cost').textContent, '10M 토큰 · 745K 부족');
   assert.equal(element('draw-one').disabled, false);
-  assert.equal(element('draw-one-cost').textContent, '100K 토큰');
+  assert.equal(element('draw-one-cost').textContent, '1M 토큰');
   assert.equal(element('token-hint').hidden, false);
   assert.equal(element('token-hint').textContent, 'AI 도구를 쓰면 토큰이 쌓여요.');
 });
@@ -319,7 +319,7 @@ test('잔액이 충분하면 토큰 안내를 보이지 않는다', async (t) =>
   const { element, settle } = await uiHarness(t);
   await settle();
   assert.equal(element('draw-ten').disabled, false);
-  assert.equal(element('draw-ten-cost').textContent, '1M 토큰 · RARE 이상 보장');
+  assert.equal(element('draw-ten-cost').textContent, '10M 토큰 · RARE 이상 보장');
   assert.equal(element('token-hint').hidden, true);
 });
 
@@ -353,7 +353,7 @@ test('첫 펫의 결과 화면은 오버레이에서 만나기가 기본이고, 
   assert.equal(element('result-overlay').textContent, '오버레이에서 만나기');
   assert.equal(element('result-overlay').classList.contains('primary'), true);
   assert.equal(element('result-room').classList.contains('primary'), false);
-  assert.equal(element('result-again-cost').textContent, '100K 토큰');
+  assert.equal(element('result-again-cost').textContent, '1M 토큰');
 
   const [first] = client.listOwnedPets();
   element('result-overlay').listeners.click();
@@ -416,8 +416,8 @@ test('10회 소환 결과는 가장 높은 등급의 첫 카드를 고르고, �
 });
 
 test('잔액이 모자라면 한 번 더는 비활성이고 부족분을 쓴다', async (t) => {
-  // 잔액 1,100,000 에서 10회 소환하면 100,000 이 남아 다음 10회는 모자라다.
-  const { element, settle, flushTimers } = await uiHarness(t, { spent: 8_900_000 });
+  // 잔액 11,000,000 에서 10회 소환하면 1,000,000 이 남아 다음 10회는 모자라다.
+  const { element, settle, flushTimers } = await uiHarness(t);
   await settle();
   element('draw-ten').listeners.click();
   await settle();
@@ -425,5 +425,5 @@ test('잔액이 모자라면 한 번 더는 비활성이고 부족분을 쓴다'
   flushTimers();
   await settle();
   assert.equal(element('result-again').disabled, true);
-  assert.equal(element('result-again-cost').textContent, '1M 토큰 · 900K 부족');
+  assert.equal(element('result-again-cost').textContent, '10M 토큰 · 9M 부족');
 });

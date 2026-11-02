@@ -5,6 +5,8 @@ import { combineButtonState } from '../ui/button-state.mjs';
 
 test('토큰 부족을 재료 수보다 먼저 표시하고 버튼을 비활성화한다', () => {
   for (const grade of ['common', 'rare'] as const) {
+    const expectedCost = grade === 'common' ? 300_000 : 1_000_000;
+    assert.equal(combineCost(grade), expectedCost);
     assert.deepEqual(combineButtonState(grade, combineCost(grade) - 1, 9), {
       disabled: true,
       label: '토큰 부족',

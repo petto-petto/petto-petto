@@ -4,7 +4,7 @@ export type GachaGrade = (typeof GACHA_GRADES)[number];
 export type DrawCount = 1 | 10;
 
 /** 소환 1회 비용. 저장 로직의 차감액과 화면의 버튼 상태가 이 값 하나를 본다. */
-export const GACHA_DRAW_COST = 100_000;
+export const GACHA_DRAW_COST = 1_000_000;
 
 export function drawCost(count: DrawCount): number {
   return count * GACHA_DRAW_COST;

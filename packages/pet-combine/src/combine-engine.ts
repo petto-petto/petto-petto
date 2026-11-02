@@ -38,7 +38,7 @@ export interface CombineEngine<Pet extends CombinePet> {
 
 /** 합성 한 번에 드는 같은 등급 재료 수. 도감의 획득 경로 안내도 이 값을 읽는다. */
 export const COMBINE_MATERIAL_COUNT = 10;
-const COST: Readonly<Record<CombineGrade, number>> = { common: 30_000, rare: 100_000 };
+const COST: Readonly<Record<CombineGrade, number>> = { common: 300_000, rare: 1_000_000 };
 const RESULT_GRADE: Readonly<Record<CombineGrade, ResultGrade>> = { common: 'rare', rare: 'epic' };
 
 export function combineCost(grade: CombineGrade): number {
@@ -59,7 +59,7 @@ export function combineMaterialsLabel(grade: CombineGrade, selectedCount: number
 export function createCombineEngine<Pet extends CombinePet>(
   petsByGrade: PetsByGrade<Pet>,
   randomInt: RandomInt,
-  initialTokens = 200_000,
+  initialTokens = 2_000_000,
   copiesPerPet = 30,
 ): CombineEngine<Pet> {
   const petById = new Map<string, Pet>();

@@ -32,11 +32,11 @@ test('자동 선택을 제거하고 같은 등급의 다른 종으로 교체할 
   assert.equal(engine.getState().selection.length, 10);
 });
 
-test('common 10장은 3만 Token을 차감하고 rare 결과를 균등 후보에서 선택한다', () => {
+test('common 10장은 30만 Token을 차감하고 rare 결과를 균등 후보에서 선택한다', () => {
   const engine = createCombineEngine<CombinePet>(pets, () => 1);
   const result = engine.combine();
   assert.deepEqual(result, { kind: 'success', grade: 'rare', pet: pets.rare[1], stage: 1 });
-  assert.equal(engine.getState().tokenBalance, 170_000);
+  assert.equal(engine.getState().tokenBalance, 1_700_000);
   assert.equal(engine.getState().inventory.c1, 20);
 });
 
@@ -52,7 +52,7 @@ test('재료 부족과 Token 부족은 상태를 차감하지 않는다', () => 
   assert.deepEqual(engine.getState(), tokenBefore);
 });
 
-test('20만 Token으로 rare 합성은 두 번 성공하고 세 번째에는 Token 부족을 보인다', () => {
+test('200만 Token으로 rare 합성은 두 번 성공하고 세 번째에는 Token 부족을 보인다', () => {
   const engine = createCombineEngine<CombinePet>(pets, () => 0);
   engine.selectGrade('rare');
 

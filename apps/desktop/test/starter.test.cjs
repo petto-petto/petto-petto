@@ -43,7 +43,7 @@ test('첫 실행에 뽑기 1회분을 지급한다', async () => {
       amount: FIRST_DRAW_GRANT,
     });
     assert.equal(tokens.balance(), FIRST_DRAW_GRANT);
-    assert.equal(FIRST_DRAW_GRANT, 100_000, '뽑기 1회 비용과 같아야 한다');
+    assert.equal(FIRST_DRAW_GRANT, 1_000_000, '뽑기 1회 비용과 같아야 한다');
   } finally {
     database.close();
     rmSync(directory, { recursive: true, force: true });
@@ -55,7 +55,7 @@ test('두 번째 실행부터는 지급하지 않는다', async () => {
   const first = await open(directory);
   try {
     first.grantFirstDrawCurrency(first.tokens);
-    first.tokens.spend(100_000, '뽑기');
+    first.tokens.spend(1_000_000, '뽑기');
     assert.equal(first.tokens.balance(), 0);
   } finally {
     first.database.close();

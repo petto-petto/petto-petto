@@ -16,9 +16,10 @@
  */
 
 import type { PetClient, TokenClient } from '@pet/client';
+import { GACHA_DRAW_COST } from '@pet/gacha';
 
-/** 뽑기 1회 비용. `@pet/gacha` 의 `count * 100_000` 과 같아야 한다. */
-export const FIRST_DRAW_GRANT = 100_000;
+/** 새 사용자가 첫 뽑기를 한 번 할 수 있도록 현재 1회 비용을 지급한다. */
+export const FIRST_DRAW_GRANT = GACHA_DRAW_COST;
 
 const FIRST_DRAW_KEY = 'starter:first-draw';
 

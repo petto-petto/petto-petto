@@ -24,7 +24,7 @@ import {
   type TickReport,
 } from '@pet/meta';
 
-const DRAW_COST = 100_000;
+const DRAW_COST = 1_000_000;
 const READY = '뽑기를 할 수 있어!';
 
 function app() {
@@ -67,7 +67,7 @@ function app() {
 
 test('6.3: 미만에서 이상으로 넘어간 순간에만 알린다', () => {
   // 처음 본 상태는 "바뀐 순간"이 아니다. 앱을 켰을 때 이미 뽑을 수 있어도 알리지 않는다.
-  assert.deepEqual(gachaReadyTransition(undefined, 150_000, DRAW_COST), {
+  assert.deepEqual(gachaReadyTransition(undefined, 1_500_000, DRAW_COST), {
     affordable: true,
     notify: false,
   });
@@ -76,16 +76,16 @@ test('6.3: 미만에서 이상으로 넘어간 순간에만 알린다', () => {
     notify: false,
   });
   // 정확히 비용만큼이면 뽑을 수 있다.
-  assert.deepEqual(gachaReadyTransition(false, 100_000, DRAW_COST), {
+  assert.deepEqual(gachaReadyTransition(false, 1_000_000, DRAW_COST), {
     affordable: true,
     notify: true,
   });
-  assert.deepEqual(gachaReadyTransition(false, 99_999, DRAW_COST), {
+  assert.deepEqual(gachaReadyTransition(false, 999_999, DRAW_COST), {
     affordable: false,
     notify: false,
   });
   // 이미 가능한 상태에서 더 쌓여도 다시 알리지 않는다.
-  assert.deepEqual(gachaReadyTransition(true, 900_000, DRAW_COST), {
+  assert.deepEqual(gachaReadyTransition(true, 9_000_000, DRAW_COST), {
     affordable: true,
     notify: false,
   });
@@ -95,12 +95,13 @@ test('6.3: 미만에서 이상으로 넘어간 순간에만 알린다', () => {
 test('6.3: 사용량 보상으로 뽑기 비용을 넘기면 말풍선이 한 번 나온다', async () => {
   const { state, earn, broadcasts } = app();
   state.meta.settings.notifyGachaReady = true;
+  state.meta.settings.notifyAchievement = false;
 
   await earn(0); // 첫 집계는 기준점만 잡는다. 잔액 0.
-  const below = await earn(60_000);
+  const below = await earn(600_000);
   assert.equal(below.bubble, undefined, '아직 비용 미만이다');
 
-  const crossed = await earn(60_000);
+  const crossed = await earn(600_000);
   assert.equal(crossed.bubble, READY);
   assert.deepEqual(
     broadcasts.findLast((event) => event.channel === 'usage:aggregated'),
@@ -115,26 +116,28 @@ test('6.3: 사용량 보상으로 뽑기 비용을 넘기면 말풍선이 한 �
     '말풍선은 펫 창이 받는 채널로도 나간다. 오버레이는 종류를 보고 버튼을 단다',
   );
 
-  const still = await earn(60_000);
+  const still = await earn(600_000);
   assert.equal(still.bubble, undefined, '계속 가능한 동안은 다시 알리지 않는다');
 });
 
 test('6.3: 비용 미만으로 내려갔다가 다시 넘겨야 다시 알린다', async () => {
   const { state, tokens, earn } = app();
   state.meta.settings.notifyGachaReady = true;
+  state.meta.settings.notifyAchievement = false;
   await earn(0);
-  assert.equal((await earn(120_000)).bubble, READY);
+  assert.equal((await earn(1_200_000)).bubble, READY);
 
-  tokens.spend(100_000); // 뽑기 한 번. 잔액 20,000.
-  assert.equal((await earn(30_000)).bubble, undefined, '50,000 — 아직 미만');
-  assert.equal((await earn(50_000)).bubble, READY, '100,000 — 다시 넘겼다');
+  tokens.spend(1_000_000); // 뽑기 한 번. 잔액 200,000.
+  assert.equal((await earn(300_000)).bubble, undefined, '500,000 — 아직 미만');
+  assert.equal((await earn(500_000)).bubble, READY, '1,000,000 — 다시 넘겼다');
 });
 
 test('6.3: 알림이 꺼져 있거나 오버레이가 숨겨져 있으면 표시하지 않고 나중에 재생하지도 않는다', async () => {
   const off = app();
+  off.state.meta.settings.notifyAchievement = false;
   await off.earn(0);
   assert.equal(off.state.meta.settings.notifyGachaReady, false, '초기값은 꺼짐이다');
-  const suppressed = await off.earn(120_000);
+  const suppressed = await off.earn(1_200_000);
   assert.equal(suppressed.bubble, undefined);
   assert.deepEqual(suppressed.bubbles, []);
   off.state.meta.settings.notifyGachaReady = true;
@@ -142,9 +145,10 @@ test('6.3: 알림이 꺼져 있거나 오버레이가 숨겨져 있으면 표시
 
   const hidden = app();
   hidden.state.meta.settings.notifyGachaReady = true;
+  hidden.state.meta.settings.notifyAchievement = false;
   hidden.state.meta.settings.overlayVisible = false;
   await hidden.earn(0);
-  assert.equal((await hidden.earn(120_000)).bubble, undefined);
+  assert.equal((await hidden.earn(1_200_000)).bubble, undefined);
   hidden.state.meta.settings.overlayVisible = true;
   assert.equal((await hidden.earn(10_000)).bubble, undefined);
 });
@@ -154,7 +158,8 @@ test('6.3: 업적 보상은 받아야 잔액이 오르고, 그다음 집계에�
   state.meta.settings.notifyGachaReady = true;
   await earn(0);
 
-  pets.give('003'); // `첫 만남` — 보상 100,000 이 곧 뽑기 1회 값이다.
+  await earn(900_000); // 업적 보상을 받기 전에는 뽑기 비용에 못 미친다.
+  pets.give('003'); // `첫 만남` 보상은 100,000이다.
   const unlocked = await earn(0);
   assert.deepEqual(unlocked.newlyUnlocked, ['collection.first_pet']);
   assert.equal(unlocked.bubble, '첫 만남 달성! 보상을 받아 가!', '아직 받지 않아 잔액은 그대로다');
@@ -163,7 +168,7 @@ test('6.3: 업적 보상은 받아야 잔액이 오르고, 그다음 집계에�
   assert.ok(claim);
   assert.deepEqual(claim('collection.first_pet'), { claimed: true, error: undefined });
 
-  assert.equal((await earn(0)).bubble, READY);
+  assert.equal((await earn(0)).bubble, `토큰 마일스톤 Ⅰ 달성! 보상을 받아 가! · ${READY}`);
 });
 
 test('6.3: 사용량으로 비용을 넘긴 집계에서 업적도 달성하면 한 말풍선에 이어 붙인다', async () => {
@@ -172,13 +177,13 @@ test('6.3: 사용량으로 비용을 넘긴 집계에서 업적도 달성하면 
   await earn(0);
 
   pets.give('003');
-  const report = await earn(120_000);
+  const report = await earn(1_200_000);
 
-  assert.equal(report.bubble, `첫 만남 달성! 보상을 받아 가! · ${READY}`);
+  assert.equal(report.bubble, `2개 업적을 달성했어! 보상을 받아 가! · ${READY}`);
   assert.deepEqual(
     report.bubbles,
     [
-      { kind: 'achievement', text: '첫 만남 달성! 보상을 받아 가!' },
+      { kind: 'achievement', text: '2개 업적을 달성했어! 보상을 받아 가!' },
       { kind: 'gacha-ready', text: READY },
     ],
     '오버레이는 말풍선을 하나씩, 업적부터 보인다',
@@ -188,10 +193,11 @@ test('6.3: 사용량으로 비용을 넘긴 집계에서 업적도 달성하면 
 test('6.3: 잔액을 읽지 못한 집계는 알리지 않고, 다음 집계가 이어서 판단한다', async () => {
   const { state, tokens, earn } = app();
   state.meta.settings.notifyGachaReady = true;
+  state.meta.settings.notifyAchievement = false;
   await earn(0);
 
   tokens.setQueryFailure(true);
-  assert.equal((await earn(120_000)).bubble, undefined);
+  assert.equal((await earn(1_200_000)).bubble, undefined);
 
   tokens.setQueryFailure(false);
   assert.equal((await earn(0)).bubble, READY, '읽지 못한 동안의 변화를 놓치지 않는다');
